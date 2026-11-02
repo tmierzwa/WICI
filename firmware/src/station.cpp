@@ -192,8 +192,9 @@ bool Station::transmit(uint16_t slot) {
     }
     const uint32_t nowS = store_.now();
     if (numbered ? !services_.numberedReady(c.network.id, receiver) : !services_.sendReady(to)) {
-        // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; pełna kolejka; brak IFAC): próba
-        // bez przekazania, więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
+        // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; brak IFAC; WICI-Link bez rodzica,
+        // trwałego stanu albo odbioru): próba bez przekazania, raz na odstęp ponowienia (zajęte łącze nie
+        // dochodzi tu, poll), więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
         // WYSYŁKĘ działa dalej (oprogramowanie.md, cykl życia zgłoszenia).
         ++stats_.failed;
         r.nextTryS = nowS + retryDelayS(r.attempts, false, r.firstSentS ? nowS - r.firstSentS : 0, random32());
@@ -301,8 +302,11 @@ void Station::poll() {
     for (Flight& f : flights_) {
         if (f.slot >= 0 && store_.now() - f.sentS >= RECEIPT_GUARD_S) finishFlight(f, false);
     }
-    if (!services_.radioReady() || services_.busy()) return;
-    while (inFlight() < IN_FLIGHT) {
+    // Zajęte łącze (WICI-Link: własna ramka w drodze, Reticulum: pełna kolejka) to nie nieudana próba:
+    // zgłoszenie zostaje do nadania bez zapisu i bez odstępu ponowienia, a idzie w obiegu pętli, w którym
+    // łącze się zwolni. busy() jest sprawdzane przed każdym nadaniem, bo zajmuje je już poprzednie.
+    if (!services_.radioReady()) return;
+    while (inFlight() < IN_FLIGHT && !services_.busy()) {
         const int slot = nextToSend();
         if (slot < 0 || !transmit(static_cast<uint16_t>(slot))) break;
     }

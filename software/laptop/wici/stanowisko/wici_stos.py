@@ -14,6 +14,7 @@ from . import wici_link
 # The root sends a HACK only up to 200 - 87 - 20 = 93 ms after the end of radio reception
 # (wici-link.md, „Cel i root”); USB and the serial read take part of that.
 HACK_BUDGET_S = 0.08
+FRESH = ("partial", "complete")   # outcomes of `received` that let the root learn a down route
 
 
 @dataclass
@@ -42,9 +43,10 @@ class WiciStos:
     IN_FLIGHT items are unfinished, as before, so a busy link lets Bearers fall back.
 
     `received(payload, timeout)` admits a DATA addressed to the root; it returns only
-    after durable admission (or durable set-aside of a frame that can never be
-    admitted) and raises otherwise, TimeoutError when `timeout` passed first. Only a
-    return is answered with HACK.
+    after the frame is settled (durable admission, durable set-aside of a frame that can
+    never be admitted, or an unauthenticated frame counted) and raises otherwise,
+    TimeoutError when `timeout` passed first. Only a return is answered with HACK; the
+    returned outcome decides whether the root may learn a down route (FRESH).
     """
 
     IN_FLIGHT = 4
@@ -116,8 +118,8 @@ class WiciStos:
     def outcome(item):
         return item.result
 
-    def _write(self, frame):
-        self.port.write(wici_link.kiss_encode(wici_link.encode(self.key, frame)))
+    def _write(self, frame, command=wici_link.KISS_DATA):
+        self.port.write(wici_link.kiss_encode(wici_link.encode(self.key, frame), command))
 
     def _finish(self, item, result):
         item.result = result
@@ -200,7 +202,7 @@ class WiciStos:
         if frame.kind != wici_link.DATA or frame.destination != self.root:
             return
         try:
-            self.received(frame.payload, max(0.0, HACK_BUDGET_S - (time.monotonic() - read_at)))
+            outcome = self.received(frame.payload, max(0.0, HACK_BUDGET_S - (time.monotonic() - read_at)))
         except TimeoutError:
             self.dropped["late"] += 1
             self.log(f"stanowisko: koperta WICI od {frame.source} seq {frame.sequence} bez HACK: przyjęcie po "
@@ -213,7 +215,9 @@ class WiciStos:
         if frame.flags & wici_link.ACKREQ:
             reply = wici_link.Frame(wici_link.HACK, 0, self.network, self.root,
                                     frame.source, 0, 1, frame.sequence)
-            self._write(reply)
+            # Only a fresh part authenticated by the envelope MAC proves that its sender is behind this
+            # neighbour now; a duplicate, a set-aside or an unauthenticated frame may be replayed or forged.
+            self._write(reply, wici_link.KISS_DATA if outcome in FRESH else wici_link.KISS_HACK_NO_LEARN)
 
     def _tick(self):
         now = self.clock()

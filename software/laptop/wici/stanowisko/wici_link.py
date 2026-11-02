@@ -17,6 +17,9 @@ DATA, HACK, BEACON = 0, 1, 2
 ACKREQ, DOWN = 1, 2
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
 KISS_DATA, KISS_REFUSED = 0, 1  # the root returns a frame it cannot transmit with command 1
+# Laptop to root: a HACK with command 2 is sent without learning a down route to the envelope's sender (the
+# admission was not fresh or the sender not authenticated); command 0 lets the root learn it (wici-link.md).
+KISS_HACK_NO_LEARN = 2
 
 
 class LinkError(ValueError):
@@ -101,11 +104,11 @@ def decode(key, net_id, wire):
     return frame
 
 
-def kiss_encode(raw):
-    """One KISS data frame, command byte 0, with escaped FEND/FESC."""
+def kiss_encode(raw, command=KISS_DATA):
+    """One KISS frame (command byte 0 by default) with escaped FEND/FESC."""
     if not 1 <= len(raw) <= MAX_FRAME:
         raise LinkError("KISS payload outside radio frame limit")
-    escaped = bytearray([FEND, 0])
+    escaped = bytearray([FEND, command])
     for byte in raw:
         if byte == FEND:
             escaped.extend((FESC, TFEND))

@@ -60,8 +60,13 @@ public:
     // Only after authenticated uplink DATA was durably admitted at this hop,
     // and only as the network plan allows: `destination` is `via` itself or
     // stands behind it (`behind`). Anything else is refused (false, ready()
-    // unchanged); relays and the root share this one check.
-    bool learn(uint16_t destination, uint16_t via);
+    // unchanged); relays and the root share this one check. An existing
+    // route to another station is replaced only with `replace` (the root, on
+    // the laptop's "learn" HACK for a fresh authenticated envelope); a relay
+    // cannot authenticate the claimed envelope sender, so it learns only a
+    // missing route (none yet, or forgotten after 3 downward failures). The
+    // route of a neighbour to itself (pairwise tag) always replaces.
+    bool learn(uint16_t destination, uint16_t via, bool replace = false);
     bool planned(uint16_t destination, uint16_t via) const;
     bool forget(uint16_t destination, uint16_t via);
     uint16_t down(uint16_t destination) const;  // BROADCAST when no route

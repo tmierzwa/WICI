@@ -18,7 +18,8 @@ enum class Receipt : uint8_t { IGNORED, HACK_READY, STORED_NO_HACK, REJECTED };
 // or from an active receiver identity, at most one queue slot per neighbour.
 // A down route to a station is learned via a neighbour only when the network
 // plan puts the station behind it (`behind`, from priority_keys) or the
-// station is that neighbour (wici_route::Table::learn).
+// station is that neighbour, and never replaces a working route
+// (wici_route::Table::learn): 3 downward attempts without HACK forget it.
 class Relay {
 public:
     // Flooding requires SA1 retries independent of local TX success (a flood
@@ -71,6 +72,7 @@ public:
     bool receiveHack(const uint8_t* wire, size_t length, uint32_t nowS);
     // After 600 ms without HACK: true means retry the identical frame after
     // silence debt and randomized backoff; false leaves it queued for reroute.
+    // The third failed attempt of a downward frame forgets its down route.
     bool timeout(uint32_t nowS);
     // Origin traffic uses the same durable link sequence space as relay traffic.
     bool nextSequence(uint16_t& sequence) { return sequence_.next(sequence); }
@@ -98,7 +100,7 @@ private:
     wici_flood::Ring flood_;
     uint8_t outgoing_[wici_link::MAX_FRAME] = {};
     size_t outgoingLength_ = 0;
-    uint16_t next_ = 0;
+    uint16_t next_ = 0, downTo_ = 0;  // downTo_: envelope destination of an active downward frame
     uint8_t slot_ = 0, attempts_ = 0;
     bool active_ = false, sent_ = false, noAck_ = false;
     bool activePriority_ = false;

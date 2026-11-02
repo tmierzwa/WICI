@@ -579,27 +579,67 @@ int main() {
     out = floodCut.outgoing(outLength);
     assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);  // never the flood
 
-    // Simplification: a down-route hint is learned once, at admission. An
-    // older queued frame of the same station via another neighbour does not
-    // move the route back, nor write FRAM, at every later pass.
+    // Simplification: a down-route hint is learned once, at admission, and
+    // writes no FRAM at later passes. External review: a relay cannot
+    // authenticate the envelope sender, so a claim via another planned
+    // neighbour does not move a working route (only a missing one is learned).
     static Memory hintMemory;
     const config::Behind both[] = {{7, 3}, {7, 4}};
     wici_hop::Relay hints(hintMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
     assert(hints.begin());
     uplink = incoming; uplink.payload[2] = 7;
-    for (uint8_t i = 0; i < 2; ++i) {  // 7 via 4 first (slot 0), then via 3 after a move (slot 1)...
+    for (uint8_t i = 0; i < 2; ++i) {  // 7 via 4 first (slot 0), then a claim via 3 (slot 1)
         uplink.source = static_cast<uint16_t>(4 - i);
         uplink.sequence = static_cast<uint16_t>(410 + i); uplink.payload[8] = static_cast<uint8_t>(94 + i);
         n = wici_link::encode(key, uplink, wire, sizeof(wire));
         assert(hints.receiveData(wire, n, 410, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
-        assert(hints.learnPending(410) && hints.routes().down(7) == 4 - i);
+        assert(hints.learnPending(410) && hints.routes().down(7) == 4);
     }
     const unsigned writesAfterHints = hintMemory.writes;
     for (uint32_t t = 411; t < 420; ++t) assert(hints.learnPending(t));
-    assert(hints.routes().down(7) == 3 && hintMemory.writes == writesAfterHints);
+    assert(hints.routes().down(7) == 4 && hintMemory.writes == writesAfterHints);
     wici_hop::Relay hintsAgain(hintMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
     assert(hintsAgain.begin() && hintsAgain.learnPending(420));  // after a restart: each queued hint once
-    assert(hintsAgain.routes().down(7) == 3);
+    assert(hintsAgain.routes().down(7) == 4);
+
+    // An honest move: the old route goes after three downward attempts
+    // without HACK (forget), and the station's next uplink frame via its new
+    // neighbour teaches the new route.
+    static Memory movedMemory;
+    wici_hop::Relay moved(movedMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
+    assert(moved.begin());
+    const auto upward = [&](uint16_t via, uint16_t sequence, uint32_t at) {
+        wici_link::Frame from = incoming;
+        from.source = via; from.payload[2] = 7; from.sequence = sequence; from.payload[8] = static_cast<uint8_t>(sequence);
+        n = wici_link::encode(key, from, wire, sizeof(wire));
+        assert(moved.receiveData(wire, n, at, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+        assert(moved.prepare(at) && moved.transmitted(true, at));  // up to the parent, HACKed there
+        out = moved.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);
+        reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+        hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+        assert(moved.receiveHack(hack, hackLength, at));
+    };
+    upward(4, 440, 440);
+    assert(moved.routes().down(7) == 4);
+    upward(3, 441, 441);
+    assert(moved.routes().down(7) == 4);  // the planned alternate claim moves nothing
+    wici_link::Frame toSeven = incoming;
+    toSeven.flags = wici_link::ACKREQ | wici_link::DOWN;
+    toSeven.source = 1; toSeven.destination = 2; toSeven.sequence = 442;
+    toSeven.payload[2] = 1; toSeven.payload[4] = 7; toSeven.payload[8] = 1;
+    n = wici_link::encode(key, toSeven, wire, sizeof(wire));
+    assert(moved.receiveData(wire, n, 442, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(moved.prepare(442));
+    for (unsigned attempt = 0; attempt < 3; ++attempt) {
+        out = moved.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 4);
+        assert(moved.transmitted(true, 443) && moved.timeout(444) == (attempt < 2));
+        assert(moved.routes().down(7) == (attempt < 2 ? 4 : wici_link::BROADCAST));
+    }
+    assert(!moved.prepare(445));  // no route and no flooding here: the frame waits in the queue
+    upward(3, 446, 446);
+    assert(moved.routes().down(7) == 3);  // learned again, via the new neighbour
 
     // Round 3 (3): after a restart the hints are learned in admission order,
     // not slot order: an older frame of station 9 via 4 in slot 1 does not
@@ -622,10 +662,12 @@ int main() {
     reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(ordered.receiveHack(hack, hackLength, 502));
+    assert(ordered.routes().down(9) == 4 && ordered.routes().forget(9, 4));  // as after 3 downward failures
     uplink.source = 5; uplink.sequence = 422; uplink.payload[8] = 98;  // newer: 9 via 5, slot 0
     n = wici_link::encode(key, uplink, wire, sizeof(wire));
     assert(ordered.receiveData(wire, n, 510, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
-    assert(ordered.learnPending(510) && ordered.routes().down(9) == 5);
+    // A restart before the hint was learned: newest first, so 9 via 5 is
+    // learned and the older 9 via 4 (slot 1) no longer moves it.
     wici_hop::Relay orderedAgain(orderMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, nine, 2);
     assert(orderedAgain.begin() && orderedAgain.learnPending(511) && orderedAgain.routes().down(9) == 5);
 

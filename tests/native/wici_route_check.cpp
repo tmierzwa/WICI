@@ -56,7 +56,13 @@ int main() {
     assert(restarted.begin());
     assert(restarted.down(10) == 5);
     assert(restarted.down(11) == wici_link::BROADCAST);
-    assert(restarted.learn(10, 6));
+    // External review: a claimed envelope sender does not move a working
+    // route (a relay cannot authenticate it); only `replace` (the root, on a
+    // fresh authenticated admission) does, without a write when refused.
+    memory.writesLeft = 0;
+    assert(!restarted.learn(10, 6) && restarted.ready() && restarted.down(10) == 5);
+    memory.writesLeft = -1;
+    assert(restarted.learn(10, 6, true));
     wici_route::Table updated(memory, config, nullptr, 0, plan, PLANNED);
     assert(updated.begin() && updated.down(10) == 6);
     static Memory renumberMemory;

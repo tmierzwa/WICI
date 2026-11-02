@@ -73,6 +73,7 @@
 #include "wici_airtime.h"
 #include "wici_radio.h"
 #include "wici_beacon.h"
+#include "beacon_check.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -399,8 +400,9 @@ struct BenchServices : station::Services {
         return rnsnode::send(to, data, length, timeoutS);
     }
     bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
+    // Łącze w ogóle może nieść zgłoszenie; własna ramka w drodze to busy(), nie brak gotowości.
     bool numberedReady(uint16_t network, uint16_t recipient) override {
-        return wiciActive && wiciShelter && wiciReady() && !wiciShelter->ownBusy() && radioListening() &&
+        return wiciActive && wiciShelter && wiciReady() && radioListening() &&
                stationStore.config().network.id == network &&
                (recipient == stationStore.config().receivers[0].number ||
                 recipient == stationStore.config().receivers[1].number) &&
@@ -408,7 +410,7 @@ struct BenchServices : station::Services {
     }
     uint32_t sendNumbered(uint16_t network, uint16_t recipient, const uint8_t* data,
                           size_t length, uint32_t, bool exception) override {
-        if (!numberedReady(network, recipient)) return 0;
+        if (!numberedReady(network, recipient) || wiciShelter->ownBusy()) return 0;
         ++wiciHandle;
         if (!wiciHandle) ++wiciHandle;
         return wiciShelter->queueOwn(recipient, data, length, wiciHandle, exception) ? wiciHandle : 0;
@@ -578,16 +580,15 @@ bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
                  const uint8_t* sa1, size_t length, void*) {
     return app.receivedEnvelope(network, sender, recipient, sa1, length);
 }
-bool verifyWiciBeacon(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
-                      const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
+// Klucz Ed25519 sąsiada z karty; w pętli, a Shelter kopiuje go do sprawdzenia w tle (beacon_check.h).
+const uint8_t* wiciBeaconKey(uint16_t sender, const void* context) {
     const config::Config* c = static_cast<const config::Config*>(context);
-    if (!c) return false;
+    if (!c) return nullptr;
     for (uint8_t i = 0; i < c->priorityKeyCount; ++i)
-        if (c->priorityKeys[i].station == sender)
-            return wici_beacon::verify(c->priorityKeys[i].ed25519,
-                                        c->network.id, sender, content, signature);
-    return false;
+        if (c->priorityKeys[i].station == sender) return c->priorityKeys[i].ed25519;
+    return nullptr;
 }
+uint32_t wiciClockMs() { return millis(); }
 uint32_t wiciRandom(void*) {
     uint32_t value = 0;
     stationRandom(reinterpret_cast<uint8_t*>(&value), sizeof(value));
@@ -1823,8 +1824,21 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "HACK")) {
         uint32_t zero = 1;
         if (n > 1 || (n == 1 && !cmdargs::parseUint(words[0], 0, 0, zero))) { printError("HACK [0]"); return; }
-        if (n) bench.resetHackStats();
-        bench.printHack();
+        if (n) {
+            bench.resetHackStats();
+            if (wiciShelter) wiciShelter->resetBeaconStats();
+        }
+        // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
+        // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
+        char beacon[160] = "";
+        const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
+        if (wiciShelter)
+            snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
+                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld",
+                     static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
+                     static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
+                     static_cast<long>(beaconcheck::stackFree()));
+        bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
@@ -2011,9 +2025,13 @@ void beginWici() {
                           c.network.parent, c.network.backupParent}, c.network.ttl, receivers, c.ifac,
                          privateKey, publicKeys, onWiciAdmit, nullptr,
                          wiciAir, wiciRandom, nullptr, c.behind, c.behindCount, rootEd25519,
-                         verifyWiciBeacon, &c, c.priorityKeys, c.priorityKeyCount);
+                         wiciBeaconKey, &c, c.priorityKeys, c.priorityKeyCount);
             if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
-            else wiciShelter->onDelivery(onWiciDelivery, nullptr);
+            else {
+                wiciShelter->onDelivery(onWiciDelivery, nullptr);
+                // Podpisy BEACON-ów sprawdza zadanie na drugim rdzeniu; bez zadania Shelter sprawdza na miejscu.
+                wiciShelter->useBeaconCheck(beaconcheck::worker(), wiciClockMs);
+            }
         }
     }
     sha2::wipe(privateKey, sizeof(privateKey));
@@ -2381,8 +2399,9 @@ void stationLoop() {
             if (wiciRoot) {
                 const uint8_t* frame = nullptr;
                 size_t length = 0;
-                while (wiciUsb.peek(frame, length)) {
-                    wiciRoot->host(frame, length, now, counterS());
+                uint8_t command = kiss::CMD_DATA;
+                while (wiciUsb.peek(frame, length, command)) {
+                    wiciRoot->host(frame, length, now, counterS(), command);
                     wiciUsb.pop();
                 }
                 drain(SerialData, wiciUsb);

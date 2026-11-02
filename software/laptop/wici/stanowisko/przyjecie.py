@@ -392,6 +392,21 @@ class Przyjecie:
         """Entry in the action log (dziennik działań), durable when this returns."""
         self.call(lambda store: self._log_action(account, op, detail))
 
+    def envelope_alarm(self, limit=50):
+        """Alarm of WICI-Link frames the stanowisko acknowledged without admitting (stanowisko-osp.md,
+        „Przyjęcie koperty WICI-Link”), for the panel: {"active", "frames", "total", "newest", "rows",
+        "overflow", "unauthenticated"}. rows and overflow are the durable set-aside of authenticated
+        envelopes (until ZAMKNIJ ZDARZENIE); unauthenticated maps each reason to {"count", "at", "net_id",
+        "sender"} counted in memory since the start (sender only as claimed). active while any of them
+        is non-empty: such a sender got a HACK, so nothing but this alarm tells the duty officer."""
+        def read(store):
+            data = envelope_rejections(store.db, limit)
+            data["unauthenticated"] = {reason: dict(entry) for reason, entry in self.unauthenticated.items()}
+            return data
+        data = self.call(read)
+        data["active"] = data["total"] > 0 or bool(data["unauthenticated"])
+        return data
+
     def deliver(self, source, content, bearer=None):
         """A REQUEST or TEST with a checked signature from source (16 B "lxmf.delivery" hash)."""
         self.jobs.put(lambda: self._receive(source, content, bearer))

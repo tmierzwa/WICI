@@ -23,7 +23,7 @@ for _path in (ROOT / "software" / "laptop", ROOT / "software" / "reference"):
 from obliczenia import lora_frame_seconds  # noqa: E402
 from wici.stanowisko import wici_link  # noqa: E402
 
-FIRMWARE = "lora-raw-0.1"
+FIRMWARE = "lora-raw-0.2"
 PROFILE = {"mhz": 869.525, "bw_khz": 125, "sf": 7, "cr": 5, "preamble": 24, "sync_word": 0x12,
            "crc": True, "explicit_header": True}
 SF = 7

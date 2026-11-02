@@ -166,7 +166,7 @@ public:
     const char* p1rxStart();
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
-    void printHack();   // HACK: HackStats as JSON
+    void printHack(const char* tail = nullptr);   // HACK: HackStats as JSON; tail: further ",\"pole\":…" fields
     void resetHackStats() { hack_ = HackStats(); }
     const LinkCounters& link() const { return link_; }
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).

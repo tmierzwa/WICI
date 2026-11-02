@@ -18,6 +18,7 @@ Root::Root(journal::Storage& storage, kiss::Port& port, Air& air, uint16_t netwo
     : port_(port), air_(air), network_(network), own_(own),
       routes_(storage, {network, own, own, 0, 0}, peers, peerCount, behind, behindCount),
       flood_(storage), sequence_(storage) {
+    port_.acceptCommand(CMD_HACK_ONLY);
     keyReady_ = own && own != wici_link::BROADCAST &&
                 wici_link::deriveKey(ifac, network, key_) && identity;
     if (identity) {
@@ -115,9 +116,11 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
     return Event::FORWARDED;
 }
 
-Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS) {
+Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS, uint8_t command) {
     wici_link::Frame frame;
-    if (!keyReady_ || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame))
+    if (!keyReady_ || !port_.open() || (command != kiss::CMD_DATA && command != CMD_HACK_ONLY) ||
+        !wici_link::decode(key_, network_, wire, length, frame) ||
+        (command == CMD_HACK_ONLY && frame.type != wici_link::Type::HACK))
         return Event::REJECTED;
     if (frame.type == wici_link::Type::HACK) {
         if (!ready() || frame.source != own_ || !pending_ || frame.destination != pendingSource_ ||
@@ -125,13 +128,19 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
             return Event::REJECTED;
         if (!air_.sendHack(wire, length, receivedMs_)) return Event::REJECTED;
         pending_ = false;
-        // A neighbour is always a route to itself; this also restores it after
-        // `forget`. The envelope sender is learned behind it only as the plan
-        // allows: the laptop also HACKs a recorded copy of an old envelope (a
-        // duplicate), which a captured neighbour can relay under its own
-        // l_src. A failed write takes ready() down.
-        if (pendingSender_ != own_) routes_.learn(pendingSender_, pendingVia_);
-        if (pendingVia_ != pendingSender_) routes_.learn(pendingVia_, pendingVia_);
+        // A neighbour is always a route to itself (pairwise tag); this also
+        // restores it after `forget`. The envelope sender is learned behind
+        // it only on the laptop's "learn" HACK (CMD_DATA): a new envelope part
+        // whose sender the envelope MAC authenticated. A recorded copy (a
+        // duplicate) or a forged envelope, which a captured neighbour can
+        // relay under its own l_src, gets CMD_HACK_ONLY and moves no route.
+        // Such evidence is fresh and authenticated, so it may replace an
+        // older route (the station moved); a relay may not (Table::learn),
+        // and as everywhere only as the plan allows. A failed write takes
+        // ready() down.
+        routes_.learn(pendingVia_, pendingVia_, true);
+        if (command == kiss::CMD_DATA && pendingSender_ != own_ && pendingSender_ != pendingVia_)
+            routes_.learn(pendingSender_, pendingVia_, true);
         return Event::HACK_SENT;
     }
     // A malformed frame is a laptop fault, not a transient refusal.

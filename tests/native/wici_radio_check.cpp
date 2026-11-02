@@ -53,10 +53,23 @@ bool admit(uint16_t net, uint16_t src, uint16_t dst, const uint8_t* p, size_t n,
     ++*static_cast<unsigned*>(ctx); return true;
 }
 uint32_t randomZero(void*) { return 0; }
-bool beaconProof(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
-                 const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
-    return wici_beacon::verify(static_cast<const uint8_t*>(context), 100, sender, content, signature);
-}
+// Every neighbour signs with the root's key in this check.
+const uint8_t* beaconProof(uint16_t, const void* context) { return static_cast<const uint8_t*>(context); }
+// A BEACON check worker that runs only when the test says so (a slow verifier).
+struct Deferred : wici_radio::BeaconCheck {
+    void (*check)(void*) = nullptr;
+    void* job = nullptr;
+    unsigned starts = 0;
+    bool free = true;
+    bool start(void (*c)(void*), void* j) override {
+        if (!free) return false;
+        assert(!check);
+        check = c; job = j; ++starts; return true;
+    }
+    void run() { assert(check); void (*c)(void*) = check; check = nullptr; c(job); }
+};
+uint32_t clockMs = 0;
+uint32_t stepClock() { return clockMs += 150; }  // each check reads 150 ms
 struct Delivery { uint32_t handle = 0; unsigned calls = 0; bool acknowledged = false; };
 void delivered(uint32_t handle, bool acknowledged, void* context) {
     Delivery& result = *static_cast<Delivery*>(context);
@@ -421,4 +434,67 @@ int main() {
     assert(!lost.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 56));
     assert(lost.begin() && lost.ready());
     assert(lost.receive(wire, n, 30002, 60) == wici_radio::Event::HACK_SENT);
+
+    // External review: BEACON signatures are checked off the HACK path. The
+    // route table takes a BEACON only after the worker's result, in poll();
+    // DATA arriving meanwhile gets its HACK at once; a second BEACON while
+    // one waits is dropped; a replay is refused before the hand-off.
+    static Memory asyncMemory;
+    Air asyncAir;
+    Deferred worker;
+    assert(envelope::startCounters(asyncMemory));
+    wici_radio::Shelter async(asyncMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
+                              ownSecret, receiverPublic, admit, &admitted, asyncAir, randomZero,
+                              nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
+    assert(async.begin());
+    async.useBeaconCheck(&worker, stepClock);
+    wici_link::Frame signedBeacon;
+    signedBeacon.type = wici_link::Type::BEACON; signedBeacon.network = 100;
+    signedBeacon.source = 5; signedBeacon.destination = wici_link::BROADCAST;
+    signedBeacon.ttl = 1; signedBeacon.length = wici_link::BEACON_PAYLOAD; signedBeacon.sequence = 1;
+    signedBeacon.payload[1] = 5; signedBeacon.payload[5] = 1;
+    assert(wici_epoch::sign(rootSecret, rootEd, 100, 5, 1, signedBeacon.payload + 9));
+    assert(wici_beacon::sign(rootSecret, rootEd, 100, 5, signedBeacon.payload,
+                             signedBeacon.payload + wici_beacon::CONTENT_BYTES));
+    uint8_t beaconWire[255];
+    const size_t beaconLength = encode(key, signedBeacon, beaconWire);
+    assert(async.receive(beaconWire, beaconLength, 40000, 70, -20) == wici_radio::Event::PENDING);
+    assert(worker.starts == 1 && async.routes().rank(70) == 0xFFFF);
+    frame.sequence = 400; frame.payload[8] = 10;
+    n = encode(key, frame, wire);
+    assert(async.receive(wire, n, 40010, 70) == wici_radio::Event::HACK_SENT && asyncAir.hackCount == 1);
+    signedBeacon.sequence = 2;
+    n = encode(key, signedBeacon, wire);
+    assert(async.receive(wire, n, 41100, 71) == wici_radio::Event::IGNORED);
+    assert(worker.starts == 1 && async.beaconStats().dropped == 1);
+    async.poll(41200, 71);
+    assert(async.routes().rank(71) == 0xFFFF && async.beaconStats().checks == 0);  // still checking
+    worker.run();
+    assert(async.routes().rank(71) == 0xFFFF);  // the worker never touches the route table
+    async.poll(41300, 71);
+    assert(async.routes().rank(71) == 21);
+    assert(async.beaconStats().checks == 1 && async.beaconStats().lastMs == 150 &&
+           async.beaconStats().maxMs == 150);
+    assert(async.receive(beaconWire, beaconLength, 43000, 72, -20) == wici_radio::Event::REJECTED);
+    assert(worker.starts == 1);  // the replay never reached the worker
+    // A forged signature: handed off, refused by the result.
+    signedBeacon.sequence = 3; signedBeacon.payload[3] = 0;
+    signedBeacon.payload[wici_beacon::CONTENT_BYTES] ^= 1;
+    n = encode(key, signedBeacon, wire);
+    assert(async.receive(wire, n, 44100, 73) == wici_radio::Event::PENDING && worker.starts == 2);
+    worker.run();
+    async.poll(44200, 73);
+    assert(async.beaconStats().checks == 2 && async.routes().rank(73) == 21);
+    // A worker that cannot take the check drops the BEACON, also counted.
+    worker.free = false;
+    signedBeacon.sequence = 4;
+    signedBeacon.payload[wici_beacon::CONTENT_BYTES] ^= 1;
+    n = encode(key, signedBeacon, wire);
+    assert(async.receive(wire, n, 45200, 74) == wici_radio::Event::IGNORED);
+    assert(async.beaconStats().dropped == 2 && worker.starts == 2);
+    worker.free = true;
+    assert(async.receive(wire, n, 46300, 74) == wici_radio::Event::PENDING && worker.starts == 3);
+    worker.run();
+    async.poll(46400, 74);
+    assert(async.beaconStats().checks == 3 && async.beaconStats().maxMs == 150);
 }

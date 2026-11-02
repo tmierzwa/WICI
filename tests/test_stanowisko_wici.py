@@ -184,6 +184,24 @@ class WiciAdmissionTest(StationTestCase):
                 self.reception.call(lambda s: inbox.receive(part, key, now, lambda full: None))
             self.assertNotIsInstance(raised.exception, self.inbox.PermanentRejection)
 
+    def test_panel_alarm_shows_every_frame_acknowledged_without_admission(self):
+        self.assertFalse(self.reception.envelope_alarm()["active"])
+        self.assertEqual(self.admit(self.seal(7, sender=9)[0]), "unauthenticated")
+        alarm = self.reception.envelope_alarm()
+        self.assertTrue(alarm["active"])
+        self.assertEqual(alarm["unauthenticated"]["unknown station number"]["sender"], 9)
+        self.assertEqual(alarm["total"], 0)
+        self.assertEqual(self.admit(self.seal(400)[0]), "complete")
+        self.assertEqual(self.admit(self.seal(400 - self.envelope.WINDOW)[0]), "rejected")
+        alarm = self.reception.envelope_alarm()
+        self.assertEqual((alarm["frames"], alarm["total"], alarm["rows"][0]["sender"]), (1, 1, 4))
+        self.assertIn("replay window", alarm["rows"][0]["reason"])
+        # Closing the event clears the durable part; the in-memory count lasts until the restart.
+        self.reception.call(lambda s: zamkniecie.purge(s.db))
+        alarm = self.reception.envelope_alarm()
+        self.assertEqual((alarm["total"], alarm["rows"]), (0, []))
+        self.assertTrue(alarm["active"])
+
     def test_closing_the_event_removes_envelope_content(self):
         self.assertEqual(self.admit(self.seal(300)[0]), "complete")
         self.assertEqual(self.admit(self.seal(300 - self.envelope.WINDOW)[0]), "rejected")

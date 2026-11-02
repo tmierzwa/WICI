@@ -58,7 +58,7 @@ void Port::feed(const uint8_t* bytes, size_t count, uint32_t nowMs) {
             escape_ = true;
             continue;
         }
-        if (command_ == CMD_DATA) {
+        if (command_ == CMD_DATA || command_ == extraCommand_) {
             if (length_ >= MTU) { tooLarge_ = true; continue; }
             if (target_ >= 0) slots_[target_][length_] = value;
             ++length_;
@@ -70,11 +70,12 @@ void Port::feed(const uint8_t* bytes, size_t count, uint32_t nowMs) {
 }
 
 void Port::endFrame() {
-    if (command_ == CMD_DATA) {
+    if (command_ == CMD_DATA || command_ == extraCommand_) {
         if (tooLarge_) { ++counters_.rxTooLarge; return; }
         if (!length_) return;
         if (target_ < 0) { ++counters_.rxDropped; return; }
         lengths_[target_] = static_cast<uint16_t>(length_);
+        commands_[target_] = static_cast<uint8_t>(command_);
         ++count_;
         ++counters_.fromComputer;
         if (flowControl_) {
@@ -89,9 +90,15 @@ void Port::endFrame() {
 }
 
 bool Port::peek(const uint8_t*& data, size_t& length) const {
+    uint8_t command = CMD_DATA;
+    return peek(data, length, command);
+}
+
+bool Port::peek(const uint8_t*& data, size_t& length, uint8_t& command) const {
     if (!count_) return false;
     data = slots_[head_];
     length = lengths_[head_];
+    command = commands_[head_];
     return true;
 }
 

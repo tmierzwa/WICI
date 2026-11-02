@@ -120,7 +120,7 @@ class DeviceLines(unittest.TestCase):
         self.assertIsNone(lora_raw.parse_device_line(""))
 
     def test_check_info(self):
-        info = {"info": "lora-raw-0.1", "ready": True, **lora_raw.PROFILE}
+        info = {"info": "lora-raw-0.2", "ready": True, **lora_raw.PROFILE}
         lora_raw.check_info(info)
         with self.assertRaises(RuntimeError):
             lora_raw.check_info({**info, "preamble": 8})
@@ -151,6 +151,50 @@ class DeviceLines(unittest.TestCase):
         lines = [json.loads(line) for line in out.getvalue().splitlines()]
         self.assertEqual(len(lines), 6)
         self.assertEqual(lines[4]["device"]["err"], "read")
+
+
+class MonitorReconnect(unittest.TestCase):
+    def test_lost_usb_is_a_gap_not_the_end(self):
+        info = {"info": "lora-raw-0.2", "ready": True, **lora_raw.PROFILE}
+        frame = {"rx": "00" * 10, "len": 10, "rssi": -90.0, "snr": 1.0, "crc": True, "t_us": 1}
+
+        class Port:
+            def close(self):
+                pass
+
+        class Device:
+            def __init__(self, records):
+                self.records = list(records)
+
+            def read(self):
+                if not self.records:
+                    return 0.0, None
+                item = self.records.pop(0)
+                if isinstance(item, Exception):
+                    raise item
+                return 0.0, item
+
+        lost = OSError("device reports readiness to read but returned no data")
+        sessions = [(Port(), Device([frame, lost]), info), OSError("port gone"), (Port(), Device([frame]), info)]
+
+        def connect(name):
+            item = sessions.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
+
+        tmp = Path(self.enterContext(__import__("tempfile").TemporaryDirectory())) / "monitor.jsonl"
+        with unittest.mock.patch.object(monitor, "connect", connect), \
+                unittest.mock.patch.object(monitor, "RECONNECT_S", 0), \
+                unittest.mock.patch("sys.stdout", io.StringIO()), unittest.mock.patch("sys.stderr", io.StringIO()):
+            monitor.main(["port", "--out", str(tmp), "--duration", "0.3"])
+        lines = [json.loads(line) for line in tmp.read_text().splitlines()]
+        kinds = ["gap" if "gap" in x else "frame" if x.get("len") == 10 else "summary" if "summary" in x else "start"
+                 for x in lines]
+        self.assertEqual(kinds, ["start", "frame", "gap", "frame", "summary"])
+        self.assertEqual(lines[2]["error"], str(lost))
+        self.assertEqual(sessions, [])
+        self.assertEqual(lines[-1]["summary"]["frames"], {"other": 2})
 
 
 class SimulatedDevice:

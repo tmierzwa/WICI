@@ -67,6 +67,7 @@ struct RamStorage : journal::Storage {
     long budget = -1;
     long readFailures = 0;
     long readSkip = 0;
+    size_t writeCalls = 0;   // zapisy do FRAM (polecenie writes)
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
         if (address >= store::REGISTER_BASE && address < store::INBOX_BASE && readFailures > 0) {
@@ -79,6 +80,7 @@ struct RamStorage : journal::Storage {
     }
     bool write(uint32_t address, const uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
+        ++writeCalls;
         size_t n = count;
         if (budget >= 0 && address >= store::TX_BASE) {
             if (static_cast<size_t>(budget) < n) n = static_cast<size_t>(budget);
@@ -365,12 +367,15 @@ struct World;
 struct FakeServices : station::Services {
     World* w = nullptr;
     bool sw = false, forced = false, ready = true, busyFlag = false, refuse = false, unknown = false;
+    // oneSlot: łącze jak WICI-Link, jedna własna ramka naraz (zajęte od sendNumbered do potwierdzenia).
+    bool oneSlot = false;
+    uint32_t ownHandle = 0;
     uint32_t handle = 0;
     uint32_t rng = 12345;
     bool silence() override;
     bool silenceSwitch() override { return sw; }
     bool radioReady() override { return ready; }
-    bool busy() override { return busyFlag; }
+    bool busy() override { return busyFlag || (oneSlot && ownHandle); }
     bool sendReady(const uint8_t*) override {
         if (unknown) printf("path request\n");   // cel bez trasy: stos pyta o trasę, pakiet nie wychodzi
         return !unknown;
@@ -378,8 +383,9 @@ struct FakeServices : station::Services {
     bool numberedReady(uint16_t, uint16_t) override { return !unknown; }
     uint32_t sendNumbered(uint16_t net, uint16_t recipient, const uint8_t* data,
                           size_t length, uint32_t, bool exception) override {
-        if (refuse) return 0;
+        if (refuse || (oneSlot && ownHandle)) return 0;
         ++handle;
+        if (oneSlot) ownHandle = handle;
         printf("numbered %u %u %u %d %.*s\n", handle, net, recipient, exception,
                static_cast<int>(length), reinterpret_cast<const char*>(data));
         return handle;
@@ -785,12 +791,15 @@ int world() {
         else if (!strcmp(cmd, "radio")) w.services.ready = atoi(arg) != 0;
         else if (!strcmp(cmd, "busy")) w.services.busyFlag = atoi(arg) != 0;
         else if (!strcmp(cmd, "refuse")) w.services.refuse = atoi(arg) != 0;
+        else if (!strcmp(cmd, "oneslot")) w.services.oneSlot = atoi(arg) != 0;
+        else if (!strcmp(cmd, "writes")) printf("writes %s %zu\n", arg, w.ram.writeCalls);
         else if (!strcmp(cmd, "unknown")) w.services.unknown = atoi(arg) != 0;
         else if (!strcmp(cmd, "poll")) {
             w.app->poll();
             printf("inflight %zu\n", w.app->inFlight());
         } else if (!strcmp(cmd, "rcpt")) {
             sscanf(arg, "%u %u", &a, &b);
+            if (w.services.ownHandle == a) w.services.ownHandle = 0;
             w.app->receipt(a, b != 0);
         } else if (!strcmp(cmd, "in")) {
             char from[2 * store::HASH + 1] = "00000000000000000000000000000000";
@@ -1674,6 +1683,31 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(all(line.split()[4] == "1" for line in sends))
         self.assertIn("delivered=0", self.find(out, "stats after")[0])
         self.assertEqual(self.regs(out, "after")[rid]["att"], 3)
+
+    def test_numbered_busy_own_slot_is_not_a_failed_attempt(self):
+        # Sprzęt: REQ 20 szło minutami, APP failed 24. Zajęte łącze (własna ramka WICI-Link w drodze) to nie
+        # nieudana próba: bez failed, bez zapisu FRAM w obiegu pętli, zgłoszenia idą jedno po drugim.
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        script = ["cfg " + json.dumps(doc, ensure_ascii=False), "oneslot 1", "now 100"]
+        script += [self.sub(self.request(self.rid(200 + i))) for i in range(20)]
+        script += ["poll", "writes first"] + ["poll"] * 5 + ["writes busy", "stats busy"]
+        for handle in range(1, 21):
+            script += [f"rcpt {handle} 1", "poll"]
+        script += ["stats end", "reg end"]
+        out = self.world(script)
+        sends = self.find(out, "numbered ")
+        self.assertEqual([int(line.split()[1]) for line in sends], list(range(1, 21)))
+        self.assertEqual(len({line.split()[5] for line in sends}), 20)   # każde zgłoszenie raz
+        first, busy = (int(self.find(out, f"writes {label}")[0].split()[2]) for label in ("first", "busy"))
+        self.assertEqual(first, busy)
+        self.assertIn("sent=1 delivered=0 failed=0", self.find(out, "stats busy")[0])
+        self.assertIn("sent=20 delivered=20 failed=0", self.find(out, "stats end")[0])
+        self.assertTrue(all(row["att"] == 1 for row in self.regs(out, "end").values()))
 
     # --- stacja: magazyn, warstwa aplikacji, USB, ekran ------------------------
 

@@ -100,13 +100,14 @@ bool Relay::learnPending(uint32_t nowS) {
     if (!routes_.ready() || !queue_.settle(nowS)) return false;
     if (active_ && !queue_.pending(slot_)) active_ = false;  // expired or forwarded before a crash
     uint8_t wire[wici_link::MAX_FRAME];
-    // Hints in admission order, oldest first: the newest frame of a station
-    // sets its route last, also after a restart (slot order says nothing).
-    // Frames admitted in the same second keep slot order.
+    // Hints newest first, by admission time (slot order says nothing): a
+    // route is learned only where none exists (Table::learn), so after a
+    // restart the newest frame of a station sets it and older ones do not
+    // move it. Frames admitted in the same second keep slot order.
     while (learn_) {
         uint8_t slot = wici_relay::SLOTS;
         for (uint8_t i = 0; i < wici_relay::SLOTS; ++i)
-            if ((learn_ & (1u << i)) && (slot == wici_relay::SLOTS || queue_.admittedS(i) < queue_.admittedS(slot)))
+            if ((learn_ & (1u << i)) && (slot == wici_relay::SLOTS || queue_.admittedS(i) > queue_.admittedS(slot)))
                 slot = i;
         learn_ &= static_cast<uint8_t>(~(1u << slot));
         size_t length = 0;
@@ -183,6 +184,7 @@ bool Relay::prepare(uint32_t nowS) {
             last = fresh;
         }
         next_ = next; slot_ = slot;
+        downTo_ = frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : 0;
         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
         activePriority_ = k1 && next != wici_link::BROADCAST;
@@ -255,6 +257,11 @@ bool Relay::timeout(uint32_t nowS) {
         return true;
     }
     active_ = false;  // No HACK: keep the durable queue item for another route.
+    // A relay learns no route over a working one (Table::learn), so a station
+    // that moved is found again only after the old route goes: the next
+    // frame floods, and the station's next uplink frame teaches the new
+    // route. A failed write takes ready() down.
+    if (downTo_) routes_.forget(downTo_, next_);
     return false;
 }
 

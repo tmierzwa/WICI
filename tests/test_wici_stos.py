@@ -62,6 +62,7 @@ class WiciBearerTest(unittest.TestCase):
     def admit(self, payload, timeout):
         self.limits.append(timeout)
         self.accepted.append(payload)
+        return "complete"
 
     def feed(self, frame):
         self.bearer._receive(wici_link.encode(self.key, frame))
@@ -95,6 +96,19 @@ class WiciBearerTest(unittest.TestCase):
         self.feed(data)
         self.assertEqual(len(self.port.writes), writes)
         self.assertEqual(self.bearer.dropped["admission"], 1)
+
+    def test_only_a_fresh_admission_lets_the_root_learn_a_route(self):
+        for outcome, command in (("complete", wici_link.KISS_DATA), ("partial", wici_link.KISS_DATA),
+                                 ("duplicate", wici_link.KISS_HACK_NO_LEARN),
+                                 ("rejected", wici_link.KISS_HACK_NO_LEARN),
+                                 ("unauthenticated", wici_link.KISS_HACK_NO_LEARN)):
+            with self.subTest(outcome):
+                self.bearer.received = lambda *_: outcome
+                self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 45, bytes(25)))
+                written = self.port.writes[-1]
+                self.assertEqual(written[1], command)   # KISS command byte after FEND
+                reply = wici_link.decode(self.key, 100, unpack(written[:1] + bytes(1) + written[2:]))
+                self.assertEqual((reply.kind, reply.destination, reply.sequence), (wici_link.HACK, 4, 45))
 
     def test_late_admission_gets_no_hack(self):
         # Past the deadline the admission still completes on the database thread; the

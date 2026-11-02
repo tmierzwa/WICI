@@ -1028,13 +1028,13 @@ const char* Bench::txStateName() const {
            : txState_ == TxState::BACKOFF ? "backoff" : "send";
 }
 
-void Bench::printHack() {
+void Bench::printHack(const char* tail) {
     Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
-                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu}\n",
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu%s}\n",
                   static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
                   static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
                   static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
-                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
+                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0), tail ? tail : "");
 }
 
 void Bench::printLink() {

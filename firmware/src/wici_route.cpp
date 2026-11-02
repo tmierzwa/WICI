@@ -138,7 +138,7 @@ bool Table::planned(uint16_t destination, uint16_t via) const {
     return false;
 }
 
-bool Table::learn(uint16_t destination, uint16_t via) {
+bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
     if (!ready_ || !id(destination) || !id(via) || destination == config_.own ||
         via == config_.own || destination == config_.root || !paired(via) ||
         !planned(destination, via)) return false;
@@ -146,6 +146,7 @@ bool Table::learn(uint16_t destination, uint16_t via) {
     for (size_t i = 0; i < ROUTES; ++i) {
         if (routes_[i].destination == destination) {
             if (routes_[i].via == via) return true;
+            if (!replace && destination != via) return false;  // a claim does not move a working route
             const Route old = routes_[i];
             routes_[i].via = via;
             if (!commit()) { routes_[i] = old; return false; }

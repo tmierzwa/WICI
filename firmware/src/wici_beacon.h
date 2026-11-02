@@ -32,7 +32,7 @@ inline uint32_t jittered(uint32_t atMs, uint32_t lastMs, bool sent, uint32_t ran
 // A rank change earns an extra BEACON only from RANK_STEP (one ETX) on, or
 // when a rank appears or lapses. The rank carries the HACK average of the link
 // to the parent, which moves by small steps under load, and every BEACON
-// costs each neighbour an Ed25519 check that blocks its loop. The 30-min
+// costs each neighbour an Ed25519 check (background CPU time). The 30-min
 // BEACONs carry the exact rank.
 constexpr uint16_t RANK_STEP = 16;
 inline bool rankMoved(uint16_t rank, uint16_t advertised) {

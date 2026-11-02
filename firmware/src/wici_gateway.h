@@ -19,6 +19,11 @@ using Air = wici_link::Air;
 enum class Event : uint8_t { REJECTED, FORWARDED, QUEUED, HACK_SENT, REFUSED };
 
 constexpr uint8_t CMD_REFUSED = 0x01;  // KISS command: downward frame not sent, bytes unchanged
+// KISS commands of a laptop HACK: kiss::CMD_DATA (0x00) "HACK and learn" only
+// for a newly admitted envelope part whose sender the envelope MAC
+// authenticated; CMD_HACK_ONLY (0x02) "HACK without learning" for a duplicate,
+// a frame set aside as never admissible, or an unauthenticated envelope.
+constexpr uint8_t CMD_HACK_ONLY = 0x02;
 
 class Root {
 public:
@@ -47,15 +52,18 @@ public:
     // Called with the radio's receive-end timestamp, after the pairwise tag
     // check. A failed KISS enqueue cannot create a pending HACK authorization.
     Event radio(const uint8_t* wire, size_t length, uint32_t receivedMs);
-    // Called for a decoded KISS data packet from the laptop. A HACK must match
-    // the last forwarded unicast DATA and fit the 200 ms radio deadline. The
-    // laptop HACK means only that the frame is durable at the stanowisko (new,
-    // a duplicate, or set aside as never admissible); after it the root learns
-    // the routes to the neighbour itself and, as the plan allows, to the
-    // envelope sender behind it. A well-formed downward DATA that cannot be
-    // sent (also while the previous one waits for its HACK) is REFUSED: its
+    // Called for a decoded KISS packet from the laptop with its command byte
+    // (kiss::CMD_DATA or CMD_HACK_ONLY; the root's port takes no others). A
+    // HACK must match the last forwarded unicast DATA and fit the 200 ms radio
+    // deadline. After either HACK the root learns the route to the neighbour
+    // itself (pairwise tag); only after CMD_DATA, a fresh authenticated
+    // admission, also the route to the envelope sender behind it, as the plan
+    // allows, replacing an older one (the station moved). CMD_HACK_ONLY with
+    // anything but a HACK is REJECTED. A well-formed downward DATA that cannot
+    // be sent (also while the previous one waits for its HACK) is REFUSED: its
     // bytes go back to the laptop at once with CMD_REFUSED.
-    Event host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS);
+    Event host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t nowS,
+               uint8_t command = kiss::CMD_DATA);
 
 private:
     Event transmit(const uint8_t* wire, size_t length, const wici_link::Frame& frame,

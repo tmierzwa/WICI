@@ -18,7 +18,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
                  wici_destination::AdmitFn admit, void* admitContext,
                  Air& air, RandomFn random, void* randomContext,
                  const config::Behind* behind, uint16_t behindCount,
-                 const uint8_t rootEd25519[32], VerifyBeacon verifyBeacon, const void* beaconContext,
+                 const uint8_t rootEd25519[32], BeaconKey beaconKey, const void* beaconContext,
                  const config::PriorityKey* peers, uint8_t peerCount)
     : network_(route.network), own_(route.own), root_(route.root), ttl_(ttl),
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
@@ -28,7 +28,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
                    ifac, privateKey, receiverPublic, admit, admitContext),
       relay_(storage, route, ifac, true, receiverIds, behind, behindCount, peers, peerCount),
       air_(air), random_(random), randomContext_(randomContext) {
-    verifyBeacon_ = verifyBeacon;
+    beaconKey_ = beaconKey;
     beaconContext_ = beaconContext;
     if (rootEd25519) {
         memcpy(rootEd25519_, rootEd25519, sizeof(rootEd25519_));
@@ -57,7 +57,7 @@ bool Shelter::begin() {
     ownCount_ = ownPart_ = ownAttempts_ = 0;
     beaconChecked_ = false;
     settledS_ = 0;
-    return ready_ = keyReady_ && rootKeyReady_ && verifyBeacon_ && outboundKeysReady_ &&
+    return ready_ = keyReady_ && rootKeyReady_ && beaconKey_ && outboundKeysReady_ &&
                     destination_.begin() && relay_.begin() &&
                     outbound_[0].begin(network_, own_, receivers_[0], outboundKeys_[0]) &&
                     outbound_[1].begin(network_, own_, receivers_[1], outboundKeys_[1]);
@@ -93,26 +93,45 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         return Event::ADMITTED;
     }
     if (frame.type == wici_link::Type::BEACON) {
-        // BEACONs carry no hop tag, and each Ed25519 check blocks the loop,
-        // and so every HACK deadline, for about 0.2-0.4 s on nRF52840. Checks
-        // are therefore spaced, and a verified epoch token is not rechecked.
-        // A replayed or malformed BEACON is refused before the spacing, so a
-        // recorded copy cannot use up the checks of real ones.
+        // BEACONs carry no hop tag, and an Ed25519 check takes 0.04-0.4 s, far
+        // beyond the 93 ms a HACK has after RX end. The signatures are checked
+        // by the BeaconCheck worker, never here; the route table takes the
+        // result in poll(). Checks are spaced (BEACON_CHECK_MS), a second
+        // BEACON while one waits is dropped, and a verified epoch token is not
+        // rechecked. A replayed or malformed BEACON is refused before the
+        // spacing, so a recorded copy cannot use up the checks of real ones.
         wici_route::Beacon beacon;
         wici_route::Table& routes = relay_.routes();
         if (!wici_route::parseBeacon(frame, beacon) || !routes.acceptable(frame.source, beacon, nowS))
             return Event::REJECTED;
         if (beaconChecked_ && receivedMs - beaconCheckedMs_ < BEACON_CHECK_MS) return Event::IGNORED;
+        if (pendingState_.load(std::memory_order_acquire) != IDLE) {
+            ++beaconStats_.dropped;
+            return Event::IGNORED;
+        }
+        const uint8_t* key = beaconKey_(frame.source, beaconContext_);
+        if (!key) return Event::REJECTED;
         beaconChecked_ = true;
         beaconCheckedMs_ = receivedMs;
-        const bool knownEpoch = routes.epochKnown() && beacon.epoch == routes.epoch() &&
-                                !memcmp(beacon.epochSignature, routes.epochSignature(), sizeof(beacon.epochSignature));
-        return (knownEpoch ||
-                wici_epoch::verify(rootEd25519_, network_, root_, beacon.epoch, beacon.epochSignature)) &&
-                       verifyBeacon_(frame.source, frame.payload, frame.payload + wici_beacon::CONTENT_BYTES,
-                                     beaconContext_) &&
-                       routes.beacon(frame.source, beacon, wici_route::snrCost16(snrQdb), nowS) ?
-               Event::ADMITTED : Event::REJECTED;
+        PendingBeacon& p = pending_;
+        p.beacon = beacon;
+        p.sender = frame.source;
+        p.cost16 = wici_route::snrCost16(snrQdb);
+        p.knownEpoch = routes.epochKnown() && beacon.epoch == routes.epoch() &&
+                       !memcmp(beacon.epochSignature, routes.epochSignature(), sizeof(beacon.epochSignature));
+        memcpy(p.key, key, sizeof(p.key));
+        memcpy(p.content, frame.payload, sizeof(p.content));
+        memcpy(p.signature, frame.payload + wici_beacon::CONTENT_BYTES, sizeof(p.signature));
+        p.valid = false;
+        p.ms = 0;
+        pendingState_.store(RUNNING, std::memory_order_release);
+        if (!beaconCheck_) checkBeacon(this);
+        else if (!beaconCheck_->start(checkBeacon, this)) {
+            pendingState_.store(IDLE, std::memory_order_release);
+            ++beaconStats_.dropped;
+            return Event::IGNORED;
+        }
+        return pendingState_.load(std::memory_order_acquire) == DONE ? applyBeacon(nowS) : Event::PENDING;
     }
     if (frame.type != wici_link::Type::DATA || frame.length < envelope::OVERHEAD)
         return Event::REJECTED;
@@ -132,6 +151,30 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     }
     if (result == wici_hop::Receipt::STORED_NO_HACK) { routePending_ = true; return Event::ADMITTED; }
     return result == wici_hop::Receipt::IGNORED ? Event::IGNORED : Event::REJECTED;
+}
+
+// Runs in the BeaconCheck worker: reads only the slot and fields fixed at
+// construction, and Ed25519 keeps no state between calls.
+void Shelter::checkBeacon(void* self) {
+    Shelter& shelter = *static_cast<Shelter*>(self);
+    PendingBeacon& p = shelter.pending_;
+    const uint32_t startMs = shelter.clock_ ? shelter.clock_() : 0;
+    p.valid = (p.knownEpoch || wici_epoch::verify(shelter.rootEd25519_, shelter.network_, shelter.root_,
+                                                 p.beacon.epoch, p.beacon.epochSignature)) &&
+              wici_beacon::verify(p.key, shelter.network_, p.sender, p.content, p.signature);
+    p.ms = shelter.clock_ ? shelter.clock_() - startMs : 0;
+    shelter.pendingState_.store(DONE, std::memory_order_release);
+}
+
+// In the loop, after the check: the table rechecks acceptable() at nowS.
+Event Shelter::applyBeacon(uint32_t nowS) {
+    const PendingBeacon& p = pending_;
+    ++beaconStats_.checks;
+    beaconStats_.lastMs = p.ms;
+    if (p.ms > beaconStats_.maxMs) beaconStats_.maxMs = p.ms;
+    const bool admitted = p.valid && relay_.routes().beacon(p.sender, p.beacon, p.cost16, nowS);
+    pendingState_.store(IDLE, std::memory_order_release);
+    return admitted ? Event::ADMITTED : Event::REJECTED;
 }
 
 void Shelter::onTxDone(bool success, uint32_t nowMs, uint32_t nowS) {
@@ -169,6 +212,7 @@ void Shelter::ownAttemptFailed(uint32_t nowMs) {
 
 void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
     if (!ready()) return;
+    if (pendingState_.load(std::memory_order_acquire) == DONE) applyBeacon(nowS);
     // Queue settlement (30-min expiry, crash leftovers) runs once a second,
     // whether or not a transfer is active; the down-route hint of a newly
     // stored frame is learned once, right after its HACK.

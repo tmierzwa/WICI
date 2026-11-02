@@ -325,6 +325,60 @@ int main() {
     assert(root.host(wire, n, 8201, 8) == wici_gateway::Event::REFUSED);
     take(port, command, returned);
 
+    // External review: the laptop HACK alone proves neither freshness nor the
+    // envelope sender. The root learns the route to the sender only on the
+    // "learn" HACK (KISS 0x00: a new envelope part the envelope MAC
+    // authenticated), which may replace an older route (the station moved);
+    // KISS 0x02 HACKs without learning (duplicate, set aside, unauthenticated).
+    // The neighbour's route to itself (pairwise tag) is learned on both.
+    static Memory learnMemory;
+    kiss::Port learnPort;
+    Air learnAir;
+    const config::Behind both[] = {{7, 4}, {7, 3}};  // station 7 may stand behind 4 or 3
+    wici_gateway::Root learner(learnMemory, learnPort, learnAir, 100, 5, ifac, identity, nullptr, 0, both, 2);
+    assert(learner.begin(7));
+    learner.setUsbOpen(true);
+    const auto relayed = [&](uint16_t via, uint16_t sequence, uint32_t at, uint8_t hackCommand) {
+        wici_link::Frame up = frame;
+        up.source = via; up.destination = 5; up.flags = wici_link::ACKREQ;
+        up.payload[2] = 7; up.payload[4] = 1; up.sequence = sequence;
+        size_t length = encode(key, up, wire);
+        assert(learner.radio(wire, length, at) == wici_gateway::Event::FORWARDED);
+        while (learnPort.pendingBytes()) take(learnPort, command, returned);
+        wici_link::Frame reply = hack;
+        reply.source = 5; reply.destination = via; reply.sequence = sequence;
+        length = encode(key, reply, wire);
+        return learner.host(wire, length, at + 50, at / 1000, hackCommand);
+    };
+    assert(relayed(4, 100, 10000, wici_gateway::CMD_HACK_ONLY) == wici_gateway::Event::HACK_SENT);
+    assert(learnAir.hacks == 1 && learner.down(4) == 4 && learner.down(7) == wici_link::BROADCAST);
+    assert(relayed(4, 101, 11000, kiss::CMD_DATA) == wici_gateway::Event::HACK_SENT);
+    assert(learner.down(7) == 4);
+    assert(relayed(3, 102, 12000, wici_gateway::CMD_HACK_ONLY) == wici_gateway::Event::HACK_SENT);
+    assert(learner.down(7) == 4 && learner.down(3) == 3);  // a duplicate via 3 moves nothing
+    assert(relayed(3, 103, 13000, kiss::CMD_DATA) == wici_gateway::Event::HACK_SENT);
+    assert(learner.down(7) == 3 && learnAir.hacks == 4);   // fresh and authenticated: the station moved
+    // Any other command, and 0x02 with anything but a HACK, is rejected
+    // without a refusal; on the port, unknown commands stay ignored.
+    assert(relayed(4, 104, 14000, 0x05) == wici_gateway::Event::REJECTED && learnAir.hacks == 4);
+    wici_link::Frame downlink = frame;
+    downlink.source = 1; downlink.destination = 5; downlink.flags = wici_link::ACKREQ | wici_link::DOWN;
+    downlink.payload[2] = 1; downlink.payload[4] = 7; downlink.sequence = 105;
+    n = encode(key, downlink, wire);
+    assert(learner.host(wire, n, 15000, 15, wici_gateway::CMD_HACK_ONLY) == wici_gateway::Event::REJECTED);
+    assert(learnPort.pendingBytes() == 0 && learnAir.data == 0);
+    const uint8_t kissFrames[] = {kiss::FEND, 0x05, 0x11, kiss::FEND, 0x02, 0x22, 0x23, kiss::FEND};
+    learnPort.feed(kissFrames, sizeof(kissFrames), 16000);
+    const uint8_t* packet = nullptr;
+    size_t packetLength = 0;
+    assert(learnPort.buffered() == 1 && learnPort.counters().commands == 1);
+    assert(learnPort.peek(packet, packetLength, command) && command == wici_gateway::CMD_HACK_ONLY &&
+           packetLength == 2 && packet[0] == 0x22);
+    kiss::Port plain;  // a port without acceptCommand (Reticulum node) ignores 0x02 as before
+    plain.setOpen(true);
+    plain.feed(kissFrames, sizeof(kissFrames), 16000);
+    assert(plain.buffered() == 0 && plain.counters().commands == 2);
+
     // Review 1/11a: BEACON schedule. A change or retry is pushed to 60 s
     // after the last BEACON only when that is later, then jittered 0-4 s;
     // a long-silent station is not scheduled in the past.
