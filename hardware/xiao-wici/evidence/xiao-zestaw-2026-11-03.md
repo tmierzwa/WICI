@@ -74,6 +74,20 @@ Wynik: kryterium spełnione.
 
 Błąd znaleziony w tej próbie: menu wracało samo do ekranu głównego zaraz po `KEY OK`. `loop()` odczytuje `now` na początku obiegu, a `KEY` w `pollSerial()` zapisuje czas naciśnięcia z późniejszego `millis()`. `tick(now)` liczył wtedy `now - lastPressMs_` bez znaku: wynik około 49 dni, więc bezczynność od razu odesłała ekran do MAIN. Fizyczne przyciski dostają `now` obiegu, dlatego błąd dotyczył tylko poleceń z USB. Poprawka: `elapsed()` w `ui.cpp` daje 0, gdy chwila odniesienia jest późniejsza (bezczynność, przytrzymanie, powtarzanie); test hosta `test_press_after_loop_time_does_not_trigger_idle`.
 
+## Dowód doręczenia (E1, obraz z `41f43ba`, 15:55–15:59)
+
+Obraz z dowodem doręczenia stacji ([wici-link.md](../../../docs/spec/wici-link.md#dowód-doręczenia)) wgrany na obie płytki; konfiguracja w PSRAM przetrwała wgranie (stacja 21). Stanowisko z tego samego commitu. Zestaw ma tylko dwa węzły WICI-Link, więc drogi przez przekaźnik (wynik „przekazane”, 35 min, K2 u przekaźnika) ta próba nie sprawdza; sprawdzają je testy natywne i stanowiska.
+
+| Krok | Wynik |
+|---|---|
+| T1: zgłoszenie z A (`REQ 1 0`), potem odpowiedź z panelu | REQUEST 119 B od 21; dwie DATA 98 B (RECEIVED i otwarta wcześniej intencja do 21, wysłana od razu po świeżej kopercie od stacji) i REPLY 127 B od roota, każda z HACK od 21; żadnej koperty dowodu w eterze; intencje zamknięte (czekające 2 → 1) |
+| T2: `SILENCE 1` na A, odpowiedź z panelu | trzy DATA 122 B od roota bez HACK (15:57:05, :17, :30); root zapomina drogę; ponowienie stanowiska po 1 min jako rozsyłanie (114 B, 15:58:25) |
+| T2: `SILENCE 0` na A | DATA 60 B od 21 (15:58:58): koperta rodzaju 1 (`kind` 0x41), 21 → 2, dwa liczniki (kopia jednoadresowa i rozsyłanie); HACK roota po 234 ms od początku DATA; stanowisko: `koperta WICI proof`, przyjęcie 7,5 ms; REPLY zamknięta (czekające 2 → 1); `proofs_dropped` 0 |
+
+Wynik: kryterium spełnione dla jednego przeskoku i rozsyłania. Pozostała otwarta intencja jest sprzed tej próby. Zgłoszenie czeka za dowodem najwyżej jedno przekazanie, tu 234 ms do HACK.
+
+Poprawka znaleziona przed próbą: stacja pomijała dowód, gdy rozstrzygającą ramkę podał root z ACKREQ, także gdy radio odrzuciło jej HACK (cisza, termin). Root go wtedy nie dostał, a wiadomość zamykało dopiero ponowienie stanowiska. Teraz dowód pomija tylko HACK przyjęty przez radio; w T2 dowód objął też tę pierwszą kopię.
+
 ## Surowe logi
 
 - `podsluch-2026-11-03.jsonl`: 08:25–09:23 (próby 2, 4, 5, 11 na `72d4089`, potem pomiary z RAK jako nadajnikiem);
@@ -81,5 +95,6 @@ Błąd znaleziony w tej próbie: menu wracało samo do ekranu głównego zaraz p
 - `diag-root-2026-11-03*.log`, `diag-a-2026-11-03*.log`: porty diagnostyki z czasem laptopa (sekundy Unix): bez sufiksu do 09:23, `b` 09:45–10:09, `c` od 10:09;
 - `stanowisko-2026-11-03.log`: przyjęcia kopert na stanowisku (kolejka i przyjęcie w ms);
 - `podsluch-2026-11-03d.jsonl`, `diag-root-2026-11-03d.log`, `diag-a-2026-11-03d.log`, `stanowisko-2026-11-03d.log`: obraz z `d5d364b` od 12:40 (próba 5 12:50–12:56).
+- `podsluch-2026-11-03e.jsonl`, `diag-root-2026-11-03e.log`, `diag-a-2026-11-03e.log`, `stanowisko-2026-11-03e.log`: obraz z `41f43ba` (dowód doręczenia, 15:55–15:59).
 
 Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../../LICENSE.md)).
