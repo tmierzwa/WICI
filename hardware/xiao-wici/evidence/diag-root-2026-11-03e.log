@@ -1,0 +1,15 @@
+1793717716.587 "store_ok":true,"register":0,"inbox":0,"head":5,"node":true,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"d1fb0f550ae47a12","wdt_s":60,"board":"XIAO"}
+1793717716.587 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0004","busy_timeouts":0,"p1_ok":true,"ok":true}
+1793717716.587 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+1793717716.587 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+1793717716.587 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+1793717716.587 {"journal_ok":true,"debt_seq":157,"debt_ms":0,"debt_written_at_s":11135,"debt_records":32,"tx_wait_ms":0,"clock_seq":209,"uptime_s":12583,"skip_s":300,"restarts":5,"event_seq":101,"max_debt_ms":10056,"journal_resets":0,"prep_entries":4,"prep_at_s":1207,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+1793717719.585 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+1793717750.779 {"lorarx":"raw","len":119,"rssi_dbm":-16}
+1793717750.884 {"hack":"sent","len":27,"end_ms":121}
+1793717752.245 {"lorarx":"raw","len":27,"rssi_dbm":-15}
+1793717754.715 {"lorarx":"raw","len":27,"rssi_dbm":-16}
+1793717781.344 {"lorarx":"raw","len":27,"rssi_dbm":-15}
+1793717938.200 {"lorarx":"raw","len":60,"rssi_dbm":-15}
+1793717938.302 {"hack":"sent","len":27,"end_ms":104}
+1793717940.168 {"lorarx":"raw","len":156,"rssi_dbm":-15}

@@ -1,0 +1,204 @@
+diff --git a/firmware/src/cca_floor.h b/firmware/src/cca_floor.h
+index a1109b1..68d1231 100644
+--- a/firmware/src/cca_floor.h
++++ b/firmware/src/cca_floor.h
+@@ -11,6 +11,7 @@
+ 
+ #include <atomic>
+ #include <stddef.h>
++#include <stdio.h>
+ #include <stdint.h>
+ 
+ namespace cca {
+@@ -25,6 +26,7 @@ public:
+         : lowest_(lowest), highest_(highest), margin_(margin), threshold_(lowest) {}
+ 
+     void sample(int16_t dbm, uint32_t nowMs) {
++        ++samples_;
+         const uint32_t epoch = nowMs / BUCKET_MS;
+         Bucket& b = buckets_[epoch % BUCKETS];
+         if (!b.used || b.epoch != epoch) b = {epoch, dbm, true};
+@@ -47,6 +49,15 @@ public:
+         threshold_.store(static_cast<int16_t>(t), std::memory_order_relaxed);
+     }
+ 
++    // DIAG
++    void diag(char* out, size_t n, uint32_t nowMs) const {
++        size_t k = snprintf(out, n, "\"samples\":%lu,\"buckets\":[", (unsigned long)samples_);
++        for (size_t i = 0; i < BUCKETS && k < n; ++i)
++            k += snprintf(out + k, n - k, "%s[%ld,%d,%u]", i ? "," : "", buckets_[i].used ? (long)(nowMs / BUCKET_MS - buckets_[i].epoch) : -1L,
++                          buckets_[i].min, (unsigned)buckets_[i].used);
++        if (k < n) snprintf(out + k, n - k, "]");
++    }
++    uint32_t samples_ = 0;
+     int16_t threshold() const { return threshold_.load(std::memory_order_relaxed); }
+     // Ostatnio wyznaczone tło; UNKNOWN przed pierwszym wyznaczeniem.
+     static constexpr int16_t UNKNOWN = INT16_MIN;
+diff --git a/firmware/src/radio_console_sx1262.cpp b/firmware/src/radio_console_sx1262.cpp
+index 7beb6fb..6843ff9 100644
+--- a/firmware/src/radio_console_sx1262.cpp
++++ b/firmware/src/radio_console_sx1262.cpp
+@@ -42,7 +42,7 @@ rxwatch::Watch watch;
+ bool stalledWas = false;
+ uint32_t modeLostCount = 0;
+ // Polecenia układu (handle): przy blokadzie radia niedostępnej odpowiedź z błędem zamiast obsługi.
+-const char* const COMMANDS[] = {"RADIO", "RESET", "CONFIG", "VERIFY", "FREQ", "IDLE", "RSSI", "STATE", "REG", "REGW", "SLEEP"};
++const char* const COMMANDS[] = {"RADIO", "RESET", "CONFIG", "VERIFY", "FREQ", "IDLE", "RSSI", "STATE", "REG", "REGW", "SLEEP", "DSETTLE", "DCAD", "DCADRX", "DFLOOR", "DHIST"};
+ bool configured = false;  // profil LoRa zapisany i zweryfikowany odczytem
+ bool modified = false;    // rejestr zmieniony poleceniem REGW (tylko w trybie przygotowania; CONFIG cofa)
+ 
+@@ -292,6 +292,44 @@ bool handleLocked(const char* cmd, char* words[], size_t n) {
+         const bool woke = driver.sleepAndWake(gain);
+         Serial.printf("{\"sleep\":%s,\"rx_gain\":\"0x%02X\",\"boosted\":%s,\"state\":\"%s\"}\n", boolName(woke), gain,
+                       boolName(gain == sx1262::RX_GAIN_BOOSTED), driver.stateName());
++    } else if (!strcmp(cmd, "DSETTLE")) {
++        // DIAG: RSSI co 250 µs przez 30 ms po SetRx z STDBY_XOSC
++        static int16_t d[120]; static uint32_t u[120];
++        const int k = driver.diagRssiSettle(d, u, 120, 250);
++        Serial.print("{\"settle\":[");
++        for (int i = 0; i < k; ++i) Serial.printf("%s[%lu,%d]", i ? "," : "", static_cast<unsigned long>(u[i]), d[i]);
++        Serial.println("]}");
++    } else if (!strcmp(cmd, "DCAD")) {
++        uint32_t count = 200;
++        if (n == 1) cmdargs::parseUint(words[0], 1, 5000, count);
++        uint32_t f = 0, b = 0, b2 = 0, e = 0;
++        const uint32_t t0 = millis();
++        driver.diagCad(count, f, b, b2, e);
++        Serial.printf("{\"cad_n\":%lu,\"free\":%lu,\"busy\":%lu,\"busy_twice\":%lu,\"error\":%lu,\"ms\":%lu}\n",
++                      (unsigned long)count, (unsigned long)f, (unsigned long)b, (unsigned long)b2, (unsigned long)e, (unsigned long)(millis() - t0));
++    } else if (!strcmp(cmd, "DCADRX")) {
++        uint32_t count = 100, delayMs = 15;
++        if (n >= 1) cmdargs::parseUint(words[0], 1, 5000, count);
++        if (n >= 2) cmdargs::parseUint(words[1], 0, 1000, delayMs);
++        uint32_t fr = 0, f = 0, b = 0, b2 = 0, e = 0;
++        driver.diagCadAfterRx(count, delayMs, fr, f, b, b2, e);
++        Serial.printf("{\"cadrx_frames\":%lu,\"delay_ms\":%lu,\"free\":%lu,\"busy\":%lu,\"busy_twice\":%lu,\"error\":%lu}\n",
++                      (unsigned long)fr, (unsigned long)delayMs, (unsigned long)f, (unsigned long)b, (unsigned long)b2, (unsigned long)e);
++    } else if (!strcmp(cmd, "DHIST")) {
++        const uint32_t* hs[3] = {driver.diagHist, driver.diagHistPre, driver.diagHistIrq};
++        const char* names[3] = {"none", "preamble", "other_irq"};
++        for (int k = 0; k < 3; ++k) {
++            Serial.printf("{\"hist\":\"%s\",\"bins\":[", names[k]);
++            bool first = true;
++            for (int i = 0; i < 128; ++i)
++                if (hs[k][i]) { Serial.printf("%s[%d,%lu]", first ? "" : ",", i - 127, (unsigned long)hs[k][i]); first = false; }
++            Serial.println("]}");
++        }
++    } else if (!strcmp(cmd, "DFLOOR")) {
++        static char b[400];
++        driver.diagFloor(b, sizeof(b));
++        Serial.printf("{\"floor\":%d,\"threshold\":%d,\"rx_starts\":%lu,\"early\":%lu,%s}\n", driver.noiseFloorDbm(), driver.ccaThresholdDbm(),
++                      (unsigned long)driver.diagRxStarts, (unsigned long)driver.diagEarly, b);
+     } else return false;
+     return true;
+ }
+diff --git a/firmware/src/sx1262_link.cpp b/firmware/src/sx1262_link.cpp
+index 96806f8..798c8ab 100644
+--- a/firmware/src/sx1262_link.cpp
++++ b/firmware/src/sx1262_link.cpp
+@@ -345,6 +345,7 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
+     rxActive_ = radio_.status().mode() == MODE_RX;
+     if (!rxActive_) rxen(false);
+     headerSeen_ = false;     // flagi skasowane: start odbioru liczy się jak próbka
++    ++diagRxStarts; diagRxStartMs = millis();
+     lastSampleMs_ = millis();
+     return rxActive_;
+ }
+@@ -402,6 +403,11 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
+         if (sampleRssi) {
+             radiolink::Rssi r;
+             if (!readRssi(r)) return RxService::BusyTimeout;
++            if (r.valid && !inFrame_ && now - diagRxStartMs < 5) ++diagEarly;
++            if (r.valid && !inFrame_) {
++                const int idx = r.dbm < -127 ? 0 : (r.dbm > 0 ? 127 : r.dbm + 127);
++                if (irq & 0x0004) ++diagHistPre[idx]; else if (irq) ++diagHistIrq[idx]; else ++diagHist[idx];
++            }
+             if (r.valid && !inFrame_) noise_.sample(r.dbm, now);  // tło tylko poza ramką
+             if (r.valid && r.dbm > ccaThresholdDbm()) activity_.mark(Activity::RSSI, now);
+         }
+@@ -585,3 +591,62 @@ void LinkDriver::reapplyFrequencyOffset() {
+ int32_t LinkDriver::frequencyOffsetHz() { return static_cast<int32_t>(lround(offsetSteps_ * frequencyStepHz())); }
+ 
+ }  // namespace sx1262
++
++namespace sx1262 {
++int LinkDriver::diagRssiSettle(int16_t* dbm, uint32_t* us, int n, uint32_t stepUs) {
++    if (!toStandby()) return 0;
++    rxen(true);
++    const uint8_t continuous[3] = {0xFF, 0xFF, 0xFF};
++    const uint32_t t0 = micros();
++    radio_.command(OP_SET_RX, continuous, 3);
++    int k = 0;
++    for (; k < n; ++k) {
++        while (micros() - t0 < k * stepUs) {}
++        uint8_t raw = 0;
++        radio_.read(OP_GET_RSSI_INST, &raw, 1);
++        us[k] = micros() - t0;
++        dbm[k] = (radio_.lastStatus().mode() == MODE_RX) ? rssiDbm(raw) : 999;
++    }
++    startRx(rxVariable_, rxFixedLength_);
++    return k;
++}
++void LinkDriver::diagCadAfterRx(uint32_t n, uint32_t delayMs, uint32_t& frames, uint32_t& free, uint32_t& busy,
++                                uint32_t& busyTwice, uint32_t& error) {
++    for (uint32_t i = 0; i < n; ++i) {
++        startRx(rxVariable_, rxFixedLength_);
++        const uint32_t t0 = millis();
++        uint16_t irq = 0;
++        bool got = false;
++        while (millis() - t0 < 5000 && radio_.readIrq(irq)) {
++            if (irq & IRQ_RX_END) { got = true; break; }
++            delayMicroseconds(200);
++        }
++        radio_.clearIrq(IRQ_ALL);
++        if (!got) break;
++        ++frames;
++        delay(delayMs);
++        toStandby();
++        const radiolink::Cad a = cad();
++        if (a == radiolink::Cad::Free) ++free;
++        else if (a == radiolink::Cad::Busy) {
++            ++busy;
++            toStandby();
++            if (cad() == radiolink::Cad::Busy) ++busyTwice;
++        } else ++error;
++    }
++    startRx(rxVariable_, rxFixedLength_);
++}
++void LinkDriver::diagCad(uint32_t n, uint32_t& free, uint32_t& busy, uint32_t& busyTwice, uint32_t& error) {
++    for (uint32_t i = 0; i < n; ++i) {
++        toStandby();
++        const radiolink::Cad a = cad();
++        if (a == radiolink::Cad::Free) ++free;
++        else if (a == radiolink::Cad::Busy) {
++            ++busy;
++            toStandby();
++            if (cad() == radiolink::Cad::Busy) ++busyTwice;
++        } else ++error;
++    }
++    startRx(rxVariable_, rxFixedLength_);
++}
++}  // namespace sx1262
+diff --git a/firmware/src/sx1262_link.h b/firmware/src/sx1262_link.h
+index c460591..68f6829 100644
+--- a/firmware/src/sx1262_link.h
++++ b/firmware/src/sx1262_link.h
+@@ -162,10 +162,17 @@ public:
+     radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
+     bool hasSnr() const override { return true; }
+     int8_t ccaThresholdDbm() const override;
+-    int16_t noiseFloorDbm() const { return noise_.floor(); }  // cca::NoiseFloor::UNKNOWN przed pomiarem
++    int16_t noiseFloorDbm() const { return noise_.floor(); }
++    void diagFloor(char* out, size_t n) const { noise_.diag(out, n, millis()); }
++    uint32_t diagHist[128] = {}, diagHistPre[128] = {}, diagHistIrq[128] = {};
++    uint32_t diagRxStarts = 0, diagEarly = 0, diagRxStartMs = 0;  // cca::NoiseFloor::UNKNOWN przed pomiarem
+     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
+     radiolink::Cad cad() override;
+     bool sendPrepared(radiolink::TxTiming* timing) override;
++    // DIAG (tylko obraz diagnostyczny): RSSI po starcie odbioru i seria CAD.
++    int diagRssiSettle(int16_t* dbm, uint32_t* us, int n, uint32_t stepUs);
++    void diagCadAfterRx(uint32_t n, uint32_t delayMs, uint32_t& frames, uint32_t& free, uint32_t& busy, uint32_t& busyTwice, uint32_t& error);
++    void diagCad(uint32_t n, uint32_t& free, uint32_t& busy, uint32_t& busyTwice, uint32_t& error);
+ 
+ private:
+     bool toStandby();    // STDBY_XOSC: między nadawaniem, odbiorem i CAD; false przy przekroczeniu czasu BUSY

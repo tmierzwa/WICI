@@ -215,6 +215,7 @@
       "link_header_bytes": 11,
       "link_mac_bytes": 8,
       "hop_tag_bytes": 8,
+      "hack_echo_bytes": 2,
       "envelope_overhead_bytes": 25,
       "beacon_content_bytes": 73,
       "beacon_signature_bytes": 64,
@@ -222,7 +223,7 @@
       "debt_multiplier": 13,
       "hop_attempts": 3,
       "contended_k2_cap_s": 900.0,
-      "hack_frame_bytes": 27,
+      "hack_frame_bytes": 29,
       "beacon_frame_bytes": 156,
       "signature_variants_single_first_second_bytes": {
         "hop_tag_only": [

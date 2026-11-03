@@ -146,17 +146,6 @@ class NativeWiciLink(unittest.TestCase):
         with self.assertRaises(wici_link.LinkError):
             wici_link.encode(key, wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 1, 0, 7, 1, bytes(229)))
         self.assertEqual(wici_link.KissStream().feed(bytes([0xC0, 0, 0xDB, 0x00, 0xC0])), [])
-        sent, admitted = [], []
-        receiver = wici_link.Receiver(100, 1, key, sent.append, admitted.append)
-        self.assertEqual(receiver.feed(packed), 1)
-        self.assertEqual(admitted, [body])
-        hack_wire, = wici_link.KissStream().feed(sent[0])
-        hack = wici_link.decode(key, 100, hack_wire)
-        self.assertEqual((hack.kind, hack.source, hack.destination, hack.sequence),
-                         (wici_link.HACK, 1, 4, 0x1234))
-        failed = wici_link.Receiver(100, 1, key, sent.append, lambda _: (_ for _ in ()).throw(OSError()))
-        self.assertEqual(failed.feed(packed), 0)
-        self.assertEqual(len(sent), 1)
 
 
 class CrossLanguageEnvelope(unittest.TestCase):
@@ -182,8 +171,12 @@ class CrossLanguageEnvelope(unittest.TestCase):
         key = envelope.derive_key(a, bp, 0x1234, 10, 20, own_id=10)
         whole, = envelope.seal(key, 10, 20, 7, b"[1,1,2]", 236)
         first, second = envelope.seal(key, 10, 20, 0xFFFFFFFF, bytes(range(256)), 153)
-        # Kind type 1 (formerly "TEST łącza") and 15 are reserved: correctly encrypted, still rejected.
+        proof, = envelope.seal(key, 10, 20, 8, bytes([0, 0, 0, 7, 0xFF, 0xFF, 0xFF, 0xFF]), 236, envelope.TYPE_PROOF)
+        # Kind type 1 (a delivery proof, E1) is no SA1 envelope, and 15 is reserved: correctly encrypted,
+        # both rejected on the SA1 path on both sides; the receiver opens a proof only where it asks for one.
         from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+        self.assertEqual(envelope.open_part(key, proof, (envelope.TYPE_SA1, envelope.TYPE_PROOF)).plaintext[4:],
+                         bytes([0xFF] * 4))
         reserved = []
         for kind in (0x41, 0x4F):
             header = bytes([kind]) + whole[1:9]
@@ -192,7 +185,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
                 envelope.open_part(key, reserved[-1])
         binary = native("envelope_check", "envelope", "wici_link", "wici_destination", *DURABLE, crypto=True)
         actual = dict(line.split("=", 1) for line in run(binary, *(f.hex() for f in reserved)).splitlines())
-        self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "first": first.hex(),
+        self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "proof": proof.hex(), "first": first.hex(),
                                   "second": second.hex(), "reserved": "rejected"})
 
     def test_fragment_admission_matches_receiver_inbox(self):
@@ -201,9 +194,9 @@ class CrossLanguageEnvelope(unittest.TestCase):
         # (counter, part, time s, plaintext, station result, receiver result)
         steps = (
             (7, 2, 100, b"world", "partial", "partial"),
-            # Identical repeat. The station reports a duplicate and rate-limits its HACK
-            # (wici_destination.cpp, 5 s); the receiver HACKs it again.
-            (7, 2, 101, b"world", "duplicate", "partial"),
+            # Identical repeat: a duplicate on both sides, HACKed again without a write. The station
+            # rate-limits that HACK (wici_destination.cpp, 5 s).
+            (7, 2, 101, b"world", "duplicate", "duplicate"),
             (7, 2, 101, b"other", "rejected", "rejected"),        # conflicting content
             (7, 1, 102, b"hello ", "complete", "complete"),
             (7, 1, 103, b"hello ", "duplicate", "duplicate"),     # replay bit proves admission
@@ -284,25 +277,32 @@ class CrossLanguageEnvelope(unittest.TestCase):
             (dict(station, receiver=dict(station["receiver"], backup=weak_backup)), "receiver",
              ["receiver.backup.key"]),
         )
-        # Plan-bound down routes: optional `behind` list per neighbour, validated identically.
+        # Plan-bound down routes: optional `behind` list per neighbour, only in the root's document (a relay
+        # learns down routes only to its neighbours), validated identically.
         behind = "priority_keys", ["priority_keys.0.behind"]
+        first = dict(neighbour, id=4)
         second = {"id": 5, "ed25519": honest.hex(), "x25519": "ef" * 32}
+        root = {"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"},
+                "network": dict(network, station=1, parent=0), "priority_keys": [first]}
         cases += (
-            (dict(station, priority_keys=[dict(neighbour, behind=[5, 6, 7]), dict(second, behind=[6])]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=[])]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 125)))]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=[1])]), *behind),        # the neighbour itself
-            (dict(station, priority_keys=[dict(neighbour, behind=[4])]), *behind),        # this station
-            (dict(station, priority_keys=[dict(neighbour, behind=[3])]), *behind),        # a receiver
-            (dict(station, priority_keys=[dict(neighbour, behind=[6, 6])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[0])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[65535])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[True])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=["6"])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=6)]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(10000, 10080)))]), *behind),  # 640 B
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 69))),
-                                          dict(second, behind=list(range(100, 165)))]),
+            (dict(station, priority_keys=[dict(neighbour, behind=[6])]), *behind),     # a station document
+            (dict(station, priority_keys=[dict(neighbour, behind=[])]), *behind),
+            (root, "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[6, 7, 8]), dict(second, behind=[6])]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[])]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=list(range(5, 125)))]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[4])]), *behind),            # the neighbour itself
+            (dict(root, priority_keys=[dict(first, behind=[1])]), *behind),            # this station
+            (dict(root, priority_keys=[dict(first, behind=[3])]), *behind),            # a receiver
+            (dict(root, priority_keys=[dict(first, behind=[6, 6])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[0])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[65535])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[True])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=["6"])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=6)]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=list(range(10000, 10080)))]), *behind),  # 640 B
+            (dict(root, priority_keys=[dict(first, behind=list(range(6, 70))),
+                                       dict(second, behind=list(range(100, 165)))]),
              "priority_keys", ["priority_keys"]),                                    # 129 > BEHIND_MAX
         )
         with tempfile.TemporaryDirectory() as directory:

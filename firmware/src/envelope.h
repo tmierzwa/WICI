@@ -18,7 +18,10 @@ constexpr size_t MAX_SA1 = 256;
 constexpr size_t MAX_FRAME = MAX_SA1 + OVERHEAD;
 constexpr size_t MIN_PAYLOAD = 153;
 static_assert(MIN_PAYLOAD == MAX_SA1 / 2 + OVERHEAD, "two parts fit every bearer");
-constexpr uint8_t TYPE_SA1 = 0;  // the only kind type in v1; 1..15 are reserved and rejected
+constexpr uint8_t TYPE_SA1 = 0;
+// A station's delivery proof to the receiver (transport.md); a station never opens one. 2..15 are reserved.
+constexpr uint8_t TYPE_PROOF = 1;
+constexpr size_t PROOF_COUNTERS = 16;  // u32 counters of resolved SA1 messages, 1..16 per proof
 
 struct Frame {
     uint8_t bytes[MAX_FRAME] = {};
@@ -47,13 +50,14 @@ bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint1
 
 // Returns 1 or 2 frames; 0 on invalid input/capacity. Frames are independently authenticated.
 size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t counter,
-            const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2]);
+            const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2],
+            uint8_t type = TYPE_SA1);
 // Production send path: reserves a counter in FRAM first, then seals. A failed
 // encryption may burn a counter but can never reuse it. Rejects a mismatched binding.
 size_t sealReserved(Counter& counter, const uint8_t key[32], uint16_t netId, uint16_t sender,
                     uint16_t recipient, const uint8_t* plaintext, size_t length, size_t maxPayload,
-                    Frame out[2]);
-// Releases plaintext only after the tag verifies. On failure, out is zeroed.
+                    Frame out[2], uint8_t type = TYPE_SA1);
+// Releases plaintext only after the tag verifies; SA1 only. On failure, out is zeroed.
 bool openPart(const uint8_t key[32], const uint8_t* frame, size_t length, Part& out);
 
 }  // namespace envelope

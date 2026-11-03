@@ -26,8 +26,9 @@ int main() {
     wici_link::Frame frame;
     frame.type = wici_link::Type::HACK; frame.network = 100;
     frame.source = 1; frame.destination = 2; frame.sequence = 7; frame.ttl = 1;
+    frame.payload[0] = 0xA5; frame.payload[1] = 0x5A; frame.length = wici_link::HACK_ECHO;
     const size_t bareLength = wici_link::encode(groupKey, frame, bare, sizeof(bare));
-    assert(bareLength == 19);
+    assert(bareLength == 21);
     size_t radioLength = sender.seal(bare, bareLength, radio, sizeof(radio));
     assert(radioLength == bareLength + wici_link::HOP_TAG && radioLength == wici_link::RADIO_HACK);
     for (size_t i = 0; i < radioLength; ++i) printf("%02x", radio[i]);  // tag vector for Python
@@ -61,7 +62,7 @@ int main() {
     peers[1].station = 3;
     memset(peers[1].x25519, 0, 32);
     assert(!sender.begin(100, 1, a, peers, 2));
-    frame.type = wici_link::Type::HACK; frame.destination = 2; frame.length = 0;
+    frame.type = wici_link::Type::HACK; frame.destination = 2; frame.length = wici_link::HACK_ECHO;
     assert(wici_link::encode(groupKey, frame, bare, sizeof(bare)) == bareLength);
     assert(!sender.seal(bare, bareLength, radio, sizeof(radio)));
     assert(sender.begin(100, 1, a, peers, 1) && sender.seal(bare, bareLength, radio, sizeof(radio)));

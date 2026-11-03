@@ -185,6 +185,9 @@ def check(doc):
                         not _number(number) or not _key(entry.get("ed25519")) or
                         not _key(entry.get("x25519")) or number in seen or number in own):
                     problems.append((f"priority_keys.{i}", "invalid or repeated station number or public key"))
+                elif "behind" in entry and role != "wezel":
+                    # Przekaźnik zna drogi w dół tylko do sąsiadów: plan pilotażu ma najwyżej 2 przeskoki.
+                    problems.append((f"priority_keys.{i}.behind", "stacje za sąsiadem podaje tylko plan roota"))
                 elif (not isinstance(behind, list) or
                       any(not _number(s) or s == number or s in own for s in behind) or
                       len(set(behind)) != len(behind) or

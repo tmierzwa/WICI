@@ -5,6 +5,10 @@ Writes one JSON line per received frame (host time, device RxDone time, raw hex,
 airtime and the plain WICI-Link v3 header when the version bits are 3; with --ifac and --net-id also whether
 the network MAC is valid). On exit (Ctrl+C or --duration) appends and prints a summary: frames and airtime
 per class, airtime per l_src and channel occupancy.
+
+A lost USB connection (the host's serial driver drops the port for a moment) does not end the record: the
+monitor writes a "gap" line, opens the port again and goes on; frames during the gap are not in the record,
+so the report states each gap with its length.
 """
 
 import argparse
@@ -49,6 +53,24 @@ class Monitor:
         return result
 
 
+RECONNECT_S = 0.5
+
+
+def connect(name):
+    """(port, device, info) of a checked lora-raw device with the RX stream on."""
+    port = lora_raw.open_port(name)
+    try:
+        device = lora_raw.Device(port)
+        port.reset_input_buffer()
+        info = device.info()
+        lora_raw.check_info(info)
+        device.command("rx on")
+    except BaseException:
+        port.close()
+        raise
+    return port, device, info
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("port", help="serial port of the RAK4631 with lora-raw")
@@ -60,20 +82,30 @@ def main(argv=None):
     if bool(args.ifac) != bool(args.net_id):
         parser.error("--ifac and --net-id go together")
     key = lora_raw.network_key(args.ifac, args.net_id) if args.ifac else None
-    port = lora_raw.open_port(args.port)
-    device = lora_raw.Device(port)
+    port, device, info = connect(args.port)
     try:
-        port.reset_input_buffer()
-        info = device.info()
-        lora_raw.check_info(info)
-        device.command("rx on")
         with args.out.open("a", encoding="utf-8") as out:
             monitor = Monitor(out, key)
             monitor.write({"host_ts": round(time.time(), 6), "device": info, "tool": "monitor"})
             print(f"monitor: {args.port} -> {args.out}; Ctrl+C ends", file=sys.stderr)
             try:
                 while not args.duration or time.monotonic() - monitor.started < args.duration:
-                    _, record = device.read()
+                    try:
+                        _, record = device.read()
+                    except OSError as exc:   # SerialException is an OSError
+                        lost = time.time()
+                        port.close()
+                        print(f"monitor: USB lost ({exc}); reconnecting", file=sys.stderr)
+                        while True:
+                            time.sleep(RECONNECT_S)
+                            try:
+                                port, device, info = connect(args.port)
+                                break
+                            except OSError:   # also TimeoutError: the device is not up yet
+                                continue
+                        monitor.write({"host_ts": round(time.time(), 6), "gap": "usb", "error": str(exc),
+                                       "gap_s": round(time.time() - lost, 3), "device": info})
+                        continue
                     if record is not None:
                         frame = monitor.handle(record)
                         if frame:
@@ -87,7 +119,6 @@ def main(argv=None):
         print(json.dumps(result["summary"], indent=2))
     finally:
         port.close()
-
 
 if __name__ == "__main__":
     main()

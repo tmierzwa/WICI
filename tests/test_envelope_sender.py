@@ -46,12 +46,17 @@ class SenderTest(unittest.TestCase):
         self.assertEqual(opened.plaintext, b"hello")
         restored.close()
 
-    def test_failed_snapshot_never_seals(self):
+    def test_failed_snapshot_never_seals_and_is_retried(self):
         failed = Sender(self.db, lambda: False)
+        for _ in range(2):   # every seal tries a new snapshot; none seals without one
+            with self.assertRaises(OSError):
+                self.seal(failed)
+        results = [False, True]
+        sender = Sender(self.db, lambda: results.pop(0))
         with self.assertRaises(OSError):
-            self.seal(failed)
-        with self.assertRaises(envelope.EnvelopeError):
-            self.seal(failed)
+            self.seal(sender)
+        # The failed block was never handed out; the next seal reserves past it.
+        self.assertEqual(int.from_bytes(self.seal(sender)[5:9], "big"), 3 * 64)
 
     def test_restored_copy_refuses_old_identity(self):
         self.db.execute("CREATE TABLE kopia (id INTEGER)")

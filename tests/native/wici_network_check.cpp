@@ -49,6 +49,9 @@ int main() {
     wici_link::Frame hack;
     hack.type = wici_link::Type::HACK; hack.network = 100;
     hack.source = 2; hack.destination = 4; hack.sequence = 41; hack.ttl = 1;
+    const uint16_t echo = wici_link::macEcho(incoming, receivedLength);
+    hack.payload[0] = static_cast<uint8_t>(echo >> 8); hack.payload[1] = static_cast<uint8_t>(echo);
+    hack.length = wici_link::HACK_ECHO;
     uint8_t hackWire[wici_link::MAX_FRAME] = {};
     const size_t hackLength = wici_link::encode(key, hack, hackWire, sizeof(hackWire));
     wici_link::Frame checked;
@@ -72,7 +75,8 @@ int main() {
     assert(wici_link::decode(key, 100, forwardWire, forwardLength, checked));
     assert(checked.destination == 1 && checked.payload[8] == 7);
 
-    wici_route::Table root(rootMemory, {100, 1, 1, 0, 0});
+    const config::Behind rootPlan[] = {{4, 2}};  // the root's plan: station 4 behind relay 2
+    wici_route::Table root(rootMemory, {100, 1, 1, 0, 0}, nullptr, 0, rootPlan, 1);
     assert(root.begin() && root.setRootEpoch(1));
     assert(root.learn(4, 2) && root.down(4) == 2);
     assert(restarted.remove(0, 102));  // root HACK

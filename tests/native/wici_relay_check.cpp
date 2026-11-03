@@ -156,4 +156,19 @@ int main() {
     memory.bytes[wici_relay::BASE + 0 * wici_relay::COPY_BYTES + 25] ^= 1;
     wici_relay::Queue corrupt(memory);
     assert(!corrupt.begin(key, 100, 2));
+
+    // A damaged seen-ring record is not security state: it is tombstoned and
+    // counted, and the link starts. At worst the envelope is forwarded again.
+    static Memory seenMemory;
+    wici_relay::Queue seenFirst(seenMemory);
+    assert(seenFirst.begin(newKey, 100, 2));
+    assert(seenFirst.admit(wire, n, 300) == wici_relay::Admission::STORED);
+    assert(seenFirst.remove(0, 301));
+    assert(seenFirst.admit(wire, n, 302) == wici_relay::Admission::FORWARDED);
+    seenMemory.bytes[wici_seen::BASE + 5] ^= 1;
+    wici_relay::Queue seenDamaged(seenMemory);
+    assert(seenDamaged.begin(newKey, 100, 2) && seenDamaged.clearedRecords() == 1 && seenDamaged.ready());
+    assert(seenDamaged.admit(wire, n, 303) == wici_relay::Admission::STORED);
+    wici_relay::Queue seenClean(seenMemory);
+    assert(seenClean.begin(newKey, 100, 2) && seenClean.clearedRecords() == 0);
 }

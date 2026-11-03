@@ -1,0 +1,29 @@
+1793717716.587 "node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"1ff9742525aaa2b7","wdt_s":60,"board":"XIAO"}
+1793717716.587 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0000","busy_timeouts":0,"p1_ok":true,"ok":true}
+1793717716.587 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+1793717716.587 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+1793717716.587 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+1793717716.587 {"journal_ok":true,"debt_seq":133,"debt_ms":0,"debt_written_at_s":11954,"debt_records":32,"tx_wait_ms":0,"clock_seq":209,"uptime_s":12600,"skip_s":360,"restarts":6,"event_seq":135,"max_debt_ms":10056,"journal_resets":0,"prep_entries":4,"prep_at_s":1262,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+1793717718.878 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+1793717750.482 > REQ 1 0
+1793717750.791 {"numbers":[1954],"created":1,"sa1_bytes":67}
+1793717750.893 {"lorarx":"raw","len":27,"rssi_dbm":-16}
+1793717752.245 {"hack":"sent","len":27,"end_ms":100}
+1793717752.245 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+1793717754.721 {"hack":"sent","len":27,"end_ms":98}
+1793717754.721 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+1793717781.378 {"hack":"sent","len":27,"end_ms":97}
+1793717781.378 {"lorarx":"raw","len":127,"rssi_dbm":-16}
+1793717821.662 > SILENCE 1
+1793717821.972 {"silence":true,"switch":true}
+1793717825.399 {"lorarx":"raw","len":122,"rssi_dbm":-16}
+1793717837.811 {"lorarx":"raw","len":122,"rssi_dbm":-15}
+1793717842.156 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+1793717850.412 {"lorarx":"raw","len":122,"rssi_dbm":-15}
+1793717905.634 {"lorarx":"raw","len":114,"rssi_dbm":-15}
+1793717938.053 > SILENCE 0
+1793717938.360 {"silence":false,"switch":false}
+1793717938.360 {"lorarx":"raw","len":27,"rssi_dbm":-15}
+1793717963.172 > HACK
+1793717963.478 {"hack_sent":3,"hack_late":0,"hack_refused":3,"hack_over_200ms":0,"end_ms_last":97,"end_ms_max":100,"end_ms_mean":98,"refused_by":{"state":3,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":2,"beacon_check_ms_last":67,"beacon_check_ms_max":133,"beacon_dropped":0,"beacon_stack_free":5932,"proofs_dropped":0}
+1793717963.787 {"lorarx":"raw","len":156,"rssi_dbm":-15}

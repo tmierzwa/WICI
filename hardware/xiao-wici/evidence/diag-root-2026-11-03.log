@@ -1,0 +1,885 @@
+1793691421.769 "bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":1062,"service_s":882,"boot_s":746,"screen":"main","lang":"PL","name":"WICI-548ED5","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":555,"loop_max_ms":284,"rx_task_loops":746163,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":0,"inbox":0,"head":4,"node":true,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":56,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"45ded3259b5cb37a","wdt_s":60,"board":"XIAO"}
+1793691421.769 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x54","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0197","busy_timeouts":0,"p1_ok":true,"ok":true}
+1793691421.769 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+1793691421.769 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+1793691421.769 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+1793691421.769 {"journal_ok":true,"debt_seq":65,"debt_ms":0,"debt_written_at_s":1009,"debt_records":32,"tx_wait_ms":0,"clock_seq":17,"uptime_s":1062,"skip_s":180,"restarts":3,"event_seq":45,"max_debt_ms":10056,"journal_resets":0,"prep_entries":2,"prep_at_s":316,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+1793691423.682 > HACK
+1793691423.990 {"hack_sent":22,"hack_late":0,"hack_refused":2,"hack_over_200ms":0,"end_ms_last":110,"end_ms_max":111,"end_ms_mean":106,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":2,"debt":0,"tx":0}}
+1793691454.558 > RSSI
+1793691454.871 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691455.077 > RSSI
+1793691455.385 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691455.604 > RSSI
+1793691455.909 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691456.119 > RSSI
+1793691456.429 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691456.641 > RSSI
+1793691456.954 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691457.160 > RSSI
+1793691457.475 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691457.685 > RSSI
+1793691457.998 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691458.211 > RSSI
+1793691458.524 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691458.736 > RSSI
+1793691459.046 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691459.264 > RSSI
+1793691459.575 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691459.680 > RSSI
+1793691459.993 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691460.206 > RSSI
+1793691460.516 {"rssi_valid":true,"rssi_dbm":-92,"state":"RX"}
+1793691460.731 > RSSI
+1793691461.048 {"rssi_valid":true,"rssi_dbm":-92,"state":"RX"}
+1793691461.267 > RSSI
+1793691461.588 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691461.806 > RSSI
+1793691462.114 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691462.321 > RSSI
+1793691462.632 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691462.851 > RSSI
+1793691463.157 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691463.376 > RSSI
+1793691463.690 {"rssi_valid":true,"rssi_dbm":-92,"state":"RX"}
+1793691463.798 > RSSI
+1793691464.113 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691464.334 > RSSI
+1793691464.649 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691464.855 > RSSI
+1793691465.162 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691465.373 > RSSI
+1793691465.691 {"rssi_valid":true,"rssi_dbm":-88,"state":"RX"}
+1793691465.904 > RSSI
+1793691466.210 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691466.430 > RSSI
+1793691466.748 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691466.963 > RSSI
+1793691467.278 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691467.385 > RSSI
+1793691467.705 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691467.914 > RSSI
+1793691468.230 {"rssi_valid":true,"rssi_dbm":-88,"state":"RX"}
+1793691468.441 > RSSI
+1793691468.760 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691468.973 > RSSI
+1793691469.287 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691469.504 > RSSI
+1793691469.818 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691497.761 > P1
+1793691498.071 {"lora":{"rx":true,"tx":"idle","rx_ok":51,"rx_bad":0,"rx_datagrams":51,"tx_datagrams":49,"tx_fragments":49,"tx_drop":1,"deferrals":92,"long_deferrals":8,"cad_busy":2,"rssi_busy":83,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691540.242 > HACK 0
+1793691540.452 > INFO
+1793691540.660 > P1
+1793691540.972 {"hack_sent":0,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0}}
+1793691540.972 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":51,"rx_bad":0,"tx_drop":1,"restarts":3,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":1181,"service_s":1001,"boot_s":865,"screen":"main","lang":"PL","name":"WICI-548ED5","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":555,"loop_max_ms":284,"rx_task_loops":864948,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":0,"inbox":0,"head":4,"node":true,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":175,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"45ded3259b5cb37a","wdt_s":60,"board":"XIAO"}
+1793691540.972 {"lora":{"rx":true,"tx":"idle","rx_ok":51,"rx_bad":0,"rx_datagrams":51,"tx_datagrams":49,"tx_fragments":49,"tx_drop":1,"deferrals":92,"long_deferrals":8,"cad_busy":2,"rssi_busy":83,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691541.288 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691541.397 {"hack":"sent","len":27,"end_ms":105}
+1793691542.756 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691545.331 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691545.437 {"hack":"sent","len":27,"end_ms":110}
+1793691546.825 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691549.492 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691549.602 {"hack":"sent","len":27,"end_ms":110}
+1793691550.874 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691552.260 > P1
+1793691552.464 > RSSI
+1793691552.784 {"lora":{"rx":true,"tx":"idle","rx_ok":57,"rx_bad":0,"rx_datagrams":57,"tx_datagrams":55,"tx_fragments":55,"tx_drop":1,"deferrals":92,"long_deferrals":8,"cad_busy":2,"rssi_busy":83,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":754}}
+1793691552.784 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691558.433 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691558.536 {"hack":"sent","len":27,"end_ms":109}
+1793691559.817 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691562.252 > P1
+1793691562.462 > RSSI
+1793691562.777 {"lora":{"rx":true,"tx":"idle","rx_ok":59,"rx_bad":0,"rx_datagrams":59,"tx_datagrams":57,"tx_fragments":57,"tx_drop":1,"deferrals":92,"long_deferrals":8,"cad_busy":2,"rssi_busy":83,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":0}}
+1793691562.778 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691562.778 {"hack":"sent","len":27,"end_ms":106}
+1793691562.778 {"rssi_valid":true,"rssi_dbm":-93,"state":"RX"}
+1793691563.931 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691566.544 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691566.649 {"hack":"sent","len":27,"end_ms":107}
+1793691572.309 > P1
+1793691572.511 > RSSI
+1793691572.830 {"lora":{"rx":true,"tx":"backoff","rx_ok":62,"rx_bad":0,"rx_datagrams":62,"tx_datagrams":60,"tx_fragments":60,"tx_drop":1,"deferrals":100,"long_deferrals":8,"cad_busy":2,"rssi_busy":91,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691572.830 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691573.777 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691576.132 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691576.237 {"hack":"sent","len":27,"end_ms":107}
+1793691577.653 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691580.212 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691580.317 {"hack":"sent","len":27,"end_ms":107}
+1793691581.680 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691582.330 > P1
+1793691582.535 > RSSI
+1793691582.850 {"lora":{"rx":true,"tx":"idle","rx_ok":67,"rx_bad":0,"rx_datagrams":67,"tx_datagrams":65,"tx_fragments":65,"tx_drop":1,"deferrals":102,"long_deferrals":9,"cad_busy":2,"rssi_busy":93,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":1476}}
+1793691582.850 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691584.356 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691584.457 {"hack":"sent","len":27,"end_ms":110}
+1793691585.748 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691588.400 {"lorarx":"raw","len":125,"rssi_dbm":-17}
+1793691588.510 {"hack":"sent","len":27,"end_ms":106}
+1793691592.358 > P1
+1793691592.566 > RSSI
+1793691592.879 {"lora":{"rx":true,"tx":"backoff","rx_ok":70,"rx_bad":0,"rx_datagrams":70,"tx_datagrams":68,"tx_fragments":68,"tx_drop":1,"deferrals":109,"long_deferrals":9,"cad_busy":2,"rssi_busy":100,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691592.879 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691594.369 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691600.907 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691601.016 {"hack":"sent","len":27,"end_ms":108}
+1793691602.290 > P1
+1793691602.500 > RSSI
+1793691602.804 {"lora":{"rx":true,"tx":"idle","rx_ok":72,"rx_bad":0,"rx_datagrams":72,"tx_datagrams":71,"tx_fragments":71,"tx_drop":1,"deferrals":111,"long_deferrals":10,"cad_busy":2,"rssi_busy":102,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":2140}}
+1793691602.804 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691603.854 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691603.964 {"hack":"sent","len":27,"end_ms":111}
+1793691606.760 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691606.870 {"hack":"sent","len":27,"end_ms":104}
+1793691610.588 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691610.688 {"hack":"sent","len":27,"end_ms":108}
+1793691612.379 > P1
+1793691612.581 > RSSI
+1793691612.899 {"lora":{"rx":true,"tx":"idle","rx_ok":75,"rx_bad":0,"rx_datagrams":75,"tx_datagrams":74,"tx_fragments":74,"tx_drop":1,"deferrals":111,"long_deferrals":10,"cad_busy":2,"rssi_busy":102,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691612.899 {"rssi_valid":true,"rssi_dbm":-88,"state":"RX"}
+1793691616.306 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691618.752 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691620.024 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691620.128 {"hack":"sent","len":27,"end_ms":108}
+1793691622.356 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691622.357 > P1
+1793691622.562 > RSSI
+1793691622.872 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":79,"rx_bad":0,"rx_datagrams":79,"tx_datagrams":78,"tx_fragments":78,"tx_drop":1,"deferrals":114,"long_deferrals":11,"cad_busy":2,"rssi_busy":105,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":2134}}
+1793691622.872 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691625.931 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691631.976 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691632.405 > P1
+1793691632.609 > RSSI
+1793691632.920 {"lora":{"rx":true,"tx":"idle","rx_ok":81,"rx_bad":0,"rx_datagrams":81,"tx_datagrams":80,"tx_fragments":80,"tx_drop":1,"deferrals":123,"long_deferrals":13,"cad_busy":2,"rssi_busy":114,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1677}}
+1793691632.920 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691634.432 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691634.538 {"hack":"sent","len":27,"end_ms":107}
+1793691635.913 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691638.589 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691638.589 {"hack":"sent","len":27,"end_ms":105}
+1793691641.790 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691642.329 > P1
+1793691642.539 > RSSI
+1793691642.859 {"lora":{"rx":true,"tx":"idle","rx_ok":85,"rx_bad":0,"rx_datagrams":85,"tx_datagrams":84,"tx_fragments":84,"tx_drop":1,"deferrals":125,"long_deferrals":14,"cad_busy":2,"rssi_busy":116,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1576}}
+1793691642.859 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691648.191 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691648.191 {"hack":"sent","len":27,"end_ms":107}
+1793691649.577 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691652.234 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691652.341 {"hack":"sent","len":27,"end_ms":110}
+1793691652.342 > P1
+1793691652.548 > RSSI
+1793691652.863 {"lora":{"rx":true,"tx":"idle","rx_ok":88,"rx_bad":0,"rx_datagrams":88,"tx_datagrams":87,"tx_fragments":87,"tx_drop":1,"deferrals":125,"long_deferrals":14,"cad_busy":2,"rssi_busy":116,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":965}}
+1793691652.863 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691653.715 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691656.268 {"lorarx":"raw","len":125,"rssi_dbm":-17}
+1793691656.378 {"hack":"sent","len":27,"end_ms":105}
+1793691657.776 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691660.871 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691660.979 {"hack":"sent","len":27,"end_ms":108}
+1793691662.343 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691662.343 > P1
+1793691662.548 > RSSI
+1793691662.860 {"lora":{"rx":true,"tx":"idle","rx_ok":93,"rx_bad":0,"rx_datagrams":93,"tx_datagrams":92,"tx_fragments":92,"tx_drop":1,"deferrals":125,"long_deferrals":14,"cad_busy":2,"rssi_busy":116,"rx_busy":8,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":2084}}
+1793691662.860 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691664.905 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691665.009 {"hack":"sent","len":27,"end_ms":105}
+1793691668.092 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691668.202 {"hack":"sent","len":27,"end_ms":106}
+1793691672.467 > P1
+1793691672.677 > RSSI
+1793691672.988 {"lora":{"rx":true,"tx":"backoff","rx_ok":95,"rx_bad":0,"rx_datagrams":95,"tx_datagrams":94,"tx_fragments":94,"tx_drop":1,"deferrals":137,"long_deferrals":14,"cad_busy":2,"rssi_busy":127,"rx_busy":9,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691672.988 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691672.988 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691673.098 {"hack":"sent","len":27,"end_ms":107}
+1793691676.194 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691676.298 {"hack":"sent","len":27,"end_ms":105}
+1793691677.780 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691680.321 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691682.478 > P1
+1793691682.688 > RSSI
+1793691683.008 {"lora":{"rx":true,"tx":"backoff","rx_ok":99,"rx_bad":0,"rx_datagrams":99,"tx_datagrams":98,"tx_fragments":98,"tx_drop":1,"deferrals":143,"long_deferrals":14,"cad_busy":2,"rssi_busy":133,"rx_busy":9,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691683.008 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691684.278 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691687.993 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691692.158 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691692.266 {"hack":"sent","len":27,"end_ms":108}
+1793691692.487 > P1
+1793691692.694 > RSSI
+1793691693.013 {"lora":{"rx":true,"tx":"idle","rx_ok":102,"rx_bad":0,"rx_datagrams":102,"tx_datagrams":101,"tx_fragments":101,"tx_drop":1,"deferrals":148,"long_deferrals":16,"cad_busy":2,"rssi_busy":138,"rx_busy":9,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":738}}
+1793691693.013 {"rssi_valid":true,"rssi_dbm":-88,"state":"RX"}
+1793691694.290 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691696.208 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691696.313 {"hack":"sent","len":27,"end_ms":109}
+1793691699.933 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691702.390 > P1
+1793691702.599 > RSSI
+1793691702.912 {"lora":{"rx":true,"tx":"idle","rx_ok":105,"rx_bad":0,"rx_datagrams":105,"tx_datagrams":104,"tx_fragments":104,"tx_drop":1,"deferrals":152,"long_deferrals":17,"cad_busy":2,"rssi_busy":142,"rx_busy":9,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691702.912 {"rssi_valid":true,"rssi_dbm":-92,"state":"RX"}
+1793691708.287 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691708.397 {"hack":"sent","len":27,"end_ms":109}
+1793691709.777 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691712.327 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691712.430 {"hack":"sent","len":27,"end_ms":106}
+1793691712.430 > P1
+1793691712.636 > RSSI
+1793691712.955 {"lora":{"rx":true,"tx":"idle","rx_ok":108,"rx_bad":0,"rx_datagrams":108,"tx_datagrams":107,"tx_fragments":107,"tx_drop":1,"deferrals":152,"long_deferrals":17,"cad_busy":2,"rssi_busy":142,"rx_busy":9,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":1042}}
+1793691712.955 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691713.803 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691716.472 {"lorarx":"raw","len":125,"rssi_dbm":-17}
+1793691716.582 {"hack":"sent","len":27,"end_ms":107}
+1793691720.860 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691720.962 {"hack":"sent","len":27,"end_ms":105}
+1793691722.444 > P1
+1793691722.655 > RSSI
+1793691722.963 {"lora":{"rx":true,"tx":"backoff","rx_ok":111,"rx_bad":0,"rx_datagrams":111,"tx_datagrams":110,"tx_fragments":110,"tx_drop":1,"deferrals":161,"long_deferrals":17,"cad_busy":2,"rssi_busy":150,"rx_busy":10,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691722.963 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691724.664 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691724.766 {"hack":"sent","len":27,"end_ms":108}
+1793691728.174 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691728.274 {"hack":"sent","len":27,"end_ms":109}
+1793691730.387 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691732.226 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691732.333 {"hack":"sent","len":27,"end_ms":106}
+1793691732.443 > P1
+1793691732.653 > RSSI
+1793691732.972 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":115,"rx_bad":0,"rx_datagrams":115,"tx_datagrams":114,"tx_fragments":114,"tx_drop":1,"deferrals":170,"long_deferrals":17,"cad_busy":2,"rssi_busy":159,"rx_busy":10,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1159}}
+1793691732.972 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691740.190 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691740.391 {"hack":"sent","len":27,"end_ms":107}
+1793691742.525 > P1
+1793691742.729 > RSSI
+1793691743.040 {"lora":{"rx":true,"tx":"idle","rx_ok":116,"rx_bad":0,"rx_datagrams":116,"tx_datagrams":116,"tx_fragments":116,"tx_drop":1,"deferrals":173,"long_deferrals":18,"cad_busy":2,"rssi_busy":162,"rx_busy":10,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691743.040 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691744.087 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691744.188 {"hack":"sent","len":27,"end_ms":106}
+1793691747.053 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691747.156 {"hack":"sent","len":27,"end_ms":109}
+1793691748.536 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691751.104 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691751.213 {"hack":"sent","len":27,"end_ms":106}
+1793691752.467 > P1
+1793691752.677 > RSSI
+1793691752.997 {"lora":{"rx":true,"tx":"backoff","rx_ok":120,"rx_bad":0,"rx_datagrams":120,"tx_datagrams":120,"tx_fragments":120,"tx_drop":1,"deferrals":176,"long_deferrals":18,"cad_busy":2,"rssi_busy":165,"rx_busy":10,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691752.997 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691755.857 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691759.887 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691762.136 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691762.239 {"hack":"sent","len":27,"end_ms":107}
+1793691762.556 > P1
+1793691762.766 > RSSI
+1793691763.083 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":123,"rx_bad":0,"rx_datagrams":123,"tx_datagrams":123,"tx_fragments":123,"tx_drop":1,"deferrals":185,"long_deferrals":20,"cad_busy":2,"rssi_busy":173,"rx_busy":11,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":625}}
+1793691763.083 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691763.833 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691766.189 {"lorarx":"raw","len":125,"rssi_dbm":-17}
+1793691766.297 {"hack":"sent","len":27,"end_ms":108}
+1793691772.148 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691772.561 > P1
+1793691772.767 > RSSI
+1793691773.086 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":126,"rx_bad":0,"rx_datagrams":126,"tx_datagrams":126,"tx_fragments":126,"tx_drop":1,"deferrals":196,"long_deferrals":21,"cad_busy":2,"rssi_busy":182,"rx_busy":13,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1682}}
+1793691773.086 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691776.044 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691778.506 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691780.862 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691780.970 {"hack":"sent","len":27,"end_ms":106}
+1793691782.329 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691782.542 > P1
+1793691782.752 > RSSI
+1793691783.056 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":130,"rx_bad":0,"rx_datagrams":130,"tx_datagrams":130,"tx_fragments":130,"tx_drop":1,"deferrals":199,"long_deferrals":22,"cad_busy":2,"rssi_busy":184,"rx_busy":14,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1911}}
+1793691783.056 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691788.271 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691791.897 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691792.527 > P1
+1793691792.731 > RSSI
+1793691793.038 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":132,"rx_bad":0,"rx_datagrams":132,"tx_datagrams":132,"tx_fragments":132,"tx_drop":1,"deferrals":206,"long_deferrals":24,"cad_busy":2,"rssi_busy":191,"rx_busy":14,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1443}}
+1793691793.038 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691794.321 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691796.378 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691796.488 {"hack":"sent","len":27,"end_ms":108}
+1793691797.891 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691802.577 > P1
+1793691802.777 > RSSI
+1793691803.094 {"lora":{"rx":true,"tx":"idle","rx_ok":135,"rx_bad":0,"rx_datagrams":135,"tx_datagrams":135,"tx_fragments":135,"tx_drop":1,"deferrals":206,"long_deferrals":24,"cad_busy":2,"rssi_busy":191,"rx_busy":14,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691803.094 {"rssi_valid":true,"rssi_dbm":-92,"state":"RX"}
+1793691804.266 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691804.376 {"hack":"sent","len":27,"end_ms":106}
+1793691808.217 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691808.320 {"hack":"sent","len":27,"end_ms":107}
+1793691809.923 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691812.290 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691812.400 {"hack":"sent","len":27,"end_ms":105}
+1793691812.613 > P1
+1793691812.814 > RSSI
+1793691813.131 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":139,"rx_bad":0,"rx_datagrams":139,"tx_datagrams":139,"tx_fragments":139,"tx_drop":1,"deferrals":213,"long_deferrals":24,"cad_busy":2,"rssi_busy":196,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":732}}
+1793691813.131 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691813.881 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691819.847 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691822.641 > P1
+1793691822.851 > RSSI
+1793691823.161 {"lora":{"rx":true,"tx":"idle","rx_ok":141,"rx_bad":0,"rx_datagrams":141,"tx_datagrams":141,"tx_fragments":141,"tx_drop":1,"deferrals":220,"long_deferrals":25,"cad_busy":2,"rssi_busy":203,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691823.161 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691824.341 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691824.445 {"hack":"sent","len":27,"end_ms":107}
+1793691825.839 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691828.403 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691828.513 {"hack":"sent","len":27,"end_ms":106}
+1793691829.880 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691832.628 > P1
+1793691832.831 > RSSI
+1793691833.148 {"lora":{"rx":true,"tx":"idle","rx_ok":145,"rx_bad":0,"rx_datagrams":145,"tx_datagrams":145,"tx_fragments":145,"tx_drop":1,"deferrals":220,"long_deferrals":25,"cad_busy":2,"rssi_busy":203,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":0}}
+1793691833.148 {"rssi_valid":true,"rssi_dbm":-91,"state":"RX"}
+1793691836.231 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691836.335 {"hack":"sent","len":27,"end_ms":110}
+1793691840.164 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691842.389 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691842.491 {"hack":"sent","len":27,"end_ms":109}
+1793691842.596 > P1
+1793691842.801 > RSSI
+1793691843.117 {"lora":{"rx":true,"tx":"idle","rx_ok":148,"rx_bad":0,"rx_datagrams":148,"tx_datagrams":148,"tx_fragments":148,"tx_drop":1,"deferrals":225,"long_deferrals":26,"cad_busy":2,"rssi_busy":208,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":879}}
+1793691843.117 {"rssi_valid":true,"rssi_dbm":-89,"state":"RX"}
+1793691843.878 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691846.445 {"lorarx":"raw","len":125,"rssi_dbm":-17}
+1793691846.556 {"hack":"sent","len":27,"end_ms":104}
+1793691851.829 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793691852.575 > P1
+1793691852.778 > RSSI
+1793691853.089 {"lora":{"rx":true,"tx":"idle","rx_ok":151,"rx_bad":0,"rx_datagrams":151,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-100,"tx_wait_ms":1382}}
+1793691853.089 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691862.651 > P1
+1793691862.859 > RSSI
+1793691863.169 {"lora":{"rx":true,"tx":"idle","rx_ok":151,"rx_bad":0,"rx_datagrams":151,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691863.169 {"rssi_valid":true,"rssi_dbm":-90,"state":"RX"}
+1793691870.388 > HACK
+1793691870.598 > INFO
+1793691870.802 > P1
+1793691871.109 {"hack_sent":50,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":104,"end_ms_max":111,"end_ms_mean":107,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0}}
+1793691871.109 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":151,"rx_bad":0,"tx_drop":1,"restarts":3,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":1511,"service_s":1331,"boot_s":1195,"screen":"main","lang":"PL","name":"WICI-548ED5","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":555,"loop_max_ms":284,"rx_task_loops":1195043,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":0,"inbox":0,"head":4,"node":true,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":22,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"45ded3259b5cb37a","wdt_s":60,"board":"XIAO"}
+1793691871.109 {"lora":{"rx":true,"tx":"idle","rx_ok":151,"rx_bad":0,"rx_datagrams":151,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691945.408 > SILENCE 1
+1793691945.718 {"silence":true,"switch":true}
+1793691947.753 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691950.682 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691953.641 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691956.586 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691957.450 > P1
+1793691957.761 {"lora":{"rx":true,"tx":"idle","rx_ok":155,"rx_bad":0,"rx_datagrams":155,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691959.463 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691964.186 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691967.072 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691967.395 > P1
+1793691967.701 {"lora":{"rx":true,"tx":"idle","rx_ok":158,"rx_bad":0,"rx_datagrams":158,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691970.052 {"lorarx":"raw","len":156,"rssi_dbm":-17}
+1793691973.659 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691976.523 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691977.484 > P1
+1793691977.792 {"lora":{"rx":true,"tx":"idle","rx_ok":161,"rx_bad":0,"rx_datagrams":161,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691980.128 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691982.976 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691986.388 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691987.453 > P1
+1793691987.758 {"lora":{"rx":true,"tx":"idle","rx_ok":164,"rx_bad":0,"rx_datagrams":164,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691989.371 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691992.242 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691996.308 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793691997.500 > P1
+1793691997.814 {"lora":{"rx":true,"tx":"idle","rx_ok":167,"rx_bad":0,"rx_datagrams":167,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793691999.314 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692002.220 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692005.168 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692007.521 > P1
+1793692007.835 {"lora":{"rx":true,"tx":"idle","rx_ok":170,"rx_bad":0,"rx_datagrams":170,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692008.049 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692014.236 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692017.456 > P1
+1793692017.769 {"lora":{"rx":true,"tx":"idle","rx_ok":172,"rx_bad":0,"rx_datagrams":172,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692018.632 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692021.647 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692024.533 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692027.503 > P1
+1793692027.822 {"lora":{"rx":true,"tx":"idle","rx_ok":175,"rx_bad":0,"rx_datagrams":175,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692030.087 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692034.391 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692037.461 {"lorarx":"raw","len":156,"rssi_dbm":-17}
+1793692037.461 > P1
+1793692037.773 {"lora":{"rx":true,"tx":"idle","rx_ok":178,"rx_bad":0,"rx_datagrams":178,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692040.952 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692044.236 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692047.245 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692047.457 > P1
+1793692047.766 {"lora":{"rx":true,"tx":"idle","rx_ok":181,"rx_bad":0,"rx_datagrams":181,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692050.128 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692053.106 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692056.606 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692057.472 > P1
+1793692057.780 {"lora":{"rx":true,"tx":"idle","rx_ok":184,"rx_bad":0,"rx_datagrams":184,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692060.417 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692063.317 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692066.270 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692067.538 > P1
+1793692067.858 {"lora":{"rx":true,"tx":"idle","rx_ok":187,"rx_bad":0,"rx_datagrams":187,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692069.245 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692072.134 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692076.303 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692077.578 > P1
+1793692077.891 {"lora":{"rx":true,"tx":"idle","rx_ok":190,"rx_bad":0,"rx_datagrams":190,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692079.255 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692082.140 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692085.036 {"lorarx":"raw","len":124,"rssi_dbm":-18}
+1793692087.558 > P1
+1793692087.863 {"lora":{"rx":true,"tx":"idle","rx_ok":193,"rx_bad":0,"rx_datagrams":193,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692088.488 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692092.839 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692095.747 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692097.520 > P1
+1793692097.830 {"lora":{"rx":true,"tx":"idle","rx_ok":196,"rx_bad":0,"rx_datagrams":196,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692098.661 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692101.679 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692104.573 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692107.581 > P1
+1793692107.892 {"lora":{"rx":true,"tx":"idle","rx_ok":199,"rx_bad":0,"rx_datagrams":199,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692108.722 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692112.453 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692115.342 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692117.624 > P1
+1793692117.930 {"lora":{"rx":true,"tx":"idle","rx_ok":202,"rx_bad":0,"rx_datagrams":202,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692118.235 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692121.251 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692124.168 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692127.593 > P1
+1793692127.900 {"lora":{"rx":true,"tx":"idle","rx_ok":205,"rx_bad":0,"rx_datagrams":205,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692130.290 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692134.222 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692137.115 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692137.638 > P1
+1793692137.942 {"lora":{"rx":true,"tx":"idle","rx_ok":208,"rx_bad":0,"rx_datagrams":208,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692140.120 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692145.095 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692147.577 > P1
+1793692147.884 {"lora":{"rx":true,"tx":"idle","rx_ok":210,"rx_bad":0,"rx_datagrams":210,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692147.989 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692150.899 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692153.891 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692157.626 > P1
+1793692157.932 {"lora":{"rx":true,"tx":"idle","rx_ok":213,"rx_bad":0,"rx_datagrams":213,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692167.660 > P1
+1793692167.970 {"lora":{"rx":true,"tx":"idle","rx_ok":213,"rx_bad":0,"rx_datagrams":213,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692177.625 > P1
+1793692177.933 {"lora":{"rx":true,"tx":"idle","rx_ok":213,"rx_bad":0,"rx_datagrams":213,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692187.671 > P1
+1793692187.978 {"lora":{"rx":true,"tx":"idle","rx_ok":213,"rx_bad":0,"rx_datagrams":213,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692192.121 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692195.013 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692197.691 > P1
+1793692197.999 {"lora":{"rx":true,"tx":"idle","rx_ok":215,"rx_bad":0,"rx_datagrams":215,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692197.999 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692200.888 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692203.839 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692207.629 > P1
+1793692207.940 {"lora":{"rx":true,"tx":"idle","rx_ok":218,"rx_bad":0,"rx_datagrams":218,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692208.353 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692211.257 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692214.253 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692217.142 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692217.657 > P1
+1793692217.961 {"lora":{"rx":true,"tx":"idle","rx_ok":222,"rx_bad":0,"rx_datagrams":222,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692220.024 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692224.597 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692227.514 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692227.717 > P1
+1793692228.024 {"lora":{"rx":true,"tx":"idle","rx_ok":225,"rx_bad":0,"rx_datagrams":225,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692230.509 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692233.410 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692236.299 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692237.653 > P1
+1793692237.959 {"lora":{"rx":true,"tx":"idle","rx_ok":228,"rx_bad":0,"rx_datagrams":228,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692240.954 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692243.849 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692246.858 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692247.683 > P1
+1793692247.988 {"lora":{"rx":true,"tx":"idle","rx_ok":231,"rx_bad":0,"rx_datagrams":231,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692249.737 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692252.641 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692256.173 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692257.729 > P1
+1793692258.036 {"lora":{"rx":true,"tx":"idle","rx_ok":234,"rx_bad":0,"rx_datagrams":234,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692260.935 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692263.848 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692266.753 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692267.690 > P1
+1793692267.991 {"lora":{"rx":true,"tx":"idle","rx_ok":237,"rx_bad":0,"rx_datagrams":237,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692269.648 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692272.667 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692276.075 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692277.735 > P1
+1793692278.040 {"lora":{"rx":true,"tx":"idle","rx_ok":240,"rx_bad":0,"rx_datagrams":240,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692280.327 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692283.234 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692286.123 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692287.776 > P1
+1793692288.081 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692297.711 > P1
+1793692298.018 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692307.760 > P1
+1793692308.069 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692317.795 > P1
+1793692318.102 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692327.817 > P1
+1793692328.124 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692337.747 > P1
+1793692338.054 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692347.855 > P1
+1793692348.167 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692357.884 > P1
+1793692358.203 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692367.813 > P1
+1793692368.117 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692377.855 > P1
+1793692378.169 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692387.889 > P1
+1793692388.206 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692397.908 > P1
+1793692398.218 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692407.950 > P1
+1793692408.258 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692417.905 > P1
+1793692418.211 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692427.925 > P1
+1793692428.231 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692437.897 > P1
+1793692438.205 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692447.938 > P1
+1793692448.240 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692457.958 > P1
+1793692458.262 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692467.911 > P1
+1793692468.220 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692477.940 > P1
+1793692478.250 {"lora":{"rx":true,"tx":"idle","rx_ok":243,"rx_bad":0,"rx_datagrams":243,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692482.076 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692484.990 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692487.901 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793692488.006 > P1
+1793692488.317 {"lora":{"rx":true,"tx":"idle","rx_ok":246,"rx_bad":0,"rx_datagrams":246,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692490.799 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692493.803 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692497.948 > P1
+1793692498.258 {"lora":{"rx":true,"tx":"idle","rx_ok":248,"rx_bad":0,"rx_datagrams":248,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692498.362 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692501.267 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692504.169 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692507.161 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692507.983 > P1
+1793692508.286 {"lora":{"rx":true,"tx":"idle","rx_ok":252,"rx_bad":0,"rx_datagrams":252,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692510.042 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692514.693 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692517.595 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692518.010 > P1
+1793692518.318 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692528.040 > P1
+1793692528.353 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692538.066 > P1
+1793692538.376 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692548.009 > P1
+1793692548.316 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692558.045 > P1
+1793692558.349 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692567.993 > P1
+1793692568.299 {"lora":{"rx":true,"tx":"idle","rx_ok":255,"rx_bad":0,"rx_datagrams":255,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692571.092 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692574.007 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692576.907 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692578.043 > P1
+1793692578.351 {"lora":{"rx":true,"tx":"idle","rx_ok":258,"rx_bad":0,"rx_datagrams":258,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692579.809 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692582.811 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692586.430 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692588.096 > P1
+1793692588.405 {"lora":{"rx":true,"tx":"idle","rx_ok":261,"rx_bad":0,"rx_datagrams":261,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692595.142 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692598.042 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692598.042 > P1
+1793692598.351 {"lora":{"rx":true,"tx":"idle","rx_ok":263,"rx_bad":0,"rx_datagrams":263,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692601.053 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692603.957 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692606.851 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692608.102 > P1
+1793692608.412 {"lora":{"rx":true,"tx":"idle","rx_ok":266,"rx_bad":0,"rx_datagrams":266,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692610.688 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692614.417 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692617.427 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692618.055 > P1
+1793692618.363 {"lora":{"rx":true,"tx":"idle","rx_ok":269,"rx_bad":0,"rx_datagrams":269,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692620.337 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692623.233 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692626.150 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692628.127 > P1
+1793692628.431 {"lora":{"rx":true,"tx":"idle","rx_ok":272,"rx_bad":0,"rx_datagrams":272,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692630.393 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793692638.052 > P1
+1793692638.358 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692648.083 > P1
+1793692648.386 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692658.122 > P1
+1793692658.424 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692668.069 > P1
+1793692668.374 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692678.093 > P1
+1793692678.400 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692688.152 > P1
+1793692688.458 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692698.103 > P1
+1793692698.411 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692708.156 > P1
+1793692708.461 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692718.190 > P1
+1793692718.496 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692728.137 > P1
+1793692728.444 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692738.191 > P1
+1793692738.498 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692748.145 > P1
+1793692748.451 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692758.195 > P1
+1793692758.500 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692768.236 > P1
+1793692768.542 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692778.204 > P1
+1793692778.509 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692788.266 > P1
+1793692788.571 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692798.210 > P1
+1793692798.519 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692808.274 > P1
+1793692808.581 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692818.206 > P1
+1793692818.513 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692828.235 > P1
+1793692828.543 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692838.243 > P1
+1793692838.553 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692848.286 > P1
+1793692848.591 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692858.333 > P1
+1793692858.643 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692868.266 > P1
+1793692868.573 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692878.290 > P1
+1793692878.596 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692888.331 > P1
+1793692888.637 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692898.364 > P1
+1793692898.674 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692908.319 > P1
+1793692908.624 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692918.348 > P1
+1793692918.658 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692928.312 > P1
+1793692928.618 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692938.360 > P1
+1793692938.668 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692948.415 > P1
+1793692948.722 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692958.398 > P1
+1793692958.706 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692968.432 > P1
+1793692968.740 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692978.360 > P1
+1793692978.663 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692988.401 > P1
+1793692988.706 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793692998.453 > P1
+1793692998.761 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693008.370 > P1
+1793693008.677 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693018.440 > P1
+1793693018.747 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693028.486 > P1
+1793693028.791 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693038.431 > P1
+1793693038.750 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693048.457 > P1
+1793693048.775 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693058.517 > P1
+1793693058.835 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693068.473 > P1
+1793693068.786 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693078.465 > P1
+1793693078.782 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693088.493 > P1
+1793693088.809 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693098.481 > P1
+1793693098.791 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693108.532 > P1
+1793693108.848 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693118.539 > P1
+1793693118.846 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693128.566 > P1
+1793693128.881 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693138.596 > P1
+1793693138.913 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693148.565 > P1
+1793693148.882 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693158.608 > P1
+1793693158.918 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693168.665 > P1
+1793693168.980 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693178.674 > P1
+1793693178.989 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693188.599 > P1
+1793693188.913 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693198.633 > P1
+1793693198.946 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693208.720 > P1
+1793693209.031 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693218.647 > P1
+1793693218.967 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693228.730 > P1
+1793693229.039 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693238.707 > P1
+1793693239.024 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693248.692 > P1
+1793693249.001 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693258.714 > P1
+1793693259.021 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693268.770 > P1
+1793693269.081 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693278.811 > P1
+1793693279.121 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693288.770 > P1
+1793693289.089 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693298.840 > P1
+1793693299.156 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693308.798 > P1
+1793693309.107 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693318.773 > P1
+1793693319.083 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693328.820 > P1
+1793693329.125 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693338.812 > P1
+1793693339.121 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693348.862 > P1
+1793693349.171 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693358.847 > P1
+1793693359.151 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693368.927 > P1
+1793693369.247 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693378.898 > P1
+1793693379.209 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693388.899 > P1
+1793693389.216 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693398.873 > P1
+1793693399.193 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693408.959 > P1
+1793693409.273 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693418.972 > P1
+1793693419.281 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693428.943 > P1
+1793693429.251 {"lora":{"rx":true,"tx":"idle","rx_ok":273,"rx_bad":0,"rx_datagrams":273,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693432.041 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693435.047 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693437.942 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693438.976 > P1
+1793693439.285 {"lora":{"rx":true,"tx":"idle","rx_ok":276,"rx_bad":0,"rx_datagrams":276,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693440.840 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693443.857 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693448.525 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693448.939 > P1
+1793693449.245 {"lora":{"rx":true,"tx":"idle","rx_ok":279,"rx_bad":0,"rx_datagrams":279,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693458.938 > P1
+1793693459.241 {"lora":{"rx":true,"tx":"idle","rx_ok":279,"rx_bad":0,"rx_datagrams":279,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693462.026 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693465.019 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693467.913 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693468.950 > P1
+1793693469.259 {"lora":{"rx":true,"tx":"idle","rx_ok":282,"rx_bad":0,"rx_datagrams":282,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693470.807 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693473.803 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693478.355 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693478.980 > P1
+1793693479.290 {"lora":{"rx":true,"tx":"idle","rx_ok":285,"rx_bad":0,"rx_datagrams":285,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693481.266 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693484.179 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693487.087 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693488.961 > P1
+1793693489.268 {"lora":{"rx":true,"tx":"idle","rx_ok":288,"rx_bad":0,"rx_datagrams":288,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693490.094 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693494.146 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693497.155 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693499.030 > P1
+1793693499.338 {"lora":{"rx":true,"tx":"idle","rx_ok":291,"rx_bad":0,"rx_datagrams":291,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693500.467 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693503.481 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693506.368 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693508.960 > P1
+1793693509.264 {"lora":{"rx":true,"tx":"idle","rx_ok":294,"rx_bad":0,"rx_datagrams":294,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693510.613 {"lorarx":"raw","len":124,"rssi_dbm":-18}
+1793693513.526 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693516.400 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693518.986 > P1
+1793693519.296 {"lora":{"rx":true,"tx":"idle","rx_ok":297,"rx_bad":0,"rx_datagrams":297,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693519.401 {"lorarx":"raw","len":124,"rssi_dbm":-17}
+1793693522.304 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793693526.158 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793693529.063 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793693529.063 > P1
+1793693529.373 {"lora":{"rx":true,"tx":"idle","rx_ok":301,"rx_bad":0,"rx_datagrams":301,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693532.282 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793693535.195 {"lorarx":"raw","len":124,"rssi_dbm":-16}
+1793693539.038 > P1
+1793693539.344 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693549.008 > P1
+1793693549.312 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693559.054 > P1
+1793693559.361 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693569.081 > P1
+1793693569.391 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693579.047 > P1
+1793693579.356 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693589.104 > P1
+1793693589.414 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693599.050 > P1
+1793693599.357 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693609.127 > P1
+1793693609.428 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693619.077 > P1
+1793693619.386 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693629.141 > P1
+1793693629.446 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693639.075 > P1
+1793693639.382 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693649.135 > P1
+1793693649.441 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693659.175 > P1
+1793693659.485 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693669.139 > P1
+1793693669.446 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693679.160 > P1
+1793693679.462 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693689.211 > P1
+1793693689.521 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693699.163 > P1
+1793693699.469 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693709.202 > P1
+1793693709.522 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693719.206 > P1
+1793693719.518 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693729.173 > P1
+1793693729.488 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-82,"tx_wait_ms":0}}
+1793693739.228 > P1
+1793693739.543 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":0}}
+1793693749.237 > P1
+1793693749.442 > SILENCE 0
+1793693749.762 {"lora":{"rx":true,"tx":"idle","rx_ok":303,"rx_bad":0,"rx_datagrams":303,"tx_datagrams":151,"tx_fragments":151,"tx_drop":1,"deferrals":231,"long_deferrals":27,"cad_busy":2,"rssi_busy":214,"rx_busy":16,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-83,"tx_wait_ms":0}}
+1793693749.762 {"silence":false,"switch":false}
+1793693753.481 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793693755.933 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793693758.374 {"lorarx":"raw","len":27,"rssi_dbm":-16}
+1793693760.810 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793693764.303 > LOG
+1793693764.513 > BENCH
+1793693764.831 {"log":[{"seq":81,"uptime_s":3390,"event":"silence switch off (command)"},{"seq":80,"uptime_s":1586,"event":"silence switch on (command)"},{"seq":79,"uptime_s":1494,"event":"silence debt cleared"},{"seq":78,"uptime_s":1486,"event":"silence debt cleared"},{"seq":77,"uptime_s":1482,"event":"silence debt cleared"},{"seq":76,"uptime_s":1472,"event":"silence debt cleared"},{"seq":75,"uptime_s":1468,"event":"silence debt cleared"},{"seq":74,"uptime_s":1462,"event":"silence debt cleared"},{"seq":73,"uptime_s":1440,"event":"silence debt cleared"},{"seq":72,"uptime_s":1385,"event":"silence debt cleared"},{"seq":71,"uptime_s":1381,"event":"silence debt cleared"},{"seq":70,"uptime_s":1378,"event":"silence debt cleared"},{"seq":69,"uptime_s":1356,"event":"silence debt cleared"},{"seq":68,"uptime_s":1352,"event":"silence debt cleared"},{"seq":67,"uptime_s":1342,"event":"silence debt cleared"},{"seq":66,"uptime_s":1330,"event":"silence debt cleared"}],"total":81,"fram":true}
+1793693764.831 {"prep":false,"silence":false,"txcw":false,"txpkt":false,"rx":true,"tx_wait_ms":0,"debt_pending":true,"journal":true,"foff_hz":0,"emc":false}
+1793693765.912 {"lorarx":"raw","len":27,"rssi_dbm":-17}

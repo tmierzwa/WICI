@@ -2,7 +2,7 @@
 """The receiving station application (stages S1-S7: stack, reception, sending, medium, copies, recovery, panel).
 
     python -m wici.stanowisko przygotuj --nosnik KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
-    python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41] [--bez-dzwieku]
+    python -m wici.stanowisko start --nosnik KATALOG --port /dev/ttyACM0|COM5 [--bitrate 41] [--koniec-wejscia] [--bez-dzwieku]
     python -m wici.stanowisko odtworz --nosnik PUSTY_KATALOG [--kopie KATALOG ...]
     python -m wici.stanowisko nowa-tozsamosc --nosnik KATALOG --karta NOWY_PLIK
     python -m wici.stanowisko aktywuj-tozsamosc --nosnik KATALOG --karta PLIK --karta-na-stacjach
@@ -17,7 +17,9 @@ every password with its envelope.
 start: reads the station password (first line of stdin, or typed without echo at a terminal), prints one
 JSON line "ready" with the receiver address and the one-time link of the duty officer panel (opened in
 the browser; panel.py), and writes a copy of the database to the computer disk every
-5 min (kopie.py) and works until Ctrl+C or end of stdin. Logs (Reticulum and
+5 min (kopie.py) and works until Ctrl+C, SIGTERM or ZNISZCZ DANE in the panel; the end of stdin after the
+password does not stop it (`echo HASŁO | …` works). --koniec-wejscia also stops it at the end of stdin, for a
+supervisor that holds a pipe and closes it to stop the application. Logs (Reticulum and
 reception, never the content of reports or passwords) go to stderr. A wrong password prints "login_failed"
 and ends with code 3. When the computer clock is earlier than the last numbered message, prints
 "clock_behind" and ends with code 2 without starting the stack: the duty officer sets the clock first.
@@ -40,6 +42,7 @@ starts with WICI-Link sending blocked until nowa-tozsamosc and aktywuj-tozsamosc
 import argparse
 import getpass
 import json
+import signal
 import sys
 import threading
 import time
@@ -131,8 +134,7 @@ def start(args):
             return 3
         numbered = WiciStos(args.port, link["net_id"], link["root"], link["ttl"], bytes.fromhex(link["ifac"]),
                             bytes.fromhex(active["lxmf"]),
-                            lambda frame: przyjecie.receive_envelope_frame(link["net_id"], frame,
-                                                                             bearer="wici"))
+                            lambda frame, timeout: przyjecie.admit_wici_frame(link["net_id"], frame, timeout))
         if args.reticulum_port:
             legacy = Stos(medium.network, args.reticulum_port,
                           lambda source, content: przyjecie.deliver(source, content, bearer="reticulum"),
@@ -178,17 +180,32 @@ def start(args):
         webbrowser.open(url)
     done = threading.Event()
     dyzur.on_quit = done.set   # ZNISZCZ DANE
-    threading.Thread(target=lambda: (sys.stdin.read(), done.set()), daemon=True).start()
+    if args.koniec_wejscia:
+        threading.Thread(target=lambda: (sys.stdin.read(), done.set()), daemon=True).start()
+    previous = None
+    if threading.current_thread() is threading.main_thread():
+        previous = signal.signal(signal.SIGTERM, _interrupt)   # zamknięcie jak Ctrl+C: ostatnia migawka bazy
     try:
-        done.wait()
-    except KeyboardInterrupt:
-        pass
-    server.shutdown()
-    if dyzur.wezel is not None:
-        dyzur.wezel.stop()
-    stos.stop()
-    przyjecie.stop()
+        try:
+            while not done.wait(0.5):   # krótkie oczekiwanie: Ctrl+C dochodzi także w Windows
+                pass
+        except KeyboardInterrupt:
+            pass
+        if previous is not None:
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)   # drugi SIGTERM nie przerywa zamykania
+        server.shutdown()
+        if dyzur.wezel is not None:
+            dyzur.wezel.stop()
+        stos.stop()
+        przyjecie.stop()   # ostatnia migawka bazy; dopiero potem SIGTERM znowu kończy proces od razu
+    finally:
+        if previous is not None:
+            signal.signal(signal.SIGTERM, previous)
     return 0
+
+
+def _interrupt(signum, frame):
+    raise KeyboardInterrupt
 
 
 def restore(args):
@@ -282,6 +299,8 @@ def main(argv=None):
     run.add_argument("--diagnostyka", help="port diagnostyki węzła (drugi interfejs USB; domyślnie odszukany "
                      "obok --port; „brak” wyłącza; dla świata symulatora tcp:127.0.0.1:7391)")
     run.add_argument("--kopie", help="katalog kopii co 5 min na dysku komputera (domyślnie: katalog stanu aplikacji)")
+    run.add_argument("--koniec-wejscia", action="store_true",
+                     help="zakończ pracę także po końcu stdin (nadzorca zamyka potok, żeby zatrzymać aplikację)")
     back = commands.add_parser("odtworz", help="odtworzenie nośnika z kopii (zgoda dwóch dyżurnych)")
     back.add_argument("--nosnik", required=True, help="pusty katalog na nowym nośniku stanowiska")
     back.add_argument("--kopie", action="append", default=[], help="dodatkowy katalog kopii, np. drugi nośnik")

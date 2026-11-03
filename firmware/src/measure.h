@@ -102,18 +102,25 @@ struct LinkCounters {
     uint32_t deferrals = 0;     // odroczenia CCA
     uint32_t longDeferrals = 0; // nadania odroczone przez CCA łącznie o ponad 1 s (bez czekania na dług)
     uint32_t cadBusy = 0;       // LoRa: CAD wykrył preambułę
-    uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji
-    uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, albo nieodczytana ramka w układzie
+    uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji, gdy może zdradzać ramkę
+    uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, nieodczytana ramka w układzie albo czas na HACK
+    uint32_t rssiIgnored = 0;   // LoRa: datagramy nadane mimo RSSI ponad progiem bez możliwej ukrytej ramki (energia obca)
 };
 
 // HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused
 // otherwise (state, busy channel, debt limit, journal) and the time from the end of the received DATA (the
 // receive task's timestamp) to TxDone of the HACK, in ms of the MCU clock: last, largest, sum (mean = sum /
-// sent) and the number of HACKs that ended after 200 ms.
+// sent) and the number of HACKs that ended after 200 ms. `refusedBy` splits `refused` by reason:
+// STATE frame shape or bench state (link, journal, silence, preparation, EMC, test TX, not in link RX),
+// LOCK radio lock not taken in time, RX_PENDING a frame being received or unread in the chip, PREP other
+// prepareTx failure, CAD busy channel, DEBT debt limit or failed debt journal write, TX failed send.
+enum HackRefusal : uint8_t { HACK_STATE, HACK_LOCK, HACK_RX_PENDING, HACK_PREP, HACK_CAD, HACK_DEBT, HACK_TX,
+                             HACK_REFUSALS };
 struct HackStats {
     uint32_t sent = 0;
     uint32_t late = 0;
     uint32_t refused = 0;
+    uint32_t refusedBy[HACK_REFUSALS] = {};
     uint32_t over = 0;
     uint32_t lastMs = 0;
     uint32_t maxMs = 0;
@@ -159,14 +166,14 @@ public:
     // caller authenticates frames; CAD, silence and durable airtime debt stay here.
     bool setRawLora(bool enabled);
     bool rawLora() const { return rawLora_; }
-    // An already authenticated 27 B HACK may interrupt a queued DATA. It uses
+    // An already authenticated 29 B HACK may interrupt a queued DATA. It uses
     // CAD without the 50 ms window and adds its airtime to outstanding debt.
     // Caller provides the radio receive-end timestamp for the 200 ms limit.
     bool linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedMs);
     const char* p1rxStart();
     const char* p1send(const uint8_t* data, size_t length, bool stack = false);
     void printLink();
-    void printHack();   // HACK: HackStats as JSON
+    void printHack(const char* tail = nullptr);   // HACK: HackStats as JSON; tail: further ",\"pole\":…" fields
     void resetHackStats() { hack_ = HackStats(); }
     const LinkCounters& link() const { return link_; }
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
@@ -289,6 +296,7 @@ private:
     bool rawLora_ = false;
     LinkCounters link_;
     HackStats hack_;
+    void refuseHack(HackRefusal reason) { ++hack_.refused; ++hack_.refusedBy[reason]; }
 
     // Nadawanie łącza: oczekiwanie na dług, CCA, odroczenie, seria ramek.
     enum class TxState : uint8_t { IDLE, WAIT_DEBT, CCA, BACKOFF, SEND };
@@ -302,8 +310,13 @@ private:
     uint32_t ccaFirstMs_ = 0;    // pierwsze wejście w CCA (po odczekaniu długu): miara odroczeń
     uint32_t ccaStartMs_ = 0;
     uint32_t ccaFrames_ = 0;     // ramki odebrane do początku okna CCA
+    bool ccaRssiIgnored_ = false; // LoRa: w tym nadaniu CCA pominęło RSSI ponad progiem (obca energia)
     uint32_t ccaCheckMs_ = 0;
     uint32_t backoffUntilMs_ = 0;
+    // WICI-Link: po usłyszanej DATA z ACKREQ własna DATA i BEACON czekają, aż HACK odpowiedzi musiał
+    // już się zacząć (wici-link.md, reguła 2); sam HACK idzie bez tego.
+    uint32_t hackHoldUntilMs_ = 0;
+    bool hackHold_ = false;
     uint8_t txDeferrals_ = 0;
 
     uint32_t debtUntilMs_ = 0;
