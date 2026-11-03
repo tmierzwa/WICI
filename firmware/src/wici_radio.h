@@ -63,6 +63,8 @@ public:
     // Reads all durable state from FRAM. Also the recovery after ready() fell:
     // the caller cancels the own transfer first (cancelOwn).
     bool begin();
+    // Which receiver identity admits envelopes now (wici_destination::ActiveFn).
+    void setActiveReceiver(wici_destination::ActiveFn active) { destination_.setActive(active); }
     // Called from Bench's raw callback. No route learning or outbound DATA is
     // performed before the HACK attempt; all timestamps come from the radio.
     // A BEACON's signatures are never checked here when a BeaconCheck is set.

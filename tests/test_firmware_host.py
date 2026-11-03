@@ -1962,8 +1962,9 @@ class HostUnitTests(unittest.TestCase):
                           "in " + compact([1, 0, x, 0, 2, 1, "a", "", 0]),   # REQUEST od odbiorcy: zły typ
                           "reg a", "stats a", "backup", f"infrom {MAIN_SA1} {received}", f"infrom {BACKUP_SA1} {received}",
                           "reg b", "stats b"])
-        # Obca tożsamość, nieaktywna zapasowa, zły format i zły typ: trwałe odrzucenie z dowodem.
-        self.assertEqual(self.find(out, "rx "), ["rx 1 0"] * 6)
+        # Obca tożsamość, zły format i zły typ: trwałe odrzucenie z dowodem. Druga tożsamość tego odbiorcy
+        # (zapasowa przed KLUCZ ZAPASOWY, główna po nim): „jeszcze nie”, bez dowodu, więc odbiorca ponowi.
+        self.assertEqual(self.find(out, "rx "), ["rx 0 0", "rx 1 0", "rx 1 0", "rx 1 0", "rx 0 0", "rx 1 0"])
         self.assertEqual((self.stats(out, "a")["rejected"], self.regs(out, "a")[x]["stage"]), (4, 0))
         # Po KLUCZ ZAPASOWY tylko zapasowa tożsamość jest aktywna.
         self.assertEqual((self.stats(out, "b")["rejected"], self.regs(out, "b")[x]["stage"]), (5, 3))

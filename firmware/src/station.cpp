@@ -710,11 +710,15 @@ bool Station::received(const uint8_t* data, size_t length) {
     }
     services_.address(self);
     const uint8_t* recipient = store_.recipient();
-    // Tylko od aktywnej tożsamości odbiorcy i tylko do tej stacji (trwałe odrzucenie: z dowodem).
+    // Tylko od aktywnej tożsamości odbiorcy i tylko do tej stacji (trwałe odrzucenie: z dowodem). Druga
+    // tożsamość tego odbiorcy to „jeszcze nie” (zapasowa przed KLUCZ ZAPASOWY, główna po nim): bez dowodu,
+    // więc odbiorca nie zamyka wiadomości i wyśle ją ponownie po przełączeniu.
     if (memcmp(to, self, store::HASH) || !recipient || memcmp(from, recipient, store::HASH)) {
         ++stats_.rejected;
         services_.log("message from inactive or unknown receiver");
-        return true;
+        const config::Identity other = store_.meta().receiver == config::BACKUP ? config::MAIN : config::BACKUP;
+        return memcmp(to, self, store::HASH) || !recipient ||
+               memcmp(from, store_.config().receivers[other].sa1, store::HASH);
     }
     sa1::Message m;
     char wire[sa1::MAX_CONTENT + 1];

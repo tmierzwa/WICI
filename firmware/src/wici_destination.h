@@ -17,6 +17,9 @@ struct Config {
 
 using AdmitFn = bool (*)(uint16_t network, uint16_t sender, uint16_t recipient,
                          const uint8_t* content, size_t length, void* context);
+// True when receiver slot `peer` (0 main, 1 backup) is the identity the station
+// uses now; called with the admit context.
+using ActiveFn = bool (*)(uint8_t peer, void* context);
 
 // SETTLED: a frame this station can never admit, from a relay; the HACK only
 // ends that relay's retries and resolves nothing (no delivery proof).
@@ -37,6 +40,8 @@ public:
                 AdmitFn admit, void* context);
     // Re-reads replay windows and parts; also the recovery after ready() fell.
     bool begin();
+    // Without it only the main identity is active, as after preparation.
+    void setActive(ActiveFn active) { active_ = active; }
     // False after an uncertain FRAM write of a replay window or part.
     bool ready() const { return ready_ && replay_[0].ready() && replay_[1].ready(); }
     // HACK_READY only after part storage or the SA1 effect and replay window
@@ -53,6 +58,7 @@ private:
     envelope::DurableReplay replay_[2];
     envelope::DurableParts parts_[2];
     AdmitFn admit_;
+    ActiveFn active_ = nullptr;
     void* context_;
     wici_link::RepeatHack repeatHack_;
     wici_link::OwedHacks owedHacks_;

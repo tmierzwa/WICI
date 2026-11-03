@@ -580,6 +580,7 @@ bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
                  const uint8_t* sa1, size_t length, void*) {
     return app.receivedEnvelope(network, sender, recipient, sa1, length);
 }
+bool onWiciActive(uint8_t peer, void*) { return app.activeReceiver(peer); }
 // Klucz Ed25519 sąsiada z karty; w pętli, a Shelter kopiuje go do sprawdzenia w tle (beacon_check.h).
 const uint8_t* wiciBeaconKey(uint16_t sender, const void* context) {
     const config::Config* c = static_cast<const config::Config*>(context);
@@ -2028,6 +2029,7 @@ void beginWici() {
                          privateKey, publicKeys, onWiciAdmit, nullptr,
                          wiciAir, wiciRandom, nullptr, c.behind, c.behindCount, rootEd25519,
                          wiciBeaconKey, &c, c.priorityKeys, c.priorityKeyCount);
+            wiciShelter->setActiveReceiver(onWiciActive);
             if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
             else {
                 wiciShelter->onDelivery(onWiciDelivery, nullptr);

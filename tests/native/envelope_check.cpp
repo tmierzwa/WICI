@@ -52,6 +52,18 @@ bool admit(uint16_t network, uint16_t sender, uint16_t recipient,
     return true;
 }
 
+// A station whose active receiver identity the test switches (KLUCZ ZAPASOWY).
+struct Switching {
+    int admitted = 0;
+    bool backup = false;
+};
+bool admitEither(uint16_t, uint16_t, uint16_t, const uint8_t* content, size_t length, void* context) {
+    if (!content || !length) return false;
+    ++static_cast<Switching*>(context)->admitted;
+    return true;
+}
+bool activeSlot(uint8_t peer, void* context) { return peer == (static_cast<Switching*>(context)->backup ? 1 : 0); }
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -275,6 +287,37 @@ int main(int argc, char** argv) {
     envelope::Frame whole[2];
     if (envelope::seal(ab, 10, 20, 2000, plain, sizeof(plain), 236, whole) != 1 || crashWindow(whole, 1)) return 42;
     if (envelope::seal(ab, 10, 20, 2001, large, sizeof(large), 153, halves) != 2 || crashWindow(halves, 2)) return 43;
+
+    // The receiver identity the station does not use yet (the backup before KLUCZ ZAPASOWY) and no longer
+    // (the main one after it): no SA1 effect, no replay window, no proof; a relay gets its HACK, the root none.
+    static Memory switchMemory;
+    Switching station;
+    wici_destination::Destination switching(switchMemory, {0x1234, 20, {10, 30}, 2}, ifac, b, peers,
+                                            admitEither, &station);
+    switching.setActive(activeSlot);
+    uint8_t backupKey[32];
+    if (!switching.begin() || !envelope::deriveKey(c, bp, 0x1234, 30, 20, 30, backupKey)) return 44;
+    const auto deliver = [&](const uint8_t* key, uint16_t sender, uint32_t counter, uint16_t from, uint32_t nowS,
+                             wici_destination::Resolved& resolved) {
+        envelope::Frame one[2];
+        if (envelope::seal(key, sender, 20, counter, plain, sizeof(plain), 236, one) != 1)
+            return wici_destination::Outcome::IGNORED;
+        link.source = from; link.sequence = static_cast<uint16_t>(link.sequence + 1); link.length = one[0].length;
+        memcpy(link.payload, one[0].bytes, link.length);
+        const size_t n = wici_link::encode(linkKey, link, radio, sizeof(radio));
+        return switching.receive(radio, n, nowS, hack, sizeof(hack), hackLength, &resolved);
+    };
+    wici_destination::Resolved resolved;
+    if (deliver(backupKey, 30, 1, 1, 200, resolved) != wici_destination::Outcome::SETTLED ||
+        hackLength != 21 || station.admitted != 0 || resolved.valid) return 45;
+    if (deliver(backupKey, 30, 1, 2, 206, resolved) != wici_destination::Outcome::REJECTED ||
+        hackLength != 0 || station.admitted != 0 || resolved.valid) return 46;
+    station.backup = true;   // the same counter after the switch: nothing of it was kept
+    if (deliver(backupKey, 30, 1, 2, 212, resolved) != wici_destination::Outcome::HACK_READY ||
+        station.admitted != 1 || !resolved.valid || resolved.peer != 1) return 47;
+    if (deliver(ab, 10, 3000, 1, 218, resolved) != wici_destination::Outcome::SETTLED ||
+        station.admitted != 1 || resolved.valid) return 48;
+    link.source = 1;
 
     // Correctly encrypted envelopes with a reserved kind type, from the Python side.
     for (int i = 1; i < argc; ++i) {

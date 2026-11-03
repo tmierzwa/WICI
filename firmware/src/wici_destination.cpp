@@ -69,6 +69,11 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
     uint8_t peer = 2;
     for (uint8_t i = 0; i < 2; ++i) if (sender == config_.receiver[i]) peer = i;
     if (peer == 2) return refuse();
+    // The receiver identity the station does not use: the backup before KLUCZ
+    // ZAPASOWY (a manual step, possibly hours later), the main one after it.
+    // Not yet admissible, so no SA1 effect, no replay window and no proof: the
+    // receiver keeps the message open and resends it after the switch.
+    if (!(active_ ? active_(peer, context_) : peer == 0)) return refuse();
     envelope::Part part;
     if (!envelope::openPart(envelopeKeys_[peer], frame.payload, frame.length, part) ||
         part.sender != sender || part.recipient != recipient || part.type != 0) return refuse();
