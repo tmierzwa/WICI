@@ -448,6 +448,47 @@ int main() {
     sendDown(3, 118, 28000);                       // failure 1 again
     assert(learner.down(3) == 3 && learner.ready());
 
+    // Review 8: the laptop retries with the root's echo of the attempt. To
+    // the same next hop the root sends those bytes again (same seq and MAC,
+    // so the hop owes them its HACK even after replays used up its repeat
+    // limit) and burns no seq; once the route is gone the part floods.
+    wici_link::Frame previous;
+    assert(wici_link::decode(key, 100, learnAir.last, learnAir.lastLength, previous));
+    assert(hackFor(previous, previous.sequence) == wici_gateway::Event::FORWARDED);
+    drain();
+    const wici_link::Frame attempt = sendDown(3, 119, 30000);
+    uint8_t echo[255];
+    const size_t echoLength = learnAir.lastLength;
+    memcpy(echo, learnAir.last, echoLength);
+    const uint32_t retries[] = {30700, 31400};
+    for (const uint32_t at : retries) {   // no HACK: failures 1 and 2 of the route to 3
+        assert(learner.host(echo, echoLength, at, at / 1000) == wici_gateway::Event::QUEUED);
+        assert(learnAir.lastLength == echoLength && !memcmp(learnAir.last, echo, echoLength));
+        learner.onTxDone(true, at + 50);
+        drain();
+    }
+    assert(learner.host(echo, echoLength, 32100, 32) == wici_gateway::Event::QUEUED);  // failure 3
+    assert(learner.down(3) == wici_link::BROADCAST);
+    assert(wici_link::decode(key, 100, learnAir.last, learnAir.lastLength, observed));
+    assert(observed.destination == wici_link::BROADCAST && observed.flags == wici_link::DOWN &&
+           observed.source == 5 && observed.hops == 1 && observed.sequence == attempt.sequence + 1 &&
+           observed.length == attempt.length && !memcmp(observed.payload, attempt.payload, attempt.length));
+    learner.onTxDone(true, 32150);
+    drain();
+    // Flooded in the last 120 s: refused, with the laptop's bytes unchanged.
+    assert(learner.host(echo, echoLength, 32200, 32) == wici_gateway::Event::REFUSED);
+    assert(take(learnPort, command, returned) == echoLength && command == wici_gateway::CMD_REFUSED &&
+           !memcmp(returned, echo, echoLength));
+    // An echo to the root itself or one that never left it (no hop) is a laptop fault.
+    wici_link::Frame bad = attempt;
+    bad.destination = 5;
+    n = encode(key, bad, wire);
+    assert(learner.host(wire, n, 32300, 32) == wici_gateway::Event::REJECTED && !learnPort.pendingBytes());
+    bad = attempt;
+    bad.hops = 0;
+    n = encode(key, bad, wire);
+    assert(learner.host(wire, n, 32300, 32) == wici_gateway::Event::REJECTED && !learnPort.pendingBytes());
+
     // Review 1/11a: BEACON schedule. A change or retry is pushed to 60 s
     // after the last BEACON only when that is later, then jittered 0-4 s;
     // a long-silent station is not scheduled in the past.

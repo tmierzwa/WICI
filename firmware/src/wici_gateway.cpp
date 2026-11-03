@@ -149,10 +149,14 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
             routes_.learn(pendingSender_, pendingVia_, true);
         return Event::HACK_SENT;
     }
-    // A malformed frame is a laptop fault, not a transient refusal.
-    if (frame.type != wici_link::Type::DATA || frame.destination != own_ ||
-        frame.source == own_ || frame.flags != (wici_link::ACKREQ | wici_link::DOWN) ||
-        get16(frame.payload + 1) != frame.source) return Event::REJECTED;
+    // A malformed frame is a laptop fault, not a transient refusal. The
+    // laptop sends a part as its own frame to the root, and a retry as the
+    // root's echo of the previous attempt (transmit).
+    const bool retry = frame.source == own_;
+    if (frame.type != wici_link::Type::DATA || frame.flags != (wici_link::ACKREQ | wici_link::DOWN) ||
+        (retry ? frame.destination == own_ || !frame.hops
+               : frame.destination != own_ || get16(frame.payload + 1) != frame.source))
+        return Event::REJECTED;
     const Event result = transmit(wire, length, frame, nowMs, nowS);
     if (result == Event::QUEUED) return result;
     // Silence, a busy transmitter, a seal or FRAM failure: the laptop learns
@@ -174,6 +178,24 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
     const uint16_t recipient = get16(frame.payload + 3);
     const uint16_t next = routes_.down(recipient);
     if (!next) return Event::REJECTED;
+    // A retry to the same next hop goes again unchanged, as on every hop
+    // (rule 3): only the same bytes get the owed HACK there when the HACK was
+    // lost, and replays use up the limit of the other repeats. To another next
+    // hop (or as a flood) the part goes as the laptop's frame, with a new seq.
+    const bool again = frame.source == own_ && frame.destination == next;
+    const uint8_t* const laptop = wire;  // a refusal returns the laptop's bytes unchanged
+    const size_t laptopLength = length;
+    uint8_t first[wici_link::MAX_FRAME];
+    if (frame.source == own_ && !again) {
+        wici_link::Frame part = frame;
+        part.source = get16(frame.payload + 1);
+        part.destination = own_;
+        part.sequence = 0;
+        --part.hops;
+        length = wici_link::encode(key_, part, first, sizeof(first));
+        if (!length) return Event::REJECTED;
+        wire = first;
+    }
     const bool broadcast = next == wici_link::BROADCAST;
     const wici_flood::Lookup flood = broadcast ? flood_.lookup(frame.payload, nowS) : wici_flood::Lookup::NONE;
     // A marker of a flood the radio refused (never on air) stays the root's
@@ -184,11 +206,12 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
     // No seq and no flood marker for a frame the radio would refuse.
     if (!air_.accepts(wici_link::TxClass::TRANSIT, length + (broadcast ? 0 : wici_link::HOP_TAG)))
         return Event::REJECTED;
-    uint16_t sequence;
-    if (!sequence_.next(sequence)) return Event::REJECTED;
+    uint16_t sequence = frame.sequence;
+    if (!again && !sequence_.next(sequence)) return Event::REJECTED;
     uint8_t forwarded[wici_link::MAX_FRAME];
-    const size_t forwardedLength = wici_link::forward(key_, network_, own_, next, sequence,
-                                                      wire, length, forwarded, sizeof(forwarded));
+    const size_t forwardedLength = again ? length :
+        wici_link::forward(key_, network_, own_, next, sequence, wire, length, forwarded, sizeof(forwarded));
+    if (again) memcpy(forwarded, wire, length);
     if (!forwardedLength || !port_.canSend(forwarded, forwardedLength) ||
         (flood == wici_flood::Lookup::NONE && broadcast && !flood_.remember(frame.payload, nowS)))
         return Event::REJECTED;
@@ -202,8 +225,8 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
     if (ownFlood) unsentFloodValid_ = false;
     memcpy(outbound_, forwarded, forwardedLength);
     outboundLength_ = forwardedLength;
-    memcpy(original_, wire, length);
-    originalLength_ = length;
+    memcpy(original_, laptop, laptopLength);
+    originalLength_ = laptopLength;
     outboundPending_ = true;
     outboundBroadcast_ = broadcast;
     if (!broadcast) {

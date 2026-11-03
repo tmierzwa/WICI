@@ -31,6 +31,7 @@ class Delivery:
     sequence: int | None = None
     next_hop: int | None = None
     echo: bytes = b""  # wici_link.mac_echo of the part on air: the HACK must repeat it
+    on_air: bytes = b""  # the root's echo of the last attempt: a retry sends these bytes again
     submissions: int = 0
     attempts: int = 0
     sent_at: float = 0.0
@@ -147,6 +148,7 @@ class WiciStos:
     def _next_part(self, item):
         item.part += 1
         item.sequence = item.next_hop = None
+        item.on_air = b""
         item.submissions = item.attempts = 0
         item.retry_at = 0
         if item.part == len(item.frames):
@@ -157,11 +159,14 @@ class WiciStos:
                          FLOODED if item.relayed or item.flooded else True)
 
     def _submit(self, item, now):
-        part = item.frames[item.part]
-        sender = int.from_bytes(part[1:3], "big")
-        frame = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN,
-                                self.network, sender, self.root, 0, self.ttl, 0, part)
-        self._write(frame)
+        if item.on_air:
+            # A retry: the root sends its echo again unchanged to the same next hop (Root::transmit).
+            self.port.write(wici_link.kiss_encode(item.on_air, wici_link.KISS_DATA))
+        else:
+            part = item.frames[item.part]
+            sender = int.from_bytes(part[1:3], "big")
+            self._write(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN,
+                                        self.network, sender, self.root, 0, self.ttl, 0, part))
         item.submissions += 1
         item.sent_at = now
         # The root echoes only after radio TX. Airtime debt can hold a queued
@@ -209,6 +214,7 @@ class WiciStos:
                     item.sequence is None):
                 item.sequence, item.next_hop = frame.sequence, frame.destination
                 item.echo = wici_link.mac_echo(wire)
+                item.on_air = bytes(wire)
                 if self.outstanding is item:
                     self.outstanding = None
                 item.attempts += 1
@@ -286,8 +292,9 @@ class WiciStos:
                     self._finish(item, False)
                     self.dropped["outbound"] += 1
                 else:
+                    # As on every hop: the same bytes after 0.5-2 s, while the next hop still owes their HACK.
                     item.sequence = item.next_hop = None
-                    item.retry_at = now + 10 + random.uniform(0.5, 2)
+                    item.retry_at = now + random.uniform(0.5, 2)
         if self.outstanding is not None and now < self.outstanding.retry_at:
             return   # the root's slot holds our frame until its echo or refusal
         self.outstanding = None

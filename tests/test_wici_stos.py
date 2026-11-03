@@ -321,6 +321,28 @@ class WiciBearerTest(unittest.TestCase):
         self.assertTrue(first.result)
         self.assertTrue(second.result)
 
+    def test_retry_after_a_lost_hack_sends_the_roots_echo_again_soon(self):
+        # Review 8: the next hop owes its HACK only to the same bytes (rule 3), so the laptop hands the root
+        # its echo of the attempt, after 0.5-2 s as on every hop; the next part goes as a new frame.
+        item = self.bearer.send_frames((self.part(4, 1), self.part(4, 2)))
+        self.bearer._tick()
+        self.echo(4, 70, self.part(4, 1))
+        echoed = wici_link.encode(self.key, wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN,
+                                                            100, 5, 4, 1, 7, 70, self.part(4, 1)))
+        self.clock.value += 0.7   # no HACK in time
+        self.bearer._tick()
+        self.assertEqual(len(self.port.writes), 1)
+        self.assertLessEqual(item.retry_at - self.clock.value, 2)
+        self.clock.value = item.retry_at
+        self.bearer._tick()
+        self.assertEqual(unpack(self.port.writes[-1]), echoed)
+        self.echo(4, 70, self.part(4, 1))
+        self.feed(self.hack(4, 70))
+        self.assertEqual(item.part, 1)
+        self.bearer._tick()
+        self.assertEqual((self.sent().source, self.sent().destination, self.sent().payload),
+                         (1, 5, self.part(4, 2)))
+
     def test_undeliverable_station_does_not_hold_back_others(self):
         stuck = self.bearer.send_frames((self.part(4),))
         other = self.bearer.send_frames((self.part(9),))
