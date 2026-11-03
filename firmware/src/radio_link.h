@@ -148,12 +148,18 @@ public:
     // Układy P1 tych kroków nie mają (nadają przez transmit()).
     virtual TxPrep prepareTx(const uint8_t*, size_t) { return TxPrep::Unsupported; }
     virtual Cad cad() { return Cad::Unsupported; }
+    virtual uint32_t cadUnconfirmed() const { return 0; }  // wykrycia CAD, których nie potwierdził drugi CAD
     virtual bool sendPrepared(TxTiming*) { return false; }
 
     // Okno CCA LoRa (radio.md, „Dostęp do kanału”, punkt 5): aktywność w ostatnich windowMs ze znaczników,
     // które zbierają próbki odbioru (zadanie odbioru albo pętla), więc postój pętli nie zrywa okna.
     // Układy P1 znaczników nie mają (CCA P1 próbkuje kanał w pętli).
     virtual Activity recentActivity(uint32_t) { return Activity::None; }
+    // RSSI ponad progiem może jeszcze znaczyć ramkę, której początku odbiornik nie słyszał (radio.md, „Dostęp do
+    // kanału”, punkt 5): przez czas najdłuższej ramki od startu odbioru, od końca ostatniej ramki albo od
+    // wygaśnięcia ramki w toku. Później ramkę w eterze zdradza jej preambuła i nagłówek, a sama energia jest obca.
+    // Układy P1 nie mają detektora preambuły: RSSI zawsze się liczy.
+    virtual bool rssiMayHideFrame() { return true; }
     virtual void clearActivity() {}               // po rekonfiguracji i IDLE
     virtual uint32_t rxLate() const { return 0; }  // ramki odczytane za późno i odrzucone
     virtual uint32_t rxRingOverflow() const { return 0; }  // ramki utracone przy pełnym pierścieniu zadania odbioru

@@ -1,0 +1,414 @@
+1793695515.333 "link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":683,"loop_max_ms":7,"rx_task_loops":26126,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":77,"inbox":0,"head":315,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"4841058e188a79b4","wdt_s":60,"board":"XIAO"}
+1793695515.333 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0004","busy_timeouts":0,"p1_ok":true,"ok":true}
+1793695515.333 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+1793695515.333 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+1793695515.333 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+1793695515.333 {"journal_ok":true,"debt_seq":372,"debt_ms":0,"debt_written_at_s":5116,"debt_records":32,"tx_wait_ms":0,"clock_seq":86,"uptime_s":5255,"skip_s":540,"restarts":9,"event_seq":205,"max_debt_ms":10056,"journal_resets":0,"prep_entries":2,"prep_at_s":326,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+1793695528.585 > HACK 0
+1793695528.790 > P1
+1793695529.096 {"hack_sent":0,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":0,"beacon_check_ms_last":0,"beacon_check_ms_max":0,"beacon_dropped":0,"beacon_stack_free":7436}
+1793695529.096 {"lora":{"rx":true,"tx":"idle","rx_ok":0,"rx_bad":0,"rx_datagrams":0,"tx_datagrams":0,"tx_fragments":0,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":0,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695530.558 > REQ 20
+1793695530.867 {"numbers":[6689,4973,2461,309,9550,5424,3453,2055,7131,4089,7570,2567,7580,4481,2010,2558,6005,5491,9565,7122],"created":20,"sa1_bytes":73}
+1793695530.867 > P1
+1793695531.175 {"lora":{"rx":true,"tx":"idle","rx_ok":0,"rx_bad":0,"rx_datagrams":0,"tx_datagrams":1,"tx_fragments":1,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":0,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":2673}}
+1793695531.175 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793695532.319 {"hack":"sent","len":27,"end_ms":97}
+1793695532.319 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695535.023 gap device reports readiness to read but returned no data (device disconnected or multiple access on port?)
+1793695536.026 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695537.027 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695538.029 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695539.033 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695540.038 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695541.042 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695542.048 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695543.051 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695544.056 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695545.059 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695546.065 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695547.067 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695548.073 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695549.075 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695550.080 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695551.084 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695552.086 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695553.087 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695554.092 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695555.093 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695556.094 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695557.095 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695558.100 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695559.101 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695560.102 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695561.107 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695562.112 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695563.116 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695564.118 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695565.123 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695566.128 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695567.133 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695568.135 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695569.137 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695570.142 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695571.147 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695572.150 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695573.155 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695574.157 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695575.158 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695576.159 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695577.164 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695578.169 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695579.172 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695580.178 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695581.183 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695582.188 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695583.193 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695584.195 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695585.196 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695586.198 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695587.200 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695588.205 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695589.208 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695590.213 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695591.216 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695592.221 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695593.225 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695594.226 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695595.232 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695596.234 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695597.238 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695598.241 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695599.242 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695600.247 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695601.252 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695602.258 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695603.263 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695604.266 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695605.270 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695606.275 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695607.280 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695608.282 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695609.287 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695610.291 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695611.296 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695612.299 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695613.301 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695614.306 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695615.311 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695616.316 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695617.320 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695618.325 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695619.330 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695620.335 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695621.340 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695622.345 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695623.350 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695624.354 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695625.360 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695626.365 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695627.367 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695628.371 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695629.376 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695630.381 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695631.383 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695632.383 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695633.389 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695634.394 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695635.399 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695636.400 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695637.405 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695638.410 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695639.415 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695640.417 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695641.423 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695642.428 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695643.432 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695644.437 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695645.440 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695646.442 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695647.447 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695648.452 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695649.454 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695650.459 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695651.464 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695652.469 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695653.470 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695654.475 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695655.480 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695656.483 gap [Errno 16] could not open port /dev/cu.usbmodem68EE8F60D16C1: [Errno 16] Resource busy: '/dev/cu.usbmodem68EE8F60D16C1'
+1793695658.235 "bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":5398,"service_s":4858,"boot_s":169,"screen":"main","lang":"PL","name":"WICI-B97DB3","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":683,"loop_max_ms":285,"rx_task_loops":169011,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":97,"inbox":0,"head":395,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":1,"usb_rejected":0,"usb_boot":"4841058e188a79b4","wdt_s":60,"board":"XIAO"}
+1793695658.235 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0197","busy_timeouts":0,"p1_ok":true,"ok":true}
+1793695658.235 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+1793695658.235 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+1793695658.235 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+1793695658.236 {"journal_ok":true,"debt_seq":416,"debt_ms":0,"debt_written_at_s":5359,"debt_records":32,"tx_wait_ms":0,"clock_seq":88,"uptime_s":5398,"skip_s":540,"restarts":9,"event_seq":227,"max_debt_ms":10056,"journal_resets":0,"prep_entries":2,"prep_at_s":326,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+1793695660.201 > HACK
+1793695660.406 > P1
+1793695660.716 {"hack_sent":21,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":96,"end_ms_max":99,"end_ms_mean":96,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":1,"beacon_check_ms_last":130,"beacon_check_ms_max":130,"beacon_dropped":0,"beacon_stack_free":5932}
+1793695660.716 {"lora":{"rx":true,"tx":"idle","rx_ok":42,"rx_bad":0,"rx_datagrams":42,"tx_datagrams":42,"tx_fragments":42,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695660.716 > P1
+1793695661.026 {"lora":{"rx":true,"tx":"idle","rx_ok":42,"rx_bad":0,"rx_datagrams":42,"tx_datagrams":42,"tx_fragments":42,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695670.704 > P1
+1793695671.012 {"lora":{"rx":true,"tx":"idle","rx_ok":42,"rx_bad":0,"rx_datagrams":42,"tx_datagrams":42,"tx_fragments":42,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695676.730 > HACK 0
+1793695676.934 > INFO
+1793695677.137 > P1
+1793695677.342 > REQ 10
+1793695677.652 {"hack_sent":0,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":0,"beacon_check_ms_last":0,"beacon_check_ms_max":0,"beacon_dropped":0,"beacon_stack_free":5932}
+1793695677.652 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":42,"rx_bad":0,"tx_drop":0,"restarts":9,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":5416,"service_s":4876,"boot_s":187,"screen":"main","lang":"PL","name":"WICI-B97DB3","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":683,"loop_max_ms":285,"rx_task_loops":187813,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":97,"inbox":0,"head":395,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":1,"usb_rejected":0,"usb_boot":"4841058e188a79b4","wdt_s":60,"board":"XIAO"}
+1793695677.652 {"lora":{"rx":true,"tx":"idle","rx_ok":42,"rx_bad":0,"rx_datagrams":42,"tx_datagrams":42,"tx_fragments":42,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695677.652 {"numbers":[9722,6153,6722,2032,5596,1146,6728,9129,4736,3053],"created":10,"sa1_bytes":73}
+1793695677.754 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695679.101 {"hack":"sent","len":27,"end_ms":99}
+1793695679.101 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695680.761 > P1
+1793695681.067 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":44,"rx_bad":0,"rx_datagrams":44,"tx_datagrams":44,"tx_fragments":44,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":680}}
+1793695681.795 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695683.144 {"hack":"sent","len":27,"end_ms":98}
+1793695683.144 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695685.951 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695687.197 {"hack":"sent","len":27,"end_ms":96}
+1793695687.197 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695689.977 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695690.707 > P1
+1793695691.013 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":49,"rx_bad":0,"rx_datagrams":49,"tx_datagrams":49,"tx_fragments":49,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1805}}
+1793695691.319 {"hack":"sent","len":27,"end_ms":100}
+1793695691.319 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695694.021 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695695.370 {"hack":"sent","len":27,"end_ms":96}
+1793695695.370 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695698.165 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695699.407 {"hack":"sent","len":27,"end_ms":99}
+1793695699.407 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695700.747 > P1
+1793695701.057 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":54,"rx_bad":0,"rx_datagrams":54,"tx_datagrams":54,"tx_fragments":54,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1039}}
+1793695702.195 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695703.543 {"hack":"sent","len":27,"end_ms":98}
+1793695703.543 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695706.242 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695706.751 > APP
+1793695707.061 {"link":true,"in_flight":1,"sent":29,"delivered":28,"failed":0,"received":27,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":106,"test_paused":false,"items":107}
+1793695707.577 {"hack":"sent","len":27,"end_ms":99}
+1793695707.577 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695710.293 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695710.713 > P1
+1793695711.022 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":59,"rx_bad":0,"rx_datagrams":59,"tx_datagrams":59,"tx_fragments":59,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":2143}}
+1793695711.649 {"hack":"sent","len":27,"end_ms":96}
+1793695711.649 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695714.340 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695715.683 {"hack":"sent","len":27,"end_ms":96}
+1793695715.683 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695720.785 > P1
+1793695721.095 {"lora":{"rx":true,"tx":"idle","rx_ok":62,"rx_bad":0,"rx_datagrams":62,"tx_datagrams":62,"tx_fragments":62,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695728.060 {"lorarx":"raw","len":156,"rssi_dbm":-20}
+1793695730.761 > P1
+1793695731.066 {"lora":{"rx":true,"tx":"idle","rx_ok":63,"rx_bad":0,"rx_datagrams":63,"tx_datagrams":62,"tx_fragments":62,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695736.685 > APP
+1793695736.889 > REQ 10
+1793695737.194 {"link":true,"in_flight":0,"sent":30,"delivered":30,"failed":0,"received":30,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":107}
+1793695737.194 {"numbers":[6935,5039,506,9487,6665,6206,4182,5705,208,7128],"created":10,"sa1_bytes":73}
+1793695737.404 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793695738.651 {"hack":"sent","len":27,"end_ms":96}
+1793695738.651 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695740.710 > P1
+1793695741.018 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":65,"rx_bad":0,"rx_datagrams":65,"tx_datagrams":65,"tx_fragments":65,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":327}}
+1793695741.432 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793695742.785 {"hack":"sent","len":27,"end_ms":96}
+1793695742.785 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695745.478 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695746.836 {"hack":"sent","len":27,"end_ms":96}
+1793695746.836 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695749.619 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695750.757 > P1
+1793695751.067 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":70,"rx_bad":0,"rx_datagrams":70,"tx_datagrams":70,"tx_fragments":70,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1351}}
+1793695751.067 {"hack":"sent","len":27,"end_ms":98}
+1793695751.067 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695753.669 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695755.018 {"hack":"sent","len":27,"end_ms":98}
+1793695755.018 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695757.709 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695759.061 {"hack":"sent","len":27,"end_ms":98}
+1793695759.061 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695760.722 > P1
+1793695761.029 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":75,"rx_bad":1,"rx_datagrams":75,"tx_datagrams":75,"tx_fragments":75,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":659}}
+1793695761.755 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695763.092 {"hack":"sent","len":27,"end_ms":97}
+1793695763.092 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695765.892 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695766.724 > APP
+1793695767.034 {"link":true,"in_flight":1,"sent":39,"delivered":38,"failed":0,"received":37,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":116,"test_paused":false,"items":117}
+1793695767.135 {"hack":"sent","len":27,"end_ms":96}
+1793695767.135 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695769.932 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695770.750 > P1
+1793695771.059 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":80,"rx_bad":1,"rx_datagrams":80,"tx_datagrams":80,"tx_fragments":80,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1702}}
+1793695771.266 {"hack":"sent","len":27,"end_ms":97}
+1793695771.266 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695773.971 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793695775.320 {"hack":"sent","len":27,"end_ms":97}
+1793695775.320 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695780.814 > P1
+1793695781.122 {"lora":{"rx":true,"tx":"idle","rx_ok":83,"rx_bad":1,"rx_datagrams":83,"tx_datagrams":83,"tx_fragments":83,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695790.800 > P1
+1793695791.107 {"lora":{"rx":true,"tx":"idle","rx_ok":83,"rx_bad":1,"rx_datagrams":83,"tx_datagrams":83,"tx_fragments":83,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695796.720 > APP
+1793695796.925 > REQ 10
+1793695797.233 {"link":true,"in_flight":0,"sent":40,"delivered":40,"failed":0,"received":40,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":117}
+1793695797.235 {"numbers":[3172,599,4557,3096,765,7098,4592,220,3047,5594],"created":10,"sa1_bytes":73}
+1793695797.338 {"lorarx":"raw","len":27,"rssi_dbm":-19}
+1793695798.692 {"hack":"sent","len":27,"end_ms":99}
+1793695798.692 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695800.778 > P1
+1793695801.083 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":85,"rx_bad":1,"rx_datagrams":85,"tx_datagrams":85,"tx_fragments":85,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":265}}
+1793695801.392 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695802.745 {"hack":"sent","len":27,"end_ms":98}
+1793695802.745 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695805.553 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695806.797 {"hack":"sent","len":27,"end_ms":97}
+1793695806.902 {"lorarx":"raw","len":98,"rssi_dbm":-19}
+1793695809.608 {"lorarx":"raw","len":27,"rssi_dbm":-21}
+1793695810.747 > P1
+1793695811.057 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":90,"rx_bad":1,"rx_datagrams":90,"tx_datagrams":90,"tx_fragments":90,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1367}}
+1793695811.057 {"hack":"sent","len":27,"end_ms":96}
+1793695811.057 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+1793695813.663 {"lorarx":"raw","len":27,"rssi_dbm":-19}
+1793695815.015 {"hack":"sent","len":27,"end_ms":98}
+1793695815.015 {"lorarx":"raw","len":98,"rssi_dbm":-20}
+1793695817.691 {"lorarx":"raw","len":27,"rssi_dbm":-17}
+1793695819.038 {"hack":"sent","len":27,"end_ms":96}
+1793695819.038 {"lorarx":"raw","len":98,"rssi_dbm":-17}
+1793695820.805 > P1
+1793695821.115 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":95,"rx_bad":1,"rx_datagrams":95,"tx_datagrams":95,"tx_fragments":95,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":583}}
+1793695821.739 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695823.088 {"hack":"sent","len":27,"end_ms":99}
+1793695823.088 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695825.890 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695826.715 > APP
+1793695827.025 {"link":true,"in_flight":1,"sent":49,"delivered":48,"failed":0,"received":47,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":126,"test_paused":false,"items":127}
+1793695827.233 {"hack":"sent","len":27,"end_ms":96}
+1793695827.233 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695829.951 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695830.788 > P1
+1793695831.098 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":100,"rx_bad":1,"rx_datagrams":100,"tx_datagrams":100,"tx_fragments":100,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1686}}
+1793695831.309 {"hack":"sent","len":27,"end_ms":96}
+1793695831.309 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695834.029 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695835.381 {"hack":"sent","len":27,"end_ms":96}
+1793695835.381 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695840.795 > P1
+1793695841.098 {"lora":{"rx":true,"tx":"idle","rx_ok":103,"rx_bad":1,"rx_datagrams":103,"tx_datagrams":103,"tx_fragments":103,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695850.875 > P1
+1793695851.184 {"lora":{"rx":true,"tx":"idle","rx_ok":103,"rx_bad":1,"rx_datagrams":103,"tx_datagrams":103,"tx_fragments":103,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695856.784 > APP
+1793695856.984 > REQ 10
+1793695857.294 {"link":true,"in_flight":0,"sent":50,"delivered":50,"failed":0,"received":50,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":127}
+1793695857.295 {"numbers":[1343,5413,9030,4473,4069,4001,6464,2308,4573,8111],"created":10,"sa1_bytes":73}
+1793695857.400 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695858.754 {"hack":"sent","len":27,"end_ms":96}
+1793695858.754 {"lorarx":"raw","len":98,"rssi_dbm":-19}
+1793695860.830 > P1
+1793695861.136 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":105,"rx_bad":1,"rx_datagrams":105,"tx_datagrams":106,"tx_fragments":106,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":259}}
+1793695861.441 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695862.771 {"hack":"sent","len":27,"end_ms":97}
+1793695862.771 {"lorarx":"raw","len":98,"rssi_dbm":-19}
+1793695865.576 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695866.921 {"hack":"sent","len":27,"end_ms":99}
+1793695866.921 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695869.615 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695870.860 > P1
+1793695871.168 {"hack":"sent","len":27,"end_ms":98}
+1793695871.168 {"lorarx":"raw","len":98,"rssi_dbm":-19}
+1793695871.168 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":111,"rx_bad":1,"rx_datagrams":111,"tx_datagrams":112,"tx_fragments":112,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":2388}}
+1793695873.659 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695875.023 {"hack":"sent","len":27,"end_ms":99}
+1793695875.023 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695877.727 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695879.085 {"hack":"sent","len":27,"end_ms":96}
+1793695879.085 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695880.869 > P1
+1793695881.179 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":115,"rx_bad":1,"rx_datagrams":115,"tx_datagrams":116,"tx_fragments":116,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":567}}
+1793695881.794 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695883.147 {"hack":"sent","len":27,"end_ms":96}
+1793695883.147 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695885.948 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695886.772 > APP
+1793695887.080 {"link":true,"in_flight":1,"sent":59,"delivered":58,"failed":0,"received":57,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":136,"test_paused":false,"items":137}
+1793695887.284 {"hack":"sent","len":27,"end_ms":96}
+1793695887.284 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695889.969 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695890.904 > P1
+1793695891.211 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":120,"rx_bad":1,"rx_datagrams":120,"tx_datagrams":121,"tx_fragments":121,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":2,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1603}}
+1793695891.313 {"hack":"sent","len":27,"end_ms":96}
+1793695891.314 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695894.007 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695895.344 {"hack":"sent","len":27,"end_ms":107}
+1793695895.344 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695900.849 > P1
+1793695901.157 {"lora":{"rx":true,"tx":"idle","rx_ok":123,"rx_bad":1,"rx_datagrams":123,"tx_datagrams":124,"tx_fragments":124,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695910.916 > P1
+1793695911.225 {"lora":{"rx":true,"tx":"idle","rx_ok":123,"rx_bad":1,"rx_datagrams":123,"tx_datagrams":124,"tx_fragments":124,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695916.833 > APP
+1793695917.037 > REQ 10
+1793695917.344 {"link":true,"in_flight":0,"sent":60,"delivered":60,"failed":0,"received":60,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":137}
+1793695917.344 {"numbers":[5192,6167,1557,8665,4697,1624,9994,2602,1970,9588],"created":10,"sa1_bytes":73}
+1793695917.449 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695918.789 {"hack":"sent","len":27,"end_ms":99}
+1793695918.789 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695920.861 > P1
+1793695921.171 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":125,"rx_bad":1,"rx_datagrams":125,"tx_datagrams":126,"tx_fragments":126,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":272}}
+1793695921.482 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695922.832 {"hack":"sent","len":27,"end_ms":96}
+1793695922.832 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695925.615 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695926.968 {"hack":"sent","len":27,"end_ms":96}
+1793695926.968 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695929.675 {"lorarx":"raw","len":27,"rssi_dbm":-19}
+1793695930.928 > P1
+1793695931.235 {"hack":"sent","len":27,"end_ms":98}
+1793695931.235 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695931.235 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":131,"rx_bad":1,"rx_datagrams":131,"tx_datagrams":132,"tx_fragments":132,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":2388}}
+1793695933.736 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695935.084 {"hack":"sent","len":27,"end_ms":99}
+1793695935.084 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695937.783 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695939.141 {"hack":"sent","len":27,"end_ms":96}
+1793695939.141 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695940.903 > P1
+1793695941.207 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":135,"rx_bad":1,"rx_datagrams":135,"tx_datagrams":136,"tx_fragments":136,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":574}}
+1793695941.828 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695943.178 {"hack":"sent","len":27,"end_ms":96}
+1793695943.178 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695945.982 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695946.812 > APP
+1793695947.122 {"link":true,"in_flight":1,"sent":69,"delivered":68,"failed":0,"received":67,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":146,"test_paused":false,"items":147}
+1793695947.329 {"hack":"sent","len":27,"end_ms":96}
+1793695947.329 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695950.021 {"lorarx":"raw","len":27,"rssi_dbm":-18}
+1793695950.954 > P1
+1793695951.259 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":140,"rx_bad":1,"rx_datagrams":140,"tx_datagrams":141,"tx_fragments":141,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":1594}}
+1793695951.362 {"hack":"sent","len":27,"end_ms":96}
+1793695951.362 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695954.073 {"lorarx":"raw","len":27,"rssi_dbm":-19}
+1793695955.420 {"hack":"sent","len":27,"end_ms":96}
+1793695955.420 {"lorarx":"raw","len":98,"rssi_dbm":-18}
+1793695960.924 > P1
+1793695961.228 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695970.954 > P1
+1793695971.261 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695976.834 > APP
+1793695977.143 {"link":true,"in_flight":0,"sent":70,"delivered":70,"failed":0,"received":70,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":147}
+1793695980.961 > P1
+1793695981.269 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793695990.907 > P1
+1793695991.216 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793696000.922 > P1
+1793696001.227 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}
+1793696006.817 > APP
+1793696007.021 > HACK
+1793696007.222 > INFO
+1793696007.425 > P1
+1793696007.735 {"link":true,"in_flight":0,"sent":70,"delivered":70,"failed":0,"received":70,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":147}
+1793696007.735 {"hack_sent":50,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":96,"end_ms_max":107,"end_ms_mean":97,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":1,"beacon_check_ms_last":66,"beacon_check_ms_max":66,"beacon_dropped":0,"beacon_stack_free":5932}
+1793696007.735 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":143,"rx_bad":1,"tx_drop":0,"restarts":9,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":5747,"service_s":5207,"boot_s":518,"screen":"main","lang":"PL","name":"WICI-B97DB3","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":683,"loop_max_ms":285,"rx_task_loops":518007,"rx_service_max_ms":3,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":147,"inbox":0,"head":595,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":1,"usb_rejected":0,"usb_boot":"4841058e188a79b4","wdt_s":60,"board":"XIAO"}
+1793696007.735 {"lora":{"rx":true,"tx":"idle","rx_ok":143,"rx_bad":1,"rx_datagrams":143,"tx_datagrams":144,"tx_fragments":144,"tx_drop":0,"deferrals":0,"long_deferrals":0,"cad_busy":0,"cad_unconfirmed":3,"rssi_busy":0,"rx_busy":0,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-78,"tx_wait_ms":0}}

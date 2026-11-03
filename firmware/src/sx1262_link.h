@@ -39,6 +39,7 @@
 
 #include <atomic>
 
+#include "cca_floor.h"
 #include "lora_profile.h"
 #include "radio_link.h"
 #include "rx_watch.h"
@@ -66,6 +67,15 @@ enum class RxService : uint8_t {
     BusyTimeout,  // przekroczony czas BUSY: próbka przerwana, `out` bez ramki
 };
 
+// Chwila `t` nie dawniej niż `windowMs` przed `now`. Znacznik zapisany przez zadanie odbioru po odczycie `now`
+// wypada nieco później (do FUTURE_SLACK_MS) i też jest świeży. Znacznik sprzed 2^31 ms jest stary: zwykła różnica
+// ze znakiem wzięłaby go za przyszły i zajęłaby kanał na następne 24,8 dnia.
+constexpr uint32_t FUTURE_SLACK_MS = 1000;
+inline bool recent(uint32_t now, uint32_t t, uint32_t windowMs) {
+    const uint32_t ago = now - t;
+    return ago < windowMs || ago > UINT32_MAX - FUTURE_SLACK_MS;
+}
+
 // Znaczniki aktywności kanału (millis()) dla okna CCA. Pisze je próbka odbioru (zadanie albo pętla),
 // czyta pętla bez blokady radia. Bit w masce mówi, że znacznik jest ważny (od clearActivity()).
 struct Activity {
@@ -85,10 +95,7 @@ struct Activity {
     bool quietFor(uint32_t now, uint32_t windowMs, uint8_t kinds = ALL) const {
         const uint8_t mask = seen.load(std::memory_order_acquire) & kinds;
         for (uint8_t k = 0; k < KINDS; ++k)
-            // Ze znakiem: znacznik zapisany przez zadanie po odczycie now (wynik ujemny) to aktywność, nie cisza.
-            if ((mask & (1u << k)) &&
-                static_cast<int32_t>(now - ms[k].load(std::memory_order_relaxed)) < static_cast<int32_t>(windowMs))
-                return false;
+            if ((mask & (1u << k)) && recent(now, ms[k].load(std::memory_order_relaxed), windowMs)) return false;
         return true;
     }
     void clear() { seen.store(0, std::memory_order_release); }
@@ -119,6 +126,7 @@ public:
     void clearActivity() override { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
     uint32_t rxLate() const override { return rxLate_.load(std::memory_order_relaxed); }
     radiolink::Activity recentActivity(uint32_t windowMs) override;
+    bool rssiMayHideFrame() override;
 
     // Odbiór w tle (stacja L0, plan interfejsu LoRa, L6). taskCycle() to jeden obieg zadania odbioru (co takt):
     // licznik obiegów; przy wysokim DIO1 (koniec ramki, poziom czytany przez wywołującego bez blokady) albo
@@ -161,11 +169,14 @@ public:
     radiolink::Framing framing() const override { return radiolink::Framing::RNODE; }
     bool hasSnr() const override { return true; }
     int8_t ccaThresholdDbm() const override;
+    int16_t noiseFloorDbm() const { return noise_.floor(); }  // cca::NoiseFloor::UNKNOWN przed pomiarem
     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
     radiolink::Cad cad() override;
+    uint32_t cadUnconfirmed() const override { return cadUnconfirmed_; }
     bool sendPrepared(radiolink::TxTiming* timing) override;
 
 private:
+    radiolink::Cad cadOnce();  // jeden CAD ze stanu spoczynku
     bool toStandby();    // STDBY_XOSC: między nadawaniem, odbiorem i CAD; false przy przekroczeniu czasu BUSY
     void toStandbyRc();  // STDBY_RC: konfiguracja, uśpienie, idle()
     bool load(const uint8_t* frame, size_t length);
@@ -187,10 +198,17 @@ private:
     std::atomic<bool> inFrame_{false};  // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana (CCA czyta bez blokady)
     bool headerSeen_ = false;   // próbka widziała i skasowała HeaderValid bieżącej ramki
     uint32_t lastSampleMs_ = 0; // ostatnia udana próbka odbioru (millis), do wykrycia spóźnienia
+    std::atomic<uint32_t> rxStartMs_{0};  // ostatni SetRx (millis): RSSI ustala się przez lora::RSSI_SETTLE_MS
+    uint32_t cadUnconfirmed_ = 0;
     std::atomic<uint32_t> inFrameSinceMs_{0};
+    // Od kiedy odbiornik słyszy początki ramek (millis): start odbioru, koniec ramki albo wygaśnięcie preambuły
+    // bez ramki (inFrameSinceMs_ + FRAME_MAX_MS). Dla rssiMayHideFrame, czytane bez blokady.
+    std::atomic<uint32_t> hearingSinceMs_{0};
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
     Activity activity_;
+    // Tło szumu z próbek RSSI poza ramką i próg CCA nad nim (lora_profile.h).
+    cca::NoiseFloor noise_{lora::CCA_RSSI_THRESHOLD_DBM, lora::CCA_RSSI_THRESHOLD_MAX_DBM, lora::CCA_FLOOR_MARGIN_DB};
     std::atomic<uint32_t> rxLate_{0};
 
     // Pozycja pierścienia odbioru w tle: Frame albo Bad (zła i spóźniona ramka, jak pollRx bez zadania).

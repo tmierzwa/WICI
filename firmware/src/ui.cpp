@@ -17,6 +17,13 @@ using ui_texts::label;
 const char* const LANGUAGE_NAMES[ui_texts::LANGS] = {"POLSKI", "УКРАЇНСЬКА", "ENGLISH"};
 // Lista liczby osób ze specyfikacji; ostatnia pozycja to INNA LICZBA (wpis cyfra po cyfrze).
 const uint16_t PEOPLE_VALUES[] = {1, 2, 5, 10, 20, 50, 100};
+
+// Czas od chwili `sinceMs` do `nowMs`; 0, gdy `sinceMs` jest późniejsze. Naciśnięcie z portu USB (KEY) ma
+// czas odczytany po `now` obiegu, a zwykła różnica liczb bez znaku dałaby wtedy około 49 dni.
+uint32_t elapsed(uint32_t nowMs, uint32_t sinceMs) {
+    const int32_t d = static_cast<int32_t>(nowMs - sinceMs);
+    return d > 0 ? static_cast<uint32_t>(d) : 0;
+}
 constexpr size_t PEOPLE_CHOICES = sizeof(PEOPLE_VALUES) / sizeof(PEOPLE_VALUES[0]) + 1;
 constexpr uint8_t MENU_ITEMS = static_cast<uint8_t>(ui_texts::MENU_ITEMS);
 constexpr size_t SERVICE_ITEMS = 5;  // OGŁOŚ ADRES, WYCISZ/WŁĄCZ DŹWIĘK, KLUCZ ZAPASOWY, ZAMKNIJ ZDARZENIE, ZNISZCZ DANE
@@ -446,11 +453,11 @@ void Model::tick(uint32_t nowMs) {
     // Przytrzymanie WSTECZ: 2 s w kreatorze (porzucić?), 3 s poza nim (wybór języka).
     const size_t back = static_cast<size_t>(Button::BACK);
     if (held_[back] && !holdConsumed_) {
-        const uint32_t held = nowMs - heldSinceMs_[back];
+        const uint32_t held = elapsed(nowMs, heldSinceMs_[back]);
         if (screen_ == Screen::TEXT) {
             // Na ekranie wpisu przytrzymanie WSTECZ usuwa kolejne znaki (bez pytania o porzucenie i bez wyjścia
             // do listy fraz); przy otwartej grupie zwolnienie ją zamyka.
-            if (!textGroupOpen_ && held >= REPEAT_DELAY_MS && nowMs - repeatMs_ >= REPEAT_MS) {
+            if (!textGroupOpen_ && held >= REPEAT_DELAY_MS && elapsed(nowMs, repeatMs_) >= REPEAT_MS) {
                 repeatMs_ = nowMs;
                 if (eraseLast()) holdErased_ = true;   // pusty tekst: zwolnienie działa jak zwykłe WSTECZ
                 lastPressMs_ = nowMs;
@@ -472,14 +479,14 @@ void Model::tick(uint32_t nowMs) {
         const Button repeatable[2] = {Button::UP, Button::DOWN};
         for (Button b : repeatable) {
             const size_t i = static_cast<size_t>(b);
-            if (held_[i] && nowMs - heldSinceMs_[i] >= REPEAT_DELAY_MS && nowMs - repeatMs_ >= REPEAT_MS) {
+            if (held_[i] && elapsed(nowMs, heldSinceMs_[i]) >= REPEAT_DELAY_MS && elapsed(nowMs, repeatMs_) >= REPEAT_MS) {
                 repeatMs_ = nowMs;
                 act(b, nowMs);
             }
         }
     }
     if (screen_ == Screen::LANGUAGE || screen_ == Screen::MAIN || screen_ == Screen::ALARM || screen_ == Screen::CONFIRM) return;
-    if (nowMs - lastPressMs_ >= (screen_ == Screen::TEXT ? IDLE_TEXT_MS : IDLE_MS)) {
+    if (elapsed(nowMs, lastPressMs_) >= (screen_ == Screen::TEXT ? IDLE_TEXT_MS : IDLE_MS)) {
         // Szkic kreatora zostaje w pamięci; wynik bez reakcji kończy się jak OK, żeby wysłane zgłoszenie
         // nie wróciło jako szkic następnego.
         if (screen_ == Screen::RESULT) {

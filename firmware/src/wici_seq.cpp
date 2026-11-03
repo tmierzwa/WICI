@@ -15,20 +15,30 @@ bool Counter::begin(uint16_t network, uint16_t own) {
     copy_ = 1;
     if (!id(network) || !id(own)) return false;
     network_ = network; own_ = own;
-    bool found = false;
+    bool found = false, damaged = false, absent = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t data[SLOT_BYTES];
         Copy state;
         if (!load(storage_, BASE + copy * SLOT_BYTES, data, sizeof(data), 16, MAGIC, state)) return false;
-        if (state == Copy::ABSENT) continue;
+        if (state == Copy::ABSENT) { absent = true; continue; }
         // The reservation stays monotonic across renumbering; the record
         // takes the new binding with its next block.
-        if (state == Copy::DAMAGED || !get32(data + 12) || get32(data + 12) % BLOCK) return false;
+        if (state == Copy::DAMAGED || !get32(data + 12) || get32(data + 12) % BLOCK) { damaged = true; continue; }
         const uint32_t generation = get32(data + 8);
         if (!found || newer(generation, generation_)) {
             generation_ = generation; upper_ = get32(data + 12); copy_ = copy; found = true;
         }
     }
+    // A missing copy beside a valid one counts as damaged: it may be the skip
+    // below, torn while written over a damaged copy that held the newer
+    // reservation, and the two cases look the same. The only normal case,
+    // a record with a single reservation so far, costs one skipped block.
+    if (found && absent) damaged = true;
+    // A damaged copy may hold the newer reservation, at most one block above
+    // the other copy: skip that block too. The skip is written over the
+    // damaged copy before any use, so the copies again differ by one block.
+    // With no valid copy left nothing bounds the used values: fail closed.
+    if (damaged && (!found || upper_ > UINT32_MAX - BLOCK || !reserve(upper_ + BLOCK))) return false;
     current_ = upper_;
     ready_ = true;
     return true;

@@ -23,7 +23,7 @@ for _path in (ROOT / "software" / "laptop", ROOT / "software" / "reference"):
 from obliczenia import lora_frame_seconds  # noqa: E402
 from wici.stanowisko import wici_link  # noqa: E402
 
-FIRMWARE = "lora-raw-0.1"
+FIRMWARE = "lora-raw-0.2"
 PROFILE = {"mhz": 869.525, "bw_khz": 125, "sf": 7, "cr": 5, "preamble": 24, "sync_word": 0x12,
            "crc": True, "explicit_header": True}
 SF = 7
@@ -214,7 +214,8 @@ def keyed_frame(rng, key, net_id, kind, sources=(), destinations=()):
                                 rng.randint(1, 15), sequence, rng.randbytes(rng.randint(25, wici_link.MAX_PAYLOAD)))
         tag = rng.randbytes(HOP_TAG)
     elif kind == "hack":
-        frame = wici_link.Frame(wici_link.HACK, 0, net_id, source, _station(rng, destinations), 0, 1, sequence)
+        frame = wici_link.Frame(wici_link.HACK, 0, net_id, source, _station(rng, destinations), 0, 1, sequence,
+                                rng.randbytes(wici_link.HACK_ECHO))
         tag = rng.randbytes(HOP_TAG)
     else:
         raise ValueError(f"unknown keyed frame kind {kind!r}")

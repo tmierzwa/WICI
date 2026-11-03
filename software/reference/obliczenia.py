@@ -60,13 +60,15 @@ def lxmf_packet_bytes(content_bytes: int) -> int:
 
 
 # WICI-Link v3 frames as in firmware/src: wici_link.h (header, network MAC, 255 B frame), wici_hop_auth.h
-# (pairwise hop tag on unicast DATA and HACK), wici_beacon.h (BEACON content and sender signature, broadcast
+# (pairwise hop tag on unicast DATA and HACK; a HACK repeats 2 B of the DATA MAC), wici_beacon.h (BEACON content and sender signature, broadcast
 # without hop tag) and envelope.h (envelope header and AEAD tag).
-WICI = {"max_frame_bytes": 255, "link_header_bytes": 11, "link_mac_bytes": 8, "hop_tag_bytes": 8,
+WICI = {"max_frame_bytes": 255, "link_header_bytes": 11, "link_mac_bytes": 8, "hop_tag_bytes": 8, "hack_echo_bytes": 2,
         "envelope_overhead_bytes": 25, "beacon_content_bytes": 73,
         "beacon_signature_bytes": 64, "ramp_ms": 3, "debt_multiplier": 13, "hop_attempts": 3,
         "contended_k2_cap_s": 0.25 * 3600}
-WICI_HACK = WICI["link_header_bytes"] + WICI["link_mac_bytes"] + WICI["hop_tag_bytes"]
+# Framing of a unicast radio frame (header, network MAC, hop tag) around its payload.
+WICI_UNICAST = WICI["link_header_bytes"] + WICI["link_mac_bytes"] + WICI["hop_tag_bytes"]
+WICI_HACK = WICI_UNICAST + WICI["hack_echo_bytes"]
 WICI_BEACON = (WICI["link_header_bytes"] + WICI["beacon_content_bytes"] + WICI["beacon_signature_bytes"]
                + WICI["link_mac_bytes"])
 # Origin-signature bytes on a single frame, on part 1 and on part 2 of a two-part SA1 message. The first entry is
@@ -84,7 +86,7 @@ def wici_tx_s(frame_bytes: int) -> float:
 def wici_frames(content: int, signature: list[int]) -> list[int]:
     """Unicast DATA frame sizes of one SA1 message: one envelope, or two parts split in half as envelope::seal
     does (part 1 shortened when its signature overhead requires it)."""
-    base = WICI_HACK + WICI["envelope_overhead_bytes"]
+    base = WICI_UNICAST + WICI["envelope_overhead_bytes"]
     single, first_sig, second_sig = signature
     if base + single + content <= WICI["max_frame_bytes"]:
         return [base + single + content]
@@ -126,7 +128,7 @@ def wici_link_model(sizes: dict[str, int]) -> dict:
                               "relay_s_with_read_and_decision": with_status,
                               "fifty_requests_with_read_and_decision_min": 50 * with_status / 60,
                               "mixed_trial_55_revisions_min": 55 * with_status / 60}
-        variants[name] = {"max_payload_bytes": WICI["max_frame_bytes"] - WICI_HACK - signature[0],
+        variants[name] = {"max_payload_bytes": WICI["max_frame_bytes"] - WICI_UNICAST - signature[0],
                           "frames_bytes": frames, "cases": cases}
     implemented = variants["hop_tag_only"]
     largest = implemented["cases"]["max_fields_request"]

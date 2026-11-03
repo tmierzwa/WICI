@@ -23,7 +23,11 @@ MAX_FRAME = MAX_SA1 + OVERHEAD
 MIN_PAYLOAD = 153
 WINDOW = 64
 VERSION = 1
-TYPE_SA1 = 0  # the only kind type in v1; 1..15 are reserved and rejected
+TYPE_SA1 = 0
+# A station's delivery proof to the receiver (transport.md): 1..16 u32 counters of resolved SA1 messages.
+# 2..15 are reserved and rejected.
+TYPE_PROOF = 1
+PROOF_COUNTERS = 16
 
 
 class EnvelopeError(ValueError):
@@ -43,7 +47,7 @@ def _u32(value):
 
 
 def _kind(part, message_type):
-    if part not in (0, 1, 2) or message_type != TYPE_SA1:
+    if part not in (0, 1, 2) or message_type not in (TYPE_SA1, TYPE_PROOF):
         raise EnvelopeError("invalid envelope kind")
     return (VERSION << 6) | (part << 4) | message_type
 
@@ -79,6 +83,8 @@ def seal(key, sender, recipient, counter, plaintext, max_payload, message_type=T
     raw = bytes(plaintext)
     if len(raw) > MAX_SA1 or max_payload < MIN_PAYLOAD:
         raise EnvelopeError("payload exceeds envelope contract")
+    if message_type == TYPE_PROOF and (not raw or len(raw) % 4 or len(raw) > 4 * PROOF_COUNTERS):
+        raise EnvelopeError("proof carries 1..16 counters")
     src, dst, ctr = _u16(sender), _u16(recipient), _u32(counter)
     if sender == recipient or len(key) != 32:
         raise EnvelopeError("invalid key or direction")
@@ -102,13 +108,17 @@ class Part:
     plaintext: bytes
 
 
-def open_part(key, frame):
+def open_part(key, frame, types=(TYPE_SA1,)):
+    """Authenticate one envelope of an accepted type: SA1 only, unless the caller also takes proofs."""
     wire = bytes(frame)
     if len(key) != 32 or not OVERHEAD <= len(wire) <= MAX_SA1 + OVERHEAD:
         raise EnvelopeError("invalid key or envelope length")
     header, kind = wire[:HEADER], wire[0]
-    if kind >> 6 != VERSION or kind & 0x0F != TYPE_SA1 or (kind >> 4) & 3 == 3:
+    if kind >> 6 != VERSION or kind & 0x0F not in types or (kind >> 4) & 3 == 3:
         raise EnvelopeError("unsupported envelope kind")
+    if kind & 0x0F == TYPE_PROOF and ((kind >> 4) & 3 or not 4 <= len(wire) - OVERHEAD <= 4 * PROOF_COUNTERS or
+                                      (len(wire) - OVERHEAD) % 4):
+        raise EnvelopeError("invalid proof envelope")
     sender, recipient = int.from_bytes(header[1:3], "big"), int.from_bytes(header[3:5], "big")
     _u16(sender)
     _u16(recipient)

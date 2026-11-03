@@ -50,13 +50,19 @@ def medium_in(root, officers=2, identity=None):
 
 
 def durable(medium, key, sql, args=()):
-    """Query the newest snapshot on the medium, as a restarted application would see it."""
-    body = nosnik.Nosnik(medium.root).load(key)
-    if body is None:
+    """Query the medium as a restarted application would see it: the newest snapshot and the receptions of the
+    intake journal admitted again, on a copy of the medium, so the running application is not touched."""
+    if nosnik.Nosnik(medium.root).load(key) is None:
         return None
-    with contextlib.closing(sqlite3.connect(":memory:")) as db:
-        db.deserialize(body)
-        return db.execute(sql, args).fetchone()
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = Path(tmp) / "nosnik"
+        shutil.copytree(medium.root, copy, ignore=shutil.ignore_patterns("*.tmp"))
+        restarted = przyjecie.Przyjecie(nosnik.Nosnik(copy, FAST), key, lambda target, content: None,
+                                        lambda message: None, clock=lambda: 4_000_000_000.0, log=lambda line: None)
+        try:
+            return restarted.call(lambda store: store.db.execute(sql, args).fetchone())
+        finally:
+            restarted.stop(save=False)
 
 
 class ConfigTest(unittest.TestCase):
@@ -213,7 +219,8 @@ class StationTestCase(unittest.TestCase):
         return Sent(self.result)
 
     def tick(self):
-        self.reception.call(lambda s: self.reception.tick())
+        # A tick and the writes it started (snapshot, copy), so the test sees their result.
+        self.reception.call(lambda s: (self.reception.tick(), self.reception.flush()))
 
     def deliver(self, source, content):
         self.reception.deliver(source, content)
@@ -279,10 +286,10 @@ class ReceptionTest(StationTestCase):
         # A replayed frame is acknowledged again but does not move the reply route.
         self.assertEqual(self.reception.receive_envelope_frame(100, frames[0], bearer="reticulum"), "duplicate")
         self.assertIsNone(durable(self.medium, self.key, "SELECT 1 FROM bearer_route WHERE bearer='reticulum'"))
-        with self.assertRaises(envelope.EnvelopeError):
+        with self.assertRaises(przyjecie.NotAuthenticated):
             self.reception.receive_envelope_frame(101, frames[0])
         forged = bytearray(frames[0]); forged[-1] ^= 1
-        with self.assertRaises(envelope.EnvelopeError):
+        with self.assertRaises(przyjecie.NotAuthenticated):
             self.reception.receive_envelope_frame(100, forged, bearer="reticulum")
         self.assertEqual(self.reception.call(lambda s: self.reception.last_bearer.get(source)), "wici")
 
@@ -310,7 +317,7 @@ class ReceptionTest(StationTestCase):
             frames = None
 
             def status(self, now):
-                return {"online": True}
+                return {"online": True, "room": True}
 
             def send_frames(self, frames):
                 self.frames = frames
@@ -436,6 +443,27 @@ class SendingTest(StationTestCase):
     def waiting(self):
         return self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM outbox WHERE done=0").fetchone()[0])
 
+    def test_station_off_the_trusted_list_gets_only_received_until_trusted_again(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        self.reception.call(lambda s: s.remove_trusted(self.STATION))
+        before = len(self.sent)
+        self.status(mid, revision, 2)
+        self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, mid, revision, "jedziemy", self.now))
+        self.now += 3600
+        self.tick()
+        self.assertEqual(self.sent[before:], [])   # held, not failed: no retries counted
+        self.assertEqual(self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*), sum(attempts) FROM outbox WHERE done=0").fetchone()), (2, 0))
+        self.deliver(self.STATION, content)   # the repeat still gets its RECEIVED, without content
+        self.assertEqual(self.kinds()[before:], [wysylka.RECEIVED])
+        self.reception.call(lambda s: s.add_trusted(self.STATION, self.KEY, ("dyzurny-1", "dyzurny-2")))
+        self.tick()
+        self.tick()
+        self.assertEqual(self.kinds()[before + 1:], [wysylka.STATUS, wysylka.REPLY])
+        self.assertEqual(self.waiting(), 0)
+
     def test_received_goes_out_after_commit_and_the_intent_ends_on_delivered(self):
         self.accepted()
         self.assertEqual(self.committed, [True])
@@ -457,6 +485,49 @@ class SendingTest(StationTestCase):
         late = [g for t, g in zip(times, gaps) if t - g >= wysylka.LATE_AFTER_S]
         self.assertTrue(late and set(late) == {3600})
         self.assertEqual(len(self.sent), len(times) + 1)   # każde ponowienie to nowa wiadomość
+
+    def sends(self, hours):
+        """Times (s from now) of every send within hours, each finished at once with self.result."""
+        start, times = self.now, []
+        while self.now - start < hours * 3600:
+            self.now += 10
+            before = len(self.sent)
+            self.tick()
+            if len(self.sent) > before:
+                times.append(self.now - start)
+                self.tick()
+        return times
+
+    def test_forwarded_stays_open_and_waits_out_the_relay_custody(self):
+        # E1: a relay's HACK is no proof. The intent stays open; the next copy waits until the first one has
+        # left the relay queue (30 min), then twice as long each time, up to 4 h, with no contact.
+        self.result = wysylka.FORWARDED
+        self.deliver(self.STATION, request())
+        times = self.sends(14)
+        gaps = [b - a for a, b in zip([0] + times, times)]
+        self.assertEqual(gaps[:5], [2100, 4200, 8400, 14400, 14400])
+        self.assertEqual(self.waiting(), 1)
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT forwarded FROM outbox").fetchone()[0]),
+                         len(times) + 1)   # and the first send, at once after the REQUEST
+
+    def test_flooded_stays_open_on_the_failure_schedule(self):
+        self.result = wysylka.FLOODED
+        self.deliver(self.STATION, request())
+        times = self.sends(1)
+        self.assertEqual([b - a for a, b in zip([0] + times, times)][:4], [60, 120, 300, 900])
+        self.assertEqual(self.waiting(), 1)
+
+    def test_contact_sends_open_intents_at_once(self):
+        self.result = wysylka.FORWARDED
+        self.deliver(self.STATION, request())
+        self.tick()
+        self.assertEqual(len(self.sent), 1)
+        self.now += 60
+        self.reception.call(lambda s: self.reception.wysylka.contact(s.db, self.STATION))
+        self.tick()
+        self.assertEqual(len(self.sent), 2)
+        self.tick()   # contact also restarts the custody floor: 1 again, not 2
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT forwarded FROM outbox").fetchone()[0]), 1)
 
     def test_retry_interval_has_twenty_percent_jitter(self):
         self.assertEqual(wysylka.retry_delay(1, 0, lambda: 0.0), 48)
@@ -489,6 +560,31 @@ class SendingTest(StationTestCase):
             message.result = True
         self.tick()
         self.assertEqual(self.kinds()[4:], [wysylka.RECEIVED, wysylka.REPLY])   # REPLY po RECEIVED
+
+    def test_reply_waits_for_the_proof_of_the_earlier_reply_of_its_request(self):
+        # The station skips a REPLY with an event below the one it took and proves it as late: an
+        # overtaken REPLY would end as delivered without reaching the station. Other requests do not wait.
+        other, _ = self.accepted()
+        mid, revision = self.accepted()
+        self.sent.clear()
+
+        def reply(m, text):
+            self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, m, revision, text, self.now))
+        self.result = "no path"
+        reply(mid, "pierwsza")
+        self.tick()               # FAILED: ponowienie po 60 s
+        self.now += 5
+        reply(mid, "druga")
+        reply(other, "inna")
+        self.result = True
+        self.tick()
+        self.tick()
+        self.assertEqual([wzorzec.decode_message(c)[5] for _, c in self.sent], ["inna"])
+        self.now += 60
+        for _ in range(3):
+            self.tick()
+        self.assertEqual([wzorzec.decode_message(c)[5] for _, c in self.sent], ["inna", "pierwsza", "druga"])
+        self.assertEqual(self.waiting(), 0)
 
     def test_newer_status_replaces_one_not_yet_delivered(self):
         mid, revision = self.accepted()
@@ -1037,7 +1133,15 @@ class RecoveryTest(WithCopies):
         self.assertEqual((self.sent, self.copies.files()), ([], []))
         with self.assertRaises(ValueError):
             self.reception.finish_recovery("dyzurny-1", 0, False)   # bez potwierdzenia zegara
+        # Przegląd 10: kopię pisze wątek zapisu, a wysyłka czeka na jej wynik.
+        gate, write = threading.Event(), self.copies.write
+        self.copies.write = lambda *a, **k: (gate.wait(5), write(*a, **k))[1]
         self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.reception.call(lambda s: self.reception.tick())
+        self.assertEqual((self.sent, self.copies.files()), ([], []))
+        gate.set()
+        self.tick()
+        self.tick()
         self.assertEqual(self.sent[0][1], received_for(content))
         _, payload = kopie.Kopie.read(self.copies.files()[0], self.key)
         with contextlib.closing(sqlite3.connect(":memory:")) as db:
@@ -1046,6 +1150,22 @@ class RecoveryTest(WithCopies):
         self.assertEqual(self.actions()[-2:], ["odtworzenie", "odzyskanie_koniec"])
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
         self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+
+    def test_a_failed_copy_after_recovery_does_not_hold_sending(self):
+        # Jak przed wątkiem zapisu: nieudana kopia jest ponawiana po minucie, a wysyłka rusza po jej wyniku.
+        self.restored(self.keep_copy(), "nowy")
+        self.sent.clear()
+        content = request()
+        self.deliver(self.STATION, content)
+
+        def broken(*a, **k):
+            raise OSError("dysk pełny")
+        self.copies.write = broken
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.tick()
+        self.tick()
+        self.assertEqual(self.sent[0][1], received_for(content))
+        self.assertIn("kopia_nieudana", self.actions())
 
     def test_restore_needs_two_different_officers_and_an_empty_medium(self):
         self.tick()
@@ -1081,7 +1201,7 @@ class OnlineLink:
     network = 100
 
     def status(self, now):
-        return {"online": True}
+        return {"online": True, "room": True}
 
     def send_frames(self, frames):
         return frames
@@ -1265,6 +1385,24 @@ class PanelTest(StationTestCase):
     def log(self):
         return [(e["account"], e["op"]) for e in reversed(self.d.view()["log"])]
 
+    def test_rejected_envelopes_raise_the_panel_alarm(self):
+        # Dane z przyjecie.envelope_alarm (test_stanowisko_wici); tu tylko to, że panel je pokazuje i przekazuje zmianie.
+        self.assertFalse(self.d.view()["envelopes"]["active"])
+        frame = lambda sender, rest: bytes([0]) + sender.to_bytes(2, "big") + rest
+        self.reception.call(lambda s: self.reception._count_unauthenticated(100, frame(9, bytes(20)), "unknown station number", 0))
+        self.reception.call(lambda s: self.reception._set_aside(100, frame(4, bytes(30)), "counter outside replay window", 0))
+        view = self.d.view()
+        e = view["envelopes"]
+        self.assertTrue(e["active"] and view["handover"]["envelope_alarm"])
+        self.assertEqual((e["total"], e["rows"][0]["sender"], e["unauthenticated"]["unknown station number"]["sender"]), (1, 4, 9))
+        self.assertEqual(e["stations"], {})   # bez numerowanej karty stacji numer zostaje numerem
+        def numbered(store):   # stacja z kartą i numerem 4 w sieci 100
+            with store.db:
+                store.db.execute("INSERT INTO karty VALUES(?, 'WICI-N4', '[]', '')", (bytes([7]) * 16,))
+                store.db.execute("INSERT INTO numery VALUES(100, 4, ?, ?)", (bytes([7]) * 16, bytes(32)))
+        self.reception.call(numbered)
+        self.assertEqual(self.d.view()["envelopes"]["stations"], {"100:4": "WICI-N4"})
+
     def test_report_received_while_the_panel_is_idle_raises_the_version(self):
         # Bez żadnego POST z panelu: wersja rośnie, bo zmieniły się dane, więc otwarty panel rysuje zgłoszenie.
         web = panel.Panel(self.d)
@@ -1384,21 +1522,89 @@ class PanelTest(StationTestCase):
         view = self.d.view()
         self.assertEqual(view["removed"], [{"source": card["lxmf"], "station": card["name"], "messages": 1}])
 
-    def test_numbered_card_cannot_rebind_station_number(self):
+    def trusted_cards(self):
+        return [t["source"] for t in self.d.view()["trusted"] if t["source"] != self.STATION.hex()]
+
+    def numbers(self):
+        return self.reception.call(lambda s: s.db.execute(
+            "SELECT net_id, station, hex(source) FROM numery ORDER BY net_id, station").fetchall())
+
+    def test_station_number_moves_to_a_new_key_only_on_explicit_rebind(self):
         second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
         first = station_card(os.urandom(64))
         first.update(net_id=100, id=4, x25519=first["key"][:64])
         self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        old = bytes.fromhex(first["lxmf"])
+        self.reception.call(lambda s: s.db.execute("INSERT INTO bearer_override VALUES(?, 'wici')", (old,)))
+        self.reception.bearer_override[old] = "wici"
         other = station_card(os.urandom(64))
         other.update(net_id=100, id=4, x25519=other["key"][:64])
-        with self.assertRaisesRegex(ValueError, "numer stacji"):
-            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
-        self.d.untrust({"source": first["lxmf"]})
-        with self.assertRaisesRegex(ValueError, "numer stacji"):
-            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        ask = {"card": other, "fingerprint": other["fingerprint"], **second}
+        before = (self.numbers(), self.log())
+        # Number held by another key: nothing changes, the panel gets what the rebind would undo.
+        replace = self.d.trust(ask)["replace"]
+        self.assertEqual(replace, {"net_id": 100, "station": 4, "renumbered_from": None,
+                                   "old": {"name": first["name"], "fingerprint": first["fingerprint"]}})
+        self.assertEqual((self.numbers(), self.log()), before)
+        with self.assertRaisesRegex(ValueError, "zmieniło się"):   # confirmed for another binding
+            self.d.trust({**ask, "replace": dict(replace, station=5)})
+        with self.assertRaises(database.LoginError):   # the rebind needs the second officer too
+            self.d.trust({**ask, "replace": replace, "account2": "dyzurny-1", "password2": self.envelopes["dyzurny-1"]})
+        self.assertEqual(self.numbers(), before[0])
+        self.assertEqual(self.d.trust({**ask, "replace": replace})["name"], other["name"])
+        self.assertEqual(self.numbers(), [(100, 4, other["lxmf"].upper())])
+        view = self.d.view()
+        self.assertEqual(self.trusted_cards(), [other["lxmf"]])
+        self.assertNotIn(old, self.reception.bearer_override)
+        self.assertEqual(self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*) FROM bearer_override WHERE source=?", (old,)).fetchone()), (0,))
+        self.assertEqual(self.log()[-3:], [("dyzurny-1", "zaufana_usunieta"), ("dyzurny-1", "numer_przepiety"),
+                                           ("dyzurny-1", "zaufana_dodana")])
+        entry = json.loads(next(e["detail"] for e in view["log"] if e["op"] == "numer_przepiety"))
+        self.assertEqual((entry["old"]["fingerprint"], entry["fingerprint"], entry["zgoda"]),
+                         (first["fingerprint"], other["fingerprint"], ["dyzurny-1", "dyzurny-2"]))
+        self.deliver(old, request())   # the old key is a removed station: quarantine and the takeover alarm
+        self.assertEqual(self.d.view()["removed"][0]["messages"], 1)
+        # The same key under another number: its old number is freed, again only after confirmation.
+        renumber = {**ask, "card": dict(other, id=5)}
+        replace = self.d.trust(renumber)["replace"]
+        self.assertEqual(replace, {"net_id": 100, "station": 5, "old": None, "renumbered_from": 4})
+        self.d.trust({**renumber, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 5, other["lxmf"].upper())])
+        # A number left by an untrusted key also moves only on rebind; no trust to remove then.
+        self.d.untrust({"source": other["lxmf"]})
+        third = station_card(os.urandom(64))
+        third.update(net_id=100, id=5, x25519=third["key"][:64])
+        ask = {"card": third, "fingerprint": third["fingerprint"], **second}
+        replace = self.d.trust(ask)["replace"]
+        self.d.trust({**ask, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 5, third["lxmf"].upper())])
+        self.assertEqual(self.log()[-2:], [("dyzurny-1", "numer_przepiety"), ("dyzurny-1", "zaufana_dodana")])
         with self.assertRaisesRegex(ValueError, "klucz koperty"):
-            self.d.trust({"card": dict(other, id=5, x25519="00" * 32),
-                          "fingerprint": other["fingerprint"], **second})
+            self.d.trust({"card": dict(third, id=6, x25519="00" * 32), "fingerprint": third["fingerprint"], **second})
+
+    def test_messages_held_for_a_removed_station_are_shown_apart(self):
+        r = self.report()
+        self.d.untrust({"source": r["source"]})
+        self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, r["id"], r["revision"], 2, self.now))
+        view = self.d.view()
+        self.assertEqual((view["node"]["waiting"], view["node"]["held"], view["node"]["oldest_s"]), (0, 1, None))
+        self.assertEqual((view["handover"]["unsent"], view["handover"]["held"]), (0, 1))
+
+    def test_rebind_rolls_back_as_a_whole(self):
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        first, other = station_card(os.urandom(64)), station_card(os.urandom(64))
+        for c in (first, other):
+            c.update(net_id=100, id=4, x25519=c["key"][:64])
+        self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        ask = {"card": other, "fingerprint": other["fingerprint"], **second}
+        replace = self.d.trust(ask)["replace"]
+        self.reception.call(lambda store: store.db.execute(
+            "CREATE TRIGGER refuse_number BEFORE INSERT ON numery BEGIN SELECT RAISE(ABORT, 'fault'); END"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.d.trust({**ask, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 4, first["lxmf"].upper())])
+        self.assertEqual(self.trusted_cards(), [first["lxmf"]])
 
     def test_numbered_card_and_trust_roll_back_together(self):
         card = station_card(os.urandom(64))
@@ -1543,8 +1749,8 @@ class AnnounceBulletinTest(StationTestCase):
     def test_sending_bookkeeping_does_not_force_a_snapshot(self):
         saves = []
         real = self.medium.save
-        self.medium.save = lambda key, body: (saves.append(1), real(key, body))
-        self.deliver(self.STATION, request())                  # przyjęcie: migawka przed RECEIVED
+        self.medium.save = lambda *args: (saves.append(1), real(*args))
+        self.deliver(self.STATION, request())                  # przyjęcie: dziennik przyjęć przed RECEIVED
         before = len(saves)
         self.tick()                                            # DELIVERED: tylko ewidencja
         self.tick()
@@ -2005,7 +2211,7 @@ class SimulatorTest(unittest.TestCase):
         station = next(x for x in lines if x.startswith("stacja 1 ")).split()[2]
         self.assertFalse(any(x.startswith("uwaga:") for x in lines), lines)
         self.app = subprocess.Popen([*app, "start", "--nosnik", str(tmp / "nosnik"),
-                                     "--port", node, "--diagnostyka", diagnostics, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie")],
+                                     "--port", node, "--diagnostyka", diagnostics, "--panel", "0", "--bez-przegladarki", "--kopie", str(tmp / "kopie"), "--koniec-wejscia"],
                                     stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                     text=True, env=env)
         self.addCleanup(self.app.wait, 20)

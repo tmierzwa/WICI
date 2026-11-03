@@ -288,8 +288,10 @@ const char* parse(Source& source, uint32_t size, const char* profile, Config& ou
         for (size_t i = 0; i < count; ++i) {
             json::Value behind;
             if (!parseValue(r, entries[i], buffer, v)) return NAMES[PRIORITY_KEYS];
-            const bool hasBehind = json::field(v, "behind", behind);  // opcjonalne, ostatnie w keys
-            if (!onlyFields(v, keys, hasBehind ? 4 : 3) ||
+            // `behind` opcjonalne, ostatnie w keys, tylko u roota: przekaźnik zna drogi w dół tylko do
+            // swoich sąsiadów, bo plan pilotażu ma najwyżej 2 przeskoki do stanowiska (wici-link.md).
+            const bool hasBehind = json::field(v, "behind", behind);
+            if (!onlyFields(v, keys, hasBehind ? 4 : 3) || (hasBehind && out.role != Role::NODE) ||
                 !number(v, "id", out.priorityKeys[i].station) ||
                 !json::hexField(v, "ed25519", out.priorityKeys[i].ed25519, 32) ||
                 !json::hexField(v, "x25519", out.priorityKeys[i].x25519, 32) ||

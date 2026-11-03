@@ -180,13 +180,18 @@ def remove_exports(directory):
 
 def purge(db):
     """Content of reports out of the database (ZAMKNIJ ZDARZENIE), in one transaction: payloads, replies,
-    quarantine (reference purge_content) and the texts of REPLY and BULLETIN intents. Reception keys,
-    identities, the trusted list, decisions and the action log stay."""
+    quarantine (reference purge_content), the texts of REPLY and BULLETIN intents, WICI envelope fragments
+    waiting for their pair (plain SA1) and WICI frames set aside as never admissible. Reception keys,
+    identities, the trusted list, decisions, the action log and the counts of frames over the cap stay."""
+    tables = {name for (name,) in db.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     with db:
         db.execute("UPDATE received SET payload=NULL")
         db.execute("UPDATE replies SET text=NULL")
         db.execute("DELETE FROM quarantine")
         db.execute("UPDATE outbox SET payload=X'', done=1 WHERE kind IN (3, 4)")
+        for table in ("env_parts", "env_rejected", "env_rejected_overflow"):   # env_parts powstaje przy pierwszej kopercie WICI-Link
+            if table in tables:
+                db.execute(f"DELETE FROM {table}")
     db.execute("VACUUM")   # bez starych stron: migawka i kopie po zamknięciu nie mają treści (też secure_delete)
 
 

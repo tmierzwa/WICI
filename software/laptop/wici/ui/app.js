@@ -468,7 +468,8 @@ const field = (name) => document.querySelector(`[name="${name}"]`);
 function role() { return document.querySelector('input[name="role"]:checked').value; }
 
 // One neighbour per line: number, Ed25519, X25519 and optionally the stations the network
-// plan places behind it, comma-separated ("12 <ed25519> <x25519> 7,8"). Malformed parts
+// plan places behind it, comma-separated ("12 <ed25519> <x25519> 7,8"; only the root's
+// document may carry them, which the station-side check enforces). Malformed parts
 // become empty or null so the station-side check reports them on that line.
 function parsePriorityKeys(text) {
   const number = (s) => /^\d+$/.test(s) ? Number(s) : null;

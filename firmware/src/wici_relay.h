@@ -38,8 +38,15 @@ public:
     // DUPLICATE, `slot` names the queue item.
     Admission admit(const uint8_t* wire, size_t length, uint32_t nowS,
                     uint16_t k1Neighbor = 0, uint8_t* slot = nullptr);
+    bool ready() const { return ready_ && seen_.ready(); }
+    uint16_t clearedRecords() const { return seen_.cleared(); }
     bool pending(uint8_t slot) const;
     uint16_t k1Neighbor(uint8_t slot) const { return pending(slot) ? k1_[slot] : 0; }
+    // Changes with every durable write of the slot (admission, removal), so
+    // (slot, generation) names one queue item for RAM state about it.
+    uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
+    // Durable admission time of a pending item (monotonic station counter).
+    uint32_t admittedS(uint8_t slot) const { return pending(slot) ? admittedS_[slot] : 0; }
     // Finishes a tombstone interrupted after the durable forwarded marker and
     // retires items held for MAX_HOLD_S. False only on a storage failure.
     bool settle(uint32_t nowS);

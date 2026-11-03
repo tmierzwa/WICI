@@ -104,6 +104,10 @@ public:
     // station before any state change. false forbids the link-layer HACK.
     bool receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recipient,
                           const uint8_t* content, size_t length);
+    // Receiver slot (config::MAIN, config::BACKUP) the station takes messages from now.
+    bool activeReceiver(uint8_t slot) const {
+        return slot == (store_.meta().receiver == config::BACKUP ? config::BACKUP : config::MAIN);
+    }
     // Ostatni pakiet z received() dotyczył zgłoszenia z wyjątkiem ciszy (jego dowód może wyjść w ciszy).
     bool exceptionTraffic() const { return exceptionTraffic_; }
     const Stats& stats() const { return stats_; }

@@ -51,7 +51,13 @@ int main() {
     assert(afterCut.begin(100));
     assert(afterCut.lookup(header, 100) == wici_flood::Lookup::NONE);
     assert(afterCut.remember(header, 100));
+    // A damaged record is not security state: it is tombstoned and counted
+    // instead of blocking the link for good.
     cutMemory.bytes[wici_flood::BASE_A + 2] ^= 1;
     wici_flood::Ring corrupt(cutMemory);
-    assert(!corrupt.begin(100));
+    assert(corrupt.begin(100) && corrupt.cleared() == 1);
+    assert(corrupt.lookup(header, 100) == wici_flood::Lookup::NONE);
+    wici_flood::Ring cleaned(cutMemory);
+    assert(cleaned.begin(100) && cleaned.cleared() == 0);
+    assert(cleaned.remember(header, 100));
 }

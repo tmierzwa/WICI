@@ -144,7 +144,7 @@ document.addEventListener("mouseup", function () { pressed = 0; resume(); });
 // Liczba przy zakładce: sprawy czekające na dyżurnego.
 function tabCount(name) {
   if (name === "reports") return state.reports.filter(function (r) { return r.state === 1; }).length;
-  if (name === "quarantine") return state.quarantine.length + state.removed.length;
+  if (name === "quarantine") return state.quarantine.length + state.removed.length + (state.envelopes && state.envelopes.active ? 1 : 0);
   if (name === "tests") return state.tests.filter(function (x) { return x.state === 1; }).length;
   return 0;
 }
@@ -178,6 +178,7 @@ function render() {
   if (state.sound === false) $("badges").appendChild(pill("DŹWIĘK ALARMU WYŁĄCZONY", "pill-warn"));
   if (state.node.info && state.node.info.silence) badge("CISZA NA WĘŹLE", false);
   if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
+  if (state.envelopes && state.envelopes.active) badge("ODRZUCONE KOPERTY (" + rejectedCount(state.envelopes) + ")", false);
   if (alarms().length) {
     $("badges").appendChild(button("Wycisz alarm (" + alarms().length + ")", "alarm", function () {
       alarms().forEach(function (r) { silenced[r.id] = true; }); render(); }));
@@ -283,6 +284,56 @@ function silenceForm(view) {
 
 var BEARERS = {wici: "WICI-Link", reticulum: "Reticulum"};
 
+// Odmowy kopert WICI-Link (przyjecie.envelope_alarm): przyczyny jak w stanowisko-osp.md, „Przyjęcie koperty WICI-Link”.
+var REASONS = {"unknown station number": "nieznany numer stacji", "wrong receiver number": "inny numer odbiorcy",
+  "envelope authentication failed": "błędny podpis koperty (MAC)", "invalid envelope length": "zła długość koperty",
+  "receiver identity not bound to this network": "tożsamość odbiorcy bez tej sieci",
+  "counter outside replay window": "licznik poza oknem powtórzeń", "whole envelope over a pending fragment": "cała koperta na licznik z oczekującą częścią",
+  "invalid part for SA1 inbox": "błędna część koperty", "conflicting fragment": "sprzeczna część koperty",
+  "fragment belongs to another message": "część innej wiadomości", "fragment exceeds 128 bytes": "błędna część koperty",
+  "expected a fragment": "błędna część koperty", "assembled SA1 exceeds 256 bytes": "złożone SA1 za długie"};
+function reason(r) { return r.slice(0, 5) === "SA1: " ? "błędne SA1 (" + r.slice(5) + ")" : REASONS[r] || r; }
+// Wszystkie odbiory bez przyjęcia: odłożone z powtórzeniami i ponad limit (total) oraz liczone bez uwierzytelnienia.
+function rejectedCount(e) {
+  return e.total + Object.keys(e.unauthenticated).reduce(function (n, k) { return n + e.unauthenticated[k].count; }, 0);
+}
+// cells: [tekst, klasa]; kind: klasa tabeli ("log": ostatnia kolumna łamie długie szczegóły)
+function table(heads, rows, kind) {
+  var head = el("tr", {}), body = el("tbody", {});
+  heads.forEach(function (h) { head.appendChild(el("th", {text: h})); });
+  rows.forEach(function (cells) {
+    var tr = el("tr", {});
+    cells.forEach(function (c) { tr.appendChild(el("td", {class: c[1] || "", text: String(c[0])})); });
+    body.appendChild(tr);
+  });
+  return el("div", {class: "table-wrap"}, el("table", {class: kind || ""}, el("thead", {}, head), body));
+}
+// Alarm jak przejęcie stacji: bez dźwięku i bez „przeczytane”; odłożone ramki znikają z ZAMKNIJ ZDARZENIE,
+// liczone bez uwierzytelnienia z restartem aplikacji.
+function envelopeAlarm(view) {
+  var e = state.envelopes;
+  if (!e || !e.active) return;
+  function station(n, s) { return e.stations[n + ":" + s] || "nr " + s + " (sieć " + n + ")"; }
+  view.appendChild(el("p", {class: "banner banner-alarm", text: "ODRZUCONE KOPERTY WICI-Link, odbiorów: " + rejectedCount(e) +
+    ". Stanowisko potwierdziło je stacjom, ale ich nie przyjęło; zgłoszeń z nich nie ma w panelu. Stacja wyśle zgłoszenie ponownie z nowym licznikiem, gdy przyczyna zniknie (np. po dodaniu stacji do zaufanych)."}));
+  var unauth = Object.keys(e.unauthenticated).map(function (k) {
+    var u = e.unauthenticated[k];
+    return [[reason(k)], [u.count], [time(u.at), "when"], [u.sender == null ? "—" : u.sender + " (sieć " + u.net_id + ")", "mono"]];
+  });
+  view.appendChild(card("Odrzucone koperty WICI-Link", "",
+    e.rows.length ? el("h3", {text: "Odłożone po uwierzytelnieniu (bajty na nośniku do ZAMKNIJ ZDARZENIE)"}) : null,
+    e.rows.length ? table(["Stacja", "Przyczyna", "Pierwszy odbiór", "Ostatni", "Odbiory"], e.rows.map(function (r) {
+      return [[station(r.net_id, r.sender), "mono"], [reason(r.reason)], [time(r.first_at), "when"], [time(r.at), "when"], [r.count]];
+    })) : null,
+    e.overflow.length ? el("h3", {text: "Ponad limit zapisu, tylko liczone"}) : null,
+    e.overflow.length ? table(["Stacja", "Odbiory", "Ostatni"], e.overflow.map(function (o) {
+      return [[station(o.net_id, o.sender), "mono"], [o.count], [time(o.at), "when"]];
+    })) : null,
+    unauth.length ? el("h3", {text: "Bez uwierzytelnienia koperty (liczone od startu aplikacji)"}) : null,
+    unauth.length ? hint("Numer nadawcy to tylko deklaracja z nagłówka: koperta nie potwierdza, kto ją wysłał.") : null,
+    unauth.length ? table(["Przyczyna", "Odbiory", "Ostatni", "Deklarowany numer"], unauth) : null));
+}
+
 function describe(detail) { return Object.keys(detail).map(function (k) { return (FIELDS[k] || k) + " " + detail[k]; }).join(", "); }
 function opName(op) { return op.slice(0, 5) === "stan_" ? "stan " + op.slice(5) + ", " + STATES[op.slice(5)] : OPS[op] || op.replace(/_/g, " "); }
 // Szczegóły zapisane jako JSON (stan 3 i 4, cisza, przełącznik węzła) czytelnie; resztę jak w bazie.
@@ -327,6 +378,7 @@ var VIEWS = {
       error));
   },
   quarantine: function (view) {
+    envelopeAlarm(view);
     state.removed.forEach(function (s) {
       view.appendChild(el("p", {class: "banner banner-alarm", text: "MOŻLIWE PRZEJĘCIE STACJI " + s.station + ". Stacja usunięta z zaufanych, a nadal nadaje; liczba wiadomości od niej: " + s.messages + "."}));
     });
@@ -387,7 +439,17 @@ var VIEWS = {
         el("div", {class: "file-pick"}, button("Wybierz plik", "", function () { picking = true; file.click(); }), chosen, file)),
         field("Odcisk z ekranu stacji (16 cyfr)", fp)), info, second.node,
       row(button("Dodaj do zaufanych", "primary", function () {
-        action("/api/operator/trust", Object.assign({card: card_, fingerprint: fp.value}, second.values()), error);
+        var body = Object.assign({card: card_, fingerprint: fp.value}, second.values());
+        action("/api/operator/trust", body, error).then(function (v) {
+          if (!v || !v.replace) return;
+          // Numer zajęty: serwer niczego nie zmienił; przepięcie dopiero po potwierdzeniu, z tym samym opisem.
+          var r = v.replace, what = "Numer " + r.station + " w sieci " + r.net_id;
+          ask(what + (r.old ? " ma " + r.old.name + " (odcisk " + r.old.fingerprint + "). Przepiąć go na tę kartę? " +
+                "Tamta stacja straci zaufanie, a jej wiadomości trafią do kwarantanny." : " przejdzie na tę kartę.") +
+              (r.renumbered_from ? " Ta stacja traci dawny numer " + r.renumbered_from + "." : ""),
+              "Przepnij numer", "danger")
+            .then(function (yes) { if (yes) action("/api/operator/trust", Object.assign({replace: r}, body), error); });
+        }).catch(function () {});
       })),
       error));
   },
@@ -422,7 +484,9 @@ var VIEWS = {
           info && info.silence ? "bad" : ""],
         ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
           info ? (info.radio_ok ? "good" : "bad") : ""],
-        ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting], ["Najdłużej czekająca", ago(n.oldest_s)]]),
+        ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting],
+        ["Wstrzymane: stacja poza listą zaufanych", n.held],
+        ["W tym przekazane przez przekaźnik, bez potwierdzenia stacji", n.forwarded], ["Najdłużej czekająca", ago(n.oldest_s)]]),
       row(button("Ogłoś adres odbiorcy", "", function () { action("/api/operator/announce"); }))));
   },
   handover: function (view) {
@@ -431,7 +495,8 @@ var VIEWS = {
     var path = el("input", {placeholder: "np. /media/drugi albo E:\\"});
     view.appendChild(card("Przekazanie zmiany", "",
       facts([["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy"].concat(count(h.forwarded_unconfirmed)),
-        ["Niewysłane wiadomości", h.unsent], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
+        ["Niewysłane wiadomości", h.unsent], ["Wstrzymane do stacji poza listą zaufanych", h.held], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
+        ["Alarm odrzuconych kopert", h.envelope_alarm ? "TAK" : "nie", h.envelope_alarm ? "bad" : "good"],
         ["Najnowsza kopia na dysku komputera", state.copy_age_s == null ? "brak" : ago(state.copy_age_s) + " temu", state.copy_age_s == null ? "bad" : ""],
         ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"],
         ["Przełącznik CISZA węzła", state.node.info ? (state.node.info.silence ? "włączony" : "wyłączony") : "nieznany"]]),
@@ -460,15 +525,10 @@ var VIEWS = {
       second.node, buttons, error));
   },
   log: function (view) {
-    var body = el("tbody", {});
-    state.log.forEach(function (e) {
-      body.appendChild(el("tr", {}, el("td", {class: "when", text: time(e.at)}), el("td", {text: e.account || "aplikacja"}),
-        el("td", {class: "mono", text: e.station}), el("td", {class: "mono", text: e.number}), el("td", {text: opName(e.op)}), el("td", {text: opDetail(e.op, e.detail)})));
-    });
-    var head = el("tr", {});
-    ["Czas", "Konto", "Stacja", "Numer", "Czynność", "Szczegóły"].forEach(function (h) { head.appendChild(el("th", {text: h})); });
     view.appendChild(card("Dziennik", "", hint("Ostatnie 50 wpisów, najnowsze na górze."),
-      el("div", {class: "table-wrap"}, el("table", {}, el("thead", {}, head), body))));
+      table(["Czas", "Konto", "Stacja", "Numer", "Czynność", "Szczegóły"], state.log.map(function (e) {
+        return [[time(e.at), "when"], [e.account || "aplikacja"], [e.station, "mono"], [e.number, "mono"], [opName(e.op)], [opDetail(e.op, e.detail)]];
+      }), "log")));
   },
   // Każda karta ma własne miejsce na błąd: błąd eksportu nie może wyglądać jak błąd niszczenia danych.
   closing: function (view) {

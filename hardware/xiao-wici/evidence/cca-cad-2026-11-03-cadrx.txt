@@ -1,0 +1,8 @@
+44B176AD28A01 {"cadrx_frames":20,"delay_ms":15,"free":20,"busy":0,"busy_twice":0,"error":0}
+68EE8F60D16C1 {"cadrx_frames":20,"delay_ms":15,"free":19,"busy":1,"busy_twice":0,"error":0}
+44B176AD28A01 {"cadrx_frames":20,"delay_ms":15,"free":20,"busy":0,"busy_twice":0,"error":0}
+68EE8F60D16C1 {"cadrx_frames":20,"delay_ms":15,"free":18,"busy":2,"busy_twice":0,"error":0}
+68EE8F60D16C1 {"cadrx_frames":20,"delay_ms":15,"free":19,"busy":1,"busy_twice":0,"error":0}
+44B176AD28A01 {"cadrx_frames":20,"delay_ms":15,"free":20,"busy":0,"busy_twice":0,"error":0}
+68EE8F60D16C1 {"cadrx_frames":20,"delay_ms":15,"free":19,"busy":1,"busy_twice":0,"error":0}
+44B176AD28A01 {"cadrx_frames":20,"delay_ms":15,"free":20,"busy":0,"busy_twice":0,"error":0}

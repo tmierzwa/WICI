@@ -67,6 +67,7 @@ struct RamStorage : journal::Storage {
     long budget = -1;
     long readFailures = 0;
     long readSkip = 0;
+    size_t writeCalls = 0;   // zapisy do FRAM (polecenie writes)
     bool read(uint32_t address, uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
         if (address >= store::REGISTER_BASE && address < store::INBOX_BASE && readFailures > 0) {
@@ -79,6 +80,7 @@ struct RamStorage : journal::Storage {
     }
     bool write(uint32_t address, const uint8_t* data, size_t count) override {
         if (address + count > bytes.size()) return false;
+        ++writeCalls;
         size_t n = count;
         if (budget >= 0 && address >= store::TX_BASE) {
             if (static_cast<size_t>(budget) < n) n = static_cast<size_t>(budget);
@@ -365,12 +367,15 @@ struct World;
 struct FakeServices : station::Services {
     World* w = nullptr;
     bool sw = false, forced = false, ready = true, busyFlag = false, refuse = false, unknown = false;
+    // oneSlot: łącze jak WICI-Link, jedna własna ramka naraz (zajęte od sendNumbered do potwierdzenia).
+    bool oneSlot = false;
+    uint32_t ownHandle = 0;
     uint32_t handle = 0;
     uint32_t rng = 12345;
     bool silence() override;
     bool silenceSwitch() override { return sw; }
     bool radioReady() override { return ready; }
-    bool busy() override { return busyFlag; }
+    bool busy() override { return busyFlag || (oneSlot && ownHandle); }
     bool sendReady(const uint8_t*) override {
         if (unknown) printf("path request\n");   // cel bez trasy: stos pyta o trasę, pakiet nie wychodzi
         return !unknown;
@@ -378,8 +383,9 @@ struct FakeServices : station::Services {
     bool numberedReady(uint16_t, uint16_t) override { return !unknown; }
     uint32_t sendNumbered(uint16_t net, uint16_t recipient, const uint8_t* data,
                           size_t length, uint32_t, bool exception) override {
-        if (refuse) return 0;
+        if (refuse || (oneSlot && ownHandle)) return 0;
         ++handle;
+        if (oneSlot) ownHandle = handle;
         printf("numbered %u %u %u %d %.*s\n", handle, net, recipient, exception,
                static_cast<int>(length), reinterpret_cast<const char*>(data));
         return handle;
@@ -785,12 +791,15 @@ int world() {
         else if (!strcmp(cmd, "radio")) w.services.ready = atoi(arg) != 0;
         else if (!strcmp(cmd, "busy")) w.services.busyFlag = atoi(arg) != 0;
         else if (!strcmp(cmd, "refuse")) w.services.refuse = atoi(arg) != 0;
+        else if (!strcmp(cmd, "oneslot")) w.services.oneSlot = atoi(arg) != 0;
+        else if (!strcmp(cmd, "writes")) printf("writes %s %zu\n", arg, w.ram.writeCalls);
         else if (!strcmp(cmd, "unknown")) w.services.unknown = atoi(arg) != 0;
         else if (!strcmp(cmd, "poll")) {
             w.app->poll();
             printf("inflight %zu\n", w.app->inFlight());
         } else if (!strcmp(cmd, "rcpt")) {
             sscanf(arg, "%u %u", &a, &b);
+            if (w.services.ownHandle == a) w.services.ownHandle = 0;
             w.app->receipt(a, b != 0);
         } else if (!strcmp(cmd, "in")) {
             char from[2 * store::HASH + 1] = "00000000000000000000000000000000";
@@ -1620,13 +1629,20 @@ class HostUnitTests(unittest.TestCase):
         self.assertIn("conf network 100 4 1 1 0 2 3 ttl=15", self.parse(dict(keys, network=dict(network, ttl=15))))
         for ttl in (0, 16, True, "7"):
             self.assertEqual(self.parse(dict(keys, network=dict(network, ttl=ttl))), ["parse err network"])
-        planned = self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
-                                                       "behind": [7, 8]}]))
+        # `behind` only in the root's document: a station relay learns down routes only to its neighbours.
+        root = dict(node_doc(), network=dict(network, station=1, parent=0))
+        planned = self.parse(dict(root, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                        "behind": [7, 8]}, {"id": 6, "ed25519": "ab" * 32,
+                                                                            "x25519": "cd" * 32, "behind": [7]}]))
         self.assertEqual([line for line in planned if line.startswith("conf behind")],
-                         ["conf behind 7 via 5", "conf behind 8 via 5"])
-        for behind in ([5], [4], [7, 7], "7"):
+                         ["conf behind 7 via 5", "conf behind 8 via 5", "conf behind 7 via 6"])
+        for behind in ([7], []):
             self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
                                                                   "behind": behind}])),
+                             ["parse err priority_keys"], behind)
+        for behind in ([5], [1], [7, 7], "7"):
+            self.assertEqual(self.parse(dict(root, priority_keys=[{"id": 5, "ed25519": "ab" * 32, "x25519": "cd" * 32,
+                                                                   "behind": behind}])),
                              ["parse err priority_keys"], behind)
         self.assertEqual(self.parse(dict(doc, priority_keys=[{"id": 5, "ed25519": "ab" * 32}])),
                          ["parse err priority_keys"])
@@ -1654,7 +1670,9 @@ class HostUnitTests(unittest.TestCase):
                           f"inenv 100 2 4 {content}", f"inenv 101 2 4 {content}",
                           f"inenv 100 3 4 {content}", f"inenv 100 2 5 {content}",
                           "inenv 100 2 4 nonsense", "stats numbered"])
-        self.assertEqual(self.find(out, "envrx "), ["envrx 1", "envrx 0", "envrx 0", "envrx 0", "envrx 0"])
+        # Wrong network, inactive receiver, other station, malformed SA1: permanent rejections are
+        # resolved (true), so the envelope gets its HACK and the receiver its proof, as on LXMF.
+        self.assertEqual(self.find(out, "envrx "), ["envrx 1"] * 5)
         self.assertIn("received=1 rejected=4", self.find(out, "stats numbered")[0])
 
     def test_numbered_silence_exception_burns_three_durable_unacked_attempts(self):
@@ -1674,6 +1692,31 @@ class HostUnitTests(unittest.TestCase):
         self.assertTrue(all(line.split()[4] == "1" for line in sends))
         self.assertIn("delivered=0", self.find(out, "stats after")[0])
         self.assertEqual(self.regs(out, "after")[rid]["att"], 3)
+
+    def test_numbered_busy_own_slot_is_not_a_failed_attempt(self):
+        # Sprzęt: REQ 20 szło minutami, APP failed 24. Zajęte łącze (własna ramka WICI-Link w drodze) to nie
+        # nieudana próba: bez failed, bez zapisu FRAM w obiegu pętli, zgłoszenia idą jedno po drugim.
+        network = {"id": 100, "station": 4, "root": 1, "parent": 1, "backup_parent": 0,
+                   "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        doc = station_doc(network=network, receiver={"main": main, "backup": backup})
+        script = ["cfg " + json.dumps(doc, ensure_ascii=False), "oneslot 1", "now 100"]
+        script += [self.sub(self.request(self.rid(200 + i))) for i in range(20)]
+        script += ["poll", "writes first"] + ["poll"] * 5 + ["writes busy", "stats busy"]
+        for handle in range(1, 21):
+            script += [f"rcpt {handle} 1", "poll"]
+        script += ["stats end", "reg end"]
+        out = self.world(script)
+        sends = self.find(out, "numbered ")
+        self.assertEqual([int(line.split()[1]) for line in sends], list(range(1, 21)))
+        self.assertEqual(len({line.split()[5] for line in sends}), 20)   # każde zgłoszenie raz
+        first, busy = (int(self.find(out, f"writes {label}")[0].split()[2]) for label in ("first", "busy"))
+        self.assertEqual(first, busy)
+        self.assertIn("sent=1 delivered=0 failed=0", self.find(out, "stats busy")[0])
+        self.assertIn("sent=20 delivered=20 failed=0", self.find(out, "stats end")[0])
+        self.assertTrue(all(row["att"] == 1 for row in self.regs(out, "end").values()))
 
     # --- stacja: magazyn, warstwa aplikacji, USB, ekran ------------------------
 
@@ -1919,8 +1962,9 @@ class HostUnitTests(unittest.TestCase):
                           "in " + compact([1, 0, x, 0, 2, 1, "a", "", 0]),   # REQUEST od odbiorcy: zły typ
                           "reg a", "stats a", "backup", f"infrom {MAIN_SA1} {received}", f"infrom {BACKUP_SA1} {received}",
                           "reg b", "stats b"])
-        # Obca tożsamość, nieaktywna zapasowa, zły format i zły typ: trwałe odrzucenie z dowodem.
-        self.assertEqual(self.find(out, "rx "), ["rx 1 0"] * 6)
+        # Obca tożsamość, zły format i zły typ: trwałe odrzucenie z dowodem. Druga tożsamość tego odbiorcy
+        # (zapasowa przed KLUCZ ZAPASOWY, główna po nim): „jeszcze nie”, bez dowodu, więc odbiorca ponowi.
+        self.assertEqual(self.find(out, "rx "), ["rx 0 0", "rx 1 0", "rx 1 0", "rx 1 0", "rx 0 0", "rx 1 0"])
         self.assertEqual((self.stats(out, "a")["rejected"], self.regs(out, "a")[x]["stage"]), (4, 0))
         # Po KLUCZ ZAPASOWY tylko zapasowa tożsamość jest aktywna.
         self.assertEqual((self.stats(out, "b")["rejected"], self.regs(out, "b")[x]["stage"]), (5, 3))
@@ -2347,7 +2391,10 @@ class HostUnitTests(unittest.TestCase):
             (7, "invalid", "colour"), (8, "unknown_type", None), (9, "invalid", "id"), (10, "contract", None),
             (None, "invalid", "json"), (None, "seq", None), (10, "seq", None), (None, "too_long", None),
             (11, "unknown_type", None),                 # `export` to `op` transferu, nie polecenie
-            (12, "invalid", "step"), (13, "not_configured", None)])
+            (12, "invalid", "step")])
+        # Karta przed pierwszą konfiguracją: klucze stacji do planu sieci są potrzebne przed configure.
+        card = next(x for x in r if x["type"] == "card" and x.get("re") == 13)
+        self.assertEqual((len(card["key"]), card["address"], "net_id" in card), (128, [], False))
         self.assertEqual([x["type"] for x in r].count("hello"), 2)
         self.assertEqual([x["type"] for x in r][3], "status")   # po odmowie `seq` liczy się dalej od numeru laptopa
         self.assertEqual([x["seq"] for x in r], list(range(1, len(r) + 1)))
@@ -2780,6 +2827,11 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([t for _, t in screens[9][2]][0], "MEDICAL HELP")  # kreator: kategoria 0 w języku EN
         self.assertEqual(screens[10][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
         self.assertEqual(screens[11][0], "main")  # 3 min bezczynności: ekran główny
+
+    def test_press_after_loop_time_does_not_trigger_idle(self):
+        # KEY z portu USB ma czas późniejszy niż `now` obiegu, w którym potem idzie tick: to nie bezczynność.
+        out = self.ui(["L 0", "O 1", "K OK 5000", "T 4999", "R", "T 184999", "R", "T 185000", "R"])
+        self.assertEqual([s[0] for s in self.screens(out)], ["menu", "menu", "main"])
 
     def test_wrap_duration_and_glyph_coverage(self):
         data = ui_texts.load()

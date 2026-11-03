@@ -23,7 +23,7 @@ Procedury i warunki zaliczenia kroków są w [odbiorze](../docs/spec/odbior.md#p
 |---|---|
 | [radio-pair](radio-pair/README.md) | program radiowy `pair-0.4` radiów testowych, narzędzia prób i wyniki kroku 1; narzędzie testu pary jest współdzielone z programem diagnostycznym; [sonda RF_SW1](radio-pair/rfsw-probe/README.md) i łatka RNode dla tych zestawów |
 | [rnode](rnode/README.md) | radia RNode: wgranie firmware, konfiguracja Reticulum, próba przy stole (krok 2) |
-| [lora-raw](lora-raw/README.md) | narzędzie surowego LoRa `lora-raw-0.1` dla RAK4631: podsłuch kanału i węzeł wrogi w próbach D21 ([procedura](xiao-wici/README.md)); zamiast firmware RNode tylko na czas tych prób |
+| [lora-raw](lora-raw/README.md) | narzędzie surowego LoRa `lora-raw-0.2` dla RAK4631: podsłuch kanału i węzeł wrogi w próbach D21 ([procedura](xiao-wici/README.md)); zamiast firmware RNode tylko na czas tych prób |
 | [dev-bench](dev-bench/README.md) | płytka v1 prototypu: projekt CAD, generatory, BOM, pliki produkcyjne, uruchomienie; projekt v1.1 jako baza płytki v2 |
 | [l0-diagnostic](l0-diagnostic/README.md) | program diagnostyczny prototypu `l0-0.5`, zlecenie i instrukcja dla wykonawcy, narzędzia, testy i zapis weryfikacji |
 | [obudowa](obudowa/README.md) | założenia obudowy, lista pomiarów z przymiarki, generator odmawiający pracy bez pomiarów i render koncepcyjny |

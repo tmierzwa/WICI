@@ -63,7 +63,7 @@ struct PriorityKey {
     uint8_t x25519[32] = {};
 };
 
-// Plan sieci dla dróg w dół: stacja `station` leży za sąsiadem `via` (`priority_keys[].behind`).
+// Plan sieci dla dróg w dół: stacja `station` leży za sąsiadem `via` (`priority_keys[].behind`, tylko u roota).
 // Sąsiad zawsze może być drogą do samego siebie, więc nie ma tu wpisu dla siebie.
 struct Behind {
     uint16_t station = 0;
