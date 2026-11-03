@@ -19,7 +19,12 @@ enum class Lookup : uint8_t { NONE, MATCH, CONFLICT, IO_ERROR };
 class Ring {
 public:
     explicit Ring(journal::Storage& storage) : storage_(storage) {}
+    // A damaged record is not security state: it is tombstoned and counted
+    // (cleared()), so it cannot block the link. At worst an envelope it held
+    // is forwarded once more; its destination refuses the repeat.
     bool begin();
+    bool ready() const { return ready_; }
+    uint16_t cleared() const { return cleared_; }
     Lookup lookup(const uint8_t* authenticatedWire, size_t length, uint32_t nowS);
     // Call only after the next hop accepted the frame and before freeing its
     // durable relay slot. A failed write leaves the slot pending.
@@ -28,6 +33,7 @@ public:
 private:
     journal::Storage& storage_;
     uint8_t records_[SLOTS][SLOT_BYTES] = {};
+    uint16_t cleared_ = 0;
     bool ready_ = false;
 };
 }  // namespace wici_seen

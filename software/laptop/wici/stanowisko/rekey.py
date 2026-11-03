@@ -30,6 +30,10 @@ USED = "uzyta"   # package field: time of the first activation
 
 
 def _open_guarded(medium, key):
+    if medium.journal_pending(key):
+        # Ramki z HACK są tylko w dzienniku przyjęć: ten krok nie może pisać migawki bez nich.
+        raise database.StorageError("stanowisko nie zamknęło się po ostatniej pracy: uruchom je i zatrzymaj, "
+                                    "potem powtórz")
     body = medium.load(key)
     if body is None:
         raise database.StorageError("brak bazy na nośniku")

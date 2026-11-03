@@ -3,7 +3,8 @@
 
 An instance is owned by the database thread. `persist` must snapshot this SQLite
 connection to the encrypted medium and return only after the write is durable.
-Unused values in a reserved block are deliberately skipped after a restart.
+Unused values in a reserved block are deliberately skipped after a restart. A block whose
+snapshot failed was never handed out: the next seal reserves past it and snapshots again.
 """
 
 import hashlib
@@ -26,13 +27,10 @@ class Sender:
     def __init__(self, db, persist):
         self.db, self.persist = db, persist
         self.next = {}
-        self.failed = False
         db.executescript(SCHEMA)
 
     def seal(self, private_key, peer_public_key, network, sender, recipient, plaintext, max_payload):
         """Reserve and seal one SA1 intent; never reuse a (key, nonce) after failure."""
-        if self.failed:
-            raise envelope.EnvelopeError("outbound counter state is uncertain")
         if self.db.execute("SELECT 1 FROM sqlite_master WHERE name='kopia'").fetchone():
             raise envelope.EnvelopeError("restored copy cannot send with the old receiver identity")
         if (self.db.execute("SELECT 1 FROM sqlite_master WHERE name='env_send_guard'").fetchone() and
@@ -53,13 +51,9 @@ class Sender:
             boundary = min(start + BLOCK, LIMIT)
             with self.db:
                 self.db.execute("INSERT OR REPLACE INTO env_send VALUES(?,?,?,?,?)", (*binding, boundary))
-            try:
-                durable = self.persist()
-            except BaseException:
-                self.failed = True
-                raise
-            if not durable:
-                self.failed = True
+            # Without a durable snapshot no counter of this block leaves. The row stays at `boundary`,
+            # so a retry starts past this block: whatever the medium holds, it never reuses a counter.
+            if not self.persist():
                 raise OSError("outbound counter reservation was not durably saved")
             counter = start
         # A seal error still burns this counter; it may never be reused for another plaintext.

@@ -192,8 +192,9 @@ bool Station::transmit(uint16_t slot) {
     }
     const uint32_t nowS = store_.now();
     if (numbered ? !services_.numberedReady(c.network.id, receiver) : !services_.sendReady(to)) {
-        // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; pełna kolejka; brak IFAC): próba
-        // bez przekazania, więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
+        // Stos nie przyjmie pakietu (cel bez trasy: zapytanie wysłane; brak IFAC; WICI-Link bez rodzica,
+        // trwałego stanu albo odbioru): próba bez przekazania, raz na odstęp ponowienia (zajęte łącze nie
+        // dochodzi tu, poll), więc `nadane`, etap, liczba prób i czas pierwszego nadania zostają, a ANULUJ
         // WYSYŁKĘ działa dalej (oprogramowanie.md, cykl życia zgłoszenia).
         ++stats_.failed;
         r.nextTryS = nowS + retryDelayS(r.attempts, false, r.firstSentS ? nowS - r.firstSentS : 0, random32());
@@ -301,8 +302,11 @@ void Station::poll() {
     for (Flight& f : flights_) {
         if (f.slot >= 0 && store_.now() - f.sentS >= RECEIPT_GUARD_S) finishFlight(f, false);
     }
-    if (!services_.radioReady() || services_.busy()) return;
-    while (inFlight() < IN_FLIGHT) {
+    // Zajęte łącze (WICI-Link: własna ramka w drodze, Reticulum: pełna kolejka) to nie nieudana próba:
+    // zgłoszenie zostaje do nadania bez zapisu i bez odstępu ponowienia, a idzie w obiegu pętli, w którym
+    // łącze się zwolni. busy() jest sprawdzane przed każdym nadaniem, bo zajmuje je już poprzednie.
+    if (!services_.radioReady()) return;
+    while (inFlight() < IN_FLIGHT && !services_.busy()) {
         const int slot = nextToSend();
         if (slot < 0 || !transmit(static_cast<uint16_t>(slot))) break;
     }
@@ -706,11 +710,15 @@ bool Station::received(const uint8_t* data, size_t length) {
     }
     services_.address(self);
     const uint8_t* recipient = store_.recipient();
-    // Tylko od aktywnej tożsamości odbiorcy i tylko do tej stacji (trwałe odrzucenie: z dowodem).
+    // Tylko od aktywnej tożsamości odbiorcy i tylko do tej stacji (trwałe odrzucenie: z dowodem). Druga
+    // tożsamość tego odbiorcy to „jeszcze nie” (zapasowa przed KLUCZ ZAPASOWY, główna po nim): bez dowodu,
+    // więc odbiorca nie zamyka wiadomości i wyśle ją ponownie po przełączeniu.
     if (memcmp(to, self, store::HASH) || !recipient || memcmp(from, recipient, store::HASH)) {
         ++stats_.rejected;
         services_.log("message from inactive or unknown receiver");
-        return true;
+        const config::Identity other = store_.meta().receiver == config::BACKUP ? config::MAIN : config::BACKUP;
+        return memcmp(to, self, store::HASH) || !recipient ||
+               memcmp(from, store_.config().receivers[other].sa1, store::HASH);
     }
     sa1::Message m;
     char wire[sa1::MAX_CONTENT + 1];
@@ -729,12 +737,16 @@ bool Station::receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recip
     const config::Config& c = store_.config();
     const uint16_t active = c.receivers[store_.meta().receiver == config::BACKUP ?
                                         config::BACKUP : config::MAIN].number;
+    // Every rejection here is permanent, as in received(): true lets the
+    // envelope's replay window close it, so the receiver gets its proof and
+    // stops resending (oprogramowanie.md, dowód dopiero po rozstrzygnięciu).
     if (!store_.station() || !c.network.id || network != c.network.id ||
         recipient != c.network.station || sender != active || !content ||
         memchr(content, 0, length) != nullptr ||
         length > sa1::MAX_CONTENT) {
         ++stats_.rejected;
-        return false;
+        if (sender != active) services_.log("message from inactive or unknown receiver");
+        return true;
     }
     char copy[sa1::MAX_CONTENT + 1];
     memcpy(copy, content, length);
@@ -748,7 +760,7 @@ bool Station::receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recip
         m.type < sa1::RECEIVED || m.type > sa1::BULLETIN ||
         !(wireLength = sa1::encode(m, wire, sizeof(wire)))) {
         ++stats_.rejected;
-        return false;
+        return true;
     }
     return acceptMessage(m, wire, wireLength);
 }

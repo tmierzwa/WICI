@@ -73,6 +73,7 @@
 #include "wici_airtime.h"
 #include "wici_radio.h"
 #include "wici_beacon.h"
+#include "beacon_check.h"
 
 #ifndef WICI_FW_VERSION
 #define WICI_FW_VERSION "bench-a-dev"
@@ -173,8 +174,10 @@ struct Retained {
     uint32_t check;
     uint8_t lang;
     uint8_t screen;
+    uint32_t prepResume;   // PREP_RESUME: restart po configure w trybie przygotowania, tryb wraca po starcie
 };
 constexpr uint32_t RETAINED_MAGIC = 0x57494349;  // "WICI"
+constexpr uint32_t PREP_RESUME = 0x50524550;     // "PREP"
 PLATFORM_NOINIT Retained retained;
 
 bool framOk = false;
@@ -332,15 +335,26 @@ uint32_t wiciHandle = 0;
 uint32_t wiciNextBeaconMs = 0;
 uint32_t wiciLastBeaconMs = 0;
 uint16_t wiciAdvertisedParent = 0, wiciAdvertisedRank = 0xFFFF;
+uint16_t wiciScheduledParent = 0, wiciScheduledRank = 0xFFFF;  // zmiana, dla której BEACON już ma termin
 uint8_t wiciBeacons = 0;
 bool numberedConfigured() { return storeOk && stationStore.config().network.id != 0; }
+bool wiciReady();
 struct WiciAir : wici_link::Air {
-    // Every WICI frame leaves through the pairwise tag; unicast without a key for its neighbor is refused.
-    bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
+    // Cisza (poza zgłoszeniem z wyjątku), zajęte radio albo tor radia poza pracą: żadna ramka DATA ani BEACON.
+    static bool radioOpen(wici_link::TxClass traffic) {
         const bool exception = traffic == wici_link::TxClass::OWN && bench.silenceException &&
                                wiciShelter && wiciShelter->exceptionTx();
-        if ((bench.silence && !exception) || bench.busy() || !radioServes() ||
-            !wire || length < wici_link::HEADER + wici_link::TAG) return false;
+        return !(bench.silence && !exception) && !bench.busy() && radioServes();
+    }
+    bool accepts(wici_link::TxClass traffic, size_t radioLength) override {
+        return radioOpen(traffic) &&
+               (traffic == wici_link::TxClass::OWN ||
+                wiciBudget.allows(traffic == wici_link::TxClass::BEACON, lora::frameAirMs(radioLength), counterS(),
+                                  traffic == wici_link::TxClass::CONTENDED_K2));
+    }
+    // Every WICI frame leaves through the pairwise tag; unicast without a key for its neighbor is refused.
+    bool sendData(const uint8_t* wire, size_t length, wici_link::TxClass traffic) override {
+        if (!radioOpen(traffic) || !wire || length < wici_link::HEADER + wici_link::TAG) return false;
         const bool beacon = traffic == wici_link::TxClass::BEACON;
         const auto type = static_cast<wici_link::Type>((wire[0] >> 3) & 7);
         if (type != (beacon ? wici_link::Type::BEACON : wici_link::Type::DATA)) return false;
@@ -386,8 +400,9 @@ struct BenchServices : station::Services {
         return rnsnode::send(to, data, length, timeoutS);
     }
     bool sendReady(const uint8_t to[store::HASH]) override { return rnsnode::sendReady(to); }
+    // Łącze w ogóle może nieść zgłoszenie; własna ramka w drodze to busy(), nie brak gotowości.
     bool numberedReady(uint16_t network, uint16_t recipient) override {
-        return wiciActive && wiciShelter && !wiciShelter->ownBusy() && radioListening() &&
+        return wiciActive && wiciShelter && wiciReady() && radioListening() &&
                stationStore.config().network.id == network &&
                (recipient == stationStore.config().receivers[0].number ||
                 recipient == stationStore.config().receivers[1].number) &&
@@ -395,7 +410,7 @@ struct BenchServices : station::Services {
     }
     uint32_t sendNumbered(uint16_t network, uint16_t recipient, const uint8_t* data,
                           size_t length, uint32_t, bool exception) override {
-        if (!numberedReady(network, recipient)) return 0;
+        if (!numberedReady(network, recipient) || wiciShelter->ownBusy()) return 0;
         ++wiciHandle;
         if (!wiciHandle) ++wiciHandle;
         return wiciShelter->queueOwn(recipient, data, length, wiciHandle, exception) ? wiciHandle : 0;
@@ -510,9 +525,15 @@ void BenchHost::configChanged(bool roleChanged) {
     if (rnsOk) rnsnode::setIfac(stationStore.config().ifac);   // configure może zmienić kod IFAC
     applyReceivers();
     // Zmiana roli: interfejs USB i cel stacji (port "wici.sa1", rdzeń "lxmf.delivery") zmienia dopiero
-    // start stosu, więc stacja wraca
-    // po restarcie (po wysłaniu odpowiedzi na configure).
-    if (roleChanged) restartSoon("role changed: restart");
+    // start stosu. WICI-Link (plan sieci, klucze sąsiadów, rodzic, root) też powstaje tylko przy starcie
+    // (beginWici), więc stacja numerowana albo po zmianie roli wraca po restarcie (po wysłaniu odpowiedzi
+    // na configure). Tryb przygotowania, w którym przyszło configure, wraca po tym restarcie sam
+    // (retained.prepResume): laptop może od razu odczytać kartę z numerem stacji.
+    if (roleChanged || numberedConfigured() || wiciActive) {
+        if (bench.prep) retained.prepResume = PREP_RESUME;
+        wiciActive = false;   // stare łącze nie pracuje na nowej konfiguracji do restartu (jak freezeMigration)
+        restartSoon(roleChanged ? "role changed: restart" : "configuration changed: restart");
+    }
     screenChanged();
 }
 void BenchServices::changed() {
@@ -524,8 +545,29 @@ void BenchServices::changed() {
 void onDatagram(const uint8_t* data, size_t length, void*) {
     if (rnsOk && !numberedConfigured()) rnsnode::received(data, length);
 }
+uint32_t wiciRandom(void*);
+// Wszystkie trwałe części WICI-Link po ostatnim odczycie FRAM bez niepewnego zapisu.
+bool wiciReady() {
+    return wiciBudget.ready() && (wiciRoot ? wiciRoot->ready() : wiciShelter && wiciShelter->ready());
+}
+// Seria BEACON-ów od początku: 1–5 s, potem dwa razy co 120 s (start łącza, otwarcie portu KISS roota).
+void wiciBeaconBurst(uint32_t now) {
+    wiciNextBeaconMs = now + 1000 + wiciRandom(nullptr) % 4000;
+    wiciBeacons = 0;
+}
+// Root po otwarciu portu KISS albo po powrocie trwałego stanu: seria od nowa, ale nie częściej niż co 60 s.
+void wiciRootBurst(uint32_t now) {
+    if (wici_beacon::burstAllowed(now, wiciLastBeaconMs, wiciLastBeaconMs != 0)) wiciBeaconBurst(now);
+}
+void logWiciCleared() {
+    const uint16_t cleared = wiciRoot ? wiciRoot->clearedRecords() : wiciShelter ? wiciShelter->clearedRecords() : 0;
+    if (!cleared) return;
+    char line[64];
+    snprintf(line, sizeof(line), "wici: %u damaged ring records cleared", static_cast<unsigned>(cleared));
+    bench.log(line);
+}
 void onWiciRaw(const radiolink::Frame& frame, void*) {
-    if (!wiciActive) return;
+    if (!wiciActive || !wiciReady()) return;  // bez trwałego stanu łącze milczy: bez HACK i przyjęć
     uint8_t bare[wici_link::MAX_FRAME];
     size_t length = 0;
     if (!wiciHopAuth.open(frame.bytes, frame.length, bare, sizeof(bare), length)) return;
@@ -538,16 +580,16 @@ bool onWiciAdmit(uint16_t network, uint16_t sender, uint16_t recipient,
                  const uint8_t* sa1, size_t length, void*) {
     return app.receivedEnvelope(network, sender, recipient, sa1, length);
 }
-bool verifyWiciBeacon(uint16_t sender, const uint8_t content[wici_beacon::CONTENT_BYTES],
-                      const uint8_t signature[wici_beacon::SIGNATURE_BYTES], const void* context) {
+bool onWiciActive(uint8_t peer, void*) { return app.activeReceiver(peer); }
+// Klucz Ed25519 sąsiada z karty; w pętli, a Shelter kopiuje go do sprawdzenia w tle (beacon_check.h).
+const uint8_t* wiciBeaconKey(uint16_t sender, const void* context) {
     const config::Config* c = static_cast<const config::Config*>(context);
-    if (!c) return false;
+    if (!c) return nullptr;
     for (uint8_t i = 0; i < c->priorityKeyCount; ++i)
-        if (c->priorityKeys[i].station == sender)
-            return wici_beacon::verify(c->priorityKeys[i].ed25519,
-                                        c->network.id, sender, content, signature);
-    return false;
+        if (c->priorityKeys[i].station == sender) return c->priorityKeys[i].ed25519;
+    return nullptr;
 }
+uint32_t wiciClockMs() { return millis(); }
 uint32_t wiciRandom(void*) {
     uint32_t value = 0;
     stationRandom(reinterpret_cast<uint8_t*>(&value), sizeof(value));
@@ -621,6 +663,7 @@ bool BenchHost::destroy() {
     // Po skasowaniu restart: stan w RAM (próby w drodze, potwierdzone alarmy, stos bez tożsamości)
     // należy do skasowanych rekordów, a nowa tożsamość powstaje przy starcie stosu.
     wipeStack();
+    wiciActive = false;   // łącze nie pracuje na kasowanym magazynie do restartu
     bench.emcStop();  // rekord ustawień i tak znika; bez ramek do restartu
     destroyed = true;
     retained.magic = 0;   // język i ekran nie wracają po restarcie (ustawienia ekranu skasowane)
@@ -666,7 +709,10 @@ void setSwitchSilence(bool on, const char* source) {
 // Zwraca false, gdy wejście w tryb odmówiono (brak zapisu w dzienniku).
 bool applyPrep(bool on, const char* source) {
     if (!on && migrationBarrier.ready() && !migrationBarrier.permitsTransmit()) return false;
-    if (!on) bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
+    if (!on) {
+        bench.stop();  // wyjście z trybu przygotowania przerywa pomiary
+        retained.prepResume = 0;   // wyjście w oknie restartu po configure: tryb nie wraca po starcie
+    }
     if (bench.prep == on) return true;
     char text[48];
     // Wejście zapisane w dzienniku FRAM, zanim tryb zacznie działać (oprogramowanie.md, "Tryb
@@ -1779,8 +1825,21 @@ void handle(char* cmd) {
     else if (!strcmp(cmd, "HACK")) {
         uint32_t zero = 1;
         if (n > 1 || (n == 1 && !cmdargs::parseUint(words[0], 0, 0, zero))) { printError("HACK [0]"); return; }
-        if (n) bench.resetHackStats();
-        bench.printHack();
+        if (n) {
+            bench.resetHackStats();
+            if (wiciShelter) wiciShelter->resetBeaconStats();
+        }
+        // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
+        // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
+        char beacon[192] = "";
+        const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
+        if (wiciShelter)
+            snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
+                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u",
+                     static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
+                     static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
+                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()));
+        bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();
     else if (!strcmp(cmd, "APP")) printApp();
@@ -1943,7 +2002,8 @@ void beginWici() {
         failure = "wici neighbor authentication unavailable";
     } else if (c.role == config::Role::NODE) {
         wiciRoot = new (wiciRootSpace) wici_gateway::Root(memory, wiciUsb, wiciAir,
-                            c.network.id, c.network.station, c.ifac, privateKey);
+                            c.network.id, c.network.station, c.ifac, privateKey,
+                            c.priorityKeys, c.priorityKeyCount, c.behind, c.behindCount);
         // The root epoch is the durable start count.
         if (!wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()))) failure = "wici root binding failed";
     } else {
@@ -1960,15 +2020,23 @@ void beginWici() {
         }
         if (!rootEd25519 || !plannedKey || !backupKey) {
             failure = "wici neighbor signing key missing from station card";
+        } else if (beaconcheck::REQUIRED && !beaconcheck::worker()) {
+            failure = "wici beacon check task unavailable";
         } else {
             wiciShelter = new (wiciShelterSpace) wici_radio::Shelter(memory,
                          {c.network.id, c.network.station, c.network.root,
                           c.network.parent, c.network.backupParent}, c.network.ttl, receivers, c.ifac,
                          privateKey, publicKeys, onWiciAdmit, nullptr,
                          wiciAir, wiciRandom, nullptr, c.behind, c.behindCount, rootEd25519,
-                         verifyWiciBeacon, &c);
+                         wiciBeaconKey, &c, c.priorityKeys, c.priorityKeyCount);
+            wiciShelter->setActiveReceiver(onWiciActive);
             if (!wiciShelter->begin()) failure = "wici station durable state unavailable";
-            else wiciShelter->onDelivery(onWiciDelivery, nullptr);
+            else {
+                wiciShelter->onDelivery(onWiciDelivery, nullptr);
+                // Podpisy BEACON-ów sprawdza zadanie na drugim rdzeniu (wymagane w obrazach z radiem WICI-Link,
+                // wyżej); w obrazach bez zadania (symulator, testy) Shelter sprawdza na miejscu.
+                wiciShelter->useBeaconCheck(beaconcheck::worker(), wiciClockMs);
+            }
         }
     }
     sha2::wipe(privateKey, sizeof(privateKey));
@@ -1984,13 +2052,51 @@ void beginWici() {
         return;
     }
     wiciActive = true;
-    uint32_t jitter = wiciRandom(nullptr);
-    wiciNextBeaconMs = millis() + 1000 + jitter % 4000;
+    wiciBeaconBurst(millis());
     wiciLastBeaconMs = 0;
-    wiciAdvertisedParent = 0;
-    wiciAdvertisedRank = 0xFFFF;
-    wiciBeacons = 0;
+    wiciAdvertisedParent = wiciScheduledParent = 0;
+    wiciAdvertisedRank = wiciScheduledRank = 0xFFFF;
     bench.log(wiciRoot ? "wici root ready" : "wici station ready");
+    logWiciCleared();
+}
+
+// Niepewny zapis FRAM wyłącza moduł WICI-Link (ready() == false). Łącze milczy (bez BEACON, HACK
+// i przyjęć, root odmawia ramek z laptopa), a moduł co 10 s czyta FRAM od nowa (begin()). Utrata
+// i powrót dają po jednym wpisie w dzienniku; bez restartu, więc bez pętli restartów.
+void pollWiciRecovery(uint32_t now) {
+    constexpr uint32_t RETRY_MS = 10000;
+    static bool down = false;
+    static uint32_t retryMs = 0;
+    static StackState before = StackState::RUNNING;   // stan stosu sprzed utraty, przywracany po powrocie
+    if (wiciReady()) {
+        if (down) {
+            down = false;
+            stackState = before;
+            bench.log("wici durable state recovered");
+            logWiciCleared();
+            // Stacje wracają do rodzica z planu po nowym BEACON-ie; root nie czeka na zwykły termin.
+            if (wiciRoot && wiciUsb.open()) wiciRootBurst(now);
+        }
+        return;
+    }
+    if (!down) {
+        down = true;
+        retryMs = now;
+        before = stackState;
+        stackState = StackState::START_FAILED;   // alarm brak_lacznosci
+        bench.log("wici durable state uncertain: link silent, FRAM re-read every 10 s");
+        if (wiciShelter) wiciShelter->cancelOwn();   // warstwa aplikacji dostaje Failed i ponawia
+        return;
+    }
+    if (now - retryMs < RETRY_MS) return;
+    retryMs = now;
+    const config::Config& c = stationStore.config();
+    if (!wiciBudget.ready()) wiciBudget.begin(c.network.id, c.network.station);
+    if (wiciRoot && !wiciRoot->ready()) wiciRoot->begin(static_cast<uint16_t>(stationJournal.starts()));
+    if (wiciShelter && !wiciShelter->ready()) {
+        wiciShelter->cancelOwn();
+        wiciShelter->begin();
+    }
 }
 
 // Ziarno generatora stacji: 48 B entropii ze źródła sprzętowego i identyfikator układu jako nonce
@@ -2098,6 +2204,12 @@ void stationSetup() {
     beginStack();
     beginWici();
     if (storeOk && !nodeRole()) app.stationEvent(store::RESTART, stationJournal.starts());
+    // Restart po configure w trybie przygotowania: tryb wraca (wpis w dzienniku jak przy wejściu).
+    // Po włączeniu zasilania pamięć RTC ma przypadkowe słowa, więc wymagany jest też znacznik retained.
+    const bool resumePrep = retained.prepResume == PREP_RESUME && retained.magic == RETAINED_MAGIC &&
+                            retained.check == ~RETAINED_MAGIC;
+    retained.prepResume = 0;
+    if (resumePrep && normalBoot) applyPrep(true, " after configure restart");
     bench.onDatagram(onDatagram, nullptr);
     bench.onTxDone(onTxDone, nullptr);
     // Łącze stosu w odbiorze od startu, przed ekranem (radio niezależne od ekranu, gotowość ≤60 s).
@@ -2192,30 +2304,47 @@ void stationLoop() {
         pollAnnounce();
     }
     // WICI-Link durable timestamps use the monotonic counter: serviceS() can step back after a restart.
-    if (wiciActive && wiciShelter) wiciShelter->poll(now, counterS());
-    if (wiciActive && wiciShelter && wiciShelter->routes().parent() &&
-        (wiciShelter->routes().parent() != wiciAdvertisedParent ||
-         wiciShelter->routes().rank() != wiciAdvertisedRank)) {
-        const uint32_t earliest = wiciLastBeaconMs ? wiciLastBeaconMs + 60000u : now + 1000u;
-        if (static_cast<int32_t>(wiciNextBeaconMs - earliest) > 0) wiciNextBeaconMs = earliest;
+    if (wiciActive) pollWiciRecovery(now);
+    if (wiciActive && wiciShelter && wiciReady()) wiciShelter->poll(now, counterS());
+    // Pierwszy BEACON po zmianie rodzica lub rangi: najwcześniej 60 s po poprzednim, z losowym 0–4 s, żeby
+    // rodzeństwo, które usłyszało ten sam BEACON rodzica, nie nadawało razem. Zmianą rangi jest dopiero
+    // przesunięcie o co najmniej RANK_STEP (wici_beacon::rankMoved). Bez rangi (brak świeżego BEACON-u
+    // rodzica) stacja nie nadaje BEACON-ów.
+    if (wiciActive && wiciShelter) {
+        const uint16_t parent = wiciShelter->routes().parent(), rank = wiciShelter->routes().rank(counterS());
+        if (rank != 0xFFFF &&
+            (parent != wiciAdvertisedParent || wici_beacon::rankMoved(rank, wiciAdvertisedRank)) &&
+            (parent != wiciScheduledParent || wici_beacon::rankMoved(rank, wiciScheduledRank))) {
+            wiciScheduledParent = parent;
+            wiciScheduledRank = rank;
+            const uint32_t earliest = wici_beacon::jittered(now, wiciLastBeaconMs, wiciLastBeaconMs != 0,
+                                                            wiciRandom(nullptr));
+            if (static_cast<int32_t>(wiciNextBeaconMs - earliest) > 0) wiciNextBeaconMs = earliest;
+        }
     }
     if (wiciActive && linkAuto && !bench.silence && !bench.transmitting() &&
         static_cast<int32_t>(now - wiciNextBeaconMs) >= 0) {
-        const bool accepted = wiciRoot ? wiciRoot->beacon() : wiciShelter && wiciShelter->beacon();
+        // Root bez otwartego portu KISS i moduł bez trwałego stanu odmawiają BEACON-u (Root::beacon, Shelter::beacon).
+        const bool accepted = wiciReady() &&
+                              (wiciRoot ? wiciRoot->beacon() : wiciShelter && wiciShelter->beacon(counterS()));
         if (accepted) {
             wiciLastBeaconMs = now;
             if (wiciShelter) {
-                wiciAdvertisedParent = wiciShelter->routes().parent();
-                wiciAdvertisedRank = wiciShelter->routes().rank();
+                wiciAdvertisedParent = wiciScheduledParent = wiciShelter->routes().parent();
+                wiciAdvertisedRank = wiciScheduledRank = wiciShelter->routes().rank(counterS());
             }
             ++wiciBeacons;
-            uint32_t jitter = wiciRandom(nullptr);
-            wiciNextBeaconMs = now + (wiciBeacons < 3 ? 120000u :
-                                         1440000u + jitter % 720001u);
-        } else wiciNextBeaconMs = now + 5000;
+            const uint32_t jitter = wiciRandom(nullptr);
+            wiciNextBeaconMs = now + (wiciBeacons < 3 ? 120000u + jitter % 4001u :
+                                                       1440000u + jitter % 720001u);
+        } else {
+            // Odmowa (brak rangi, cisza, zajęte radio, limit ogłoszeń, port roota zamknięty): bez podpisu
+            // i bez numeru seq (Air::accepts). Ponowienie za 5 s z tym samym losowym przesunięciem, żeby
+            // rodzeństwo nie zsynchronizowało się na ponowieniach.
+            wiciNextBeaconMs = wici_beacon::jittered(now + 5000u, wiciLastBeaconMs, wiciLastBeaconMs != 0,
+                                                     wiciRandom(nullptr));
+        }
     }
-    if (wiciActive && ((wiciRoot && !wiciRoot->ready()) ||
-                       (wiciShelter && !wiciShelter->ready()))) stackState = StackState::START_FAILED;
     static uint32_t lastApp = 0;
     if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd rejestru co 100 ms, nie w każdym obiegu
         lastApp = now;
@@ -2253,7 +2382,10 @@ void stationLoop() {
         }
         else if (dataWas) protocol.disconnected();
         if (kiss) {
-            if (wiciRoot) wiciRoot->setUsbOpen(dataOpen);
+            if (wiciRoot) {
+                wiciRoot->setUsbOpen(dataOpen);
+                if (dataOpen) wiciRootBurst(now);   // root BEACON-uje tylko z otwartym portem (może dać HACK)
+            }
             else rnsnode::usbOpen(dataOpen);
         }
         else if (dataOpen) protocol.connected(now);
@@ -2272,8 +2404,9 @@ void stationLoop() {
             if (wiciRoot) {
                 const uint8_t* frame = nullptr;
                 size_t length = 0;
-                while (wiciUsb.peek(frame, length)) {
-                    wiciRoot->host(frame, length, now, counterS());
+                uint8_t command = kiss::CMD_DATA;
+                while (wiciUsb.peek(frame, length, command)) {
+                    wiciRoot->host(frame, length, now, counterS(), command);
                     wiciUsb.pop();
                 }
                 drain(SerialData, wiciUsb);

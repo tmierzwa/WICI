@@ -68,9 +68,10 @@ bool deriveKey(const uint8_t privateKey[32], const uint8_t peerPublic[32], uint1
 }
 
 size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t counter,
-            const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2]) {
+            const uint8_t* plaintext, size_t length, size_t maxPayload, Frame out[2], uint8_t type) {
     if (!key || !out || (!plaintext && length) || length > MAX_SA1 || maxPayload < MIN_PAYLOAD ||
-        !id(sender) || !id(recipient) || sender == recipient) return 0;
+        !id(sender) || !id(recipient) || sender == recipient || type > TYPE_PROOF ||
+        (type == TYPE_PROOF && (!length || length % 4 || length > 4 * PROOF_COUNTERS))) return 0;
     // MIN_PAYLOAD fits a 128-byte half, so two parts always suffice.
     const size_t count = length + OVERHEAD <= maxPayload ? 1 : 2;
     const size_t first = count == 1 ? length : (length + 1) / 2;
@@ -79,7 +80,7 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
         const size_t offset = i == 0 ? 0 : first;
         const size_t partLength = i == 0 ? first : length - first;
         Frame& frame = local[i];
-        frame.bytes[0] = static_cast<uint8_t>((VERSION << 6) | ((count == 1 ? 0 : i + 1) << 4) | TYPE_SA1);
+        frame.bytes[0] = static_cast<uint8_t>((VERSION << 6) | ((count == 1 ? 0 : i + 1) << 4) | type);
         put16(frame.bytes + 1, sender);
         put16(frame.bytes + 3, recipient);
         put32(frame.bytes + 5, counter);
@@ -99,12 +100,12 @@ size_t seal(const uint8_t key[32], uint16_t sender, uint16_t recipient, uint32_t
 
 size_t sealReserved(Counter& counter, const uint8_t key[32], uint16_t netId, uint16_t sender,
                     uint16_t recipient, const uint8_t* plaintext, size_t length, size_t maxPayload,
-                    Frame out[2]) {
+                    Frame out[2], uint8_t type) {
     if (!counter.outgoing(netId, sender, recipient, key) || !out || (!plaintext && length) ||
         length > MAX_SA1 || maxPayload < MIN_PAYLOAD) return 0;
     uint32_t value;
     if (!counter.next(value)) return 0;
-    return seal(key, sender, recipient, value, plaintext, length, maxPayload, out);
+    return seal(key, sender, recipient, value, plaintext, length, maxPayload, out, type);
 }
 
 bool openPart(const uint8_t key[32], const uint8_t* frame, size_t length, Part& out) {

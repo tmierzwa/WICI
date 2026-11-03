@@ -37,6 +37,10 @@ int main() {
     assert(resumed.poolUsed() == first.poolUsed());
     assert(!resumed.reserve(false, 800, 200));
     assert(!resumed.reserve(false, 800, 3600));  // old bucket retained conservatively
+    // allows() answers as reserve() would, without a write or a moved window.
+    const uint32_t usedBefore = resumed.poolUsed();
+    assert(!resumed.allows(false, 800, 3600) && resumed.allows(false, 800, 4200));
+    assert(resumed.poolUsed() == usedBefore);
     assert(resumed.reserve(false, 800, 4200));
     assert(resumed.poolUsed() == 10400);
     assert(resumed.reserve(true, 800, 4200));
@@ -55,6 +59,7 @@ int main() {
     for (unsigned i = 0; i < 90; ++i) assert(beacons.reserve(true, 800, 100));
     assert(beacons.beaconUsed() == wici_airtime::BEACON_CAP_MS);
     assert(!beacons.reserve(true, 800, 100));
+    assert(!beacons.allows(true, 800, 100) && beacons.allows(false, 800, 100));
     assert(beacons.poolUsed() == 90u * 800u * 13u);
 
     static Memory contentionMemory;
@@ -62,6 +67,7 @@ int main() {
     assert(contention.begin(100, 2));
     for (unsigned i = 0; i < 86; ++i) assert(contention.reserve(false, 800, 100, true));
     assert(!contention.reserve(false, 800, 100, true));
+    assert(!contention.allows(false, 800, 100, true) && contention.allows(false, 800, 100));
     assert(contention.reserve(false, 800, 100));  // no K1 waiting: the 60% pool still applies
     wici_airtime::Budget contentionRestart(contentionMemory);
     assert(contentionRestart.begin(100, 2));

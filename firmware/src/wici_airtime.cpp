@@ -76,14 +76,27 @@ bool Budget::commit() {
     return true;
 }
 
+bool Budget::fits(bool isBeacon, uint32_t txMs, bool contendedK2) const {
+    if (!ready_ || !txMs || txMs > 1000 || sequence_ == UINT32_MAX) return false;
+    const uint32_t cost = (txMs * 13 + 99) / 100;
+    const uint32_t beaconCost = (txMs + 99) / 100;
+    return poolUsed() / 100 + cost <= POOL_CAP_MS / 100 &&
+           (!contendedK2 || poolUsed() / 100 + cost <= CONTENDED_K2_CAP_MS / 100) &&
+           (!isBeacon || beaconUsed() / 100 + beaconCost <= BEACON_CAP_MS / 100);
+}
+
+bool Budget::allows(bool isBeacon, uint32_t txMs, uint32_t nowS, bool contendedK2) const {
+    Budget probe = *this;  // the window as reserve() would see it, without the write
+    probe.advance(nowS / BUCKET_S);
+    return probe.fits(isBeacon, txMs, contendedK2);
+}
+
 bool Budget::reserve(bool isBeacon, uint32_t txMs, uint32_t nowS, bool contendedK2) {
     if (!ready_ || !txMs || txMs > 1000 || sequence_ == UINT32_MAX) return false;
     advance(nowS / BUCKET_S);
+    if (!fits(isBeacon, txMs, contendedK2)) return false;
     const uint32_t cost = (txMs * 13 + 99) / 100;
     const uint32_t beaconCost = (txMs + 99) / 100;
-    if (poolUsed() / 100 + cost > POOL_CAP_MS / 100 ||
-        (contendedK2 && poolUsed() / 100 + cost > CONTENDED_K2_CAP_MS / 100) ||
-        (isBeacon && beaconUsed() / 100 + beaconCost > BEACON_CAP_MS / 100)) return false;
     const uint8_t slot = static_cast<uint8_t>(epoch_ % BUCKETS);
     pool_[slot] = static_cast<uint16_t>(pool_[slot] + cost);
     if (isBeacon) beacon_[slot] = static_cast<uint16_t>(beacon_[slot] + beaconCost);

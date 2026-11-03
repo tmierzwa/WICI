@@ -58,7 +58,7 @@ void Port::feed(const uint8_t* bytes, size_t count, uint32_t nowMs) {
             escape_ = true;
             continue;
         }
-        if (command_ == CMD_DATA) {
+        if (command_ == CMD_DATA || command_ == extraCommand_) {
             if (length_ >= MTU) { tooLarge_ = true; continue; }
             if (target_ >= 0) slots_[target_][length_] = value;
             ++length_;
@@ -70,11 +70,11 @@ void Port::feed(const uint8_t* bytes, size_t count, uint32_t nowMs) {
 }
 
 void Port::endFrame() {
-    if (command_ == CMD_DATA) {
+    if (command_ == CMD_DATA || command_ == extraCommand_) {
         if (tooLarge_) { ++counters_.rxTooLarge; return; }
         if (!length_) return;
         if (target_ < 0) { ++counters_.rxDropped; return; }
-        lengths_[target_] = static_cast<uint16_t>(length_);
+        lengths_[target_] = static_cast<uint16_t>(length_ | (static_cast<size_t>(command_) << COMMAND_SHIFT));
         ++count_;
         ++counters_.fromComputer;
         if (flowControl_) {
@@ -89,9 +89,15 @@ void Port::endFrame() {
 }
 
 bool Port::peek(const uint8_t*& data, size_t& length) const {
+    uint8_t command = CMD_DATA;
+    return peek(data, length, command);
+}
+
+bool Port::peek(const uint8_t*& data, size_t& length, uint8_t& command) const {
     if (!count_) return false;
     data = slots_[head_];
-    length = lengths_[head_];
+    length = lengths_[head_] & LENGTH_MASK;
+    command = static_cast<uint8_t>(lengths_[head_] >> COMMAND_SHIFT);
     return true;
 }
 
@@ -122,9 +128,9 @@ bool Port::canSend(const uint8_t* data, size_t length) const {
     return TX_BYTES - txCount_ >= encoded;
 }
 
-bool Port::send(const uint8_t* data, size_t length) {
+bool Port::send(const uint8_t* data, size_t length, uint8_t command) {
     if (!canSend(data, length)) { ++counters_.txDropped; return false; }
-    const uint8_t start[2] = {FEND, CMD_DATA};
+    const uint8_t start[2] = {FEND, command};
     put(start, sizeof(start));
     for (size_t i = 0; i < length; ++i) {
         if (data[i] == FEND) { const uint8_t e[2] = {FESC, TFEND}; put(e, 2); }

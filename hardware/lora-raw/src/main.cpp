@@ -4,7 +4,7 @@
 // limit. Bytes from "tx" go on air unchanged; every received frame (also with a CRC error) goes to USB.
 //
 // USB serial, one command per line:
-//   info                 -> {"info":"lora-raw-0.1",...}
+//   info                 -> {"info":"lora-raw-0.2",...,"reset":RESETREAS,"cut":lines cut on a stalled host}
 //   rx on | rx off       -> {"rx_stream":true|false}; frames: {"rx":"<hex>","len":N,"rssi":..,"snr":..,"crc":true,"t_us":T}
 //   tx <hex>             -> {"tx":"done","n":K,"len":N,"start_us":S,"done_us":D,"air_us":D-S,"toa_us":..,"power_dbm":P}
 //   power <dBm>          -> {"power_dbm":P}   (-9..22, SX1262 high-power PA)
@@ -25,7 +25,7 @@
 
 namespace {
 
-constexpr const char *VERSION = "lora-raw-0.1";
+constexpr const char *VERSION = "lora-raw-0.2";
 constexpr float CARRIER_MHZ = 869.525f;
 constexpr float BANDWIDTH_KHZ = 125.0f;
 constexpr uint8_t SPREADING_FACTOR = 7;
@@ -58,6 +58,16 @@ char line[600];
 size_t lineLength = 0;
 bool lineOverflow = false;
 char out[700];
+
+// USB output must never stop the loop. Adafruit_USBD_CDC::write waits for FIFO room for as long as the host
+// keeps the port open, so a host that stops reading without closing the port would stall the tool. emit()
+// writes only what fits and gives a line EMIT_MS; the rest is cut and counted (info "cut").
+constexpr uint32_t EMIT_MS = 100;
+uint32_t emitCut = 0;
+// Watchdog: a loop that stops for WATCHDOG_S for any other reason restarts the tool; info "reset" shows
+// RESETREAS of that start (bit 1 DOG: watchdog; 0: power on), so a hang is visible instead of silent.
+constexpr uint32_t WATCHDOG_S = 4;
+uint32_t resetReason = 0;
 
 // 1 MHz free-running 32-bit TIMER4 (the core and this program use no other TIMER4 user); HFXO is started in
 // setup so the clock is crystal accurate.
@@ -118,10 +128,39 @@ void onDio1() {
   dio1 = true;
 }
 
+bool writeWithin(const char *data, size_t length, uint32_t startMs) {
+  while (length && Serial) {
+    const int room = Serial.availableForWrite();
+    if (room > 0) {
+      const size_t n = length < static_cast<size_t>(room) ? length : static_cast<size_t>(room);
+      Serial.write(reinterpret_cast<const uint8_t *>(data), n);
+      data += n;
+      length -= n;
+    } else if (millis() - startMs > EMIT_MS) {
+      return false;
+    } else {
+      yield();
+    }
+  }
+  return length == 0;
+}
+
 void emit(const char *text) {
-  Serial.println(text);
+  const uint32_t start = millis();
+  if (!writeWithin(text, strlen(text), start) || !writeWithin("\r\n", 2, start)) ++emitCut;
   Serial.flush();
 }
+
+void watchdogBegin() {
+  resetReason = NRF_POWER->RESETREAS;
+  NRF_POWER->RESETREAS = resetReason;  // write-1-to-clear: the next start reports only its own cause
+  NRF_WDT->CONFIG = (WDT_CONFIG_HALT_Pause << WDT_CONFIG_HALT_Pos) | (WDT_CONFIG_SLEEP_Run << WDT_CONFIG_SLEEP_Pos);
+  NRF_WDT->CRV = WATCHDOG_S * 32768;
+  NRF_WDT->RREN = WDT_RREN_RR0_Msk;
+  NRF_WDT->TASKS_START = 1;  // after a soft reset it may still run with this configuration (it cannot stop)
+}
+
+void watchdogFeed() { NRF_WDT->RR[0] = WDT_RR_RR_Reload; }
 
 void error(const char *what, int code) {
   snprintf(out, sizeof(out), "{\"err\":\"%s\",\"code\":%d}", what, code);
@@ -148,10 +187,11 @@ void info() {
   snprintf(out, sizeof(out),
            "{\"info\":\"%s\",\"board\":\"rak4631\",\"ready\":%s,\"begin\":%d,\"mhz\":869.525,\"bw_khz\":125,"
            "\"sf\":%u,\"cr\":%u,\"preamble\":%u,\"sync_word\":%u,\"crc\":true,\"explicit_header\":true,"
-           "\"tcxo_v\":3.3,\"power_dbm\":%d,\"rx_stream\":%s,\"tx_count\":%lu,\"t_us\":%s}",
+           "\"tcxo_v\":3.3,\"power_dbm\":%d,\"rx_stream\":%s,\"tx_count\":%lu,\"reset\":%lu,\"cut\":%lu,"
+           "\"t_us\":%s}",
            VERSION, ready ? "true" : "false", beginCode, SPREADING_FACTOR, CODING_RATE, PREAMBLE_SYMBOLS,
            SYNC_WORD, powerDbm, rxStream ? "true" : "false", static_cast<unsigned long>(txCount),
-           Dec(clockNow()).text);
+           static_cast<unsigned long>(resetReason), static_cast<unsigned long>(emitCut), Dec(clockNow()).text);
   emit(out);
 }
 
@@ -259,6 +299,7 @@ void execute(char *command) {
 }  // namespace
 
 void setup() {
+  watchdogBegin();
   clockBegin();
   Serial.begin(115200);
   // Power of the RF switch in the RAK4630 module: held on, DIO2 selects TX/RX.
@@ -309,5 +350,6 @@ void loop() {
     }
   }
   clockNow();  // keeps the 64-bit extension ahead of a 32-bit wrap
+  watchdogFeed();
   yield();
 }

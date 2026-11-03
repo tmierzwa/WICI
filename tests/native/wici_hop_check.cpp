@@ -6,15 +6,24 @@
 
 struct Memory : journal::Storage {
     uint8_t bytes[0x048000] = {};
+    unsigned writes = 0;
     bool read(uint32_t at, uint8_t* out, size_t count) override {
         if (at > sizeof(bytes) || count > sizeof(bytes) - at) return false;
         memcpy(out, bytes + at, count); return true;
     }
     bool write(uint32_t at, const uint8_t* in, size_t count) override {
         if (at > sizeof(bytes) || count > sizeof(bytes) - at) return false;
+        ++writes;
         memcpy(bytes + at, in, count); return true;
     }
 };
+
+// A HACK repeats the start of the acknowledged frame's network MAC.
+void setEcho(wici_link::Frame& reply, uint16_t echo) {
+    reply.payload[0] = static_cast<uint8_t>(echo >> 8);
+    reply.payload[1] = static_cast<uint8_t>(echo);
+    reply.length = wici_link::HACK_ECHO;
+}
 
 int main() {
     static Memory memory;
@@ -36,10 +45,11 @@ int main() {
     size_t hackLength = 0;
     assert(relay.receiveData(wire, length, 100, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
-    assert(hackLength == 19);
+    assert(hackLength == 21);
     wici_link::Frame parsed;
     assert(wici_link::decode(key, 100, hack, hackLength, parsed));
-    assert(parsed.type == wici_link::Type::HACK && parsed.destination == 4 && parsed.sequence == 41);
+    assert(parsed.type == wici_link::Type::HACK && parsed.destination == 4 && parsed.sequence == 41 &&
+           wici_link::hackEcho(parsed) == wici_link::macEcho(wire, length));
 
     // Crash after HACK: the queue remains and a new link sequence is reserved.
     wici_hop::Relay resumed(memory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver);
@@ -67,12 +77,18 @@ int main() {
     reply.type = wici_link::Type::HACK;
     reply.network = 100; reply.source = 4; reply.destination = 2;
     reply.sequence = seq; reply.ttl = 1;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(!resumed.receiveHack(hack, hackLength, 103));
     assert(resumed.timeout(103));
     assert(resumed.outgoing(outLength) == out && outLength == length);
     assert(resumed.transmitted(true, 104));
     reply.source = 1;
+    // A recorded HACK for an older frame with the same seq (after the 16-bit seq wrapped) has another echo.
+    setEcho(reply, static_cast<uint16_t>(wici_link::macEcho(out, outLength) ^ 1));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(!resumed.receiveHack(hack, hackLength, 105) && resumed.active());
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(resumed.receiveHack(hack, hackLength, 105));
     assert(!resumed.active());
@@ -97,6 +113,7 @@ int main() {
     assert(wici_link::decode(key, 100, out, outLength, parsed));
     assert(after.transmitted(true, 106) && after.timeout(107));
     reply.source = 1; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(after.receiveHack(hack, hackLength, 107));  // HACK after timeout, before retry TX
 
@@ -113,6 +130,7 @@ int main() {
     assert(parsed.destination == 4 && parsed.flags == (wici_link::ACKREQ | wici_link::DOWN));
     assert(after.transmitted(true, 108));
     reply.source = 4; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(after.receiveHack(hack, hackLength, 109));
 
@@ -222,10 +240,28 @@ int main() {
         order[i] = parsed.payload[8];
         assert(priorityRelay.transmitted(true, 130 + i));
         reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+        setEcho(reply, wici_link::macEcho(out, outLength));
         hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
         assert(priorityRelay.receiveHack(hack, hackLength, 130 + i));
     }
     assert(order[0] == 10 && order[1] == 16 && order[2] == 11 && order[3] == 12);
+
+    // E1: a delivery proof (envelope type 1) is K2, so its station's K1 slot
+    // stays for its SA1: the REQUEST behind the proof leaves first.
+    static Memory proofMemory;
+    wici_hop::Relay proofRelay(proofMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    assert(proofRelay.begin());
+    traffic.source = 4; traffic.payload[2] = 4;
+    traffic.payload[0] = 0x41; traffic.sequence = 80; traffic.payload[8] = 20;  // the proof first
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(proofRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    traffic.payload[0] = 0x40; traffic.sequence = 81; traffic.payload[8] = 21;  // then its SA1
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(proofRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(proofRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
+    assert(proofRelay.prepare(140));
+    out = proofRelay.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 21);
 
     // A captured station C (7) can only spend its own K1 quota at its parent
     // B (2), and B's quota at the next relay A (3); A still has K1 room for
@@ -266,6 +302,7 @@ int main() {
     assert(parsed.payload[8] == 100);  // B's K1 slot first (rotation), D's K1 next
     assert(nextA.transmitted(true, 150));
     reply.source = 1; reply.destination = 3; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(nextA.receiveHack(hack, hackLength, 150));
     assert(nextA.prepare(151));
@@ -287,7 +324,7 @@ int main() {
     traffic.sequence = 93; traffic.payload[4] = 90; traffic.payload[8] = 23;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY && hackLength == 19);
+           wici_hop::Receipt::HACK_READY && hackLength == 21);
     assert(guarded.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 141));
     assert(guarded.prepare(141));
     out = guarded.outgoing(outLength);
@@ -333,9 +370,9 @@ int main() {
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(lateContention.contendedK2());  // K1 is known at admission, no deferred check
-    // Review finding 2/6: the first retry of a K1 frame gets its HACK even
-    // when a replayed copy just used the repeat allowance (the admission
-    // HACK may have been lost).
+    // Review finding 2/6, L4/E8: the first retry of any admitted frame gets
+    // its HACK even when a replayed copy just used the repeat allowance and
+    // after the frame left the queue (the admission HACK may have been lost).
     static Memory owedMemory;
     wici_hop::Relay owed(owedMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
     assert(owed.begin());
@@ -350,14 +387,27 @@ int main() {
                wici_hop::Receipt::HACK_READY);
     }
     assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY);  // repeat allowance used at t=200
+           wici_hop::Receipt::HACK_READY);  // the first retry is owed, K2 too
+    assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);  // a replay: repeat allowance used at t=200
+    assert(owed.receiveData(k2Wire, k2Length, 201, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::IGNORED);
     wici_link::Frame k1 = k2;
     k1.sequence = 210; k1.payload[4] = 90; k1.payload[8] = 40;
     n = wici_link::encode(key, k1, wire, sizeof(wire));
     assert(owed.receiveData(wire, n, 200, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);  // durable K1 admission, HACK at once
+    // The frame leaves the queue (K1 first) before the sender's retry arrives.
+    assert(owed.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 200) && owed.prepare(200));
+    out = owed.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 40);
+    assert(owed.transmitted(true, 200));
+    reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(owed.receiveHack(hack, hackLength, 200));
     assert(owed.receiveData(wire, n, 201, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY);  // owed HACK is not rate limited
+           wici_hop::Receipt::HACK_READY);  // owed HACK is not rate limited, also after forwarding
     assert(owed.receiveData(wire, n, 202, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::IGNORED);     // but owed only once
 
@@ -429,6 +479,150 @@ int main() {
     n = wici_link::encode(key, uplink, wire, sizeof(wire));
     assert(unplanned.receiveData(wire, n, 250, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
     assert(unplanned.learnPending(250) && unplanned.routes().down(7) == wici_link::BROADCAST);
+    // A station relay as configured (`behind` only in the root's document):
+    // no plan, so only the neighbour's own frame teaches a route, to itself.
+    uplink.payload[2] = 4; uplink.sequence = 251; uplink.payload[8] = 81;
+    n = wici_link::encode(key, uplink, wire, sizeof(wire));
+    assert(unplanned.receiveData(wire, n, 251, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(unplanned.learnPending(251) && unplanned.routes().down(4) == 4);
+    assert(unplanned.routes().down(7) == wici_link::BROADCAST);
+
+    // Review D7, finding 7: an item whose hop limit would end at a relay
+    // (that relay refuses hops == ttl) is not sent there and spends no seq;
+    // it waits for a next hop that ends the trip, here the root as backup
+    // after a detour, bounded by the 30-min expiry. The root may take the
+    // last hop.
+    static Memory lastHopMemory, rootHopMemory;
+    wici_link::Frame lastHop = incoming;
+    lastHop.ttl = 2; lastHop.hops = 1; lastHop.sequence = 300; lastHop.payload[8] = 90;
+    n = wici_link::encode(key, lastHop, wire, sizeof(wire));
+    wici_hop::Relay viaRelay(lastHopMemory, {100, 2, 1, 3, 1}, ifac);
+    wici_hop::Relay viaRoot(rootHopMemory, {100, 2, 1, 1, 0}, ifac);
+    assert(viaRelay.begin() && viaRoot.begin());
+    assert(viaRelay.receiveData(wire, n, 300, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(viaRoot.receiveData(wire, n, 300, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(viaRelay.learnPending(300));  // the down-route hint (4 via 4) is written once, here
+    const unsigned writesBeforeWait = lastHopMemory.writes;
+    assert(!viaRelay.prepare(300) && !viaRelay.prepare(301));
+    assert(lastHopMemory.writes == writesBeforeWait);  // neither retired nor a seq reserved
+    viaRelay.routes().loop(302);  // planned 3 -> backup 1, the root
+    assert(viaRelay.prepare(302));
+    out = viaRelay.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1 && parsed.hops == 2);
+    assert(viaRoot.prepare(300));
+    // Review D7: the 30-min expiry runs while a transfer is active and ends it.
+    assert(viaRoot.transmitted(true, 301) && viaRoot.timeout(302) && viaRoot.active());
+    assert(viaRoot.learnPending(300 + wici_relay::MAX_HOLD_S - 1) && viaRoot.active());
+    assert(viaRoot.learnPending(300 + wici_relay::MAX_HOLD_S) && !viaRoot.active());
+    assert(!viaRoot.prepare(300 + wici_relay::MAX_HOLD_S));
+
+    // Review 2c: upward DATA from the current parent is a loop: the parent
+    // rotates at once and the frame is still admitted. Final review B1: an
+    // envelope that names this station as its sender (`src`) is no signal; a
+    // relay cannot check the envelope MAC, so a captured child could forge it.
+    static Memory fromParentMemory, ownBackMemory;
+    wici_hop::Relay looped(fromParentMemory, {100, 2, 1, 3, 6}, ifac);
+    wici_hop::Relay ownBack(ownBackMemory, {100, 2, 1, 3, 6}, ifac);
+    assert(looped.begin() && ownBack.begin());
+    wici_link::Frame up = incoming;
+    up.source = 3; up.sequence = 320; up.payload[8] = 91;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(looped.routes().parent() == 3);
+    assert(looped.receiveData(wire, n, 320, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(looped.routes().parent() == 6);
+    up.source = 4; up.payload[2] = 2; up.sequence = 321;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(ownBack.receiveData(wire, n, 320, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(ownBack.routes().parent() == 3);
+    // Finding 5: only a newly stored envelope is a loop signal. A retry or
+    // replayed copy of one already held, even from the current parent, does
+    // not rotate the parent again.
+    up = incoming; up.source = 6; up.sequence = 322; up.payload[8] = 91;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(looped.receiveData(wire, n, 330, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(looped.routes().parent() == 6);
+
+    // Final review B2: a round of 3 attempts without HACK holds that next hop
+    // for 2, 4 ... 256, then 300 s, so a silent root (no laptop) costs a few
+    // frames per 5 min instead of the whole transit pool. A HACK echoing an
+    // attempt or a checked BEACON from it ends the hold at once; a DATA does
+    // not, because a recorded one replays (link frames have no replay window).
+    static Memory holdMemory;
+    wici_hop::Relay holding(holdMemory, {100, 2, 1, 1, 0}, ifac);
+    assert(holding.begin());
+    up = incoming; up.sequence = 600; up.payload[8] = 93;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(holding.receiveData(wire, n, 600, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    const auto round = [&](uint32_t at) {
+        assert(holding.prepare(at));
+        for (unsigned attempt = 0; attempt < 3; ++attempt)
+            assert(holding.transmitted(true, at) && holding.timeout(at) == (attempt < 2));
+    };
+    uint32_t at = 600;
+    const uint32_t holds[] = {2, 4, 8, 16, 32, 64, 128, 256, 300, 300};
+    for (const uint32_t holdS : holds) {
+        round(at);
+        assert(!holding.prepare(at + holdS - 1));
+        at += holdS;
+    }
+    round(at);
+    assert(!holding.prepare(at + 1));
+    wici_link::Frame recorded = incoming;   // root -> relay, down to station 4, from when the root had its laptop
+    recorded.flags = wici_link::ACKREQ | wici_link::DOWN; recorded.source = 1; recorded.sequence = 7;
+    recorded.payload[2] = 1; recorded.payload[4] = 4; recorded.payload[8] = 94;
+    n = wici_link::encode(key, recorded, wire, sizeof(wire));
+    // Replayed by a keyless listener: the frame itself goes on to station 4, the hop to the root stays held.
+    holding.receiveData(wire, n, at + 1, hack, sizeof(hack), hackLength);
+    assert(holding.prepare(at + 1));
+    out = holding.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 4);
+    assert(holding.transmitted(true, at + 1));
+    reply.source = 4; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(holding.receiveHack(hack, hackLength, at + 1));
+    assert(!holding.prepare(at + 1));
+    holding.heard(1);  // e.g. the root's BEACON after its laptop came back
+    assert(holding.prepare(at + 1));
+
+    // Review 11b, finding 3: a transfer the radio refused, prepared again for
+    // the same next hop, keeps its seq, so refusals burn none. After a
+    // reroute it gets a new seq, and a HACK for the attempt that was on air
+    // before still completes the same item.
+    static Memory lateMemory;
+    wici_hop::Relay lateHack(lateMemory, {100, 2, 1, 1, 6}, ifac);
+    assert(lateHack.begin());
+    up = incoming; up.sequence = 330; up.payload[8] = 92;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(lateHack.receiveData(wire, n, 330, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(lateHack.prepare(330));
+    out = lateHack.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed));
+    const uint16_t firstAttempt = parsed.sequence;
+    const uint16_t firstEcho = wici_link::macEcho(out, outLength);
+    assert(lateHack.transmitted(true, 331) && lateHack.timeout(332));
+    uint16_t seqBeforeRefusals = 0, seqAfterRefusals = 0;
+    assert(lateHack.nextSequence(seqBeforeRefusals));
+    for (unsigned i = 0; i < 100; ++i) {
+        lateHack.yield();  // the radio refused the retry
+        assert(!lateHack.active() && lateHack.prepare(333));
+        out = lateHack.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.sequence == firstAttempt);
+    }
+    assert(lateHack.nextSequence(seqAfterRefusals) &&
+           seqAfterRefusals == static_cast<uint16_t>(seqBeforeRefusals + 1));
+    lateHack.yield();
+    lateHack.routes().loop(333);  // reroute: planned 1 -> backup 6
+    assert(lateHack.prepare(333));
+    out = lateHack.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 6 &&
+           parsed.sequence != firstAttempt);
+    reply.source = 1; reply.destination = 2; reply.sequence = firstAttempt;
+    setEcho(reply, firstEcho);
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(lateHack.receiveHack(hack, hackLength, 334) && !lateHack.active());
+    assert(!lateHack.prepare(335));                         // the item left the queue
+    assert(!lateHack.receiveHack(hack, hackLength, 336));   // and the HACK counts once
 
     // Review medium item: downlink from one receiver is not serialised; each
     // frame takes a K2 slot and gets its HACK at once.
@@ -445,4 +639,162 @@ int main() {
         assert(downlinks.receiveData(wire, n, 250, hack, sizeof(hack), hackLength) ==
                wici_hop::Receipt::HACK_READY);
     }
+
+    // Finding 2 (harness flood_yield): a downward flood the radio refused was
+    // never on air. Its durable marker stays this relay's own, so the flood
+    // stays queued and goes out at a later prepare() with the same seq, also
+    // when another transfer was prepared and refused in between. Only a
+    // restart (power loss between marker and TX) can lose it.
+    static Memory floodYieldMemory;
+    wici_hop::Relay floodYield(floodYieldMemory, {100, 2, 1, 1, 0}, ifac, true, rootReceiver);
+    assert(floodYield.begin());
+    wici_link::Frame refusedFlood = incoming;
+    refusedFlood.flags = wici_link::DOWN; refusedFlood.source = 1; refusedFlood.destination = wici_link::BROADCAST;
+    refusedFlood.sequence = 400; refusedFlood.payload[2] = 90; refusedFlood.payload[4] = 6;
+    refusedFlood.payload[8] = 50;
+    n = wici_link::encode(key, refusedFlood, wire, sizeof(wire));
+    assert(floodYield.receiveData(wire, n, 400, hack, sizeof(hack), hackLength) == wici_hop::Receipt::STORED_NO_HACK);
+    assert(floodYield.prepare(400));
+    out = floodYield.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == wici_link::BROADCAST);
+    const uint16_t floodSeq = parsed.sequence;
+    floodYield.yield();  // silence, budget or a busy radio: nothing on air
+    up = incoming; up.sequence = 401; up.payload[4] = 50; up.payload[8] = 93;  // another (K2) transfer
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(floodYield.receiveData(wire, n, 401, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(floodYield.prepare(401));
+    out = floodYield.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);
+    floodYield.yield();
+    assert(floodYield.prepare(402) && floodYield.active());
+    out = floodYield.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) &&
+           parsed.destination == wici_link::BROADCAST && parsed.sequence == floodSeq);
+    floodYield.yield();
+    wici_hop::Relay floodCut(floodYieldMemory, {100, 2, 1, 1, 0}, ifac, true, rootReceiver);
+    assert(floodCut.begin() && floodCut.prepare(403));
+    out = floodCut.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);  // the uplink
+    floodCut.yield();
+    assert(floodCut.prepare(404));
+    out = floodCut.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);  // never the flood
+
+    // Simplification: a down-route hint is learned once, at admission, and
+    // writes no FRAM at later passes. External review: a relay cannot
+    // authenticate the envelope sender, so a claim via another planned
+    // neighbour does not move a working route (only a missing one is learned).
+    static Memory hintMemory;
+    const config::Behind both[] = {{7, 3}, {7, 4}};
+    wici_hop::Relay hints(hintMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
+    assert(hints.begin());
+    uplink = incoming; uplink.payload[2] = 7;
+    for (uint8_t i = 0; i < 2; ++i) {  // 7 via 4 first (slot 0), then a claim via 3 (slot 1)
+        uplink.source = static_cast<uint16_t>(4 - i);
+        uplink.sequence = static_cast<uint16_t>(410 + i); uplink.payload[8] = static_cast<uint8_t>(94 + i);
+        n = wici_link::encode(key, uplink, wire, sizeof(wire));
+        assert(hints.receiveData(wire, n, 410, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+        assert(hints.learnPending(410) && hints.routes().down(7) == 4);
+    }
+    const unsigned writesAfterHints = hintMemory.writes;
+    for (uint32_t t = 411; t < 420; ++t) assert(hints.learnPending(t));
+    assert(hints.routes().down(7) == 4 && hintMemory.writes == writesAfterHints);
+    wici_hop::Relay hintsAgain(hintMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
+    assert(hintsAgain.begin() && hintsAgain.learnPending(420));  // after a restart: each queued hint once
+    assert(hintsAgain.routes().down(7) == 4);
+
+    // An honest move: the old route goes after three downward attempts
+    // without HACK (forget), and the station's next uplink frame via its new
+    // neighbour teaches the new route.
+    static Memory movedMemory;
+    wici_hop::Relay moved(movedMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, both, 2);
+    assert(moved.begin());
+    const auto upward = [&](uint16_t via, uint16_t sequence, uint32_t at) {
+        wici_link::Frame from = incoming;
+        from.source = via; from.payload[2] = 7; from.sequence = sequence; from.payload[8] = static_cast<uint8_t>(sequence);
+        n = wici_link::encode(key, from, wire, sizeof(wire));
+        assert(moved.receiveData(wire, n, at, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+        assert(moved.prepare(at) && moved.transmitted(true, at));  // up to the parent, HACKed there
+        out = moved.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);
+        reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+        setEcho(reply, wici_link::macEcho(out, outLength));
+        hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+        assert(moved.receiveHack(hack, hackLength, at));
+    };
+    upward(4, 440, 440);
+    assert(moved.routes().down(7) == 4);
+    upward(3, 441, 441);
+    assert(moved.routes().down(7) == 4);  // the planned alternate claim moves nothing
+    wici_link::Frame toSeven = incoming;
+    toSeven.flags = wici_link::ACKREQ | wici_link::DOWN;
+    toSeven.source = 1; toSeven.destination = 2; toSeven.sequence = 442;
+    toSeven.payload[2] = 1; toSeven.payload[4] = 7; toSeven.payload[8] = 1;
+    n = wici_link::encode(key, toSeven, wire, sizeof(wire));
+    assert(moved.receiveData(wire, n, 442, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(moved.prepare(442));
+    for (unsigned attempt = 0; attempt < 3; ++attempt) {
+        if (attempt == 1) {  // the radio refused the retry: the same frame comes back with its count
+            moved.yield();
+            assert(moved.prepare(443));
+        }
+        out = moved.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 4);
+        assert(moved.transmitted(true, 443) && moved.timeout(444) == (attempt < 2));
+        assert(moved.routes().down(7) == (attempt < 2 ? 4 : wici_link::BROADCAST));
+    }
+    assert(!moved.prepare(445));  // no route and no flooding here: the frame waits in the queue
+    upward(3, 446, 446);
+    assert(moved.routes().down(7) == 3);  // learned again, via the new neighbour
+
+    // Round 3 (3): after a restart the hints are learned in admission order,
+    // not slot order: an older frame of station 9 via 4 in slot 1 does not
+    // override the newer one via 5 in slot 0.
+    static Memory orderMemory;
+    const config::Behind nine[] = {{9, 4}, {9, 5}};
+    wici_hop::Relay ordered(orderMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, nine, 2);
+    assert(ordered.begin());
+    uplink = incoming; uplink.source = 4; uplink.payload[2] = 4;  // filler in slot 0 (K1 of 4)
+    uplink.sequence = 420; uplink.payload[8] = 96;
+    n = wici_link::encode(key, uplink, wire, sizeof(wire));
+    assert(ordered.receiveData(wire, n, 490, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    uplink.payload[2] = 9; uplink.sequence = 421; uplink.payload[8] = 97;  // older: 9 via 4, slot 1
+    n = wici_link::encode(key, uplink, wire, sizeof(wire));
+    assert(ordered.receiveData(wire, n, 500, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(ordered.prepare(500));  // the filler (K1) leaves and frees slot 0
+    out = ordered.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 96);
+    assert(ordered.transmitted(true, 501));
+    reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(ordered.receiveHack(hack, hackLength, 502));
+    assert(ordered.routes().down(9) == 4 && ordered.routes().forget(9, 4));  // as after 3 downward failures
+    uplink.source = 5; uplink.sequence = 422; uplink.payload[8] = 98;  // newer: 9 via 5, slot 0
+    n = wici_link::encode(key, uplink, wire, sizeof(wire));
+    assert(ordered.receiveData(wire, n, 510, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    // A restart before the hint was learned: newest first, so 9 via 5 is
+    // learned and the older 9 via 4 (slot 1) no longer moves it.
+    wici_hop::Relay orderedAgain(orderMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, nine, 2);
+    assert(orderedAgain.begin() && orderedAgain.learnPending(511) && orderedAgain.routes().down(9) == 5);
+
+    // Round 3 (4): a flood TX the radio accepted but failed put nothing
+    // complete on air: the flood stays queued and goes again with its seq.
+    static Memory failedFloodMemory;
+    wici_hop::Relay failedFlood(failedFloodMemory, {100, 2, 1, 1, 0}, ifac, true, rootReceiver);
+    assert(failedFlood.begin());
+    refusedFlood.sequence = 430; refusedFlood.payload[8] = 51;
+    n = wici_link::encode(key, refusedFlood, wire, sizeof(wire));
+    assert(failedFlood.receiveData(wire, n, 430, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::STORED_NO_HACK);
+    assert(failedFlood.prepare(430));
+    out = failedFlood.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed));
+    const uint16_t failedSeq = parsed.sequence;
+    assert(!failedFlood.transmitted(false, 431) && !failedFlood.active());
+    assert(failedFlood.prepare(432));
+    out = failedFlood.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) &&
+           parsed.destination == wici_link::BROADCAST && parsed.sequence == failedSeq);
+    assert(failedFlood.transmitted(true, 433) && !failedFlood.prepare(434));
 }

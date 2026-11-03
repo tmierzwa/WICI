@@ -10,9 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "software" / "lapto
 
 try:
     from wici import envelope
-    from wici.stanowisko import envelope_inbox, wici_link
+    from wici.stanowisko import envelope_inbox
 except ImportError:
-    envelope = envelope_inbox = wici_link = None
+    envelope = envelope_inbox = None
 
 
 @unittest.skipIf(envelope is None, "cryptography dependency unavailable")
@@ -48,7 +48,11 @@ class EnvelopeInboxTests(unittest.TestCase):
     def test_fragments_survive_restart_and_replay_is_idempotent(self):
         self.assertEqual(self.receive(self.part(7, 2, b"world"), 100, self.admit), envelope_inbox.PARTIAL)
         self.restart()
-        self.assertEqual(self.receive(self.part(7, 2, b"world"), 101, self.admit), envelope_inbox.PARTIAL)
+        # A repeat of the stored part is a duplicate: HACK again, no write and no fresh() (transport.md).
+        fresh, before = [], self.db.execute("SELECT * FROM env_parts").fetchall()
+        self.assertEqual(self.receive(self.part(7, 2, b"world"), 101, self.admit, lambda: fresh.append(1)),
+                         envelope_inbox.DUPLICATE)
+        self.assertEqual((fresh, self.db.execute("SELECT * FROM env_parts").fetchall()), ([], before))
         self.assertEqual(self.receive(self.part(7, 1, b"hello "), 102, self.admit), envelope_inbox.COMPLETE)
         self.restart()
         self.assertEqual(self.receive(self.part(7, 1, b"hello "), 103, self.admit), envelope_inbox.DUPLICATE)
@@ -110,18 +114,3 @@ class EnvelopeInboxTests(unittest.TestCase):
             self.receive(self.part(1, 0, b"never admitted"), 104, self.admit)
         self.assertEqual(self.db.execute("SELECT message FROM admitted ORDER BY rowid").fetchall(),
                          [(b"first",), (b"later",)])
-
-    def test_kiss_receiver_does_not_hack_stale_counter(self):
-        key, sent = bytes(range(32)), []
-        def admit(payload):
-            counter = int.from_bytes(payload[:4], "big")
-            return self.receive(self.part(counter, 0, payload), 100, self.admit)
-        receiver = wici_link.Receiver(100, 2, key, sent.append, admit)
-        def wire(counter):
-            payload = counter.to_bytes(4, "big") + bytes(21)
-            frame = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 2,
-                                    0, 7, counter, payload)
-            return wici_link.kiss_encode(wici_link.encode(key, frame))
-        self.assertEqual(receiver.feed(wire(65)), 1)
-        self.assertEqual(receiver.feed(wire(1)), 0)
-        self.assertEqual(len(sent), 1)

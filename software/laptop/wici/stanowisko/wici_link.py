@@ -7,15 +7,21 @@ DATA before it asks the node to send HACK; a valid MAC alone is never an admissi
 
 from dataclasses import dataclass
 import hmac
-import sqlite3
 
 HEADER, TAG, MAX_FRAME = 11, 8, 255
 VERSION = 3  # v3: DATA without the v2 origin signature; v2 frames are rejected
 MAX_PAYLOAD = MAX_FRAME - HEADER - TAG - 8  # 228 B: unicast radio frames carry an 8 B hop tag
 BROADCAST = 0xFFFF
 DATA, HACK, BEACON = 0, 1, 2
+# A HACK repeats the first bytes of the acknowledged DATA's MAC, so a recorded HACK does not
+# match a newer frame after the 16-bit seq wraps (wici-link.md, rule 2).
+HACK_ECHO = 2
 ACKREQ, DOWN = 1, 2
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
+KISS_DATA, KISS_REFUSED = 0, 1  # the root returns a frame it cannot transmit with command 1
+# Laptop to root: a HACK with command 2 is sent without learning a down route to the envelope's sender (the
+# admission was not fresh or the sender not authenticated); command 0 lets the root learn it (wici-link.md).
+KISS_HACK_NO_LEARN = 2
 
 
 class LinkError(ValueError):
@@ -66,10 +72,18 @@ def _valid(frame):
     if frame.kind == DATA:
         return len(frame.payload) >= 25 and (frame.destination != BROADCAST or not frame.flags & ACKREQ)
     if frame.kind == HACK:
-        return _id(frame.destination) and frame.flags == 0 and not frame.payload
+        return _id(frame.destination) and frame.flags == 0 and len(frame.payload) == HACK_ECHO
     if frame.kind == BEACON:
         return frame.destination == BROADCAST and frame.flags == 0 and len(frame.payload) == 137
     return False
+
+
+def mac_echo(wire):
+    """The echo a HACK for this bare frame carries: the first bytes of its MAC."""
+    raw = bytes(wire)
+    if len(raw) < HEADER + TAG:
+        raise LinkError("frame too short for a MAC")
+    return raw[-TAG:-TAG + HACK_ECHO]
 
 
 def encode(key, frame):
@@ -100,11 +114,11 @@ def decode(key, net_id, wire):
     return frame
 
 
-def kiss_encode(raw):
-    """One KISS data frame, command byte 0, with escaped FEND/FESC."""
+def kiss_encode(raw, command=KISS_DATA):
+    """One KISS frame (command byte 0 by default) with escaped FEND/FESC."""
     if not 1 <= len(raw) <= MAX_FRAME:
         raise LinkError("KISS payload outside radio frame limit")
-    escaped = bytearray([FEND, 0])
+    escaped = bytearray([FEND, command])
     for byte in raw:
         if byte == FEND:
             escaped.extend((FESC, TFEND))
@@ -117,7 +131,11 @@ def kiss_encode(raw):
 
 
 class KissStream:
-    """Incremental decoder. Invalid escapes and oversized frames are discarded until FEND."""
+    """Incremental decoder. Invalid escapes and oversized frames are discarded until FEND.
+
+    feed() returns data frames (command 0); feed_commands() also returns frames the root
+    refused to transmit (command 1, the same bytes the laptop wrote), as (command, bytes).
+    """
 
     def __init__(self):
         self.buffer = bytearray()
@@ -126,11 +144,15 @@ class KissStream:
         self.dropped = False
 
     def feed(self, data):
+        return [frame for command, frame in self.feed_commands(data) if command == KISS_DATA]
+
+    def feed_commands(self, data):
         frames = []
         for byte in data:
             if byte == FEND:
-                if self.in_frame and not self.dropped and not self.escaped and len(self.buffer) >= 2 and self.buffer[0] == 0:
-                    frames.append(bytes(self.buffer[1:]))
+                if (self.in_frame and not self.dropped and not self.escaped and len(self.buffer) >= 2 and
+                        self.buffer[0] in (KISS_DATA, KISS_REFUSED)):
+                    frames.append((self.buffer[0], bytes(self.buffer[1:])))
                 self.buffer.clear()
                 self.in_frame, self.escaped, self.dropped = True, False, False
                 continue
@@ -153,34 +175,3 @@ class KissStream:
             else:
                 self.buffer.append(byte)
         return frames
-
-
-class Receiver:
-    """KISS-side receive adapter for a root node. `admit(envelope)` must return only
-    after SQLite and the encrypted medium are durable. A failed admission gets no HACK.
-    The radio node enforces CAD, silence debt and transmit limits when sent a KISS frame.
-    """
-
-    def __init__(self, network, root, key, write, admit, silent=lambda: False):
-        if not _id(network) or not _id(root) or len(key) != 32:
-            raise LinkError("invalid receiver network binding")
-        self.network, self.root, self.key = network, root, bytes(key)
-        self.write, self.admit, self.silent = write, admit, silent
-        self.stream = KissStream()
-
-    def feed(self, data):
-        """Process one serial read; return the count of authenticated DATA frames admitted."""
-        accepted = 0
-        for raw in self.stream.feed(data):
-            try:
-                frame = decode(self.key, self.network, raw)
-                if frame.kind != DATA or frame.destination not in (self.root, BROADCAST):
-                    continue
-                self.admit(frame.payload)
-                accepted += 1
-                if frame.flags & ACKREQ and not self.silent():
-                    hack = Frame(HACK, 0, self.network, self.root, frame.source, 0, 1, frame.sequence)
-                    self.write(kiss_encode(encode(self.key, hack)))
-            except (LinkError, ValueError, OSError, sqlite3.Error):
-                continue  # failed authentication/admission/write: never claim successful hop receipt
-        return accepted

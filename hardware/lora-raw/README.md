@@ -1,6 +1,6 @@
 # WICI: narzędzie surowego LoRa na RAK4631 (`lora-raw`)
 
-Program `lora-raw-0.1` dla RAK4631 (nRF52840 i SX1262 w module RAK4630) na płytce RAK19007. Zamienia zestaw radia RNode w podsłuch kanału i nadajnik dowolnych ramek w profilu LoRa pilotażu do [prób D21 przy stole](../xiao-wici/README.md#podsłuch-i-węzeł-wrogi-lora-raw). Nie ma w nim logiki WICI, RNode ani Reticulum: nie dodaje nagłówka, nie sprawdza kanału, nie ma długu ciszy ani limitu czasu nadawania. Bajty z polecenia `tx` idą w eter bez zmian, a każda odebrana ramka (także z błędem CRC) trafia do USB.
+Program `lora-raw-0.2` dla RAK4631 (nRF52840 i SX1262 w module RAK4630) na płytce RAK19007. Zamienia zestaw radia RNode w podsłuch kanału i nadajnik dowolnych ramek w profilu LoRa pilotażu do [prób D21 przy stole](../xiao-wici/README.md#podsłuch-i-węzeł-wrogi-lora-raw). Nie ma w nim logiki WICI, RNode ani Reticulum: nie dodaje nagłówka, nie sprawdza kanału, nie ma długu ciszy ani limitu czasu nadawania. Bajty z polecenia `tx` idą w eter bez zmian, a każda odebrana ramka (także z błędem CRC) trafia do USB.
 
 **Na sprzęcie (2026-11-02):** dwa RAK4631 przy −9 dBm, 1 m od siebie: `info` z `"ready":true` i `"begin":0` na obu, 12/12 ramek (po 3 ramki 21 B i 255 B w każdą stronę) z poprawnym CRC, RSSI −50…−54 dBm, SNR 12,25…13,75 dB. Zmierzony `air_us` przewyższa `toa_us` o około 0,23 ms: 73,20 ms wobec 72,96 ms dla 21 B, 416,22 ms wobec 416,00 ms dla 255 B. Podsłuch i węzeł wrogi w próbach D21 nie były jeszcze uruchomione.
 
@@ -57,12 +57,12 @@ Polecenia tekstowe zakończone znakiem nowej linii; odpowiedzi to wiersze JSON.
 
 | Polecenie | Odpowiedź |
 |---|---|
-| `info` | `{"info":"lora-raw-0.1","board":"rak4631","ready":true,"begin":0,"mhz":869.525,"bw_khz":125,"sf":7,"cr":5,"preamble":24,"sync_word":18,"crc":true,"explicit_header":true,"tcxo_v":3.3,"power_dbm":-9,"rx_stream":true,"tx_count":0,"t_us":…}` |
+| `info` | `{"info":"lora-raw-0.2","board":"rak4631","ready":true,"begin":0,"mhz":869.525,"bw_khz":125,"sf":7,"cr":5,"preamble":24,"sync_word":18,"crc":true,"explicit_header":true,"tcxo_v":3.3,"power_dbm":-9,"rx_stream":true,"tx_count":0,"reset":2,"cut":0,"t_us":…}`; `reset` to rejestr RESETREAS tego startu (2: watchdog, 0: włączenie zasilania), `cut` to wiersze ucięte, bo komputer nie czytał portu |
 | `rx on`, `rx off` | `{"rx_stream":true}`; po `rx on` każda ramka: `{"rx":"<hex>","len":N,"rssi":-52.0,"snr":9.25,"crc":true,"t_us":T}`, gdzie `t_us` to przerwanie RxDone (koniec ramki w eterze); po `rx off` radio stoi w gotowości |
 | `tx <hex>` | po TxDone: `{"tx":"done","n":K,"len":N,"start_us":S,"done_us":D,"air_us":D−S,"toa_us":…,"power_dbm":P}`; `start_us` to chwila po poleceniu SetTx, `toa_us` czas ze wzoru RadioLib |
 | `power <dBm>` | `{"power_dbm":P}`, zakres −9…22 |
 
-Błędy: `{"err":"<co>","code":C}` (`busy` przy nadawaniu w toku, `length`, `hex`, `power_range`, `tx_timeout`, `receive`, `read`, `command`). Czasy są w µs od startu urządzenia. Po starcie odbiór jest włączony.
+Błędy: `{"err":"<co>","code":C}` (`busy` przy nadawaniu w toku, `length`, `hex`, `power_range`, `tx_timeout`, `receive`, `read`, `command`). Czasy są w µs od startu urządzenia. Po starcie odbiór jest włączony. Zapis do USB nigdy nie zatrzymuje programu: wiersz, który nie wyjdzie w 100 ms (komputer trzyma port otwarty, ale nie czyta), jest ucinany i liczony w `cut`. Pętla, która stanie na 4 s z innego powodu, restartuje urządzenie (watchdog); `info` pokazuje wtedy `reset` z bitem DOG (wartość 2), a czasy zaczynają się od zera.
 
 Skrypty prób są w `hardware/xiao-wici/tools`: [`monitor.py`](../xiao-wici/tools/monitor.py) (podsłuch) i [`hostile.py`](../xiao-wici/tools/hostile.py) (węzeł wrogi); testy bez sprzętu: `python3 -m unittest tests.test_bench_tools`.
 

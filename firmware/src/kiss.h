@@ -49,12 +49,17 @@ public:
     void setOpen(bool open);
     bool open() const { return open_; }
     void feed(const uint8_t* bytes, size_t count, uint32_t nowMs);
-    // Najstarszy pakiet od komputera; false, gdy bufor pusty.
+    // Najstarszy pakiet od komputera; false, gdy bufor pusty. command: jego bajt polecenia.
     bool peek(const uint8_t*& data, size_t& length) const;
+    bool peek(const uint8_t*& data, size_t& length, uint8_t& command) const;
+    // Drugie polecenie (obok CMD_DATA), którego ramki trafiają do bufora jak pakiety, z bajtem polecenia
+    // (root WICI-Link: 0x02, HACK bez nauki drogi); bez wywołania każde inne polecenie jest pomijane.
+    void acceptCommand(uint8_t command) { extraCommand_ = static_cast<int16_t>(command & 0x0F); }
     void pop();                        // pakiet przekazany do stosu: wolne miejsce, zaległa gotowość
     size_t buffered() const { return count_; }
     // Pakiet do komputera; false: port zamknięty, pakiet za długi albo brak miejsca (liczone).
-    bool send(const uint8_t* data, size_t length);
+    // `command` inny niż CMD_DATA: ramka z tym bajtem polecenia (root WICI-Link: 0x01, odmowa nadania).
+    bool send(const uint8_t* data, size_t length, uint8_t command = CMD_DATA);
     bool canSend(const uint8_t* data, size_t length) const;
     // Bajty do zapisu w CDC: ciągły fragment bufora (najpierw zaległa ramka gotowości) i consume()
     // z liczbą bajtów, które port przyjął.
@@ -77,6 +82,7 @@ private:
     bool escape_ = false;
     int16_t command_ = -1;             // -1: bajt polecenia jeszcze nie przyszedł
     int16_t target_ = -1;              // miejsce w buforze dla ramki danych; -1: bufor był pełny
+    int16_t extraCommand_ = -1;        // acceptCommand; -1: brak
     size_t length_ = 0;
     bool tooLarge_ = false;
     uint32_t lastByteMs_ = 0;
@@ -84,6 +90,11 @@ private:
     bool hasValue_ = false;
     // Bufor pakietów od komputera.
     uint8_t slots_[RX_SLOTS][MTU] = {};
+    // Długość pakietu w 12 dolnych bitach, bajt polecenia (najwyżej 0x0F) w 4 górnych: bez osobnej tablicy,
+    // bo port USB węzła OSP ma stałą rezerwę RAM (firmware/tools/core_boards.py).
+    static constexpr unsigned COMMAND_SHIFT = 12;
+    static constexpr uint16_t LENGTH_MASK = (1u << COMMAND_SHIFT) - 1;
+    static_assert(MTU <= LENGTH_MASK, "długość pakietu w 12 bitach");
     uint16_t lengths_[RX_SLOTS] = {};
     size_t head_ = 0;
     size_t count_ = 0;

@@ -107,9 +107,11 @@ public:
     bool hasSnr() const override { return inner_.hasSnr(); }
     int8_t ccaThresholdDbm() const override { return inner_.ccaThresholdDbm(); }
     Activity recentActivity(uint32_t windowMs) override { return inner_.recentActivity(windowMs); }
+    bool rssiMayHideFrame() override { return inner_.rssiMayHideFrame(); }
     void clearActivity() override { inner_.clearActivity(); }
     uint32_t rxLate() const override { return inner_.rxLate(); }
     uint32_t rxRingOverflow() const override { return inner_.rxRingOverflow(); }
+    uint32_t cadUnconfirmed() const override { return inner_.cadUnconfirmed(); }
 
 private:
     Driver& inner_;

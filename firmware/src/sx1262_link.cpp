@@ -266,8 +266,19 @@ radiolink::TxPrep LinkDriver::prepareTx(const uint8_t* frame, size_t length) {
 }
 
 radiolink::Cad LinkDriver::cad() {
-    // Tylko ze stanu spoczynku (po prepareTx): SetCad nie działa z odbioru. Po CAD_ONLY układ jest
-    // w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
+    // Wykrycie potwierdza drugi CAD od razu po pierwszym (radio.md, „Dostęp do kanału”, punkt 5): pojedynczy
+    // CAD SX1262 zgłasza czasem wykrycie przy pustym kanale, a preambuła (24 symbole) trwa dłużej niż dwa CAD.
+    const radiolink::Cad first = cadOnce();
+    if (first != radiolink::Cad::Busy) return first;
+    const radiolink::Cad second = cadOnce();
+    if (second == radiolink::Cad::Free) ++cadUnconfirmed_;
+    // Błąd drugiego CAD nie obala pierwszego wykrycia: kanał zajęty (odroczenie), a nie utrata datagramu.
+    return second == radiolink::Cad::Error ? radiolink::Cad::Busy : second;
+}
+
+radiolink::Cad LinkDriver::cadOnce() {
+    // Tylko ze stanu spoczynku (po prepareTx albo po poprzednim CAD): SetCad nie działa z odbioru. Po CAD_ONLY
+    // układ jest w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
     if (rxActive_) return radiolink::Cad::Error;
     // RXEN wysoki w CAD: przełącznik antenowy w odbiorze (jak w SetRx); wraca niski przed SetTx.
     rxen(true);
@@ -345,24 +356,31 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
     rxActive_ = radio_.status().mode() == MODE_RX;
     if (!rxActive_) rxen(false);
     headerSeen_ = false;     // flagi skasowane: start odbioru liczy się jak próbka
-    lastSampleMs_ = millis();
+    const uint32_t now = millis();
+    lastSampleMs_ = now;
+    rxStartMs_.store(now, std::memory_order_relaxed);
+    hearingSinceMs_.store(now, std::memory_order_relaxed);
     return rxActive_;
 }
 
 bool LinkDriver::frameInProgress(uint32_t now) const {
-    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() przez wołającego daje wynik ujemny,
-    // czyli ramka w toku.
-    return inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS);
+    // Czas zapisany przez zadanie po odczycie millis() przez wołającego to też ramka w toku (recent).
+    return inFrame_ && recent(now, inFrameSinceMs_.load(std::memory_order_relaxed), FRAME_MAX_MS);
 }
 
 void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
     // Preambuła bez ramki (jak w receivingFrame): po czasie najdłuższej ramki stan nieaktualny, więc następny
     // początek ramki liczy się od nowa (inaczej ochrona ramki w toku w recentActivity już by nie działała).
-    if (inFrame_ && !frameInProgress(now)) inFrame_ = false;
+    // Odbiornik słyszy znów od chwili wygaśnięcia, nie od tej próbki (próbki co RSSI_SAMPLE_MS).
+    if (inFrame_ && !frameInProgress(now)) {
+        hearingSinceMs_.store(inFrameSinceMs_.load(std::memory_order_relaxed) + FRAME_MAX_MS, std::memory_order_relaxed);
+        inFrame_ = false;
+    }
     if (irq & IRQ_PREAMBLE_DETECTED) activity_.mark(Activity::PREAMBLE, now);
     if (irq & IRQ_HEADER_VALID) activity_.mark(Activity::HEADER, now);
     if (irq & IRQ_RX_END) {
         activity_.mark(Activity::FRAME, now);  // także ramka z błędem CRC albo nagłówka
+        hearingSinceMs_.store(now, std::memory_order_relaxed);
         inFrame_ = false;
     }
     // Początek ramki po końcu poprzedniej w tej samej próbce to już następna ramka.
@@ -399,9 +417,11 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
         const uint16_t start = irq & IRQ_RX_START;
         if (start && !radio_.clearIrq(start)) return RxService::BusyTimeout;
         if (irq & IRQ_HEADER_VALID) headerSeen_ = true;  // nagłówek bieżącej ramki już widziany
-        if (sampleRssi) {
+        // RSSI tuż po SetRx jest zaniżone (do −127 dBm): taka próbka obniżyłaby tło po każdym nadaniu.
+        if (sampleRssi && now - rxStartMs_.load(std::memory_order_relaxed) >= lora::RSSI_SETTLE_MS) {
             radiolink::Rssi r;
             if (!readRssi(r)) return RxService::BusyTimeout;
+            if (r.valid && !inFrame_) noise_.sample(r.dbm, now);  // tło tylko poza ramką
             if (r.valid && r.dbm > ccaThresholdDbm()) activity_.mark(Activity::RSSI, now);
         }
         lastSampleMs_ = now;
@@ -530,11 +550,12 @@ bool LinkDriver::receivingFrame() {
     uint16_t irq = 0;
     if (!radio_.readIrq(irq)) return false;
     collectIrq(irq);
+    const uint32_t now = millis();
     if (irq & IRQ_RX_END) {  // ramka skończona: odbierze ją serviceRx (flag nie kasuje)
+        hearingSinceMs_.store(now, std::memory_order_relaxed);
         inFrame_ = false;
         return false;
     }
-    const uint32_t now = millis();
     noteActivity(irq, now);
     const uint16_t start = irq & IRQ_RX_START;
     // Jak próbka odbioru: tylko widziane flagi początku ramki.
@@ -563,7 +584,19 @@ radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
     return radiolink::Activity::None;
 }
 
-int8_t LinkDriver::ccaThresholdDbm() const { return lora::CCA_RSSI_THRESHOLD_DBM; }
+bool LinkDriver::rssiMayHideFrame() {
+    // Odbiornik nie słyszy początku ramki przed startem odbioru, w czasie odbioru innej ramki i w czasie
+    // preambuły bez ramki. Ramka zaczęta wtedy trwa najwyżej FRAME_MAX_MS od końca tej ślepoty; ramkę
+    // zaczętą później zdradza preambuła (słabszej niż wykrywa detektor nie widzi też próg RSSI).
+    // Bez blokady, jak recentActivity. Preambuła wygasła, ale jeszcze nieskasowana przez próbkę, kończy ślepotę
+    // w inFrameSinceMs_ + FRAME_MAX_MS: tyle samo, ile zapisze potem noteActivity.
+    const uint32_t now = millis();
+    if (inFrame_.load(std::memory_order_relaxed))
+        return recent(now, inFrameSinceMs_.load(std::memory_order_relaxed), 2 * FRAME_MAX_MS);
+    return recent(now, hearingSinceMs_.load(std::memory_order_relaxed), FRAME_MAX_MS);
+}
+
+int8_t LinkDriver::ccaThresholdDbm() const { return static_cast<int8_t>(noise_.threshold()); }
 
 double LinkDriver::frequencyStepHz() const { return static_cast<double>(F_XTAL_HZ) / 33554432.0; }  // f_xtal / 2^25
 

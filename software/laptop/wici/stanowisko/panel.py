@@ -256,7 +256,12 @@ class Dyzur:
 
     def trust(self, body):
         """Add a station from its card, after comparing the fingerprint with the station screen, with the
-        consent of two logged-in duty officers."""
+        consent of two logged-in duty officers.
+
+        A numbered card whose number (or whose key's other number) is already bound changes nothing and
+        returns {"replace": ...}: what the rebind would undo. Sent again with that "replace", the same
+        consent rebinds in one transaction: the old key loses trust as with untrust, and the number goes
+        to the new key (stanowisko-osp.md, „Zaufanie”)."""
         user, other = self.second(body)
         card = body.get("card")
         if not isinstance(card, dict):
@@ -282,33 +287,62 @@ class Dyzur:
         name = station_name(key)
 
         def add(store):
+            holder = renumbered = replace = None
             if numbered:
-                existing = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
-                                            (net_id, station_id)).fetchone()
-                other_binding = store.db.execute("SELECT station, public_key FROM numery WHERE net_id=? AND source=?",
-                                                 (net_id, lxmf)).fetchone()
-                if (existing and existing != (lxmf, key)) or (other_binding and other_binding != (station_id, key)):
-                    raise ValueError("numer stacji jest już związany z innym kluczem lub adresem")
+                holder = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                          (net_id, station_id)).fetchone()
+                holder = holder if holder and holder != (lxmf, key) else None
+                renumbered = store.db.execute("SELECT station FROM numery WHERE net_id=? AND source=? AND station<>?",
+                                              (net_id, lxmf, station_id)).fetchone()
+                if holder or renumbered:
+                    replace = {"net_id": net_id, "station": station_id,
+                               "old": holder and {"name": station_name(holder[1]), "fingerprint": fingerprint(holder[1])},
+                               "renumbered_from": renumbered and renumbered[0]}
+            if body.get("replace", None) != replace:
+                if "replace" not in body:
+                    return replace   # nic nie zmienia: panel pyta dyżurnych o przepięcie numeru
+                raise ValueError("powiązanie numeru stacji zmieniło się: wczytaj kartę i sprawdź ponownie")
+            old_trusted = holder is not None and store.db.execute(
+                "SELECT 1 FROM trusted WHERE source=?", (holder[0],)).fetchone() is not None
             with store.db:
+                if old_trusted:
+                    self._drop_trust(store, holder[0])
+                if replace:
+                    store.db.execute("DELETE FROM numery WHERE net_id=? AND (station=? OR source=?)",
+                                     (net_id, station_id, lxmf))
                 store.add_trusted_in_transaction(lxmf, key, (user, other))
                 if numbered:
                     store.db.execute("INSERT OR IGNORE INTO numery VALUES(?,?,?,?)", (net_id, station_id, lxmf, key))
                 store.db.execute("INSERT OR REPLACE INTO karty VALUES(?,?,?,?)",
                                  (lxmf, name, json.dumps(address, ensure_ascii=False), fingerprint(key)))
+            if old_trusted:
+                self._forget_bearer(holder[0])
+                self._logged(store, user, "zaufana_usunieta", "numer przepięty na nowy klucz", holder[0])
+            if replace:
+                self._logged(store, user, "numer_przepiety", json.dumps(
+                    {**replace, "fingerprint": fingerprint(key), "zgoda": [user, other]}, ensure_ascii=False), lxmf)
             self._logged(store, user, "zaufana_dodana", f"zgoda {user} i {other}", lxmf)
-        self.p.call(add)
-        return {"name": name}
+        replace = self.p.call(add)
+        return {"replace": replace} if replace else {"name": name}
+
+    def _drop_trust(self, store, source):
+        """In the caller's transaction: the station leaves the trusted list with its reply path."""
+        store.remove_trusted_in_transaction(source)
+        store.db.execute("DELETE FROM bearer_route WHERE source=?", (source,))
+        store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
+
+    def _forget_bearer(self, source):
+        self.p.last_bearer.pop(source, None)
+        self.p.bearer_override.pop(source, None)
 
     def untrust(self, body):
         user = self.current()
         source = _source(body)
 
         def remove(store):
-            store.remove_trusted(source)
-            store.db.execute("DELETE FROM bearer_route WHERE source=?", (source,))
-            store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
-            self.p.last_bearer.pop(source, None)
-            self.p.bearer_override.pop(source, None)
+            with store.db:
+                self._drop_trust(store, source)
+            self._forget_bearer(source)
             self._logged(store, user, "zaufana_usunieta", "", source)
         self.p.call(remove)
         return {"ok": True}
@@ -390,8 +424,10 @@ class Dyzur:
             return {"account": account, "password": password}
 
         def change(store):
-            # W wątku bazy, więc kopia co 5 min nie wchodzi w środek przepakowania. Hasło wraca zawsze, także
-            # gdy kopie się nie przepakują: nośnik ma już nowe opakowanie, a bez hasła nie otworzy się po restarcie.
+            # W wątku bazy, po zakończeniu zapisów w toku, więc migawka ani kopia co 5 min nie wchodzi w środek
+            # przepakowania. Hasło wraca zawsze, także gdy kopie się nie przepakują: nośnik ma już nowe
+            # opakowanie, a bez hasła nie otworzy się po restarcie.
+            self.p.flush()
             password = self.medium.new_station_password(self.key, store.db.serialize())
             failed = None
             if self.p.copies is not None:
@@ -463,7 +499,8 @@ class Dyzur:
             copies.append(kopie.Kopie(Path(_text(body, "path", 1000)) / "wici-kopie"))
 
         def run(store):
-            # W wątku bazy: kopia co 5 min nie powstanie między usunięciem a wpisem.
+            # W wątku bazy, po zakończeniu zapisów w toku: kopia co 5 min nie powstanie między usunięciem a wpisem.
+            self.p.flush()
             failed = [name for copy in copies for name in copy.remove()]
             with store.db:
                 store.db.execute("INSERT OR REPLACE INTO settings VALUES('kopie_usuniete', ?)", (self.clock(),))
@@ -545,7 +582,10 @@ class Dyzur:
                         "address": names.get(s, ("", []))[1], "bearer": self.p.last_bearer.get(s),
                         "override": self.p.bearer_override.get(s)}
                        for (s,) in db.execute("SELECT source FROM trusted")]
-            waiting, oldest = db.execute("SELECT count(*), min(first_try) FROM outbox WHERE done=0").fetchone()
+            waiting, oldest, forwarded = db.execute(
+                f"SELECT count(*), min(first_try), sum(forwarded > 0) FROM outbox WHERE done=0 AND {wysylka.SENDABLE}"
+            ).fetchone()
+            held = db.execute(f"SELECT count(*) FROM outbox WHERE done=0 AND NOT {wysylka.SENDABLE}").fetchone()[0]
             log = [{"at": a, "account": u, "op": o, "detail": d,
                     "station": names[s][0] if s in names else "", "number": short_number(m) if m else ""}
                    for a, u, o, d, s, m in db.execute(
@@ -560,25 +600,32 @@ class Dyzur:
             closed = {"silence": json.loads(silence) if silence else None,
                       "closed": wysylka.setting(db, "zamkniete", None),
                       "copies_purged": wysylka.setting(db, "kopie_usuniete", None)}
-            return reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed
-        reports, tests, quarantine, removed, trusted, waiting, oldest, log, bulletins, closed = self.p.call(read)
+            return reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, held, log, bulletins, closed
+        reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, held, log, bulletins, closed = self.p.call(read)
+        # Ramki potwierdzone stacji HACK bez przyjęcia (stanowisko-osp.md, „Przyjęcie koperty WICI-Link”), z nazwą
+        # stacji po numerze w sieci; numer bez uwierzytelnienia koperty to tylko deklaracja, więc bez nazwy.
+        envelopes = self.p.envelope_alarm()
+        envelopes["stations"] = self.p.call(lambda store: {f"{n}:{station}": name for n, station, name in store.db.execute(
+            "SELECT numery.net_id, numery.station, karty.name FROM numery JOIN karty ON karty.source = numery.source")})
         in_flight = len(self.p.wysylka.flight)
         open_reports = [r for r in reports if r["state"] not in (3, 5, 6)]
         return {
             "reports": reports, "tests": tests, "quarantine": quarantine, "removed": removed, "trusted": trusted,
             "bearers": list(self.stos.bindings) if isinstance(self.stos, bearers.Bearers) else [],
-            "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
+            "node": {**node, "in_flight": in_flight, "waiting": max((waiting or 0) - in_flight, 0),
+                     "forwarded": forwarded or 0, "held": held,
                      "oldest_s": None if oldest is None else now - oldest,
                      "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
-            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, **closed,
+            "saved": self.p.save_error is None and self.p.journal_error is None, "log": log, "bulletins": bulletins, "envelopes": envelopes, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
-                         "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed)},
+                         "unsent": waiting or 0, "held": held, "quarantine": len(quarantine), "removed_alarm": len(removed),
+                         "envelope_alarm": envelopes["active"]},
         }
 
     def health(self):
         node = self.stos.status(self.clock()) if self.stos is not None else {"online": False, "dropped": {}}
-        return {"app": "wici-stanowisko", "version": VERSION, "saved": self.p.save_error is None,
+        return {"app": "wici-stanowisko", "version": VERSION, "saved": self.p.save_error is None and self.p.journal_error is None,
                 "recovery": self.p.recovery, "online": node["online"], "since_rx": node.get("since_rx"),
                 "copy_age_s": None if self.p.last_copy_at is None else self.clock() - self.p.last_copy_at,
                 "counts": dict(self.p.counts), "dropped": node.get("dropped", {}),

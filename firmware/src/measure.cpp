@@ -35,9 +35,14 @@ static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 static_assert(EMC_PERIOD_FACTOR == radiolink::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 // Dług ciszy po nadaniu przez txMs (radio.md, "Dostęp do kanału", punkt 2).
 constexpr uint32_t debtForTxMs(uint32_t txMs) { return txMs * radiolink::DEBT_FACTOR; }
+// Termin HACK (200 ms od końca DATA, wici-link.md) i część jego czasu, której nie widzi zegar pętli: start TCXO
+// przed SetTx po CAD (układ w STDBY_RC, 5 ms) i opóźnienie próbki odbioru względem RxDone (receivedMs to czas
+// próbki; zadanie odbioru próbkuje co takt, przy zajętej blokadzie później; zapas jak okres próbek RSSI, 5 ms).
+constexpr uint32_t HACK_DEADLINE_MS = 200;
+constexpr uint32_t HACK_UNSEEN_MS = 10;
 
 bool validRawHack(const uint8_t* frame, size_t length) {
-    // A pairwise-tagged WICI-Link v2 HACK; the tags themselves are checked by the caller.
+    // A pairwise-tagged WICI-Link v3 HACK; the tags themselves are checked by the caller.
     constexpr uint8_t HACK_HEADER = (wici_link::VERSION << 6) | (static_cast<uint8_t>(wici_link::Type::HACK) << 3);
     if (!frame || length != wici_link::RADIO_HACK ||
         frame[0] != HACK_HEADER || frame[7] != 1 || frame[10] != 0) return false;
@@ -354,28 +359,32 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     // shape. The caller must have generated its MAC with the network key.
     if (!rawLora_ || !validRawHack(frame, length) || !p1Ready || !journal_ || !journal_->ok() ||
         silence || emcActive_ || prep || cwActive_ || pktActive_ || rxMode_ != RxMode::LINK) {
-        ++hack_.refused;
+        refuseHack(HACK_STATE);
         return false;
     }
     const uint32_t txMs = radio_.frameAirMs(length);
     // Include room for CAD, SPI and RX re-arm; a late callback must not start
     // a HACK that cannot meet the deadline. Hardware timing still needs D21.
-    if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
+    if (txMs + HACK_UNSEEN_MS >= HACK_DEADLINE_MS) { ++hack_.late; return false; }
+    // Ostatnia chwila na SetTx: później HACK skończyłby się po terminie.
+    const uint32_t lastStartMs = HACK_DEADLINE_MS - txMs - HACK_UNSEEN_MS;
+    if (millis() - receivedMs > HACK_DEADLINE_MS - txMs - 20) { ++hack_.late; return false; }
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
-    if (!lock.held()) { ++hack_.refused; return false; }
-    if (millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
+    if (!lock.held()) { refuseHack(HACK_LOCK); return false; }
+    if (millis() - receivedMs > HACK_DEADLINE_MS - txMs - 20) { ++hack_.late; return false; }
     const uint32_t remaining = debtRemainingMs();
     const radiolink::TxPrep prepared = radio_.prepareTx(frame, length);
     if (prepared != radiolink::TxPrep::Ready) {
         if (prepared != radiolink::TxPrep::RxPending) enterRx(RxMode::LINK, 0);
-        ++hack_.refused;
+        refuseHack(prepared == radiolink::TxPrep::RxPending ? HACK_RX_PENDING : HACK_PREP);
         return false;
     }
     rxMode_ = RxMode::NONE;
     const radiolink::Cad cad = radio_.cad();
-    if (cad != radiolink::Cad::Free || millis() - receivedMs > 200 - txMs) {
+    if (cad != radiolink::Cad::Free || millis() - receivedMs > lastStartMs) {
         enterRx(RxMode::LINK, 0);
-        ++(cad != radiolink::Cad::Free ? hack_.refused : hack_.late);
+        if (cad != radiolink::Cad::Free) refuseHack(HACK_CAD);
+        else ++hack_.late;
         return false;
     }
     const uint32_t extra = txMs * (radiolink::DEBT_FACTOR + 1);
@@ -384,11 +393,11 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     if (extra > maxDebtMs() || remaining > maxDebtMs() - extra ||
         !journal_->writeDebt(remaining + extra, uptimeS())) {
         enterRx(RxMode::LINK, 0);
-        ++hack_.refused;
+        refuseHack(HACK_DEBT);
         return false;
     }
     debtPending_ = true;
-    if (millis() - receivedMs > 200 - txMs) {
+    if (millis() - receivedMs > lastStartMs) {
         // The conservative journal reservation can remain; no radio time was
         // used, so the pre-existing RAM debt remains the actual lower bound.
         enterRx(RxMode::LINK, 0);
@@ -402,8 +411,8 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         hack_.lastMs = endMs;
         if (endMs > hack_.maxMs) hack_.maxMs = endMs;
         hack_.sumMs += endMs;
-        if (endMs > 200) ++hack_.over;
-    } else ++hack_.refused;
+        if (endMs > HACK_DEADLINE_MS) ++hack_.over;
+    } else refuseHack(HACK_TX);
     diagLine("{\"hack\":\"%s\",\"len\":%u,\"end_ms\":%lu}\n", sent ? "sent" : "tx error",
              static_cast<unsigned>(length), static_cast<unsigned long>(endMs));
     ++link_.txFragments;
@@ -536,17 +545,19 @@ void Bench::poll() {
         }
         return;
     }
+    // Odbiór przed nadawaniem: po postoju pętli decyzja CCA widzi już ramki z pierścienia odbioru
+    // (także czas na HACK po usłyszanej DATA z ACKREQ).
+    if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
+        rxPollMs_ = now;
+        if (rxMode_ == RxMode::TEST) receive();
+        else receiveLink();
+    }
     if (txState_ != TxState::IDLE) pollLinkTx();
     if (emcActive_) pollEmc(now);
     if (!prep && !emcActive_ && p1Ready && radio_.framing() != radiolink::Framing::NONE && rxMode_ == RxMode::NONE && !busy() &&
         now - autoRxMs_ >= 1000) {
         autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
         if (enterRx(RxMode::LINK, 0)) log("link RX resumed");
-    }
-    if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
-        rxPollMs_ = now;
-        if (rxMode_ == RxMode::TEST) receive();
-        else receiveLink();
     }
 }
 
@@ -778,6 +789,16 @@ void Bench::receiveLora() {
             }
             ++link_.rxOk;
             ++link_.rxDatagrams;
+            // DATA z ACKREQ (jawny nagłówek, bez sprawdzania MAC: fałszywy kosztuje nadawcę tyle czasu
+            // nadawania co prawdziwy): odbiorca odpowie HACK najpóźniej 200 ms − czas HACK po jej końcu
+            // (z zapasem 10 ms na zobaczenie go, linkSendHack). Do tej chwili okno 50 ms nie wystarcza.
+            if ((received.bytes[0] >> 6) == wici_link::VERSION &&
+                ((received.bytes[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::DATA) &&
+                (received.bytes[0] & wici_link::ACKREQ)) {
+                const uint32_t until = received.receivedMs + HACK_DEADLINE_MS - radio_.frameAirMs(wici_link::RADIO_HACK);
+                if (!hackHold_ || static_cast<int32_t>(until - hackHoldUntilMs_) > 0) hackHoldUntilMs_ = until;
+                hackHold_ = true;
+            }
             rawFrameHandler_(received, rawFrameContext_);
             diagLine("{\"lorarx\":\"raw\",\"len\":%u,\"rssi_dbm\":%d}\n",
                      static_cast<unsigned>(received.length), received.rssiDbm);
@@ -840,22 +861,32 @@ const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
 void Bench::startCca(uint32_t now, bool first) {
     txState_ = TxState::CCA;
     if (first) ccaFirstMs_ = now;
+    ccaRssiIgnored_ = false;  // liczy się tylko CCA, po którym ramka wyszła (rssi_ignored)
     ccaStartMs_ = now;
     ccaCheckMs_ = now;
     ccaFrames_ = link_.rxOk + link_.rxBad;
 }
 
 bool Bench::channelBusy() {
+    if (hackHold_) {
+        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { ++link_.rxBusy; return true; }
+        hackHold_ = false;
+    }
     if (radio_.framing() == radiolink::Framing::RNODE) {
         // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
         // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.
-        switch (radio_.recentActivity(CCA_MS)) {
-            case radiolink::Activity::Rx: ++link_.rxBusy; return true;
-            case radiolink::Activity::Rssi: ++link_.rssiBusy; return true;
-            case radiolink::Activity::None: break;
+        const radiolink::Activity activity = radio_.recentActivity(CCA_MS);
+        if (activity == radiolink::Activity::Rx) { ++link_.rxBusy; return true; }
+        bool rssiHigh = activity == radiolink::Activity::Rssi;
+        if (!rssiHigh) {
+            const radiolink::Rssi r = radio_.rssi();
+            rssiHigh = r.valid && r.dbm > radio_.ccaThresholdDbm();
         }
-        const radiolink::Rssi r = radio_.rssi();
-        if (r.valid && r.dbm > radio_.ccaThresholdDbm()) { ++link_.rssiBusy; return true; }
+        if (!rssiHigh) return false;
+        // Sama energia zajmuje kanał tylko, gdy może być ramką, której początku odbiornik nie słyszał; dłużej to
+        // sygnał obcy, a odroczenie przed nim nie chroni odbiorcy (radio.md, „Dostęp do kanału”, punkt 5).
+        if (radio_.rssiMayHideFrame()) { ++link_.rssiBusy; return true; }
+        ccaRssiIgnored_ = true;
         return false;
     }
     // P1: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo RSSI ponad progiem CCA.
@@ -988,6 +1019,7 @@ void Bench::sendLora(uint32_t now) {
     if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
     bool ok = radio_.sendPrepared(nullptr);
     ++link_.txFragments;
+    if (ccaRssiIgnored_) ++link_.rssiIgnored;
     if (!rawLora_) splitter_ = next;
     // Ramka 2 zaraz po ramce 1, bez sprawdzania kanału (jak RNode); ramka 1 bez TxDone kończy datagram.
     if (ok && count == 2) {
@@ -1028,13 +1060,22 @@ const char* Bench::txStateName() const {
            : txState_ == TxState::BACKOFF ? "backoff" : "send";
 }
 
-void Bench::printHack() {
+void Bench::printHack(const char* tail) {
     Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
-                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu}\n",
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu",
                   static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
                   static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
                   static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
                   static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
+    // Osobne wywołania: Print::printf rdzenia nRF52 formatuje do bufora 256 B (zob. printRns w main.cpp).
+    const uint32_t* r = hack_.refusedBy;
+    Serial.printf(",\"refused_by\":{\"state\":%lu,\"lock\":%lu,\"rx_pending\":%lu,\"prep\":%lu,\"cad\":%lu,"
+                  "\"debt\":%lu,\"tx\":%lu}",
+                  static_cast<unsigned long>(r[HACK_STATE]), static_cast<unsigned long>(r[HACK_LOCK]),
+                  static_cast<unsigned long>(r[HACK_RX_PENDING]), static_cast<unsigned long>(r[HACK_PREP]),
+                  static_cast<unsigned long>(r[HACK_CAD]), static_cast<unsigned long>(r[HACK_DEBT]),
+                  static_cast<unsigned long>(r[HACK_TX]));
+    Serial.printf("%s}\n", tail ? tail : "");
 }
 
 void Bench::printLink() {
@@ -1048,9 +1089,10 @@ void Bench::printLink() {
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
     if (radio_.framing() == radiolink::Framing::RNODE) {
         const loraframe::Stats& a = loraAssembler_.stats();
-        Serial.printf("\"cad_busy\":%lu,\"rssi_busy\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
+        Serial.printf("\"cad_busy\":%lu,\"cad_unconfirmed\":%lu,\"rssi_busy\":%lu,\"rssi_ignored\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
                       "\"rx_late\":%lu,\"rx_ring_overflow\":%lu,\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
-                      static_cast<unsigned long>(link_.cadBusy), static_cast<unsigned long>(link_.rssiBusy),
+                      static_cast<unsigned long>(link_.cadBusy), static_cast<unsigned long>(radio_.cadUnconfirmed()),
+                      static_cast<unsigned long>(link_.rssiBusy), static_cast<unsigned long>(link_.rssiIgnored),
                       static_cast<unsigned long>(link_.rxBusy), static_cast<unsigned long>(a.split_lost),
                       static_cast<unsigned long>(a.header_only), static_cast<unsigned long>(a.assembly_timeout),
                       static_cast<unsigned long>(radio_.rxLate()), static_cast<unsigned long>(radio_.rxRingOverflow()),

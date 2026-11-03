@@ -34,13 +34,20 @@ void payloadDigest(const uint8_t* wire, size_t length, uint8_t out[6]) {
 
 bool Ring::begin() {
     ready_ = false;
+    cleared_ = 0;
     memset(records_, 0, sizeof(records_));
     for (uint16_t i = 0; i < SLOTS; ++i) {
         uint8_t data[SLOT_BYTES];
         Copy copy;
         if (!load(storage_, BASE + i * SLOT_BYTES, data, sizeof(data), CRC_AT, nullptr, copy)) return false;
         if (copy == Copy::ABSENT) continue;
-        if (copy == Copy::DAMAGED || !valid(data)) return false;
+        if (copy == Copy::DAMAGED || !valid(data)) {
+            // Tombstone: a cleared COMMIT byte reads back as an absent record.
+            const uint8_t clear = 0;
+            if (!storage_.write(BASE + i * SLOT_BYTES + SLOT_BYTES - 1, &clear, 1)) return false;
+            ++cleared_;
+            continue;
+        }
         memcpy(records_[i], data, sizeof(data));
     }
     ready_ = true;
