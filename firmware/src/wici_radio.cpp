@@ -309,7 +309,8 @@ void Shelter::addProof(uint8_t peer, uint32_t counter) {
 bool Shelter::startProof() {
     const uint8_t peer = proofCount_[0] ? 0 : 1;
     const size_t length = proofCount_[peer] * 4u;
-    if (!air_.accepts(wici_link::TxClass::OWN, wici_link::HEADER + wici_link::TAG + envelope::OVERHEAD + length))
+    if (!air_.accepts(wici_link::TxClass::OWN,
+                      wici_link::HEADER + wici_link::TAG + wici_link::HOP_TAG + envelope::OVERHEAD + length))
         return false;
     uint8_t plain[4 * envelope::PROOF_COUNTERS];
     for (uint8_t i = 0; i < proofCount_[peer]; ++i) put32(plain + 4 * i, proofs_[peer][i]);
