@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Specyfikacja systemu WICI — projekt struktury i uzgodnione założenia.">
-  <title>Specyfikacja systemu WICI — projekt 0.5</title>
+  <title>Specyfikacja systemu WICI — projekt 0.6</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -23,6 +23,7 @@
     h1 { margin: .35rem 0; font-size: clamp(2rem, 4vw, 2.6rem); line-height: 1.15; }
     h2 { margin: 0 0 .7rem; color: var(--accent); font-size: 1.45rem; }
     h3 { margin: 1.4rem 0 .35rem; font-size: 1.05rem; }
+    h4 { margin: 1rem 0 .25rem; font-size: 1rem; }
     p, ul { margin: .55rem 0; }
     section { padding-top: 2.1rem; }
     .meta { color: var(--muted); }
@@ -55,14 +56,14 @@
       <li><a href="#eksploatacja">Wyrób i eksploatacja</a></li>
       <li><a href="#zgodnosc">Wersje, zgodność i dowody</a></li>
     </ol>
-    <a href="#decyzje">Źródła i decyzje otwarte</a>
+    <a href="#decyzje">Inwentaryzacja i decyzje</a>
   </nav>
   <main id="tresc">
     <header>
       <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.5</span> · 3 listopada 2026 r.</p>
-      <p>Uzgodniono założenia WICI-ZAL-001–008. Pozostała treść określa zakres prac nad specyfikacją. Nie stanowi podstawy deklaracji zgodności.</p>
+      <p><span class="status">Projekt 0.6</span> · 3 listopada 2026 r.</p>
+      <p>Uzgodniono założenia WICI-ZAL-001–009. Pozostała treść określa zakres prac nad specyfikacją. Nie stanowi podstawy deklaracji zgodności.</p>
     </header>
 
     <section id="status" aria-labelledby="h-status">
@@ -79,14 +80,18 @@
           <tr><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
           <tr><td>WICI-ZAL-004</td><td>Reticulum pozostaje poza architekturą podstawową. Może być rozpatrywane jako zewnętrzny protokół na potrzeby ewentualnej współpracy i integracji.</td></tr>
           <tr><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
-          <tr><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Każdej zmianie kodu, również przed zatwierdzeniem pierwszej wersji specyfikacji, towarzyszy zmiana specyfikacji.</td></tr>
+          <tr><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Do jej zatwierdzenia zmianę kodu w obszarze objętym specyfikacją odnotowuje się w inwentaryzacji. Po zatwierdzeniu zmianie kodu w tym obszarze towarzyszy aktualizacja wymagań albo wpis o braku wpływu na specyfikację.</td></tr>
           <tr><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
           <tr><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
+          <tr><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
         </tbody>
       </table>
+      <p class="explain">Podstawa architektury zakłada pozytywny wynik decyzji <a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21</a> z koncepcji, czyli próby przy stole WICI-Link v3 na docelowym sprzęcie. Decyzja pozostaje otwarta.</p>
       <h3>Utrzymanie zgodności z kodem</h3>
-      <p>Przed pierwszym zatwierdzeniem opis zachowania istniejącego kodu jest kandydatem na wymaganie. Test lub obecność kodu nie nadają mu samodzielnie statusu normatywnego. Zatwierdzona specyfikacja staje się podstawą dla implementacji i jej oceny.</p>
-      <p>Zmiana kodu i zmiana specyfikacji należą do tej samej zmiany w repozytorium. Wskazuje ona dotknięte wymagania, testy i wpływ na ocenę zgodności wyrobu. Gdy zachowanie pozostaje takie samo, wpis w historii specyfikacji odnotowuje ten fakt i sposób sprawdzenia. Zmiana kodu bez aktualizacji specyfikacji nie jest przyjmowana. Kontrola repozytorium ma egzekwować tę regułę przed zatwierdzeniem pierwszej wersji normatywnej.</p>
+      <h4>Przed pierwszą wersją normatywną</h4>
+      <p>Zmiana kodu w obszarze objętym specyfikacją dodaje wpis do inwentaryzacji w tej samej zmianie. Kod i testy są źródłami kandydatów na wymagania; nie nadają im statusu normatywnego. Na tym etapie nie ma automatycznej kontroli repozytorium.</p>
+      <h4>Od pierwszej wersji normatywnej</h4>
+      <p>Każda zmiana kodu w obszarze objętym specyfikacją aktualizuje dotknięte wymagania albo zapisuje w historii specyfikacji deklarację „bez wpływu na specyfikację” wraz ze sposobem sprawdzenia. Zmiana wskazuje też dotknięte testy i wpływ na ocenę zgodności wyrobu. Regułę egzekwuje kontrola repozytorium; zakres ścieżek ustala WICI-DEC-002.</p>
       <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami. Akapity wyróżnione kolorem objaśniają treść; nie ustanawiają wymagań.</p>
     </section>
 
@@ -139,7 +144,7 @@
 
     <section id="lokalne" aria-labelledby="h-lokalne">
       <h2 id="h-lokalne">7. Interfejsy i trwałość</h2>
-      <p>Kontrakty lokalnych interfejsów określą wymieniane dane, synchronizację po przerwaniu połączenia, limity przepływu i uprawnienia. Wymagania trwałości wskażą moment potwierdzenia zapisu oraz zachowanie przy zaniku zasilania, pełnej pamięci, odtwarzaniu, migracji tożsamości i usuwaniu danych.</p>
+      <p>Rozdział obejmie USB stacja–laptop, panel stanowiska odbiorczego, stronę dla telefonów w sieci Wi-Fi obiektu (poziom 3) i tryb kiosku. Kontrakty interfejsów określą wymieniane dane, synchronizację po przerwaniu połączenia, limity przepływu i uprawnienia. Wymagania trwałości wskażą moment potwierdzenia zapisu oraz zachowanie przy zaniku zasilania, pełnej pamięci, odtwarzaniu, migracji tożsamości i usuwaniu danych.</p>
     </section>
 
     <section id="eksploatacja" aria-labelledby="h-eksploatacja">
@@ -162,17 +167,20 @@
     </section>
 
     <section id="decyzje" aria-labelledby="h-decyzje">
-      <h2 id="h-decyzje">Źródła i decyzje otwarte</h2>
+      <h2 id="h-decyzje">Inwentaryzacja i decyzje</h2>
+      <h3>Inwentaryzacja</h3>
+      <p>Każda pozycja wskaże zachowanie lub założenie, źródło, stan implementacji i prób oraz wynik przeglądu: przyjęcie do wymagań, zmianę albo odrzucenie. Inwentaryzacja nie ustanawia wymagań.</p>
       <h3>Źródła do przeglądu</h3>
       <p class="explain">Źródłem bieżącego stanu implementacji jest aktualna wersja <a href="https://github.com/tmierzwa/WICI/pull/181">PR 181</a>, również przed scaleniem. Dla plików zmienianych w tym PR należy czytać jego najnowszy stan; dla pozostałych — gałąź główną. Przed każdą inwentaryzacją trzeba ponownie sprawdzić wersję PR. Żaden z tych materiałów nie staje się przez to normatywną częścią specyfikacji.</p>
       <table>
         <thead><tr><th>Obszar</th><th>Źródła</th></tr></thead>
         <tbody>
-          <tr><td>Funkcje i dane</td><td><a href="oprogramowanie.md">Oprogramowanie</a>, <a href="../../firmware/src/station.cpp">program stacji</a>, <a href="stanowisko-osp.md">stanowisko</a></td></tr>
-          <tr><td>Transport i bezpieczeństwo</td><td><a href="transport.md">Transport</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a></td></tr>
-          <tr><td>Sieć i radio</td><td><a href="wici-link.md">WICI-Link</a>, <a href="radio.md">Radio</a>, <a href="../../firmware/src/wici_link.cpp">kod łącza</a></td></tr>
+          <tr><td>Funkcje i dane</td><td><a href="oprogramowanie.md">Oprogramowanie</a>, <a href="../../firmware/src/station.cpp">program stacji</a>, <a href="../../firmware/src/sa1.cpp">SA1</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../concept/01-potrzeby-i-wymagania.html">potrzeby</a></td></tr>
+          <tr><td>Transport i bezpieczeństwo</td><td><a href="transport.md">Transport</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">zagrożenia</a></td></tr>
+          <tr><td>Sieć i radio</td><td><a href="wici-link.md">WICI-Link</a>, <a href="radio.md">Radio</a>, <a href="../../firmware/src/wici_link.cpp">kod łącza</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kod stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/bearers.py">nośniki stanowiska</a></td></tr>
           <tr><td>Interfejsy i trwałość</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.cpp">kod USB</a>, <a href="../../firmware/src/store.cpp">magazyn</a></td></tr>
-          <tr><td>Wyrób i dowody</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">Próby i odbiór</a></td></tr>
+          <tr><td>Wyrób i eksploatacja</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">Próby i odbiór</a>, <a href="projekt.md">projekt</a></td></tr>
+          <tr><td>Decyzje</td><td><a href="../concept/08-plan-weryfikacji-i-decyzje.html">Plan weryfikacji i decyzje</a></td></tr>
         </tbody>
       </table>
       <h3>Decyzje otwarte</h3>
@@ -186,12 +194,14 @@
           <tr><td>WICI-DEC-005</td><td>Gwarancje przyjęcia, potwierdzenia i ponowienia dla obu kierunków komunikacji.</td></tr>
           <tr><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
           <tr><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
+          <tr><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
         </tbody>
       </table>
       <h3>Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.6</td><td>Rozdzielono zasady pracy przed i po pierwszej wersji normatywnej; dodano warunek D21, zakres protokołu, decyzję o nośnikach i źródła do inwentaryzacji.</td></tr>
           <tr><td>0.5</td><td>Wskazano PR 181 jako źródło bieżącego stanu implementacji.</td></tr>
           <tr><td>0.4</td><td>Zaktualizowano WICI-ZAL-006, zasady synchronizacji z kodem oraz układ części dotyczących wyrobu, dowodów i źródeł.</td></tr>
         </tbody>
