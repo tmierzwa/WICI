@@ -37,6 +37,7 @@ class Delivery:
     retry_at: float = 0.0
     relayed: bool = False   # a part's HACK came from a relay: only the station's proof closes the intent
     flooded: bool = False   # a part left as a flood (no HACK at all)
+    last_own: bool = False  # the last part's HACK came from the station itself
     result: bool | str | None = None
 
 
@@ -149,7 +150,11 @@ class WiciStos:
         item.submissions = item.attempts = 0
         item.retry_at = 0
         if item.part == len(item.frames):
-            self._finish(item, FORWARDED if item.relayed else FLOODED if item.flooded else True)
+            # A relay holds an earlier part, but the station itself took the last one: the route moved to it, so
+            # the next try goes there at once (as after a flood) instead of waiting out that relay's custody; the
+            # station's proof closes the intent if the earlier part reaches it meanwhile.
+            self._finish(item, FORWARDED if item.relayed and not item.last_own else
+                         FLOODED if item.relayed or item.flooded else True)
 
     def _submit(self, item, now):
         part = item.frames[item.part]
@@ -197,7 +202,7 @@ class WiciStos:
                 # A flood has no HACK: the part is on air, and only the station's proof closes the intent.
                 if self.outstanding is item:
                     self.outstanding = None
-                item.flooded = True
+                item.flooded, item.last_own = True, False
                 self._next_part(item)
                 return
             if (item is not None and frame.flags == (wici_link.ACKREQ | wici_link.DOWN) and
@@ -216,7 +221,8 @@ class WiciStos:
                          i.echo == frame.payload), None)
             if item is not None:
                 # Only the station's own HACK says it settled the part; a relay's says it holds it.
-                item.relayed = item.relayed or frame.source != item.destination
+                item.last_own = frame.source == item.destination
+                item.relayed = item.relayed or not item.last_own
                 self._next_part(item)
                 return
         if frame.kind != wici_link.DATA or frame.destination != self.root:

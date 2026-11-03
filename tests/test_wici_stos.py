@@ -276,7 +276,10 @@ class WiciBearerTest(unittest.TestCase):
     def test_only_the_stations_own_hack_proves_delivery(self):
         # E1: a relay's HACK means it holds the part (custody), not that the station settled it.
         first, second = bytes([0x40, 0, 1, 0, 4]) + bytes(20), bytes([0x40, 0, 1, 0, 4]) + bytes([1] * 20)
-        for hops, expected in (((4, 4), True), ((3, 3), wici_stos.FORWARDED), ((3, 4), wici_stos.FORWARDED),
+        # A relay held part 1 and the station took part 2 itself: the route moved, so the next try comes on the
+        # failure schedule (FLOODED), not after the relay's custody; the station proves the message if part 1
+        # still reaches it.
+        for hops, expected in (((4, 4), True), ((3, 3), wici_stos.FORWARDED), ((3, 4), wici_stos.FLOODED),
                                ((4, 3), wici_stos.FORWARDED)):
             with self.subTest(hops):
                 item = self.bearer.send_frames((first, second))
