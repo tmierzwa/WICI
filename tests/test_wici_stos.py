@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 """The numbered laptop bearer preserves hop admission and outbound ordering."""
 
+import dataclasses
 import threading
 import time
 import unittest
@@ -58,6 +59,7 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer.port = self.port
         self.bearer.running = True
         self.key = wici_link.derive_key(bytes(range(16)), 100)
+        self.echoes = {}  # seq -> mac_echo of the DATA fed with it
 
     def admit(self, payload, timeout):
         self.limits.append(timeout)
@@ -65,7 +67,14 @@ class WiciBearerTest(unittest.TestCase):
         return "complete"
 
     def feed(self, frame):
-        self.bearer._receive(wici_link.encode(self.key, frame))
+        wire = wici_link.encode(self.key, frame)
+        if frame.kind == wici_link.DATA:
+            self.echoes[frame.sequence] = wici_link.mac_echo(wire)
+        self.bearer._receive(wire)
+
+    def hack(self, source, sequence, destination=5):
+        """A HACK for the DATA fed with this seq: it repeats the start of that frame's MAC."""
+        return wici_link.Frame(wici_link.HACK, 0, 100, source, destination, 0, 1, sequence, self.echoes[sequence])
 
     def refuse(self, data):
         """The root returns the bytes it could not transmit with KISS command 1."""
@@ -87,8 +96,8 @@ class WiciBearerTest(unittest.TestCase):
         self.feed(data)
         self.assertEqual(self.accepted, [bytes(25)])
         reply = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
-        self.assertEqual((reply.kind, reply.source, reply.destination, reply.sequence),
-                         (wici_link.HACK, 5, 4, 41))
+        self.assertEqual((reply.kind, reply.source, reply.destination, reply.sequence, reply.payload),
+                         (wici_link.HACK, 5, 4, 41, self.echoes[41]))
         # The admission gets what is left of the HACK budget after the serial read.
         self.assertTrue(0 < self.limits[0] <= wici_stos.HACK_BUDGET_S)
         writes = len(self.port.writes)
@@ -160,18 +169,22 @@ class WiciBearerTest(unittest.TestCase):
         self.assertEqual(len(unpack(self.port.writes[-1])), wici_link.HEADER + len(first) + wici_link.TAG)
         echo = wici_link.Frame(wici_link.DATA, virtual.flags, 100, 5, 4, 1, 7, 91, first)
         self.feed(echo)
-        wrong = wici_link.Frame(wici_link.HACK, 0, 100, 3, 5, 0, 1, 91)
+        wrong = self.hack(3, 91)
         self.feed(wrong)
         self.assertIsNone(item.result)
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 91))
+        self.feed(self.hack(4, 91))
         self.assertIsNone(item.result)
         self.bearer._tick()
         virtual2 = wici_link.decode(self.key, 100, unpack(self.port.writes[-1]))
         self.assertEqual(virtual2.payload, second)
         self.feed(wici_link.Frame(wici_link.DATA, virtual.flags, 100, 5, 4, 1, 7, 92, second))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 91))
+        self.feed(self.hack(4, 91))
         self.assertIsNone(item.result)
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 92))
+        # A recorded HACK for an older frame with seq 92 (after the 16-bit seq wrapped) has another echo.
+        stale = self.hack(4, 92)
+        self.feed(dataclasses.replace(stale, payload=bytes([stale.payload[0], stale.payload[1] ^ 1])))
+        self.assertIsNone(item.result)
+        self.feed(self.hack(4, 92))
         self.assertTrue(item.result)
 
     def test_typical_request_fits_one_frame(self):
@@ -224,7 +237,7 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer._tick()
         self.assertEqual(self.sent().payload, second)
         self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN, 100, 5, 4, 1, 7, 93, second))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 93))
+        self.feed(self.hack(4, 93))
         self.assertEqual(item.result, wici_stos.FLOODED)
 
     def test_only_the_stations_own_hack_proves_delivery(self):
@@ -239,7 +252,7 @@ class WiciBearerTest(unittest.TestCase):
                     self.assertEqual(self.sent().payload, part)
                     self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN, 100, 5, hop, 1, 7,
                                               80 + index, part))
-                    self.feed(wici_link.Frame(wici_link.HACK, 0, 100, hop, 5, 0, 1, 80 + index))
+                    self.feed(self.hack(hop, 80 + index))
                 self.assertEqual(item.result, expected)
 
     def destinations(self):
@@ -263,12 +276,12 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer._tick()
         self.assertEqual(self.destinations(), [4, 9])
         self.echo(9, 71, self.part(9))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 9, 5, 0, 1, 71))
+        self.feed(self.hack(9, 71))
         self.clock.value += 13   # 4's retry after its HACK timeout is due
         self.bearer._tick()
         self.assertEqual(self.destinations(), [4, 9, 4])
         self.echo(4, 72, self.part(4))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 72))
+        self.feed(self.hack(4, 72))
         self.assertTrue(first.result)
         self.assertTrue(second.result)
 
@@ -280,7 +293,7 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer._tick()
         self.assertEqual(self.destinations(), [4, 9])
         self.echo(9, 70, self.part(9))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 9, 5, 0, 1, 70))
+        self.feed(self.hack(9, 70))
         self.assertTrue(other.result)
         self.assertIsNone(stuck.result)
         for _ in range(29):   # station 4 never echoes: 30 submissions with backoff, then failure
@@ -299,7 +312,7 @@ class WiciBearerTest(unittest.TestCase):
         self.assertEqual(len(self.port.writes), 1)
         self.assertEqual(self.sent().payload, self.part(4, 1))
         self.echo(4, 71, self.part(4, 1))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 71))
+        self.feed(self.hack(4, 71))
         self.assertTrue(first.result)
         self.assertIsNone(second.result)
         self.bearer._tick()
@@ -329,7 +342,7 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer._tick()
         self.assertEqual(item.submissions, 2)
         self.echo(4, 72, self.part(4))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 72))
+        self.feed(self.hack(4, 72))
         self.assertTrue(item.result)
 
     def test_at_most_four_unfinished_items_so_bearers_can_fall_back(self):
@@ -339,7 +352,7 @@ class WiciBearerTest(unittest.TestCase):
         self.assertFalse(self.bearer.status(0)["room"])   # Wysylka checks this before sealing a counter
         self.assertIsNone(self.bearer.send_frames((self.part(13),)))
         self.echo(4, 73, self.part(4))
-        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 73))
+        self.feed(self.hack(4, 73))
         self.assertTrue(items[0].result)
         self.assertTrue(self.bearer.status(0)["room"])
         self.assertIsNotNone(self.bearer.send_frames((self.part(13),)))

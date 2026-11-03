@@ -102,7 +102,8 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
     // buffer is full: it is authenticated, and missing it would count a
     // delivered frame as a failure (and in time forget a working route).
     if (downPending_ && frame.type == wici_link::Type::HACK &&
-        frame.source == downNext_ && frame.destination == own_ && frame.sequence == downSequence_) {
+        frame.source == downNext_ && frame.destination == own_ && frame.sequence == downSequence_ &&
+        wici_link::hackEcho(frame) == downEcho_) {
         downPending_ = false;
         routes_.downDelivered(downRecipient_, downNext_);
     }
@@ -112,6 +113,7 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
         pending_ = true;
         pendingSource_ = frame.source;
         pendingSequence_ = frame.sequence;
+        pendingEcho_ = wici_link::macEcho(wire, length);
         pendingSender_ = get16(frame.payload + 1);
         pendingVia_ = frame.source;
         receivedMs_ = receivedMs;
@@ -127,7 +129,8 @@ Event Root::host(const uint8_t* wire, size_t length, uint32_t nowMs, uint32_t no
         return Event::REJECTED;
     if (frame.type == wici_link::Type::HACK) {
         if (!ready() || frame.source != own_ || !pending_ || frame.destination != pendingSource_ ||
-            frame.sequence != pendingSequence_ || nowMs - receivedMs_ >= 200)
+            frame.sequence != pendingSequence_ || wici_link::hackEcho(frame) != pendingEcho_ ||
+            nowMs - receivedMs_ >= 200)
             return Event::REJECTED;
         if (!air_.sendHack(wire, length, receivedMs_)) return Event::REJECTED;
         pending_ = false;
@@ -207,6 +210,7 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
         downRecipient_ = recipient;
         downNext_ = next;
         downSequence_ = sequence;
+        downEcho_ = wici_link::macEcho(forwarded, forwardedLength);
     }
     return Event::QUEUED;
 }

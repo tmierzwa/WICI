@@ -20,7 +20,7 @@ bool valid(const Frame& f) {
         case Type::DATA:
             return f.length >= 25 && (f.destination != BROADCAST || !(f.flags & ACKREQ));
         case Type::HACK:
-            return id(f.destination) && f.flags == 0 && f.length == 0;
+            return id(f.destination) && f.flags == 0 && f.length == HACK_ECHO;
         case Type::BEACON:
             return f.destination == BROADCAST && f.flags == 0 && f.length == BEACON_PAYLOAD;
     }
@@ -90,7 +90,12 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     return true;
 }
 
-size_t encodeHack(const uint8_t key[32], const Frame& data, uint8_t* out, size_t capacity) {
+uint16_t macEcho(const uint8_t* bare, size_t length) {
+    if (!bare || length < TAG) return 0;
+    return static_cast<uint16_t>((bare[length - TAG] << 8) | bare[length - TAG + 1]);
+}
+
+size_t encodeHack(const uint8_t key[32], const Frame& data, uint16_t echo, uint8_t* out, size_t capacity) {
     Frame reply;
     reply.type = Type::HACK;
     reply.network = data.network;
@@ -98,6 +103,9 @@ size_t encodeHack(const uint8_t key[32], const Frame& data, uint8_t* out, size_t
     reply.destination = data.source;
     reply.sequence = data.sequence;
     reply.ttl = 1;
+    reply.payload[0] = static_cast<uint8_t>(echo >> 8);
+    reply.payload[1] = static_cast<uint8_t>(echo);
+    reply.length = HACK_ECHO;
     return encode(key, reply, out, capacity);
 }
 

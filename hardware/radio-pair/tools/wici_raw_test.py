@@ -81,10 +81,12 @@ def main():
     parser.add_argument("b")
     args = parser.parse_args()
     key = wici_link.derive_key(bytes(range(16)), 100)
+    data = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 41,
+                           b"\x40\x00\x04\x00\x01" + bytes(range(20)))
     frames = [
-        ("A", wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 41,
-                               b"\x40\x00\x04\x00\x01" + bytes(range(20)))),
-        ("B", wici_link.Frame(wici_link.HACK, 0, 100, 5, 4, 0, 1, 41)),
+        ("A", data),
+        ("B", wici_link.Frame(wici_link.HACK, 0, 100, 5, 4, 0, 1, 41,
+                              wici_link.mac_echo(wici_link.encode(key, data)))),
         ("A", wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 42,
                                b"\x40\x00\x04\x00\x01" + bytes(range(231)))),
         ("B", wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN,

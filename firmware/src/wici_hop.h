@@ -95,6 +95,7 @@ private:
     struct Attempt {
         uint32_t generation = 0;
         uint16_t next = 0, sequence = 0, lateNext = 0, lateSequence = 0;
+        uint16_t echo = 0, lateEcho = 0;  // wici_link::macEcho of the frame on air to `next` / `lateNext`
         uint8_t attempts = 1;  // tries in this round of 3; a radio refusal (yield) keeps the count
         bool valid = false, onAir = false, late = false;
     };

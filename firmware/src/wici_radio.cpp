@@ -78,7 +78,8 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     if (frame.destination != own_ && frame.destination != wici_link::BROADCAST) return Event::IGNORED;
     if (frame.type == wici_link::Type::HACK) {
         if (ownActive_ && ownAwaiting_ && frame.source == ownNext_ &&
-            frame.destination == own_ && frame.sequence == ownSeq_[ownPart_]) {
+            frame.destination == own_ && frame.sequence == ownSeq_[ownPart_] &&
+            wici_link::hackEcho(frame) == wici_link::macEcho(ownFrames_[ownPart_], ownLengths_[ownPart_])) {
             ownAwaiting_ = ownDelayPending_ = false;
             relay_.heard(ownNext_);
             relay_.routes().hopResult(ownNext_, true, nowS);

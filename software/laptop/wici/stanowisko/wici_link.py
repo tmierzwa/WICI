@@ -13,6 +13,9 @@ VERSION = 3  # v3: DATA without the v2 origin signature; v2 frames are rejected
 MAX_PAYLOAD = MAX_FRAME - HEADER - TAG - 8  # 228 B: unicast radio frames carry an 8 B hop tag
 BROADCAST = 0xFFFF
 DATA, HACK, BEACON = 0, 1, 2
+# A HACK repeats the first bytes of the acknowledged DATA's MAC, so a recorded HACK does not
+# match a newer frame after the 16-bit seq wraps (wici-link.md, rule 2).
+HACK_ECHO = 2
 ACKREQ, DOWN = 1, 2
 FEND, FESC, TFEND, TFESC = 0xC0, 0xDB, 0xDC, 0xDD
 KISS_DATA, KISS_REFUSED = 0, 1  # the root returns a frame it cannot transmit with command 1
@@ -69,10 +72,18 @@ def _valid(frame):
     if frame.kind == DATA:
         return len(frame.payload) >= 25 and (frame.destination != BROADCAST or not frame.flags & ACKREQ)
     if frame.kind == HACK:
-        return _id(frame.destination) and frame.flags == 0 and not frame.payload
+        return _id(frame.destination) and frame.flags == 0 and len(frame.payload) == HACK_ECHO
     if frame.kind == BEACON:
         return frame.destination == BROADCAST and frame.flags == 0 and len(frame.payload) == 137
     return False
+
+
+def mac_echo(wire):
+    """The echo a HACK for this bare frame carries: the first bytes of its MAC."""
+    raw = bytes(wire)
+    if len(raw) < HEADER + TAG:
+        raise LinkError("frame too short for a MAC")
+    return raw[-TAG:-TAG + HACK_ECHO]
 
 
 def encode(key, frame):

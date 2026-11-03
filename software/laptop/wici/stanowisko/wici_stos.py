@@ -25,6 +25,7 @@ class Delivery:
     part: int = 0
     sequence: int | None = None
     next_hop: int | None = None
+    echo: bytes = b""  # wici_link.mac_echo of the part on air: the HACK must repeat it
     submissions: int = 0
     attempts: int = 0
     sent_at: float = 0.0
@@ -195,6 +196,7 @@ class WiciStos:
             if (item is not None and frame.flags == (wici_link.ACKREQ | wici_link.DOWN) and
                     item.sequence is None):
                 item.sequence, item.next_hop = frame.sequence, frame.destination
+                item.echo = wici_link.mac_echo(wire)
                 if self.outstanding is item:
                     self.outstanding = None
                 item.attempts += 1
@@ -203,7 +205,8 @@ class WiciStos:
                 return
         if frame.kind == wici_link.HACK and frame.destination == self.root:
             item = next((i for i in self.flight.values()
-                         if i.next_hop == frame.source and i.sequence == frame.sequence), None)
+                         if i.next_hop == frame.source and i.sequence == frame.sequence and
+                         i.echo == frame.payload), None)
             if item is not None:
                 # Only the station's own HACK says it settled the part; a relay's says it holds it.
                 item.relayed = item.relayed or frame.source != item.destination
@@ -224,7 +227,7 @@ class WiciStos:
             return
         if frame.flags & wici_link.ACKREQ:
             reply = wici_link.Frame(wici_link.HACK, 0, self.network, self.root,
-                                    frame.source, 0, 1, frame.sequence)
+                                    frame.source, 0, 1, frame.sequence, wici_link.mac_echo(wire))
             # Only a fresh part authenticated by the envelope MAC proves that its sender is behind this
             # neighbour now; a duplicate, a set-aside or an unauthenticated frame may be replayed or forged.
             self._write(reply, wici_link.KISS_DATA if outcome in FRESH else wici_link.KISS_HACK_NO_LEARN)

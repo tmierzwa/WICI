@@ -29,8 +29,8 @@ class Airtime(unittest.TestCase):
     def test_profile_values(self):
         # 255 B: 24 + 4.25 + 378 symbols x 1.024 ms (firmware lora::frameAirUs(255) = 416000 us).
         self.assertAlmostEqual(lora_raw.airtime_s(255), 0.416, places=9)
-        # HACK 27 B and BEACON 156 B as in docs/spec/wici-link.md (87 ms and 276 ms with ramp, rounded up).
-        self.assertAlmostEqual(lora_raw.airtime_s(27), 0.0832, places=9)
+        # HACK 29 B and BEACON 156 B as in docs/spec/wici-link.md (87 ms and 276 ms with ramp, rounded up).
+        self.assertAlmostEqual(lora_raw.airtime_s(29), 0.0832, places=9)
         self.assertAlmostEqual(lora_raw.airtime_s(156), 0.27264, places=9)
 
     def test_same_formula_as_reference_model(self):
@@ -57,7 +57,7 @@ class Header(unittest.TestCase):
     def test_rnode_header_breaks_v3(self):
         # RNode prepends one header byte (random upper nibble, bit 0 split flag): the frame is shifted by one
         # byte, so its MAC no longer verifies even when the random nibble happens to look like version 3.
-        raw = wici_link.encode(KEY, wici_link.Frame(wici_link.HACK, 0, NET, 10, 20, 0, 1, 5)) + bytes(8)
+        raw = wici_link.encode(KEY, wici_link.Frame(wici_link.HACK, 0, NET, 10, 20, 0, 1, 5, bytes(2))) + bytes(8)
         self.assertTrue(lora_raw.mac_ok(KEY, raw))
         for nibble in range(16):
             self.assertFalse(lora_raw.mac_ok(KEY, bytes([nibble << 4]) + raw))
@@ -91,7 +91,7 @@ class KeyedFrames(unittest.TestCase):
             with self.assertRaises(wici_link.LinkError):  # MAC is not where a broadcast frame has it
                 wici_link.decode(KEY, NET, raw)
             raw, _ = lora_raw.keyed_frame(rng, KEY, NET, "hack", destinations=[10])
-            self.assertEqual(len(raw), 27)
+            self.assertEqual(len(raw), 29)
             self.assertEqual(lora_raw.v3_header(raw)["type_name"], "HACK")
 
     def test_junk(self):

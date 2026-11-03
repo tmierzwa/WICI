@@ -607,9 +607,9 @@
   ],
   "source_hashes": {
     "reference.py": "76afc3cc472acfe18c4f17945230674f3d54efac58615e887dbd9dcf08607e29",
-    "test_reference.py": "557d5a4026b97de930a3bf391803b79ae14c8c3a044a5dc3311021d1a1cbcc53",
+    "test_reference.py": "2ec75404adb15d9116d0136026278553e288da5b133d0be8af89087849b15276",
     "schema.sql": "f93c98118c4b5cd4d5d79bd0d704cba04da7058935b86e473092e3437203df7e",
-    "obliczenia.py": "85fef37a80da419665ab45afb7b1bfe73b4492cdbcb74c64c3f1c65a7512f157",
+    "obliczenia.py": "693cd361875ab5a11524d22a0338cf538b6ef07a5c3e29ebfbac56177a91aa8f",
     "envelope.py": "15d2ef1ced467799da43ee0ec64126e78a86ba268a8bcb0245dd576abcd0d9c3",
     "test_envelope.py": "56a1248c918646fa393e63f6c5f5a5a58a315130caf7b95f68adf4fcf0f43651",
     "../laptop/wici/envelope.py": "917e3e8268d3295d5cb2ad0b1ea2d0a5abdf7aea7eb2a22c4c37468a2d18588a"

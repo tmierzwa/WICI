@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
     uint8_t radio[255], hack[255];
     size_t radioLength = wici_link::encode(linkKey, link, radio, sizeof(radio)), hackLength = 0;
     if (!radioLength || destination.receive(radio, radioLength, 100, hack, sizeof(hack), hackLength) !=
-                        wici_destination::Outcome::HACK_READY || admitted != 1 || hackLength != 19) return 21;
+                        wici_destination::Outcome::HACK_READY || admitted != 1 || hackLength != 21) return 21;
     wici_destination::Destination afterRestart(destinationMemory, {0x1234, 20, {10, 30}},
                                                ifac, b, peers, admit, &admitted);
     if (!afterRestart.begin() || afterRestart.receive(radio, radioLength, 101, hack, sizeof(hack), hackLength) !=

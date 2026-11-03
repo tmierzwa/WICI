@@ -92,7 +92,7 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
     }
     if (!(frame.flags & wici_link::ACKREQ)) return Outcome::ACCEPTED;
     if (repeat && !repeatHack_.allow(nowS)) return Outcome::IGNORED;
-    hackLength = wici_link::encodeHack(linkKey_, frame, hack, capacity);
+    hackLength = wici_link::encodeHack(linkKey_, frame, wici_link::macEcho(wire, length), hack, capacity);
     return hackLength ? Outcome::HACK_READY : Outcome::REJECTED;
 }
 

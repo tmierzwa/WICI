@@ -80,9 +80,9 @@ private:
     uint8_t outbound_[wici_link::MAX_FRAME] = {}, original_[wici_link::MAX_FRAME] = {};
     size_t outboundLength_ = 0, originalLength_ = 0;
     bool outboundBroadcast_ = false, downPending_ = false;
-    uint16_t downRecipient_ = 0, downNext_ = 0, downSequence_ = 0;
+    uint16_t downRecipient_ = 0, downNext_ = 0, downSequence_ = 0, downEcho_ = 0;
     uint32_t downSentMs_ = 0;
-    uint16_t pendingSource_ = 0, pendingSequence_ = 0;
+    uint16_t pendingSource_ = 0, pendingSequence_ = 0, pendingEcho_ = 0;
     uint16_t pendingSender_ = 0, pendingVia_ = 0;
     uint32_t receivedMs_ = 0;
     // A flood whose durable marker was written but which the radio then

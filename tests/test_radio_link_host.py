@@ -2012,8 +2012,8 @@ int main() {
            static_cast<unsigned long>(bench.link().rxBad - badBefore));
     // HACK bypasses the ordinary 50 ms window and outstanding debt, but
     // reserves its own airtime plus debt before the radio starts transmitting.
-    // A WICI-Link v3 HACK as transmitted: 11 B header, network MAC and pairwise tag.
-    uint8_t hack[27] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
+    // A WICI-Link v3 HACK as transmitted: 11 B header, 2 B echo of the DATA MAC, network MAC and pairwise tag.
+    uint8_t hack[29] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
     radio.ops.clear();
     radio.sent.clear();
     const bool hackFirst = bench.linkSendHack(hack, sizeof(hack), millis());
@@ -2033,11 +2033,11 @@ int main() {
     const bool silentHack = bench.linkSendHack(hack, sizeof(hack), millis());
     bench.silence = false;
     const bool lateHack = bench.linkSendHack(hack, sizeof(hack), millis() - 201);
-    const uint8_t malformedHack[27] = {};
+    const uint8_t malformedHack[29] = {};
     const bool malformedSent = bench.linkSendHack(malformedHack, sizeof(malformedHack), millis());
-    const uint8_t untaggedHack[19] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
+    const uint8_t untaggedHack[21] = {0xC8, 0, 100, 0, 2, 0, 4, 1};
     const bool untaggedSent = bench.linkSendHack(untaggedHack, sizeof(untaggedHack), millis());
-    const uint8_t v2Hack[27] = {0x88, 0, 100, 0, 2, 0, 4, 1};
+    const uint8_t v2Hack[29] = {0x88, 0, 100, 0, 2, 0, 4, 1};
     const bool v2Sent = bench.linkSendHack(v2Hack, sizeof(v2Hack), millis());
     printf("HACK_REFUSE %d %d %d %d %d %d\n", silentHack, lateHack, malformedSent, untaggedSent, v2Sent,
            radio.sent.size() == beforeRefusal);
@@ -2064,7 +2064,7 @@ int main() {
     printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
     printf("HACK_STATS ");
     bench.printHack();
-    // Po usłyszanej DATA v3 z ACKREQ własna ramka czeka do 200 ms − czas HACK (27 B) od DATA, czyli do
+    // Po usłyszanej DATA v3 z ACKREQ własna ramka czeka do 200 ms − czas HACK (29 B) od DATA, czyli do
     // ostatniej chwili, gdy HACK odbiorcy musi już nadawać; DATA bez ACKREQ trzyma tylko okno 50 ms.
     bench.restoreDebt(0);
     for (const uint8_t first : {static_cast<uint8_t>(0xC1), static_cast<uint8_t>(0xC0)}) {
@@ -2845,8 +2845,8 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "RAW_SHORT"), "RAW_SHORT 0 1")
 
     def test_raw_hack_preempts_queued_data_and_stacks_durable_debt(self):
-        # The radio HACK is 27 B (header, network MAC, pairwise tag): 87 ms, 13 x 87 ms in the journal.
-        # The untagged 19 B form is refused, so a HACK cannot leave without the neighbor tag.
+        # The radio HACK is 29 B (header, 2 B echo of the DATA MAC, network MAC, pairwise tag): 87 ms, as 27 B,
+        # 13 x 87 ms in the journal. The untagged 21 B form is refused, so a HACK cannot leave without the neighbor tag.
         self.assertEqual(line(self.out, "HACK_FIRST"), "HACK_FIRST 1 prep:0 cad:0 send:1131 rx 1131 1044")
         self.assertEqual(line(self.out, "HACK_QUEUE"), "HACK_QUEUE - 1 2175 2 1 3")
         self.assertEqual(line(self.out, "HACK_REFUSE"), "HACK_REFUSE 0 0 0 0 0 1")

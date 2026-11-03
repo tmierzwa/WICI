@@ -49,6 +49,9 @@ int main() {
     wici_link::Frame hack;
     hack.type = wici_link::Type::HACK; hack.network = 100;
     hack.source = 2; hack.destination = 4; hack.sequence = 41; hack.ttl = 1;
+    const uint16_t echo = wici_link::macEcho(incoming, receivedLength);
+    hack.payload[0] = static_cast<uint8_t>(echo >> 8); hack.payload[1] = static_cast<uint8_t>(echo);
+    hack.length = wici_link::HACK_ECHO;
     uint8_t hackWire[wici_link::MAX_FRAME] = {};
     const size_t hackLength = wici_link::encode(key, hack, hackWire, sizeof(hackWire));
     wici_link::Frame checked;

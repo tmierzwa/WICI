@@ -14,7 +14,11 @@ constexpr size_t TAG = 8;               // network MAC
 constexpr size_t HOP_TAG = 8;           // pairwise neighbor tag on unicast radio frames
 constexpr size_t MAX_FRAME = 255;
 constexpr size_t MAX_PAYLOAD = MAX_FRAME - HEADER - TAG - HOP_TAG;  // 228 B envelope
-constexpr size_t RADIO_HACK = HEADER + TAG + HOP_TAG;  // HACK as transmitted
+// A HACK repeats the first bytes of the acknowledged DATA's network MAC: after
+// the 16-bit seq wraps, a recorded HACK for an older frame no longer matches
+// (wici-link.md, rule 2). Two bytes keep the HACK in the same LoRa symbols.
+constexpr size_t HACK_ECHO = 2;
+constexpr size_t RADIO_HACK = HEADER + HACK_ECHO + TAG + HOP_TAG;  // HACK as transmitted
 // BEACON payload: root, rank, epoch, parent (u16 each), flags, the root's
 // epoch signature, then the sender's signature over the preceding bytes.
 constexpr size_t BEACON_SIGNED = 9 + 64;
@@ -80,7 +84,14 @@ size_t encode(const uint8_t key[32], const Frame& frame, uint8_t* out, size_t ca
 // Verifies MAC in constant time before interpreting frame fields. Clears out on failure.
 bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t size, Frame& out);
 // HACK from the frame's addressee to its link sender, echoing its sequence.
-size_t encodeHack(const uint8_t key[32], const Frame& data, uint8_t* out, size_t capacity);
+// `echo` is macEcho() of the bare DATA frame being acknowledged.
+size_t encodeHack(const uint8_t key[32], const Frame& data, uint16_t echo, uint8_t* out, size_t capacity);
+// The first HACK_ECHO bytes of a bare frame's network MAC (0 for a frame shorter than a MAC).
+uint16_t macEcho(const uint8_t* bare, size_t length);
+// The echo a decoded HACK carries.
+inline uint16_t hackEcho(const Frame& hack) {
+    return static_cast<uint16_t>((hack.payload[0] << 8) | hack.payload[1]);
+}
 // Authenticate an incoming DATA addressed to this relay, then prepare the next
 // link frame. The ciphertext is copied unchanged. Callers must reserve `seq`
 // durably and select a loop-safe next hop before calling this function.

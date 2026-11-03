@@ -18,7 +18,7 @@ struct Air : wici_gateway::Air {
         assert(n >= 19 && n <= 255); memcpy(last, wire, n); lastLength = n; ++data; return dataOk;
     }
     bool sendHack(const uint8_t*, size_t n, uint32_t ms) override {
-        assert(n == 19); ++hacks; stamp = ms; return hackOk;
+        assert(n == 21); ++hacks; stamp = ms; return hackOk;
     }
     bool acceptOk = true;
     size_t asked = 0;  // radio length of the last accepts() question
@@ -39,6 +39,13 @@ struct Memory : journal::Storage {
 };
 size_t encode(const uint8_t key[32], const wici_link::Frame& frame, uint8_t wire[255]) {
     const size_t n = wici_link::encode(key, frame, wire, 255); assert(n); return n;
+}
+// A HACK repeats the start of the acknowledged DATA's network MAC (encoding is deterministic).
+void setEcho(const uint8_t key[32], wici_link::Frame& hack, const wici_link::Frame& data) {
+    uint8_t bare[255];
+    const uint16_t echo = wici_link::macEcho(bare, encode(key, data, bare));
+    hack.payload[0] = static_cast<uint8_t>(echo >> 8); hack.payload[1] = static_cast<uint8_t>(echo);
+    hack.length = wici_link::HACK_ECHO;
 }
 // The next KISS frame to the laptop: its command byte and unescaped bytes.
 size_t take(kiss::Port& port, uint8_t& command, uint8_t out[255]) {
@@ -123,6 +130,7 @@ int main() {
     assert(root.radio(wire, n, 1000) == wici_gateway::Event::REJECTED);  // bad MAC
     wire[n - 1] ^= 1;
     assert(root.radio(wire, n, 1000) == wici_gateway::Event::FORWARDED);
+    const uint16_t dataEcho = wici_link::macEcho(wire, n);
     size_t encodedLength = 0;
     const uint8_t* encoded = port.output(encodedLength);
     assert(encodedLength >= n + 3 && encoded[0] == kiss::FEND && encoded[1] == kiss::CMD_DATA);
@@ -130,9 +138,15 @@ int main() {
     wici_link::Frame hack;
     hack.type = wici_link::Type::HACK; hack.network = 100;
     hack.source = 5; hack.destination = 4; hack.sequence = 42; hack.ttl = 1;
+    hack.payload[0] = static_cast<uint8_t>(dataEcho >> 8); hack.payload[1] = static_cast<uint8_t>(dataEcho);
+    hack.length = wici_link::HACK_ECHO;
     n = encode(key, hack, wire);
     assert(root.host(wire, n, 1010, 1010 / 1000) == wici_gateway::Event::REJECTED);
     hack.sequence = 41;
+    hack.payload[1] ^= 1;  // the echo of another frame with this seq
+    n = encode(key, hack, wire);
+    assert(root.host(wire, n, 1010, 1010 / 1000) == wici_gateway::Event::REJECTED && air.hacks == 0);
+    hack.payload[1] ^= 1;
     n = encode(key, hack, wire);
     assert(root.host(wire, n, 1200, 1200 / 1000) == wici_gateway::Event::REJECTED);  // expired
     air.hackOk = false;
@@ -185,6 +199,7 @@ int main() {
     root.setUsbOpen(false);
     root.setUsbOpen(true);
     hack.source = 5; hack.destination = 4; hack.sequence = 77;
+    setEcho(key, hack, frame);
     n = encode(key, hack, wire);
     assert(root.host(wire, n, 1501, 1501 / 1000) == wici_gateway::Event::REJECTED);
     frame.source = 1; frame.destination = 5;
@@ -212,6 +227,7 @@ int main() {
     assert(root.radio(wire, n, 5100) == wici_gateway::Event::FORWARDED);
     assert(root.down(4) == wici_link::BROADCAST);
     hack.source = 5; hack.destination = 4; hack.sequence = 60;
+    setEcho(key, hack, frame);
     n = encode(key, hack, wire);
     assert(root.host(wire, n, 5150, 5) == wici_gateway::Event::HACK_SENT);
     assert(root.down(4) == 4 && root.down(7) == 4);
@@ -223,6 +239,7 @@ int main() {
     n = encode(key, frame, wire);
     assert(root.radio(wire, n, 5160) == wici_gateway::Event::FORWARDED);
     hack.sequence = 64;
+    setEcho(key, hack, frame);
     n = encode(key, hack, wire);
     assert(root.host(wire, n, 5170, 5) == wici_gateway::Event::HACK_SENT);
     assert(root.down(8) == wici_link::BROADCAST && root.down(4) == 4 && root.ready());
@@ -257,6 +274,7 @@ int main() {
     assert(root.radio(wire, n, 6000) == wici_gateway::Event::FORWARDED);
     take(port, command, returned);
     hack.destination = 6; hack.sequence = 62;
+    setEcho(key, hack, frame);
     n = encode(key, hack, wire);
     memory.writesLeft = 0;
     assert(root.host(wire, n, 6050, 6) == wici_gateway::Event::HACK_SENT);  // route write fails after the HACK
@@ -347,6 +365,7 @@ int main() {
         while (learnPort.pendingBytes()) take(learnPort, command, returned);
         wici_link::Frame reply = hack;
         reply.source = 5; reply.destination = via; reply.sequence = sequence;
+        setEcho(key, reply, up);
         length = encode(key, reply, wire);
         return learner.host(wire, length, at + 50, at / 1000, hackCommand);
     };
@@ -403,6 +422,7 @@ int main() {
     const auto hackFor = [&](const wici_link::Frame& sent, uint16_t sequence) {
         wici_link::Frame reply = hack;
         reply.source = sent.destination; reply.destination = 5; reply.sequence = sequence;
+        setEcho(key, reply, sent);
         const size_t length = encode(key, reply, wire);
         return learner.radio(wire, length, 0);
     };

@@ -214,7 +214,8 @@ def keyed_frame(rng, key, net_id, kind, sources=(), destinations=()):
                                 rng.randint(1, 15), sequence, rng.randbytes(rng.randint(25, wici_link.MAX_PAYLOAD)))
         tag = rng.randbytes(HOP_TAG)
     elif kind == "hack":
-        frame = wici_link.Frame(wici_link.HACK, 0, net_id, source, _station(rng, destinations), 0, 1, sequence)
+        frame = wici_link.Frame(wici_link.HACK, 0, net_id, source, _station(rng, destinations), 0, 1, sequence,
+                                rng.randbytes(wici_link.HACK_ECHO))
         tag = rng.randbytes(HOP_TAG)
     else:
         raise ValueError(f"unknown keyed frame kind {kind!r}")

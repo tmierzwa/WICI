@@ -81,6 +81,11 @@ void delivered(uint32_t handle, bool acknowledged, void* context) {
 size_t encode(const uint8_t key[32], const wici_link::Frame& frame, uint8_t wire[255]) {
     const size_t n = wici_link::encode(key, frame, wire, 255); assert(n); return n;
 }
+// A HACK repeats the start of the acknowledged bare frame's network MAC.
+void setEcho(wici_link::Frame& hack, uint16_t echo) {
+    hack.payload[0] = static_cast<uint8_t>(echo >> 8); hack.payload[1] = static_cast<uint8_t>(echo);
+    hack.length = wici_link::HACK_ECHO;
+}
 }  // namespace
 
 int main() {
@@ -118,7 +123,7 @@ int main() {
     memcpy(frame.payload, sealed[0].bytes, frame.length);
     uint8_t wire[255]; size_t n = encode(key, frame, wire);
     assert(shelter.receive(wire, n, 1234, 10) == wici_radio::Event::HACK_SENT);
-    assert(admitted == 1 && air.hackCount == 1 && air.hackLength == 19 && air.receivedMs == 1234);
+    assert(admitted == 1 && air.hackCount == 1 && air.hackLength == 21 && air.receivedMs == 1234);
     assert(shelter.receive(wire, n, 1235, 10) == wici_radio::Event::HACK_SENT && admitted == 1);
     // A keyless replay of an admitted frame earns one HACK per 5 s, so it
     // cannot pile silence debt on the destination.
@@ -207,6 +212,7 @@ int main() {
     wici_link::Frame reply;
     reply.type = wici_link::Type::HACK; reply.network = 100;
     reply.source = 5; reply.destination = 2; reply.sequence = outgoingSeq; reply.ttl = 1;
+    setEcho(reply, wici_link::macEcho(air.data, air.dataLength));
     n = encode(key, reply, wire);
     assert(shelter.receive(wire, n, 2650, 13) == wici_radio::Event::ADMITTED);
     shelter.poll(4000, 13);
@@ -223,6 +229,7 @@ int main() {
     assert(air.lastClass == wici_link::TxClass::OWN);
     wici_link::Frame first;
     assert(wici_link::decode(key, 100, air.data, air.dataLength, first));
+    const uint16_t firstEcho = wici_link::macEcho(air.data, air.dataLength);
     assert(first.source == 2 && first.destination == 5 && first.length == 140 && first.ttl == 7);
     const uint16_t firstSeq = first.sequence;
     const uint16_t rankBeforeOwnTimeout = shelter.routes().rank(13);
@@ -239,6 +246,7 @@ int main() {
     assert(sent.sequence == firstSeq && memcmp(sent.payload, first.payload, first.length) == 0);
     shelter.onTxDone(true, 5200, 13);
     reply.sequence = firstSeq;
+    setEcho(reply, firstEcho);  // the retry is the same frame
     n = encode(key, reply, wire);
     assert(shelter.receive(wire, n, 5250, 13) == wici_radio::Event::ADMITTED);
     shelter.poll(5260, 13);
@@ -250,6 +258,11 @@ int main() {
     n = encode(key, reply, wire);
     assert(shelter.receive(wire, n, 5350, 13) == wici_radio::Event::IGNORED);
     reply.sequence = secondSeq;
+    // A recorded HACK for an older frame with this seq (after the 16-bit seq wrapped) has another echo.
+    setEcho(reply, static_cast<uint16_t>(wici_link::macEcho(air.data, air.dataLength) ^ 1));
+    n = encode(key, reply, wire);
+    assert(shelter.receive(wire, n, 5351, 13) == wici_radio::Event::IGNORED && shelter.ownBusy());
+    setEcho(reply, wici_link::macEcho(air.data, air.dataLength));
     n = encode(key, reply, wire);
     assert(shelter.receive(wire, n, 5351, 13) == wici_radio::Event::ADMITTED);
     assert(!shelter.ownBusy() && delivery.calls == 1 && delivery.handle == 88 && delivery.acknowledged);
@@ -262,6 +275,7 @@ int main() {
     assert(sent.length == 199 && air.dataLength == 218);  // 226 B on air with the hop tag
     shelter.onTxDone(true, 5370, 13);
     reply.sequence = sent.sequence;
+    setEcho(reply, wici_link::macEcho(air.data, air.dataLength));
     n = encode(key, reply, wire);
     assert(shelter.receive(wire, n, 5380, 13) == wici_radio::Event::ADMITTED);
     assert(!shelter.ownBusy() && delivery.calls == 2 && delivery.handle == 89 && delivery.acknowledged);
@@ -353,6 +367,7 @@ int main() {
     }
     failover.onTxDone(true, at, 30);
     reply.source = 6; reply.sequence = sent.sequence;
+    setEcho(reply, wici_link::macEcho(failoverAir.data, failoverAir.dataLength));
     n = encode(key, reply, wire);
     assert(failover.receive(wire, n, at + 100, 30) == wici_radio::Event::ADMITTED);
     assert(failoverDelivery.calls == 1 && failoverDelivery.handle == 77 && failoverDelivery.acknowledged);
@@ -545,6 +560,7 @@ int main() {
         wici_link::Frame hackFrame;
         hackFrame.type = wici_link::Type::HACK; hackFrame.network = 100; hackFrame.source = 5;
         hackFrame.destination = 2; hackFrame.sequence = sequence; hackFrame.ttl = 1;
+        setEcho(hackFrame, wici_link::macEcho(proofAir.data, proofAir.dataLength));
         uint8_t raw[255];
         const size_t length = encode(key, hackFrame, raw);
         assert(prover.receive(raw, length, ms, ms / 1000) == wici_radio::Event::ADMITTED);

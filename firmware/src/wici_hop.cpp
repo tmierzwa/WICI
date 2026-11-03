@@ -98,7 +98,7 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     } else if (!repeatHack_.allow(nowS)) {
         return Receipt::IGNORED;
     }
-    hackLength = wici_link::encodeHack(key_, frame, hack, capacity);
+    hackLength = wici_link::encodeHack(key_, frame, wici_link::macEcho(wire, length), hack, capacity);
     return hackLength ? Receipt::HACK_READY : Receipt::REJECTED;
 }
 
@@ -182,12 +182,15 @@ bool Relay::prepare(uint32_t nowS) {
             Attempt fresh;
             fresh.generation = queue_.generation(slot);
             fresh.next = next; fresh.sequence = sequence; fresh.valid = true;
+            fresh.echo = wici_link::macEcho(outgoing_, n);  // `again` rebuilds the same bytes
             // An attempt on air for another next hop still completes the item.
             const bool sameItem = last.valid && last.generation == fresh.generation;
             if (sameItem && last.onAir) {
                 fresh.late = true; fresh.lateNext = last.next; fresh.lateSequence = last.sequence;
+                fresh.lateEcho = last.echo;
             } else if (sameItem && last.late) {
                 fresh.late = true; fresh.lateNext = last.lateNext; fresh.lateSequence = last.lateSequence;
+                fresh.lateEcho = last.lateEcho;
             }
             last = fresh;
         }
@@ -244,8 +247,11 @@ bool Relay::receiveHack(const uint8_t* wire, size_t length, uint32_t nowS) {
         const Attempt& attempt = prepared_[slot];
         if (!attempt.valid || attempt.generation != queue_.generation(slot) || !queue_.pending(slot)) continue;
         uint16_t next;
-        if (attempt.onAir && frame.source == attempt.next && frame.sequence == attempt.sequence) next = attempt.next;
-        else if (attempt.late && frame.source == attempt.lateNext && frame.sequence == attempt.lateSequence)
+        const uint16_t echo = wici_link::hackEcho(frame);
+        if (attempt.onAir && frame.source == attempt.next && frame.sequence == attempt.sequence &&
+            echo == attempt.echo) next = attempt.next;
+        else if (attempt.late && frame.source == attempt.lateNext && frame.sequence == attempt.lateSequence &&
+                 echo == attempt.lateEcho)
             next = attempt.lateNext;
         else continue;
         if (!queue_.remove(slot, nowS)) return false;  // a new generation voids the record

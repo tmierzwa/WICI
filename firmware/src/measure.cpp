@@ -42,7 +42,7 @@ constexpr uint32_t HACK_DEADLINE_MS = 200;
 constexpr uint32_t HACK_UNSEEN_MS = 10;
 
 bool validRawHack(const uint8_t* frame, size_t length) {
-    // A pairwise-tagged WICI-Link v2 HACK; the tags themselves are checked by the caller.
+    // A pairwise-tagged WICI-Link v3 HACK; the tags themselves are checked by the caller.
     constexpr uint8_t HACK_HEADER = (wici_link::VERSION << 6) | (static_cast<uint8_t>(wici_link::Type::HACK) << 3);
     if (!frame || length != wici_link::RADIO_HACK ||
         frame[0] != HACK_HEADER || frame[7] != 1 || frame[10] != 0) return false;

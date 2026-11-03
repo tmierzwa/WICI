@@ -18,6 +18,13 @@ struct Memory : journal::Storage {
     }
 };
 
+// A HACK repeats the start of the acknowledged frame's network MAC.
+void setEcho(wici_link::Frame& reply, uint16_t echo) {
+    reply.payload[0] = static_cast<uint8_t>(echo >> 8);
+    reply.payload[1] = static_cast<uint8_t>(echo);
+    reply.length = wici_link::HACK_ECHO;
+}
+
 int main() {
     static Memory memory;
     uint8_t ifac[16] = {}, key[32], wire[255], hack[255];
@@ -38,10 +45,11 @@ int main() {
     size_t hackLength = 0;
     assert(relay.receiveData(wire, length, 100, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
-    assert(hackLength == 19);
+    assert(hackLength == 21);
     wici_link::Frame parsed;
     assert(wici_link::decode(key, 100, hack, hackLength, parsed));
-    assert(parsed.type == wici_link::Type::HACK && parsed.destination == 4 && parsed.sequence == 41);
+    assert(parsed.type == wici_link::Type::HACK && parsed.destination == 4 && parsed.sequence == 41 &&
+           wici_link::hackEcho(parsed) == wici_link::macEcho(wire, length));
 
     // Crash after HACK: the queue remains and a new link sequence is reserved.
     wici_hop::Relay resumed(memory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver);
@@ -69,12 +77,18 @@ int main() {
     reply.type = wici_link::Type::HACK;
     reply.network = 100; reply.source = 4; reply.destination = 2;
     reply.sequence = seq; reply.ttl = 1;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(!resumed.receiveHack(hack, hackLength, 103));
     assert(resumed.timeout(103));
     assert(resumed.outgoing(outLength) == out && outLength == length);
     assert(resumed.transmitted(true, 104));
     reply.source = 1;
+    // A recorded HACK for an older frame with the same seq (after the 16-bit seq wrapped) has another echo.
+    setEcho(reply, static_cast<uint16_t>(wici_link::macEcho(out, outLength) ^ 1));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(!resumed.receiveHack(hack, hackLength, 105) && resumed.active());
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(resumed.receiveHack(hack, hackLength, 105));
     assert(!resumed.active());
@@ -99,6 +113,7 @@ int main() {
     assert(wici_link::decode(key, 100, out, outLength, parsed));
     assert(after.transmitted(true, 106) && after.timeout(107));
     reply.source = 1; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(after.receiveHack(hack, hackLength, 107));  // HACK after timeout, before retry TX
 
@@ -115,6 +130,7 @@ int main() {
     assert(parsed.destination == 4 && parsed.flags == (wici_link::ACKREQ | wici_link::DOWN));
     assert(after.transmitted(true, 108));
     reply.source = 4; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(after.receiveHack(hack, hackLength, 109));
 
@@ -224,6 +240,7 @@ int main() {
         order[i] = parsed.payload[8];
         assert(priorityRelay.transmitted(true, 130 + i));
         reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+        setEcho(reply, wici_link::macEcho(out, outLength));
         hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
         assert(priorityRelay.receiveHack(hack, hackLength, 130 + i));
     }
@@ -285,6 +302,7 @@ int main() {
     assert(parsed.payload[8] == 100);  // B's K1 slot first (rotation), D's K1 next
     assert(nextA.transmitted(true, 150));
     reply.source = 1; reply.destination = 3; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(nextA.receiveHack(hack, hackLength, 150));
     assert(nextA.prepare(151));
@@ -306,7 +324,7 @@ int main() {
     traffic.sequence = 93; traffic.payload[4] = 90; traffic.payload[8] = 23;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY && hackLength == 19);
+           wici_hop::Receipt::HACK_READY && hackLength == 21);
     assert(guarded.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 141));
     assert(guarded.prepare(141));
     out = guarded.outgoing(outLength);
@@ -552,6 +570,7 @@ int main() {
     out = lateHack.outgoing(outLength);
     assert(wici_link::decode(key, 100, out, outLength, parsed));
     const uint16_t firstAttempt = parsed.sequence;
+    const uint16_t firstEcho = wici_link::macEcho(out, outLength);
     assert(lateHack.transmitted(true, 331) && lateHack.timeout(332));
     uint16_t seqBeforeRefusals = 0, seqAfterRefusals = 0;
     assert(lateHack.nextSequence(seqBeforeRefusals));
@@ -570,6 +589,7 @@ int main() {
     assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 6 &&
            parsed.sequence != firstAttempt);
     reply.source = 1; reply.destination = 2; reply.sequence = firstAttempt;
+    setEcho(reply, firstEcho);
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(lateHack.receiveHack(hack, hackLength, 334) && !lateHack.active());
     assert(!lateHack.prepare(335));                         // the item left the queue
@@ -669,6 +689,7 @@ int main() {
         out = moved.outgoing(outLength);
         assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);
         reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+        setEcho(reply, wici_link::macEcho(out, outLength));
         hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
         assert(moved.receiveHack(hack, hackLength, at));
     };
@@ -716,6 +737,7 @@ int main() {
     assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 96);
     assert(ordered.transmitted(true, 501));
     reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
     hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
     assert(ordered.receiveHack(hack, hackLength, 502));
     assert(ordered.routes().down(9) == 4 && ordered.routes().forget(9, 4));  // as after 3 downward failures
