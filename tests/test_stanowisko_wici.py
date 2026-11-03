@@ -402,26 +402,39 @@ class WiciAdmissionTest(StationTestCase):
         self.assertEqual(self.received(), 4)
 
     def test_cut_off_last_record_is_dropped_and_the_journal_goes_on(self):
-        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
-        self.reception.stop(save=False)
-        with self.journals()[-1].open("ab") as f:
-            f.write((500).to_bytes(4, "big") + b"x" * 10)   # the append the power cut broke off (no HACK)
-        self.reception = self.open()
-        self.assertEqual(self.received(), 1)
-        self.assertEqual(self.admit(self.seal(9)[0]), "complete")
-        self.crash()
-        self.assertEqual(self.received(), 2)
+        # The append the power cut broke off (no HACK yet), as a file system may leave it: a short record, the
+        # new size with zeros (FAT, exFAT) or with old data of the cluster, even a marker with the next number.
+        tails = {"short": nosnik.RECORD_MAGIC + (1).to_bytes(4, "big") + (500).to_bytes(4, "big") + b"x" * 10,
+                 "zeros": bytes(300), "old cluster": os.urandom(300),
+                 "marker": nosnik.RECORD_MAGIC + (1).to_bytes(4, "big") + (40).to_bytes(4, "big") + os.urandom(40)}
+        for counter, (name, tail) in zip((7, 9, 11, 13), tails.items()):
+            with self.subTest(name):
+                received = self.received()
+                self.assertEqual(self.admit(self.seal(counter)[0]), "complete")
+                self.reception.stop(save=False)
+                with self.journals()[-1].open("ab") as f:
+                    f.write(tail)
+                self.reception = self.open()
+                self.assertEqual(self.received(), received + 1)
+                self.assertEqual(self.admit(self.seal(counter + 1)[0]), "complete")
+                self.crash()
+                self.assertEqual(self.received(), received + 2)
 
     def test_damage_inside_the_journal_stops_the_start(self):
+        # A broken record with a whole one behind it was not the last append: never cut off in silence.
         for counter in (7, 8):
             self.assertEqual(self.admit(self.seal(counter)[0]), "complete")
         self.reception.stop(save=False)
         path = self.journals()[-1]
-        raw = bytearray(path.read_bytes())
-        raw[len(nosnik.JOURNAL_MAGIC) + 8 + 10] ^= 1   # inside the first of two records
-        path.write_bytes(bytes(raw))
-        with self.assertRaises(nosnik.StorageError):
-            self.open()
+        good = path.read_bytes()
+        first = len(nosnik.JOURNAL_MAGIC) + 8
+        for name, offset in (("marker", first), ("number", first + 5), ("length", first + 10), ("body", first + 20)):
+            with self.subTest(name):
+                raw = bytearray(good)
+                raw[offset] ^= 1   # in the first of two records
+                path.write_bytes(bytes(raw))
+                with self.assertRaises(nosnik.StorageError):
+                    self.open()
 
     def test_journal_of_another_snapshot_with_the_same_number_is_never_replayed(self):
         # A restored or re-keyed medium writes its snapshot under the next number, with a new mark; the journal of

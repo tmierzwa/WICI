@@ -30,6 +30,9 @@ from .. import configdoc, database, passwords, syscrypto
 
 STATION_WORDS = BACKUP_WORDS = 6
 JOURNAL_PREFIX, JOURNAL_MAGIC = "przyjecia-", b"WICI-PRZYJECIA\n"
+# Every record starts with this marker and its number in clear, so that a start after a broken record can tell
+# a cut-off tail (nothing whole behind it) from damage in the middle (a whole record behind it).
+RECORD_MAGIC = b"WREC"
 OFFICERS_MAX = 20
 IDENTITY_AAD = b"wici tozsamosc odbiorcy"
 CARD_AAD = b"wici karta odbiorcy"
@@ -202,9 +205,9 @@ class Nosnik:
         self.gen, self.last, self.journal_id = gen, target, journal
 
     # ---- dziennik przyjęć ------------------------------------------------------------------------
-    # Plik przyjecia-<gen> zaczyna się od JOURNAL_MAGIC i znacznika migawki gen (8 B); dalej rekordy: długość (4 B)
-    # i zapieczętowana treść z AAD = nagłówek pliku + numer rekordu, więc rekordu nie da się przenieść ani
-    # przestawić. Plik o numerze wczytanej migawki należy do niej tylko przy zgodnym znaczniku: dziennik sprzed
+    # Plik przyjecia-<gen> zaczyna się od JOURNAL_MAGIC i znacznika migawki gen (8 B); dalej rekordy: RECORD_MAGIC,
+    # numer rekordu (4 B), długość (4 B) i zapieczętowana treść z AAD = nagłówek pliku + numer rekordu, więc
+    # rekordu nie da się przenieść ani przestawić. Plik o numerze wczytanej migawki należy do niej tylko przy zgodnym znaczniku: dziennik sprzed
     # odtworzenia albo nowej tożsamości (inna migawka o tym numerze) nie wraca.
 
     def _journal_path(self, gen):
@@ -238,7 +241,7 @@ class Nosnik:
         sealed = syscrypto.seal(key, payload, head + count.to_bytes(4, "big"))
         start = f.tell()
         try:
-            f.write(len(sealed).to_bytes(4, "big") + sealed)
+            f.write(RECORD_MAGIC + count.to_bytes(4, "big") + len(sealed).to_bytes(4, "big") + sealed)
             f.flush()
             database._fsync(f.fileno())
         except BaseException:
@@ -257,7 +260,8 @@ class Nosnik:
 
     def journal_records(self, key):
         """Records to replay on the loaded snapshot, oldest first. A broken last record of a file (a power cut
-        during its append, before its HACK) is cut off; any other damage raises StorageError."""
+        during its append, before its HACK) is cut off, whatever the file system left there (zeros, old
+        clusters); a broken record with a whole one behind it is damage and raises StorageError."""
         records = []
         for gen, path in self._journal_paths():
             if gen < self.gen:
@@ -272,26 +276,46 @@ class Nosnik:
             if gen == self.gen and head[len(JOURNAL_MAGIC):].hex() != self.journal_id:
                 path.unlink()   # dziennik innej migawki o tym numerze (sprzed odtworzenia): nie wróci nigdy
                 continue
-            at, count, good = len(head), 0, len(head)
+            at, count = len(head), 0
             while at < len(raw):
-                n = int.from_bytes(raw[at:at + 4], "big")
-                body = raw[at + 4:at + 4 + n]
-                try:
-                    if len(raw) - at < 4 or len(body) != n:
-                        raise syscrypto.CryptoError("ucięty rekord")
-                    payload = syscrypto.open_(key, body, head + count.to_bytes(4, "big"))
-                except syscrypto.CryptoError:
-                    if at + 4 + n < len(raw):
+                record = self._journal_record(key, raw, at, head, count)
+                if record is None:
+                    if self._whole_record_after(key, raw, at + 1, head, count):
                         raise StorageError(f"dziennik przyjęć {path.name} uszkodzony: odtwórz nośnik z kopii")
-                    break
+                    break   # ucięty koniec: za nim nie ma całego rekordu
+                payload, at = record
                 records.append(payload)
-                at, count, good = at + 4 + n, count + 1, at + 4 + n
-            if good < len(raw):
+                count += 1
+            if at < len(raw):
                 with path.open("r+b") as f:   # następne rekordy idą za ostatnim całym
-                    f.truncate(good)
+                    f.truncate(at)
                     database._fsync(f.fileno())
             self.journal_tails[gen] = (head, count)
         return records
+
+    @staticmethod
+    def _journal_record(key, raw, at, head, number):
+        """(payload, offset after it) of a whole record `number` at `at`, else None."""
+        if raw[at:at + 4] != RECORD_MAGIC or int.from_bytes(raw[at + 4:at + 8], "big") != number:
+            return None
+        n = int.from_bytes(raw[at + 8:at + 12], "big")
+        body = raw[at + 12:at + 12 + n]
+        if len(raw) - at < 12 or len(body) != n:
+            return None
+        try:
+            return syscrypto.open_(key, body, head + number.to_bytes(4, "big")), at + 12 + n
+        except syscrypto.CryptoError:
+            return None
+
+    def _whole_record_after(self, key, raw, start, head, number):
+        """True when a whole record numbered `number` or later lies somewhere from `start` on."""
+        at = raw.find(RECORD_MAGIC, start)
+        while at != -1:
+            found = int.from_bytes(raw[at + 4:at + 8], "big")
+            if found >= number and self._journal_record(key, raw, at, head, found) is not None:
+                return True
+            at = raw.find(RECORD_MAGIC, at + 1)
+        return False
 
     def journal_prune(self, below):
         """Remove the journals of snapshots older than `below`: their records are in snapshot `below`."""
