@@ -67,6 +67,7 @@ bool Table::begin() {
                     (!config_.planned || config_.planned == config_.own ||
                      config_.backup == config_.own || config_.backup == config_.planned))) return false;
     for (Route& route : routes_) route = Route();
+    clearDownFailures();
     bool found = false;
     for (uint8_t copy = 0; copy < 2; ++copy) {
         uint8_t data[COPY_BYTES];
@@ -150,6 +151,7 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
             const Route old = routes_[i];
             routes_[i].via = via;
             if (!commit()) { routes_[i] = old; return false; }
+            downFailures_[i] = 0;
             return true;
         }
         if (!routes_[i].destination && empty == ROUTES) empty = i;
@@ -158,19 +160,35 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
     const Route old = routes_[empty];
     routes_[empty] = {destination, via};
     if (!commit()) { routes_[empty] = old; return false; }
+    downFailures_[empty] = 0;
     return true;
 }
 
 bool Table::forget(uint16_t destination, uint16_t via) {
     if (!ready_ || !id(destination) || !id(via)) return false;
-    for (Route& route : routes_) {
-        if (route.destination != destination || route.via != via) continue;
-        const Route old = route;
-        route = Route();
-        if (!commit()) { route = old; return false; }
+    for (size_t i = 0; i < ROUTES; ++i) {
+        if (routes_[i].destination != destination || routes_[i].via != via) continue;
+        const Route old = routes_[i];
+        routes_[i] = Route();
+        if (!commit()) { routes_[i] = old; return false; }
+        downFailures_[i] = 0;
         return true;
     }
     return true;
+}
+
+bool Table::downFailed(uint16_t destination, uint16_t via) {
+    if (!ready_ || !id(destination) || !id(via)) return false;
+    for (size_t i = 0; i < ROUTES; ++i) {
+        if (routes_[i].destination != destination || routes_[i].via != via) continue;
+        return ++downFailures_[i] < 3 || forget(destination, via);
+    }
+    return true;  // already forgotten or replaced
+}
+
+void Table::downDelivered(uint16_t destination, uint16_t via) {
+    for (size_t i = 0; i < ROUTES; ++i)
+        if (routes_[i].destination == destination && routes_[i].via == via) downFailures_[i] = 0;
 }
 
 uint16_t Table::down(uint16_t destination) const {

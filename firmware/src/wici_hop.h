@@ -88,6 +88,7 @@ private:
     struct Attempt {
         uint32_t generation = 0;
         uint16_t next = 0, sequence = 0, lateNext = 0, lateSequence = 0;
+        uint8_t attempts = 1;  // tries of this frame (same seq) so far; a radio refusal (yield) keeps the count
         bool valid = false, onAir = false, late = false;
     };
     wici_route::Config config_;
@@ -103,7 +104,7 @@ private:
     uint8_t outgoing_[wici_link::MAX_FRAME] = {};
     size_t outgoingLength_ = 0;
     uint16_t next_ = 0, downTo_ = 0;  // downTo_: envelope destination of an active downward frame
-    uint8_t slot_ = 0, attempts_ = 0;
+    uint8_t slot_ = 0;
     bool active_ = false, sent_ = false, noAck_ = false;
     bool activePriority_ = false;
     Attempt prepared_[wici_relay::SLOTS];

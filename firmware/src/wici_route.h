@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "config.h"
 #include "journal.h"
@@ -69,6 +70,13 @@ public:
     bool learn(uint16_t destination, uint16_t via, bool replace = false);
     bool planned(uint16_t destination, uint16_t via) const;
     bool forget(uint16_t destination, uint16_t via);
+    // Root: a downward frame to `destination` along the route via `via` got
+    // no HACK. The third in a row for this route forgets it (false only when
+    // that write fails); downDelivered (its HACK) restarts the count. Counts
+    // are per route, so other stations' traffic does not reset them; RAM only.
+    bool downFailed(uint16_t destination, uint16_t via);
+    void downDelivered(uint16_t destination, uint16_t via);
+    void clearDownFailures() { memset(downFailures_, 0, sizeof(downFailures_)); }  // laptop gone: a new count
     uint16_t down(uint16_t destination) const;  // BROADCAST when no route
     // Every check of beacon() that needs no signature: fields, epoch age and
     // replay (`seq` not newer than the last BEACON of a fresh entry). The
@@ -120,6 +128,7 @@ private:
     const config::Behind* behind_ = nullptr;
     uint16_t behindCount_ = 0;
     Route routes_[ROUTES] = {};
+    uint8_t downFailures_[ROUTES] = {};  // root: consecutive downward frames without HACK, per route slot
     Neighbor neighbors_[NEIGHBORS] = {};
     uint32_t generation_ = 0;
     uint16_t epoch_ = 0, rankCeiling_ = 0xFFFF;  // lowest rank held in this epoch

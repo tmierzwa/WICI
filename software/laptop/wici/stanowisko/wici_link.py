@@ -7,7 +7,6 @@ DATA before it asks the node to send HACK; a valid MAC alone is never an admissi
 
 from dataclasses import dataclass
 import hmac
-import sqlite3
 
 HEADER, TAG, MAX_FRAME = 11, 8, 255
 VERSION = 3  # v3: DATA without the v2 origin signature; v2 frames are rejected
@@ -165,34 +164,3 @@ class KissStream:
             else:
                 self.buffer.append(byte)
         return frames
-
-
-class Receiver:
-    """KISS-side receive adapter for a root node. `admit(envelope)` must return only
-    after SQLite and the encrypted medium are durable. A failed admission gets no HACK.
-    The radio node enforces CAD, silence debt and transmit limits when sent a KISS frame.
-    """
-
-    def __init__(self, network, root, key, write, admit, silent=lambda: False):
-        if not _id(network) or not _id(root) or len(key) != 32:
-            raise LinkError("invalid receiver network binding")
-        self.network, self.root, self.key = network, root, bytes(key)
-        self.write, self.admit, self.silent = write, admit, silent
-        self.stream = KissStream()
-
-    def feed(self, data):
-        """Process one serial read; return the count of authenticated DATA frames admitted."""
-        accepted = 0
-        for raw in self.stream.feed(data):
-            try:
-                frame = decode(self.key, self.network, raw)
-                if frame.kind != DATA or frame.destination not in (self.root, BROADCAST):
-                    continue
-                self.admit(frame.payload)
-                accepted += 1
-                if frame.flags & ACKREQ and not self.silent():
-                    hack = Frame(HACK, 0, self.network, self.root, frame.source, 0, 1, frame.sequence)
-                    self.write(kiss_encode(encode(self.key, hack)))
-            except (LinkError, ValueError, OSError, sqlite3.Error):
-                continue  # failed authentication/admission/write: never claim successful hop receipt
-        return accepted

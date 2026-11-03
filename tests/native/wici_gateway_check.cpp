@@ -379,6 +379,55 @@ int main() {
     plain.feed(kissFrames, sizeof(kissFrames), 16000);
     assert(plain.buffered() == 0 && plain.counters().commands == 2);
 
+    // Final review L5: the root forgets a route after 3 downward frames to
+    // that station in a row without HACK, counted per route. A delivered
+    // frame to another station in between restarts nothing (routes: 4 via 4,
+    // 3 via 3).
+    // Drained whole (output() and consume()): after the full buffer below the
+    // ring wraps, and take() reads one contiguous frame.
+    const auto drain = [&] {
+        size_t length = 0;
+        while (learnPort.pendingBytes()) { learnPort.output(length); learnPort.consume(length); }
+    };
+    const auto sendDown = [&](uint16_t recipient, uint16_t sequence, uint32_t at) {
+        wici_link::Frame d = downlink;
+        d.payload[4] = static_cast<uint8_t>(recipient); d.sequence = sequence;
+        const size_t length = encode(key, d, wire);
+        assert(learner.host(wire, length, at, at / 1000) == wici_gateway::Event::QUEUED);
+        learner.onTxDone(true, at + 50);
+        drain();
+        wici_link::Frame sent;
+        assert(wici_link::decode(key, 100, learnAir.last, learnAir.lastLength, sent));
+        return sent;
+    };
+    const auto hackFor = [&](const wici_link::Frame& sent, uint16_t sequence) {
+        wici_link::Frame reply = hack;
+        reply.source = sent.destination; reply.destination = 5; reply.sequence = sequence;
+        const size_t length = encode(key, reply, wire);
+        return learner.radio(wire, length, 0);
+    };
+    assert(learner.down(4) == 4 && learner.down(3) == 3);
+    sendDown(4, 110, 20000);
+    sendDown(4, 111, 21000);                       // failure 1 of the route to 4
+    wici_link::Frame toThree = sendDown(3, 112, 22000);  // failure 2
+    assert(hackFor(toThree, toThree.sequence) == wici_gateway::Event::FORWARDED);
+    drain();
+    sendDown(4, 113, 23000);
+    sendDown(3, 114, 24000);                       // failure 3: the route to 4 is gone
+    assert(learner.down(4) == wici_link::BROADCAST && learner.down(3) == 3);
+    // L9: the HACK of the pending downward frame counts even when the KISS
+    // buffer to the laptop is full (the frame itself is not passed on).
+    sendDown(3, 115, 25000);                       // failure 1 of the route to 3
+    toThree = sendDown(3, 116, 26000);             // failure 2
+    unsigned filled = 0;
+    while (hackFor(toThree, static_cast<uint16_t>(toThree.sequence + 1000)) == wici_gateway::Event::FORWARDED)
+        assert(++filled < 1000);
+    assert(hackFor(toThree, toThree.sequence) == wici_gateway::Event::REJECTED);
+    drain();
+    sendDown(3, 117, 27000);                       // the previous frame was delivered
+    sendDown(3, 118, 28000);                       // failure 1 again
+    assert(learner.down(3) == 3 && learner.ready());
+
     // Review 1/11a: BEACON schedule. A change or retry is pushed to 60 s
     // after the last BEACON only when that is later, then jittered 0-4 s;
     // a long-silent station is not scheduled in the past.

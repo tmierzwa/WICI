@@ -146,17 +146,6 @@ class NativeWiciLink(unittest.TestCase):
         with self.assertRaises(wici_link.LinkError):
             wici_link.encode(key, wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 1, 0, 7, 1, bytes(229)))
         self.assertEqual(wici_link.KissStream().feed(bytes([0xC0, 0, 0xDB, 0x00, 0xC0])), [])
-        sent, admitted = [], []
-        receiver = wici_link.Receiver(100, 1, key, sent.append, admitted.append)
-        self.assertEqual(receiver.feed(packed), 1)
-        self.assertEqual(admitted, [body])
-        hack_wire, = wici_link.KissStream().feed(sent[0])
-        hack = wici_link.decode(key, 100, hack_wire)
-        self.assertEqual((hack.kind, hack.source, hack.destination, hack.sequence),
-                         (wici_link.HACK, 1, 4, 0x1234))
-        failed = wici_link.Receiver(100, 1, key, sent.append, lambda _: (_ for _ in ()).throw(OSError()))
-        self.assertEqual(failed.feed(packed), 0)
-        self.assertEqual(len(sent), 1)
 
 
 class CrossLanguageEnvelope(unittest.TestCase):
@@ -201,9 +190,9 @@ class CrossLanguageEnvelope(unittest.TestCase):
         # (counter, part, time s, plaintext, station result, receiver result)
         steps = (
             (7, 2, 100, b"world", "partial", "partial"),
-            # Identical repeat. The station reports a duplicate and rate-limits its HACK
-            # (wici_destination.cpp, 5 s); the receiver HACKs it again.
-            (7, 2, 101, b"world", "duplicate", "partial"),
+            # Identical repeat: a duplicate on both sides, HACKed again without a write. The station
+            # rate-limits that HACK (wici_destination.cpp, 5 s).
+            (7, 2, 101, b"world", "duplicate", "duplicate"),
             (7, 2, 101, b"other", "rejected", "rejected"),        # conflicting content
             (7, 1, 102, b"hello ", "complete", "complete"),
             (7, 1, 103, b"hello ", "duplicate", "duplicate"),     # replay bit proves admission

@@ -639,6 +639,10 @@ int main() {
     assert(moved.receiveData(wire, n, 442, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
     assert(moved.prepare(442));
     for (unsigned attempt = 0; attempt < 3; ++attempt) {
+        if (attempt == 1) {  // the radio refused the retry: the same frame comes back with its count
+            moved.yield();
+            assert(moved.prepare(443));
+        }
         out = moved.outgoing(outLength);
         assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 4);
         assert(moved.transmitted(true, 443) && moved.timeout(444) == (attempt < 2));

@@ -85,6 +85,10 @@ class Inbox:
                         # As on the station: one counter cannot carry both a whole message and a fragment.
                         raise PermanentRejection("whole envelope over a pending fragment")
                     full, result = part.plaintext, COMPLETE
+                elif previous is not None and previous[part.number] == part.plaintext:
+                    # Powtórzenie zapisanej części: ponowny HACK bez zapisu i bez fresh() (transport.md,
+                    # „Podział na części”), jak DUPLICATE na stacji. Ta sama ramka nie przestawia drogi odpowiedzi.
+                    result = DUPLICATE
                 else:
                     if previous is None:
                         count = self.db.execute("SELECT count(*) FROM env_parts").fetchone()[0]

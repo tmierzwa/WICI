@@ -29,7 +29,6 @@ bool Relay::begin() {
     active_ = sent_ = false;
     activePriority_ = false;
     outgoingLength_ = 0;
-    attempts_ = 0;
     nextSlot_ = owedHacks_ = 0;
     for (Attempt& attempt : prepared_) attempt = Attempt();
     learn_ = (1u << wici_relay::SLOTS) - 1;  // recover hints of frames queued before a restart
@@ -188,7 +187,7 @@ bool Relay::prepare(uint32_t nowS) {
         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
         activePriority_ = k1 && next != wici_link::BROADCAST;
-        outgoingLength_ = n; attempts_ = 1;
+        outgoingLength_ = n;
         sent_ = false; active_ = true;
         return true;
     }
@@ -251,8 +250,9 @@ bool Relay::receiveHack(const uint8_t* wire, size_t length, uint32_t nowS) {
 bool Relay::timeout(uint32_t nowS) {
     if (!active_ || !sent_ || next_ == wici_link::BROADCAST) return false;
     routes_.hopResult(next_, false, nowS);
-    if (attempts_ < 3) {
-        ++attempts_;
+    Attempt& attempt = prepared_[slot_];
+    if (attempt.attempts < 3) {
+        ++attempt.attempts;
         sent_ = false;
         return true;
     }

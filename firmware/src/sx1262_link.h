@@ -67,6 +67,15 @@ enum class RxService : uint8_t {
     BusyTimeout,  // przekroczony czas BUSY: próbka przerwana, `out` bez ramki
 };
 
+// Chwila `t` nie dawniej niż `windowMs` przed `now`. Znacznik zapisany przez zadanie odbioru po odczycie `now`
+// wypada nieco później (do FUTURE_SLACK_MS) i też jest świeży. Znacznik sprzed 2^31 ms jest stary: zwykła różnica
+// ze znakiem wzięłaby go za przyszły i zajęłaby kanał na następne 24,8 dnia.
+constexpr uint32_t FUTURE_SLACK_MS = 1000;
+inline bool recent(uint32_t now, uint32_t t, uint32_t windowMs) {
+    const uint32_t ago = now - t;
+    return ago < windowMs || ago > UINT32_MAX - FUTURE_SLACK_MS;
+}
+
 // Znaczniki aktywności kanału (millis()) dla okna CCA. Pisze je próbka odbioru (zadanie albo pętla),
 // czyta pętla bez blokady radia. Bit w masce mówi, że znacznik jest ważny (od clearActivity()).
 struct Activity {
@@ -86,10 +95,7 @@ struct Activity {
     bool quietFor(uint32_t now, uint32_t windowMs, uint8_t kinds = ALL) const {
         const uint8_t mask = seen.load(std::memory_order_acquire) & kinds;
         for (uint8_t k = 0; k < KINDS; ++k)
-            // Ze znakiem: znacznik zapisany przez zadanie po odczycie now (wynik ujemny) to aktywność, nie cisza.
-            if ((mask & (1u << k)) &&
-                static_cast<int32_t>(now - ms[k].load(std::memory_order_relaxed)) < static_cast<int32_t>(windowMs))
-                return false;
+            if ((mask & (1u << k)) && recent(now, ms[k].load(std::memory_order_relaxed), windowMs)) return false;
         return true;
     }
     void clear() { seen.store(0, std::memory_order_release); }
@@ -195,6 +201,9 @@ private:
     std::atomic<uint32_t> rxStartMs_{0};  // ostatni SetRx (millis): RSSI ustala się przez lora::RSSI_SETTLE_MS
     uint32_t cadUnconfirmed_ = 0;
     std::atomic<uint32_t> inFrameSinceMs_{0};
+    // Od kiedy odbiornik słyszy początki ramek (millis): start odbioru, koniec ramki albo wygaśnięcie preambuły
+    // bez ramki (inFrameSinceMs_ + FRAME_MAX_MS). Dla rssiMayHideFrame, czytane bez blokady.
+    std::atomic<uint32_t> hearingSinceMs_{0};
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;
     Activity activity_;

@@ -35,6 +35,11 @@ static_assert(FOFF_MAX_HZ == 50000, "tekst błędu FOFF");
 static_assert(EMC_PERIOD_FACTOR == radiolink::DEBT_FACTOR + 1, "EMC_PERIOD_FACTOR");
 // Dług ciszy po nadaniu przez txMs (radio.md, "Dostęp do kanału", punkt 2).
 constexpr uint32_t debtForTxMs(uint32_t txMs) { return txMs * radiolink::DEBT_FACTOR; }
+// Termin HACK (200 ms od końca DATA, wici-link.md) i część jego czasu, której nie widzi zegar pętli: start TCXO
+// przed SetTx po CAD (układ w STDBY_RC, 5 ms) i opóźnienie próbki odbioru względem RxDone (receivedMs to czas
+// próbki; zadanie odbioru próbkuje co takt, przy zajętej blokadzie później; zapas jak okres próbek RSSI, 5 ms).
+constexpr uint32_t HACK_DEADLINE_MS = 200;
+constexpr uint32_t HACK_UNSEEN_MS = 10;
 
 bool validRawHack(const uint8_t* frame, size_t length) {
     // A pairwise-tagged WICI-Link v2 HACK; the tags themselves are checked by the caller.
@@ -360,10 +365,13 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     const uint32_t txMs = radio_.frameAirMs(length);
     // Include room for CAD, SPI and RX re-arm; a late callback must not start
     // a HACK that cannot meet the deadline. Hardware timing still needs D21.
-    if (txMs >= 200 || millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
+    if (txMs + HACK_UNSEEN_MS >= HACK_DEADLINE_MS) { ++hack_.late; return false; }
+    // Ostatnia chwila na SetTx: później HACK skończyłby się po terminie.
+    const uint32_t lastStartMs = HACK_DEADLINE_MS - txMs - HACK_UNSEEN_MS;
+    if (millis() - receivedMs > HACK_DEADLINE_MS - txMs - 20) { ++hack_.late; return false; }
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
     if (!lock.held()) { refuseHack(HACK_LOCK); return false; }
-    if (millis() - receivedMs > 200 - txMs - 20) { ++hack_.late; return false; }
+    if (millis() - receivedMs > HACK_DEADLINE_MS - txMs - 20) { ++hack_.late; return false; }
     const uint32_t remaining = debtRemainingMs();
     const radiolink::TxPrep prepared = radio_.prepareTx(frame, length);
     if (prepared != radiolink::TxPrep::Ready) {
@@ -373,7 +381,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     }
     rxMode_ = RxMode::NONE;
     const radiolink::Cad cad = radio_.cad();
-    if (cad != radiolink::Cad::Free || millis() - receivedMs > 200 - txMs) {
+    if (cad != radiolink::Cad::Free || millis() - receivedMs > lastStartMs) {
         enterRx(RxMode::LINK, 0);
         if (cad != radiolink::Cad::Free) refuseHack(HACK_CAD);
         else ++hack_.late;
@@ -389,7 +397,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         return false;
     }
     debtPending_ = true;
-    if (millis() - receivedMs > 200 - txMs) {
+    if (millis() - receivedMs > lastStartMs) {
         // The conservative journal reservation can remain; no radio time was
         // used, so the pre-existing RAM debt remains the actual lower bound.
         enterRx(RxMode::LINK, 0);
@@ -403,7 +411,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         hack_.lastMs = endMs;
         if (endMs > hack_.maxMs) hack_.maxMs = endMs;
         hack_.sumMs += endMs;
-        if (endMs > 200) ++hack_.over;
+        if (endMs > HACK_DEADLINE_MS) ++hack_.over;
     } else refuseHack(HACK_TX);
     diagLine("{\"hack\":\"%s\",\"len\":%u,\"end_ms\":%lu}\n", sent ? "sent" : "tx error",
              static_cast<unsigned>(length), static_cast<unsigned long>(endMs));
@@ -840,10 +848,8 @@ const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
 
 void Bench::startCca(uint32_t now, bool first) {
     txState_ = TxState::CCA;
-    if (first) {
-        ccaFirstMs_ = now;
-        ccaRssiIgnored_ = false;
-    }
+    if (first) ccaFirstMs_ = now;
+    ccaRssiIgnored_ = false;  // liczy się tylko CCA, po którym ramka wyszła (rssi_ignored)
     ccaStartMs_ = now;
     ccaCheckMs_ = now;
     ccaFrames_ = link_.rxOk + link_.rxBad;

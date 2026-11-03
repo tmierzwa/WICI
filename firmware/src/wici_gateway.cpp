@@ -33,7 +33,6 @@ bool Root::begin(uint16_t epoch) {
     // always reports) gives the laptop the echo or the refusal. Refusing it
     // here would let the laptop send the same envelope twice.
     pending_ = downPending_ = unsentFloodValid_ = false;
-    downFailures_ = 0;
     return ready_ = keyReady_ && wici_epoch::sign(signingPrivate_, signingPublic_, network_, own_, epoch, epochSignature_) &&
                     routes_.begin() && flood_.begin(network_) &&
                     sequence_.begin(network_, own_) &&
@@ -86,7 +85,7 @@ void Root::setUsbOpen(bool open) {
         // A downlink already handed to the radio stays pending until its TX
         // result; the laptop hears it only if the port is open again by then.
         pending_ = downPending_ = false;
-        downFailures_ = 0;
+        routes_.clearDownFailures();
         const uint8_t* ignored = nullptr;
         size_t length = 0;
         while (port_.peek(ignored, length)) port_.pop();
@@ -98,12 +97,16 @@ Event Root::radio(const uint8_t* wire, size_t length, uint32_t receivedMs) {
     wici_link::Frame frame;
     if (!ready() || !port_.open() || !wici_link::decode(key_, network_, wire, length, frame) ||
         (frame.destination != own_ && frame.destination != wici_link::BROADCAST) ||
-        frame.source == own_ || !port_.send(wire, length)) return Event::REJECTED;
+        frame.source == own_) return Event::REJECTED;
+    // The HACK for the pending downward frame counts even when the KISS
+    // buffer is full: it is authenticated, and missing it would count a
+    // delivered frame as a failure (and in time forget a working route).
     if (downPending_ && frame.type == wici_link::Type::HACK &&
         frame.source == downNext_ && frame.destination == own_ && frame.sequence == downSequence_) {
         downPending_ = false;
-        downFailures_ = 0;
+        routes_.downDelivered(downRecipient_, downNext_);
     }
+    if (!port_.send(wire, length)) return Event::REJECTED;
     if (frame.type == wici_link::Type::DATA && frame.destination == own_ &&
         (frame.flags & wici_link::ACKREQ)) {
         pending_ = true;
@@ -163,14 +166,7 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
     if (downPending_ && nowMs - downSentMs_ < wici_link::HACK_WAIT_MS) return Event::REJECTED;
     if (downPending_) {
         downPending_ = false;
-        if (failureRecipient_ != downRecipient_) {
-            failureRecipient_ = downRecipient_;
-            downFailures_ = 0;
-        }
-        if (++downFailures_ >= 3) {
-            if (!routes_.forget(downRecipient_, downNext_)) return Event::REJECTED;
-            downFailures_ = 0;
-        }
+        if (!routes_.downFailed(downRecipient_, downNext_)) return Event::REJECTED;
     }
     const uint16_t recipient = get16(frame.payload + 3);
     const uint16_t next = routes_.down(recipient);

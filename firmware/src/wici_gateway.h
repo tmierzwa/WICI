@@ -81,8 +81,6 @@ private:
     size_t outboundLength_ = 0, originalLength_ = 0;
     bool outboundBroadcast_ = false, downPending_ = false;
     uint16_t downRecipient_ = 0, downNext_ = 0, downSequence_ = 0;
-    uint16_t failureRecipient_ = 0;
-    uint8_t downFailures_ = 0;
     uint32_t downSentMs_ = 0;
     uint16_t pendingSource_ = 0, pendingSequence_ = 0;
     uint16_t pendingSender_ = 0, pendingVia_ = 0;

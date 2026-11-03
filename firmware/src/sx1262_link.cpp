@@ -272,7 +272,8 @@ radiolink::Cad LinkDriver::cad() {
     if (first != radiolink::Cad::Busy) return first;
     const radiolink::Cad second = cadOnce();
     if (second == radiolink::Cad::Free) ++cadUnconfirmed_;
-    return second;
+    // Błąd drugiego CAD nie obala pierwszego wykrycia: kanał zajęty (odroczenie), a nie utrata datagramu.
+    return second == radiolink::Cad::Error ? radiolink::Cad::Busy : second;
 }
 
 radiolink::Cad LinkDriver::cadOnce() {
@@ -355,24 +356,31 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
     rxActive_ = radio_.status().mode() == MODE_RX;
     if (!rxActive_) rxen(false);
     headerSeen_ = false;     // flagi skasowane: start odbioru liczy się jak próbka
-    lastSampleMs_ = rxStartMs_ = millis();
+    const uint32_t now = millis();
+    lastSampleMs_ = now;
+    rxStartMs_.store(now, std::memory_order_relaxed);
+    hearingSinceMs_.store(now, std::memory_order_relaxed);
     return rxActive_;
 }
 
 bool LinkDriver::frameInProgress(uint32_t now) const {
-    // Różnica ze znakiem: czas zapisany przez zadanie po odczycie millis() przez wołającego daje wynik ujemny,
-    // czyli ramka w toku.
-    return inFrame_ && static_cast<int32_t>(now - inFrameSinceMs_) < static_cast<int32_t>(FRAME_MAX_MS);
+    // Czas zapisany przez zadanie po odczycie millis() przez wołającego to też ramka w toku (recent).
+    return inFrame_ && recent(now, inFrameSinceMs_.load(std::memory_order_relaxed), FRAME_MAX_MS);
 }
 
 void LinkDriver::noteActivity(uint16_t irq, uint32_t now) {
     // Preambuła bez ramki (jak w receivingFrame): po czasie najdłuższej ramki stan nieaktualny, więc następny
     // początek ramki liczy się od nowa (inaczej ochrona ramki w toku w recentActivity już by nie działała).
-    if (inFrame_ && !frameInProgress(now)) inFrame_ = false;
+    // Odbiornik słyszy znów od chwili wygaśnięcia, nie od tej próbki (próbki co RSSI_SAMPLE_MS).
+    if (inFrame_ && !frameInProgress(now)) {
+        hearingSinceMs_.store(inFrameSinceMs_.load(std::memory_order_relaxed) + FRAME_MAX_MS, std::memory_order_relaxed);
+        inFrame_ = false;
+    }
     if (irq & IRQ_PREAMBLE_DETECTED) activity_.mark(Activity::PREAMBLE, now);
     if (irq & IRQ_HEADER_VALID) activity_.mark(Activity::HEADER, now);
     if (irq & IRQ_RX_END) {
         activity_.mark(Activity::FRAME, now);  // także ramka z błędem CRC albo nagłówka
+        hearingSinceMs_.store(now, std::memory_order_relaxed);
         inFrame_ = false;
     }
     // Początek ramki po końcu poprzedniej w tej samej próbce to już następna ramka.
@@ -542,11 +550,12 @@ bool LinkDriver::receivingFrame() {
     uint16_t irq = 0;
     if (!radio_.readIrq(irq)) return false;
     collectIrq(irq);
+    const uint32_t now = millis();
     if (irq & IRQ_RX_END) {  // ramka skończona: odbierze ją serviceRx (flag nie kasuje)
+        hearingSinceMs_.store(now, std::memory_order_relaxed);
         inFrame_ = false;
         return false;
     }
-    const uint32_t now = millis();
     noteActivity(irq, now);
     const uint16_t start = irq & IRQ_RX_START;
     // Jak próbka odbioru: tylko widziane flagi początku ramki.
@@ -579,17 +588,12 @@ bool LinkDriver::rssiMayHideFrame() {
     // Odbiornik nie słyszy początku ramki przed startem odbioru, w czasie odbioru innej ramki i w czasie
     // preambuły bez ramki. Ramka zaczęta wtedy trwa najwyżej FRAME_MAX_MS od końca tej ślepoty; ramkę
     // zaczętą później zdradza preambuła (słabszej niż wykrywa detektor nie widzi też próg RSSI).
-    // Bez blokady, jak recentActivity.
+    // Bez blokady, jak recentActivity. Preambuła wygasła, ale jeszcze nieskasowana przez próbkę, kończy ślepotę
+    // w inFrameSinceMs_ + FRAME_MAX_MS: tyle samo, ile zapisze potem noteActivity.
     const uint32_t now = millis();
-    uint32_t hearing = rxStartMs_.load(std::memory_order_relaxed);
-    const auto later = [&hearing](uint32_t t) {
-        if (static_cast<int32_t>(t - hearing) > 0) hearing = t;
-    };
-    if (activity_.seen.load(std::memory_order_acquire) & (1u << Activity::FRAME))
-        later(activity_.ms[Activity::FRAME].load(std::memory_order_relaxed));
     if (inFrame_.load(std::memory_order_relaxed))
-        later(inFrameSinceMs_.load(std::memory_order_relaxed) + FRAME_MAX_MS);  // w toku albo wygasła
-    return static_cast<int32_t>(now - hearing) < static_cast<int32_t>(FRAME_MAX_MS);
+        return recent(now, inFrameSinceMs_.load(std::memory_order_relaxed), 2 * FRAME_MAX_MS);
+    return recent(now, hearingSinceMs_.load(std::memory_order_relaxed), FRAME_MAX_MS);
 }
 
 int8_t LinkDriver::ccaThresholdDbm() const { return static_cast<int8_t>(noise_.threshold()); }
