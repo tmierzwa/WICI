@@ -14,7 +14,9 @@ authenticated envelope from the station (`contact`) sends its open intents at on
 delivered STATUS for the same (id, revision) is replaced by the newer one. A REPLY goes out only after the
 proof of every earlier REPLY of its id to that station: the station skips a REPLY with a lower `event` as late
 and proves it, so one overtaken would end as delivered without reaching the station. A repeated REQUEST gets the stored
-RECEIVED and the newest STATUS again.
+RECEIVED and the newest STATUS again. STATUS, REPLY and BULLETIN to a station off the trusted list are held
+(SENDABLE): they stay open and go on if the station is trusted again; RECEIVED, without content, still goes, so
+a quarantined message the duty officer approved stops being resent.
 
 The `event` of STATUS, REPLY and BULLETIN is max(last value of its counter + 1, seconds since 2026-01-01
 00:00 UTC + P), with counters per STATUS of an id, REPLY of an id and all BULLETIN (oprogramowanie.md,
@@ -33,6 +35,8 @@ import secrets
 from . import wzorzec
 
 RECEIVED, STATUS, REPLY, BULLETIN = 1, 2, 3, 4
+# Intents that may leave now; the others wait for the station to be trusted again (stanowisko-osp.md, „Wysyłka”).
+SENDABLE = f"(kind={RECEIVED} OR dest IN (SELECT source FROM trusted))"
 IN_FLIGHT = 4
 EPOCH_2026 = 1_767_225_600   # 2026-01-01 00:00 UTC
 MAX_EVENT = 2_147_483_647
@@ -190,7 +194,7 @@ class Wysylka:
             return
         # REPLY dopiero po dowodzie wcześniejszej REPLY tego id do tej stacji: stacja pomija i potwierdza
         # REPLY z niższym `event` jako spóźnioną, więc wyprzedzona zamknęłaby się bez doręczenia.
-        rows = db.execute("SELECT seq, dest, payload FROM outbox WHERE done=0 AND next_try<=? AND NOT "
+        rows = db.execute(f"SELECT seq, dest, payload FROM outbox WHERE done=0 AND next_try<=? AND {SENDABLE} AND NOT "
                           "(kind=3 AND EXISTS (SELECT 1 FROM outbox AS e WHERE e.done=0 AND e.dest=outbox.dest "
                           "AND e.kind=3 AND e.id=outbox.id AND e.seq<outbox.seq)) "
                           "ORDER BY kind > 2, seq LIMIT ?", (now, free + len(self.flight))).fetchall()

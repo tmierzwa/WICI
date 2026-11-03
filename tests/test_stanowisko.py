@@ -443,6 +443,27 @@ class SendingTest(StationTestCase):
     def waiting(self):
         return self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM outbox WHERE done=0").fetchone()[0])
 
+    def test_station_off_the_trusted_list_gets_only_received_until_trusted_again(self):
+        content = request()
+        self.deliver(self.STATION, content)
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        self.reception.call(lambda s: s.remove_trusted(self.STATION))
+        before = len(self.sent)
+        self.status(mid, revision, 2)
+        self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, mid, revision, "jedziemy", self.now))
+        self.now += 3600
+        self.tick()
+        self.assertEqual(self.sent[before:], [])   # held, not failed: no retries counted
+        self.assertEqual(self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*), sum(attempts) FROM outbox WHERE done=0").fetchone()), (2, 0))
+        self.deliver(self.STATION, content)   # the repeat still gets its RECEIVED, without content
+        self.assertEqual(self.kinds()[before:], [wysylka.RECEIVED])
+        self.reception.call(lambda s: s.add_trusted(self.STATION, self.KEY, ("dyzurny-1", "dyzurny-2")))
+        self.tick()
+        self.tick()
+        self.assertEqual(self.kinds()[before + 1:], [wysylka.STATUS, wysylka.REPLY])
+        self.assertEqual(self.waiting(), 0)
+
     def test_received_goes_out_after_commit_and_the_intent_ends_on_delivered(self):
         self.accepted()
         self.assertEqual(self.committed, [True])
@@ -1537,6 +1558,14 @@ class PanelTest(StationTestCase):
         self.assertEqual(self.log()[-2:], [("dyzurny-1", "numer_przepiety"), ("dyzurny-1", "zaufana_dodana")])
         with self.assertRaisesRegex(ValueError, "klucz koperty"):
             self.d.trust({"card": dict(third, id=6, x25519="00" * 32), "fingerprint": third["fingerprint"], **second})
+
+    def test_messages_held_for_a_removed_station_are_shown_apart(self):
+        r = self.report()
+        self.d.untrust({"source": r["source"]})
+        self.reception.call(lambda s: self.reception.wysylka.status(s, self.STATION, r["id"], r["revision"], 2, self.now))
+        view = self.d.view()
+        self.assertEqual((view["node"]["waiting"], view["node"]["held"], view["node"]["oldest_s"]), (0, 1, None))
+        self.assertEqual((view["handover"]["unsent"], view["handover"]["held"]), (0, 1))
 
     def test_rebind_rolls_back_as_a_whole(self):
         second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}

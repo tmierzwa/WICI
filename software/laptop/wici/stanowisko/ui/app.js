@@ -485,6 +485,7 @@ var VIEWS = {
         ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
           info ? (info.radio_ok ? "good" : "bad") : ""],
         ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting],
+        ["Wstrzymane: stacja poza listą zaufanych", n.held],
         ["W tym przekazane przez przekaźnik, bez potwierdzenia stacji", n.forwarded], ["Najdłużej czekająca", ago(n.oldest_s)]]),
       row(button("Ogłoś adres odbiorcy", "", function () { action("/api/operator/announce"); }))));
   },
@@ -494,7 +495,7 @@ var VIEWS = {
     var path = el("input", {placeholder: "np. /media/drugi albo E:\\"});
     view.appendChild(card("Przekazanie zmiany", "",
       facts([["Otwarte zgłoszenia", h.open], ["Stan 4 bez potwierdzenia skierowania pomocy"].concat(count(h.forwarded_unconfirmed)),
-        ["Niewysłane wiadomości", h.unsent], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
+        ["Niewysłane wiadomości", h.unsent], ["Wstrzymane do stacji poza listą zaufanych", h.held], ["Kwarantanna"].concat(count(h.quarantine)), ["Alarmy przejęcia stacji"].concat(count(h.removed_alarm)),
         ["Alarm odrzuconych kopert", h.envelope_alarm ? "TAK" : "nie", h.envelope_alarm ? "bad" : "good"],
         ["Najnowsza kopia na dysku komputera", state.copy_age_s == null ? "brak" : ago(state.copy_age_s) + " temu", state.copy_age_s == null ? "bad" : ""],
         ["Cisza radiowa", state.silence ? state.silence.organ + ", " + state.silence.kiedy : "nie"],

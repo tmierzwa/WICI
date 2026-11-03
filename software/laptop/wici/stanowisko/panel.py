@@ -583,7 +583,9 @@ class Dyzur:
                         "override": self.p.bearer_override.get(s)}
                        for (s,) in db.execute("SELECT source FROM trusted")]
             waiting, oldest, forwarded = db.execute(
-                "SELECT count(*), min(first_try), sum(forwarded > 0) FROM outbox WHERE done=0").fetchone()
+                f"SELECT count(*), min(first_try), sum(forwarded > 0) FROM outbox WHERE done=0 AND {wysylka.SENDABLE}"
+            ).fetchone()
+            held = db.execute(f"SELECT count(*) FROM outbox WHERE done=0 AND NOT {wysylka.SENDABLE}").fetchone()[0]
             log = [{"at": a, "account": u, "op": o, "detail": d,
                     "station": names[s][0] if s in names else "", "number": short_number(m) if m else ""}
                    for a, u, o, d, s, m in db.execute(
@@ -598,8 +600,8 @@ class Dyzur:
             closed = {"silence": json.loads(silence) if silence else None,
                       "closed": wysylka.setting(db, "zamkniete", None),
                       "copies_purged": wysylka.setting(db, "kopie_usuniete", None)}
-            return reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, log, bulletins, closed
-        reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, log, bulletins, closed = self.p.call(read)
+            return reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, held, log, bulletins, closed
+        reports, tests, quarantine, removed, trusted, waiting, oldest, forwarded, held, log, bulletins, closed = self.p.call(read)
         # Ramki potwierdzone stacji HACK bez przyjęcia (stanowisko-osp.md, „Przyjęcie koperty WICI-Link”), z nazwą
         # stacji po numerze w sieci; numer bez uwierzytelnienia koperty to tylko deklaracja, więc bez nazwy.
         envelopes = self.p.envelope_alarm()
@@ -610,14 +612,14 @@ class Dyzur:
         return {
             "reports": reports, "tests": tests, "quarantine": quarantine, "removed": removed, "trusted": trusted,
             "bearers": list(self.stos.bindings) if isinstance(self.stos, bearers.Bearers) else [],
-            "node": {**node, "in_flight": in_flight, "waiting": waiting - in_flight if waiting else 0,
-                     "forwarded": forwarded or 0,
+            "node": {**node, "in_flight": in_flight, "waiting": max((waiting or 0) - in_flight, 0),
+                     "forwarded": forwarded or 0, "held": held,
                      "oldest_s": None if oldest is None else now - oldest,
                      "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
             "saved": self.p.save_error is None and self.p.journal_error is None, "log": log, "bulletins": bulletins, "envelopes": envelopes, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
-                         "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed),
+                         "unsent": waiting or 0, "held": held, "quarantine": len(quarantine), "removed_alarm": len(removed),
                          "envelope_alarm": envelopes["active"]},
         }
 
