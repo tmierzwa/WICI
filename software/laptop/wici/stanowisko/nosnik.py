@@ -11,6 +11,8 @@ in every wrap, `version` 1 in the account file and a version byte in every seale
     baza/kopia-a, baza/kopia-b             the database in memory, sealed after every change (two files in
                                            turn, each replaced atomically after fsync); the header carries the
                                            station password wrap, so a lost account file does not lose the data
+    baza/przyjecia-<gen>                   intake journal: WICI-Link frames admitted after snapshot <gen> was
+                                           taken, each appended with fsync before its HACK; replayed on start
     tozsamosc                              the main receiver identity, sealed with the data key
     siec/                                  Reticulum and LXMF storage (paths, ratchets of the receiver)
 
@@ -27,6 +29,7 @@ from pathlib import Path
 from .. import configdoc, database, passwords, syscrypto
 
 STATION_WORDS = BACKUP_WORDS = 6
+JOURNAL_PREFIX, JOURNAL_MAGIC = "przyjecia-", b"WICI-PRZYJECIA\n"
 OFFICERS_MAX = 20
 IDENTITY_AAD = b"wici tozsamosc odbiorcy"
 CARD_AAD = b"wici karta odbiorcy"
@@ -63,6 +66,9 @@ class Nosnik:
         self.kit = database.Kit(self.root / "klucze")
         self.base, self.network = self.root / "baza", self.root / "siec"
         self.gen, self.last = 0, None   # pokolenie i plik najnowszej migawki
+        self.journal_id = None           # znacznik migawki, za którą idzie dziennik przyjęć tego pokolenia
+        self.journal_files = {}          # pokolenie -> [plik dopisywany, nagłówek, liczba rekordów]
+        self.journal_tails = {}          # pokolenie -> (nagłówek, liczba rekordów) plików przeczytanych na starcie
 
     def exists(self):
         return self.kit.exists() or database.has_copies(self.base) or any(
@@ -168,23 +174,133 @@ class Nosnik:
         newest = max(found, key=lambda c: c.gen, default=None)
         self.gen = newest.gen if newest else 0
         self.last = newest.path.name if newest else None
+        self.journal_id = newest.journal if newest else None
         return newest.body if newest else None
 
-    def save(self, key, body):
-        """Seal body and replace the older of the two files with it (fsync, then rename)."""
+    def save(self, key, body, gen=None, journal=None):
+        """Seal body and replace the older of the two files with it (fsync, then rename). gen and journal: the
+        generation and journal mark chosen when the body was taken (Przyjecie); else the next generation and a
+        new mark, so no older intake journal is ever replayed on top of this body."""
         self.base.mkdir(exist_ok=True)
         try:
             recovery = self.kit.recovery()
         except StorageError:
             recovery = None
-        header = json.dumps({"gen": self.gen + 1, "history": [], "at": database._now(), "recovery": recovery})
+        gen = self.gen + 1 if gen is None else gen
+        journal = os.urandom(8).hex() if journal is None else journal
+        if gen <= self.gen:
+            raise StorageError(f"pokolenie migawki {gen} nie jest nowsze niż {self.gen}")
+        header = json.dumps({"gen": gen, "history": [], "at": database._now(), "recovery": recovery,
+                             "journal": journal})
         head = database.MAGIC + len(header.encode()).to_bytes(4, "big") + header.encode()
         target = database._other(self.last)
         tmp = self.base / (target + ".tmp")
         database._write_durable(tmp, head + syscrypto.seal(key, body, head))
         os.replace(tmp, self.base / target)
         database._fsync_dir(self.base)
-        self.gen, self.last = self.gen + 1, target
+        self.gen, self.last, self.journal_id = gen, target, journal
+
+    # ---- dziennik przyjęć ------------------------------------------------------------------------
+    # Plik przyjecia-<gen> zaczyna się od JOURNAL_MAGIC i znacznika migawki gen (8 B); dalej rekordy: długość (4 B)
+    # i zapieczętowana treść z AAD = nagłówek pliku + numer rekordu, więc rekordu nie da się przenieść ani
+    # przestawić. Plik o numerze wczytanej migawki należy do niej tylko przy zgodnym znaczniku: dziennik sprzed
+    # odtworzenia albo nowej tożsamości (inna migawka o tym numerze) nie wraca.
+
+    def _journal_path(self, gen):
+        return self.base / f"{JOURNAL_PREFIX}{gen}"
+
+    def journal_append(self, key, gen, journal, payload):
+        """Append one record after the snapshot (gen, journal) with fsync; True on return means durable."""
+        entry = self.journal_files.get(gen)
+        if entry is None:
+            path, head = self._journal_path(gen), JOURNAL_MAGIC + bytes.fromhex(journal)
+            tail = self.journal_tails.pop(gen, None)
+            if tail is not None:   # dziennik wczytanej migawki: dalsze rekordy za odtworzonymi
+                if tail[0] != head:
+                    raise StorageError(f"dziennik przyjęć {path.name} należy do innej migawki")
+                f, count = path.open("ab"), tail[1]
+            else:
+                f, count = path.open("xb"), 0
+                f.write(head)
+                f.flush()
+                database._fsync(f.fileno())
+                database._fsync_dir(self.base)
+            entry = self.journal_files[gen] = [f, head, count]
+        f, head, count = entry
+        sealed = syscrypto.seal(key, payload, head + count.to_bytes(4, "big"))
+        f.write(len(sealed).to_bytes(4, "big") + sealed)
+        f.flush()
+        database._fsync(f.fileno())
+        entry[2] = count + 1
+
+    def journal_records(self, key):
+        """Records to replay on the loaded snapshot, oldest first. A broken last record of a file (a power cut
+        during its append, before its HACK) is cut off; any other damage raises StorageError."""
+        records = []
+        for gen, path in self._journal_paths():
+            if gen < self.gen:
+                continue
+            raw = path.read_bytes()
+            head = raw[:len(JOURNAL_MAGIC) + 8]
+            if len(raw) < len(head) or len(head) < len(JOURNAL_MAGIC) + 8:
+                path.unlink()   # zanik przy zakładaniu pliku: jeszcze bez rekordów
+                continue
+            if not head.startswith(JOURNAL_MAGIC):
+                raise StorageError(f"dziennik przyjęć {path.name} nieczytelny: odtwórz nośnik z kopii")
+            if gen == self.gen and head[len(JOURNAL_MAGIC):].hex() != self.journal_id:
+                path.unlink()   # dziennik innej migawki o tym numerze (sprzed odtworzenia): nie wróci nigdy
+                continue
+            at, count, good = len(head), 0, len(head)
+            while at < len(raw):
+                n = int.from_bytes(raw[at:at + 4], "big")
+                body = raw[at + 4:at + 4 + n]
+                try:
+                    if len(raw) - at < 4 or len(body) != n:
+                        raise syscrypto.CryptoError("ucięty rekord")
+                    payload = syscrypto.open_(key, body, head + count.to_bytes(4, "big"))
+                except syscrypto.CryptoError:
+                    if at + 4 + n < len(raw):
+                        raise StorageError(f"dziennik przyjęć {path.name} uszkodzony: odtwórz nośnik z kopii")
+                    break
+                records.append(payload)
+                at, count, good = at + 4 + n, count + 1, at + 4 + n
+            if good < len(raw):
+                with path.open("r+b") as f:   # następne rekordy idą za ostatnim całym
+                    f.truncate(good)
+                    database._fsync(f.fileno())
+            self.journal_tails[gen] = (head, count)
+        return records
+
+    def journal_prune(self, below):
+        """Remove the journals of snapshots older than `below`: their records are in snapshot `below`."""
+        for gen, path in self._journal_paths():
+            if gen < below:
+                entry = self.journal_files.pop(gen, None)
+                if entry is not None:
+                    entry[0].close()
+                path.unlink(missing_ok=True)
+
+    def journal_close(self):
+        for entry in self.journal_files.values():
+            entry[0].close()
+        self.journal_files.clear()
+        self.journal_tails.clear()
+
+    def journal_pending(self, key):
+        """True when the last session ended without its final snapshot and left admitted frames to replay."""
+        self.load(key)
+        try:
+            return bool(self.journal_records(key))
+        finally:
+            self.journal_tails.clear()
+
+    def _journal_paths(self):
+        try:
+            found = [(int(p.name[len(JOURNAL_PREFIX):]), p) for p in self.base.iterdir()
+                     if p.name.startswith(JOURNAL_PREFIX) and p.name[len(JOURNAL_PREFIX):].isdigit()]
+        except FileNotFoundError:
+            return []
+        return sorted(found)
 
     # ---- tożsamość odbiorcy ----------------------------------------------------------------------
 

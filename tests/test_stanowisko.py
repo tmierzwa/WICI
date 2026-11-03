@@ -50,13 +50,19 @@ def medium_in(root, officers=2, identity=None):
 
 
 def durable(medium, key, sql, args=()):
-    """Query the newest snapshot on the medium, as a restarted application would see it."""
-    body = nosnik.Nosnik(medium.root).load(key)
-    if body is None:
+    """Query the medium as a restarted application would see it: the newest snapshot and the receptions of the
+    intake journal admitted again, on a copy of the medium, so the running application is not touched."""
+    if nosnik.Nosnik(medium.root).load(key) is None:
         return None
-    with contextlib.closing(sqlite3.connect(":memory:")) as db:
-        db.deserialize(body)
-        return db.execute(sql, args).fetchone()
+    with tempfile.TemporaryDirectory() as tmp:
+        copy = Path(tmp) / "nosnik"
+        shutil.copytree(medium.root, copy, ignore=shutil.ignore_patterns("*.tmp"))
+        restarted = przyjecie.Przyjecie(nosnik.Nosnik(copy, FAST), key, lambda target, content: None,
+                                        lambda message: None, clock=lambda: 4_000_000_000.0, log=lambda line: None)
+        try:
+            return restarted.call(lambda store: store.db.execute(sql, args).fetchone())
+        finally:
+            restarted.stop(save=False)
 
 
 class ConfigTest(unittest.TestCase):
@@ -213,7 +219,8 @@ class StationTestCase(unittest.TestCase):
         return Sent(self.result)
 
     def tick(self):
-        self.reception.call(lambda s: self.reception.tick())
+        # A tick and the writes it started (snapshot, copy), so the test sees their result.
+        self.reception.call(lambda s: (self.reception.tick(), self.reception.flush()))
 
     def deliver(self, source, content):
         self.reception.deliver(source, content)
@@ -1337,8 +1344,8 @@ class PanelTest(StationTestCase):
         # Dane z przyjecie.envelope_alarm (test_stanowisko_wici); tu tylko to, że panel je pokazuje i przekazuje zmianie.
         self.assertFalse(self.d.view()["envelopes"]["active"])
         frame = lambda sender, rest: bytes([0]) + sender.to_bytes(2, "big") + rest
-        self.reception.call(lambda s: self.reception._count_unauthenticated(100, frame(9, bytes(20)), "unknown station number"))
-        self.reception.call(lambda s: self.reception._set_aside(100, frame(4, bytes(30)), "counter outside replay window"))
+        self.reception.call(lambda s: self.reception._count_unauthenticated(100, frame(9, bytes(20)), "unknown station number", 0))
+        self.reception.call(lambda s: self.reception._set_aside(100, frame(4, bytes(30)), "counter outside replay window", 0))
         view = self.d.view()
         e = view["envelopes"]
         self.assertTrue(e["active"] and view["handover"]["envelope_alarm"])
@@ -1629,8 +1636,8 @@ class AnnounceBulletinTest(StationTestCase):
     def test_sending_bookkeeping_does_not_force_a_snapshot(self):
         saves = []
         real = self.medium.save
-        self.medium.save = lambda key, body: (saves.append(1), real(key, body))
-        self.deliver(self.STATION, request())                  # przyjęcie: migawka przed RECEIVED
+        self.medium.save = lambda *args: (saves.append(1), real(*args))
+        self.deliver(self.STATION, request())                  # przyjęcie: dziennik przyjęć przed RECEIVED
         before = len(saves)
         self.tick()                                            # DELIVERED: tylko ewidencja
         self.tick()

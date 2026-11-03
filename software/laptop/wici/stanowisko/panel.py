@@ -390,8 +390,10 @@ class Dyzur:
             return {"account": account, "password": password}
 
         def change(store):
-            # W wątku bazy, więc kopia co 5 min nie wchodzi w środek przepakowania. Hasło wraca zawsze, także
-            # gdy kopie się nie przepakują: nośnik ma już nowe opakowanie, a bez hasła nie otworzy się po restarcie.
+            # W wątku bazy, po zakończeniu zapisów w toku, więc migawka ani kopia co 5 min nie wchodzi w środek
+            # przepakowania. Hasło wraca zawsze, także gdy kopie się nie przepakują: nośnik ma już nowe
+            # opakowanie, a bez hasła nie otworzy się po restarcie.
+            self.p.flush()
             password = self.medium.new_station_password(self.key, store.db.serialize())
             failed = None
             if self.p.copies is not None:
@@ -463,7 +465,8 @@ class Dyzur:
             copies.append(kopie.Kopie(Path(_text(body, "path", 1000)) / "wici-kopie"))
 
         def run(store):
-            # W wątku bazy: kopia co 5 min nie powstanie między usunięciem a wpisem.
+            # W wątku bazy, po zakończeniu zapisów w toku: kopia co 5 min nie powstanie między usunięciem a wpisem.
+            self.p.flush()
             failed = [name for copy in copies for name in copy.remove()]
             with store.db:
                 store.db.execute("INSERT OR REPLACE INTO settings VALUES('kopie_usuniete', ?)", (self.clock(),))
@@ -578,7 +581,7 @@ class Dyzur:
                      "oldest_s": None if oldest is None else now - oldest,
                      "diagnostics": self.wezel is not None, "info": self.wezel.status() if self.wezel else None},
             "recovery": self.p.recovery, "copy_age_s": None if self.p.last_copy_at is None else now - self.p.last_copy_at,
-            "saved": self.p.save_error is None, "log": log, "bulletins": bulletins, "envelopes": envelopes, **closed,
+            "saved": self.p.save_error is None and self.p.journal_error is None, "log": log, "bulletins": bulletins, "envelopes": envelopes, **closed,
             "handover": {"open": len(open_reports), "forwarded_unconfirmed": sum(r["state"] == 4 for r in reports),
                          "unsent": waiting or 0, "quarantine": len(quarantine), "removed_alarm": len(removed),
                          "envelope_alarm": envelopes["active"]},
@@ -586,7 +589,7 @@ class Dyzur:
 
     def health(self):
         node = self.stos.status(self.clock()) if self.stos is not None else {"online": False, "dropped": {}}
-        return {"app": "wici-stanowisko", "version": VERSION, "saved": self.p.save_error is None,
+        return {"app": "wici-stanowisko", "version": VERSION, "saved": self.p.save_error is None and self.p.journal_error is None,
                 "recovery": self.p.recovery, "online": node["online"], "since_rx": node.get("since_rx"),
                 "copy_age_s": None if self.p.last_copy_at is None else self.clock() - self.p.last_copy_at,
                 "counts": dict(self.p.counts), "dropped": node.get("dropped", {}),

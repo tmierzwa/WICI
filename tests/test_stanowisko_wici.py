@@ -15,8 +15,8 @@ import time
 import unittest
 import unittest.mock
 
-from tests.test_stanowisko import OnlineLink, StationTestCase, durable, received_for, request
-from wici.stanowisko import nosnik, przyjecie, wysylka, zamkniecie
+from tests.test_stanowisko import FAST, OnlineLink, StationTestCase, durable, received_for, request
+from wici.stanowisko import nosnik, przyjecie, rekey, wici_stos, wysylka, zamkniecie
 
 HAS_CRYPTO = importlib.util.find_spec("cryptography") is not None
 
@@ -187,13 +187,17 @@ class WiciAdmissionTest(StationTestCase):
         self.assertNotIsInstance(raised.exception, self.inbox.PermanentRejection)
         self.assertEqual(self.admit(self.seal(200)[0]), "complete")
         old = self.seal(200 - self.envelope.WINDOW)[0]
-        with unittest.mock.patch.object(self.medium, "save", side_effect=OSError("medium removed")):
+        removed = OSError("medium removed")
+        with unittest.mock.patch.object(self.medium, "save", side_effect=removed), \
+                unittest.mock.patch.object(self.medium, "journal_append", side_effect=removed):
             with self.assertRaises(OSError):
                 self.admit(self.seal(201)[0])
             # A permanent rejection that cannot be stored durably is no HACK either.
             with self.assertRaises(nosnik.StorageError):
                 self.admit(old)
         self.assertEqual(self.admit(old), "rejected")   # the retry is stored and HACKed
+        self.assertEqual(durable(self.medium, self.key, "SELECT count FROM env_rejected"), (1,))
+        self.reception.call(lambda s: self.reception.tick())   # the first count reaches the medium with a snapshot
         self.assertEqual(durable(self.medium, self.key, "SELECT count FROM env_rejected"), (2,))
 
     def test_set_aside_keeps_the_first_frames_and_counts_the_rest(self):
@@ -203,10 +207,10 @@ class WiciAdmissionTest(StationTestCase):
         with unittest.mock.patch.object(przyjecie, "REJECTED_MAX", 3):
             for frame in frames:
                 self.assertEqual(self.admit(frame), "rejected")
-        rows = self.rejected()["rows"]
-        self.assertEqual([row["frame"] for row in rows], [f.hex() for f in reversed(frames[:3])])
-        self.reception.call(lambda s: self.reception.tick())
-        self.assertEqual(durable(self.medium, self.key, "SELECT sender, count FROM env_rejected_overflow"), (4, 1))
+            rows = self.rejected()["rows"]
+            self.assertEqual([row["frame"] for row in rows], [f.hex() for f in reversed(frames[:3])])
+            # A restart admits the journal again under the same limits.
+            self.assertEqual(durable(self.medium, self.key, "SELECT sender, count FROM env_rejected_overflow"), (4, 1))
 
     def test_frames_over_the_sender_cap_are_counted_not_stored(self):
         self.assertEqual(self.admit(self.seal(500)[0]), "complete")
@@ -216,9 +220,8 @@ class WiciAdmissionTest(StationTestCase):
             with unittest.mock.patch.object(self.medium, "save", wraps=self.medium.save) as save:
                 self.assertEqual(self.admit(self.seal(2)[0]), "rejected")   # HACK, bytes not kept
             save.assert_not_called()
-        self.reception.call(lambda s: self.reception.tick())   # the count reaches the medium with a snapshot
-        self.assertEqual(durable(self.medium, self.key, "SELECT sender, count FROM env_rejected_overflow"), (4, 1))
-        self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM env_rejected"), (2,))
+            self.assertEqual(durable(self.medium, self.key, "SELECT sender, count FROM env_rejected_overflow"), (4, 1))
+            self.assertEqual(durable(self.medium, self.key, "SELECT count(*) FROM env_rejected"), (2,))
         summary = self.rejected()
         self.assertEqual((summary["frames"], summary["total"], summary["overflow"][0]["count"]), (2, 3, 1))
         self.assertEqual(self.reception.rejected, {k: summary[k] for k in ("frames", "total", "newest")})
@@ -280,6 +283,116 @@ class WiciAdmissionTest(StationTestCase):
             for counter in (60, 61, 62):
                 self.assertEqual(self.admit(self.seal(counter)[0]), "complete")
         self.assertEqual((card.call_count, identity.call_count), (1, 1))
+
+    # ---- dziennik przyjęć (E6) -----------------------------------------------------------------------
+
+    def crash(self):
+        """A power cut: the database thread ends without its last snapshot, and no write still pending lands."""
+        with unittest.mock.patch.object(self.medium, "save", side_effect=OSError("power cut")):
+            self.reception.stop(save=False)
+        self.reception = self.open()
+
+    def received(self):
+        return self.reception.call(lambda s: s.db.execute("SELECT count(*) FROM received").fetchone()[0])
+
+    def journals(self):
+        return sorted(self.medium.base.glob(nosnik.JOURNAL_PREFIX + "*"))
+
+    def test_admitted_frames_survive_a_power_cut_through_the_intake_journal(self):
+        # The HACK waits for one record in the journal, not for a snapshot of the whole database.
+        halves = self.seal(8, request(text="x" * 96), max_payload=153)
+        with unittest.mock.patch.object(self.medium, "save", wraps=self.medium.save) as save:
+            self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+            self.assertEqual(self.admit(halves[0]), "partial")
+        save.assert_not_called()
+        self.crash()
+        self.assertEqual(self.received(), 1)
+        self.assertEqual(self.admit(self.seal(7)[0]), "duplicate")
+        self.assertEqual(self.admit(halves[1]), "complete")   # the first part came back from the journal
+        self.assertEqual(self.received(), 2)
+
+    def test_admission_does_not_wait_for_a_snapshot_being_written(self):
+        release, cut, real = threading.Event(), threading.Event(), self.medium.save
+
+        def slow(*args):
+            release.wait(10)
+            if cut.is_set():
+                raise OSError("power cut")
+            real(*args)
+        with unittest.mock.patch.object(self.medium, "save", side_effect=slow):
+            change = threading.Thread(target=lambda: self.assertRaises(
+                nosnik.StorageError, self.reception.action, "dyzurny-1", "logowanie"))
+            change.start()   # a change that waits for its snapshot, held in the writer
+            deadline = time.monotonic() + 5
+            while not self.reception.in_flight and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertTrue(self.reception.in_flight)
+            self.assertEqual(self.admit(self.seal(7)[0], timeout=wici_stos.HACK_BUDGET_S * 10), "complete")
+            cut.set()       # the power goes before that snapshot is on the medium
+            release.set()
+            change.join(10)
+            self.crash()
+        self.assertEqual(self.received(), 1)   # journaled after the snapshot that never landed
+
+    def test_clean_stop_leaves_no_journal(self):
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        self.assertTrue(nosnik.Nosnik(self.medium.root, FAST).journal_pending(self.key))
+        self.restart()
+        self.assertFalse(nosnik.Nosnik(self.medium.root, FAST).journal_pending(self.key))
+        self.assertEqual(self.received(), 1)
+
+    def test_journal_is_compacted_into_a_snapshot(self):
+        with unittest.mock.patch.object(przyjecie, "JOURNAL_RECORDS", 3):
+            for counter in range(10, 14):
+                self.assertEqual(self.admit(self.seal(counter)[0]), "complete")
+            self.tick()   # the snapshot that holds them, then older journals go
+        self.assertFalse(nosnik.Nosnik(self.medium.root, FAST).journal_pending(self.key))
+        self.assertLessEqual(len(self.journals()), 1)
+        self.crash()
+        self.assertEqual(self.received(), 4)
+
+    def test_cut_off_last_record_is_dropped_and_the_journal_goes_on(self):
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        self.reception.stop(save=False)
+        with self.journals()[-1].open("ab") as f:
+            f.write((500).to_bytes(4, "big") + b"x" * 10)   # the append the power cut broke off (no HACK)
+        self.reception = self.open()
+        self.assertEqual(self.received(), 1)
+        self.assertEqual(self.admit(self.seal(9)[0]), "complete")
+        self.crash()
+        self.assertEqual(self.received(), 2)
+
+    def test_damage_inside_the_journal_stops_the_start(self):
+        for counter in (7, 8):
+            self.assertEqual(self.admit(self.seal(counter)[0]), "complete")
+        self.reception.stop(save=False)
+        path = self.journals()[-1]
+        raw = bytearray(path.read_bytes())
+        raw[len(nosnik.JOURNAL_MAGIC) + 8 + 10] ^= 1   # inside the first of two records
+        path.write_bytes(bytes(raw))
+        with self.assertRaises(nosnik.StorageError):
+            self.open()
+
+    def test_journal_of_another_snapshot_with_the_same_number_is_never_replayed(self):
+        # A restored or re-keyed medium writes its snapshot under the next number, with a new mark; the journal of
+        # a snapshot that never landed under that number belongs to the old database and goes.
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        self.reception.stop(save=False)
+        medium = nosnik.Nosnik(self.medium.root, FAST)
+        body = medium.load(self.key)
+        path = self.journals()[-1]
+        path.rename(path.with_name(f"{nosnik.JOURNAL_PREFIX}{medium.gen + 1}"))
+        medium.save(self.key, body)
+        self.reception = self.open()
+        self.assertEqual(self.received(), 0)
+        self.assertEqual(self.journals(), [])
+
+    def test_offline_identity_steps_wait_for_the_journal(self):
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        self.reception.stop(save=False)
+        with self.assertRaises(nosnik.StorageError):
+            rekey._open_guarded(nosnik.Nosnik(self.medium.root, FAST), self.key)
+        self.reception = self.open()
 
     def test_admission_timing_with_a_realistic_database(self):
         """About 2000 reports with intents and 5000 log entries (a long event); the path must fit the budget."""

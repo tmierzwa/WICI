@@ -2,7 +2,8 @@
 """Transactional receiver-side replay, two-fragment admission and delivery proofs for WICI envelopes.
 
 The caller supplies `admit` to write SA1 effects on the same SQLite connection and
-`persist` to durably snapshot the database before a hop acknowledgement is allowed.
+`persist` to make the change durable before a hop acknowledgement is allowed (the stanowisko
+appends the frame to its intake journal, przyjecie.py).
 Replay and fragment state is bound to the pair key, like the station's FRAM records,
 so a station re-provisioned under the same number starts a fresh window.
 

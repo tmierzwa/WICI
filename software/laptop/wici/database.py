@@ -274,6 +274,7 @@ class Copy:
     def __init__(self, place, path, header, raw, body):
         self.place, self.path, self.raw, self.body = place, path, raw, body
         self.gen, self.at, self.recovery = int(header["gen"]), header["at"], header.get("recovery")
+        self.journal = header.get("journal")   # stanowisko: dziennik przyjęć po tej migawce (nosnik.py)
         self.history = [tuple(h) for h in header["history"]]
 
 
