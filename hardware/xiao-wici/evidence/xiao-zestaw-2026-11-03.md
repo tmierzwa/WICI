@@ -102,6 +102,17 @@ Obraz z całą grupą B przeglądu końcowego (między innymi HACK z echem 2 B M
 
 Start HACK po końcu DATA (metoda jak niżej, HACK 29 B w tych samych symbolach, 83,2 ms w eterze): 103 HACK, mediana 19,0 ms, p95 27,8 ms, p99 32,2 ms, najwięcej 39,5 ms, żaden ponad 50 ms. Wynik: wszystkie cztery próby zaliczone na jednym przeskoku. Przekaźnika zestaw nie ma (dwa XIAO), więc trasy wieloskokowe sprawdzają nadal tylko testy natywne i symulator.
 
+## Obraz po poprawkach przeglądu niezależnego (`3cefe2a`, 22:57–23:04)
+
+Obraz z poprawkami 1–11 przeglądu niezależnego (między innymi klucz odbiorcy tylko aktywnej tożsamości, wstrzymanie do sąsiada kończone tylko HACK albo BEACON, ponowienie roota tymi samymi bajtami, spóźniony HACK przed ponowieniem) wgrany na obie płytki; konfiguracja w PSRAM przetrwała wgranie. Stanowisko z tego samego commitu na tym samym nośniku testowym, podsłuch jak wyżej. Oprogramowanie płytek podaje tylko `xiao-0.1`, więc obraz potwierdzają logi budowania i wgrania z drzewa roboczego na `3cefe2a`.
+
+| Próba | Wynik |
+|---|---|
+| 2: `REQ 1 0` na A (22:58) | DATA 119 B od 21, HACK 29 B od roota, RECEIVED jako DATA 98 B, HACK 29 B od 21; CRC i MAC sieci poprawne; echo w obu HACK zgodne; stanowisko: przyjęcie 13,0 ms |
+| 5: `REQ 10` co minutę, 5 razy (22:59–23:04) | 50/50 w 330 s, 0 ponowień (50 DATA od 21 i 50 od roota, po 50 różnych `seq`); 100 HACK, każdy z echem swojej DATA; najdłuższy HACK roota w podsłuchu 122,2 ms (`end_ms_max` 121), stacji 105,8 ms; `hack_late` 0 i `hack_refused` 0 na obu; przyjęcie na stanowisku mediana 6,2 ms, najwięcej 23,1 ms |
+
+Start HACK po końcu DATA (metoda jak niżej): 102 HACK, mediana 21,0 ms, p95 27,6 ms, p99 37,2 ms, najwięcej 39,0 ms, żaden ponad 50 ms. Wynik: obie próby zaliczone na jednym przeskoku, bez regresji względem `65b53fb`. Bez zgubionego HACK nie było ponowień, więc ponowienia roota tymi samymi bajtami i spóźnionego HACK ta sesja nie pokazuje; sprawdzają je testy natywne i laptopa. Przekaźnika zestaw nie ma (dwa XIAO).
+
 ## Start HACK po DATA (R2)
 
 Ile po końcu ramki DATA zaczyna się HACK, z podsłuchów RAK4631 z 2026-11-02 i 2026-11-03 (wszystkie z zestawami XIAO). Para DATA–HACK to ten sam `seq`, z `l_src` i `l_dst` zamienionymi. Start HACK to różnica znaczników końca odbioru minus czas HACK w eterze (27 B, SF7/125 kHz, 24 symbole preambuły: 83,2 ms). Ten sam zegar podsłuchu mierzy obie ramki, więc opóźnienie odbioru się znosi.
@@ -128,5 +139,6 @@ Okno wolnego kanału (50 ms) nie obejmuje więc każdego HACK, a termin pozwala 
 - `podsluch-2026-11-03d.jsonl`, `diag-root-2026-11-03d.log`, `diag-a-2026-11-03d.log`, `stanowisko-2026-11-03d.log`: obraz z `d5d364b` od 12:40 (próba 5 12:50–12:56).
 - `podsluch-2026-11-03e.jsonl`, `diag-root-2026-11-03e.log`, `diag-a-2026-11-03e.log`, `stanowisko-2026-11-03e.log`: obraz z `41f43ba` (dowód doręczenia, 15:55–15:59).
 - `podsluch-2026-11-03f.jsonl`, `diag-root-2026-11-03f.log`, `diag-a-2026-11-03f.log`, `stanowisko-2026-11-03f.log`: obraz z `65b53fb` (grupa B, 21:09–21:20).
+- `podsluch-2026-11-03g.jsonl`, `diag-root-2026-11-03g.log`, `diag-a-2026-11-03g.log`, `stanowisko-2026-11-03g.log`: obraz z `3cefe2a` (po przeglądzie niezależnym, 22:57–23:04).
 
 Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../../LICENSE.md)).
