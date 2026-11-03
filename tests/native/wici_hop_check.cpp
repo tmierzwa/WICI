@@ -468,9 +468,10 @@ int main() {
     assert(viaRoot.learnPending(300 + wici_relay::MAX_HOLD_S) && !viaRoot.active());
     assert(!viaRoot.prepare(300 + wici_relay::MAX_HOLD_S));
 
-    // Review 2c: upward DATA from the current parent, or this station's own
-    // envelope coming back up, is a loop: the parent rotates at once and the
-    // frame is still admitted.
+    // Review 2c: upward DATA from the current parent is a loop: the parent
+    // rotates at once and the frame is still admitted. Final review B1: an
+    // envelope that names this station as its sender (`src`) is no signal; a
+    // relay cannot check the envelope MAC, so a captured child could forge it.
     static Memory fromParentMemory, ownBackMemory;
     wici_hop::Relay looped(fromParentMemory, {100, 2, 1, 3, 6}, ifac);
     wici_hop::Relay ownBack(ownBackMemory, {100, 2, 1, 3, 6}, ifac);
@@ -484,14 +485,14 @@ int main() {
     up.source = 4; up.payload[2] = 2; up.sequence = 321;
     n = wici_link::encode(key, up, wire, sizeof(wire));
     assert(ownBack.receiveData(wire, n, 320, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
-    assert(ownBack.routes().parent() == 6);
+    assert(ownBack.routes().parent() == 3);
     // Finding 5: only a newly stored envelope is a loop signal. A retry or
     // replayed copy of one already held, even from the current parent, does
     // not rotate the parent again.
-    up.source = 6; up.payload[2] = 2; up.sequence = 322;
+    up = incoming; up.source = 6; up.sequence = 322; up.payload[8] = 91;
     n = wici_link::encode(key, up, wire, sizeof(wire));
-    assert(ownBack.receiveData(wire, n, 330, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
-    assert(ownBack.routes().parent() == 6);
+    assert(looped.receiveData(wire, n, 330, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(looped.routes().parent() == 6);
 
     // Review 11b, finding 3: a transfer the radio refused, prepared again for
     // the same next hop, keeps its seq, so refusals burn none. After a

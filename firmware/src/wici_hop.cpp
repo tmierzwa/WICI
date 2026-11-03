@@ -72,11 +72,14 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (stored == wici_relay::Admission::STORED && !(frame.flags & wici_link::DOWN)) {
         // Its down-route hint is learned once, after the HACK (learnPending).
         learn_ |= bit;
-        // Loop signal: a new upward envelope from this station's own parent,
-        // or its own envelope coming back up. The parent rotates at once; the
-        // frame leaves through the new parent. A retry or replayed copy of an
-        // envelope already held is no second signal.
-        if (frame.source == routes_.parent() || get16(frame.payload + 1) == config_.own) routes_.loop(nowS);
+        // Loop signal: a new upward envelope from this station's own parent
+        // (l_src, checked by the pairwise tag). The parent rotates at once;
+        // the frame leaves through the new parent. A retry or replayed copy
+        // of an envelope already held is no second signal. The envelope's
+        // `src` is no signal: a relay cannot check the envelope MAC, so a
+        // captured child could name this station there and move its parent
+        // (wici-link.md, rule 2).
+        if (frame.source == routes_.parent()) routes_.loop(nowS);
     }
     if (!(frame.flags & wici_link::ACKREQ))
         return stored == wici_relay::Admission::FORWARDED ? Receipt::IGNORED : Receipt::STORED_NO_HACK;

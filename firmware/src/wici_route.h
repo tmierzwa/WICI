@@ -86,9 +86,8 @@ public:
     // Beacons are soft state; caller supplies measured ETX/SNR cost in 1/16 units.
     bool beacon(uint16_t neighbor, const Beacon& value, uint16_t linkCost16, uint32_t nowS);
     void hopResult(uint16_t neighbor, bool acknowledged, uint32_t nowS);
-    // Loop signal from the data plane (upward DATA from the current parent, or
-    // this station's own envelope coming back up): rotate the parent at once,
-    // as at the failure threshold.
+    // Loop signal from the data plane (new upward DATA from the current
+    // parent): rotate the parent at once, as at the failure threshold.
     void loop(uint32_t nowS);
     // Never 0 on a station (the planned parent is the floor); 0 on the root.
     uint16_t parent() const { return parent_; }
