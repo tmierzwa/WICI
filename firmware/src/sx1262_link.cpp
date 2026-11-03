@@ -266,8 +266,18 @@ radiolink::TxPrep LinkDriver::prepareTx(const uint8_t* frame, size_t length) {
 }
 
 radiolink::Cad LinkDriver::cad() {
-    // Tylko ze stanu spoczynku (po prepareTx): SetCad nie działa z odbioru. Po CAD_ONLY układ jest
-    // w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
+    // Wykrycie potwierdza drugi CAD od razu po pierwszym (radio.md, „Dostęp do kanału”, punkt 5): pojedynczy
+    // CAD SX1262 zgłasza czasem wykrycie przy pustym kanale, a preambuła (24 symbole) trwa dłużej niż dwa CAD.
+    const radiolink::Cad first = cadOnce();
+    if (first != radiolink::Cad::Busy) return first;
+    const radiolink::Cad second = cadOnce();
+    if (second == radiolink::Cad::Free) ++cadUnconfirmed_;
+    return second;
+}
+
+radiolink::Cad LinkDriver::cadOnce() {
+    // Tylko ze stanu spoczynku (po prepareTx albo po poprzednim CAD): SetCad nie działa z odbioru. Po CAD_ONLY
+    // układ jest w STDBY_RC (tabela 13-73), a ramka i parametry pakietu zostają (bufor trwa poza uśpieniem, rozdz. 7.4).
     if (rxActive_) return radiolink::Cad::Error;
     // RXEN wysoki w CAD: przełącznik antenowy w odbiorze (jak w SetRx); wraca niski przed SetTx.
     rxen(true);
@@ -345,7 +355,7 @@ bool LinkDriver::startRx(bool variable, uint8_t fixedLength) {
     rxActive_ = radio_.status().mode() == MODE_RX;
     if (!rxActive_) rxen(false);
     headerSeen_ = false;     // flagi skasowane: start odbioru liczy się jak próbka
-    lastSampleMs_ = millis();
+    lastSampleMs_ = rxStartMs_ = millis();
     return rxActive_;
 }
 
@@ -399,7 +409,8 @@ RxService LinkDriver::serviceRx(radiolink::Frame& out, bool sampleRssi) {
         const uint16_t start = irq & IRQ_RX_START;
         if (start && !radio_.clearIrq(start)) return RxService::BusyTimeout;
         if (irq & IRQ_HEADER_VALID) headerSeen_ = true;  // nagłówek bieżącej ramki już widziany
-        if (sampleRssi) {
+        // RSSI tuż po SetRx jest zaniżone (do −127 dBm): taka próbka obniżyłaby tło po każdym nadaniu.
+        if (sampleRssi && now - rxStartMs_.load(std::memory_order_relaxed) >= lora::RSSI_SETTLE_MS) {
             radiolink::Rssi r;
             if (!readRssi(r)) return RxService::BusyTimeout;
             if (r.valid && !inFrame_) noise_.sample(r.dbm, now);  // tło tylko poza ramką
@@ -562,6 +573,23 @@ radiolink::Activity LinkDriver::recentActivity(uint32_t windowMs) {
     if (frameInProgress(now)) return radiolink::Activity::Rx;
     if (!activity_.quietFor(now, windowMs, 1u << Activity::RSSI)) return radiolink::Activity::Rssi;
     return radiolink::Activity::None;
+}
+
+bool LinkDriver::rssiMayHideFrame() {
+    // Odbiornik nie słyszy początku ramki przed startem odbioru, w czasie odbioru innej ramki i w czasie
+    // preambuły bez ramki. Ramka zaczęta wtedy trwa najwyżej FRAME_MAX_MS od końca tej ślepoty; ramkę
+    // zaczętą później zdradza preambuła (słabszej niż wykrywa detektor nie widzi też próg RSSI).
+    // Bez blokady, jak recentActivity.
+    const uint32_t now = millis();
+    uint32_t hearing = rxStartMs_.load(std::memory_order_relaxed);
+    const auto later = [&hearing](uint32_t t) {
+        if (static_cast<int32_t>(t - hearing) > 0) hearing = t;
+    };
+    if (activity_.seen.load(std::memory_order_acquire) & (1u << Activity::FRAME))
+        later(activity_.ms[Activity::FRAME].load(std::memory_order_relaxed));
+    if (inFrame_.load(std::memory_order_relaxed))
+        later(inFrameSinceMs_.load(std::memory_order_relaxed) + FRAME_MAX_MS);  // w toku albo wygasła
+    return static_cast<int32_t>(now - hearing) < static_cast<int32_t>(FRAME_MAX_MS);
 }
 
 int8_t LinkDriver::ccaThresholdDbm() const { return static_cast<int8_t>(noise_.threshold()); }

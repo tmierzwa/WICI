@@ -2825,6 +2825,11 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(screens[10][0], "category")   # 179 999 ms bez naciśnięcia: ekran zostaje
         self.assertEqual(screens[11][0], "main")  # 3 min bezczynności: ekran główny
 
+    def test_press_after_loop_time_does_not_trigger_idle(self):
+        # KEY z portu USB ma czas późniejszy niż `now` obiegu, w którym potem idzie tick: to nie bezczynność.
+        out = self.ui(["L 0", "O 1", "K OK 5000", "T 4999", "R", "T 184999", "R", "T 185000", "R"])
+        self.assertEqual([s[0] for s in self.screens(out)], ["menu", "menu", "main"])
+
     def test_wrap_duration_and_glyph_coverage(self):
         data = ui_texts.load()
         texts = data["texts"]

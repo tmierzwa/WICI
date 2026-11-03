@@ -45,10 +45,14 @@ constexpr uint32_t SYMBOL_US = (1u << SPREADING_FACTOR) * 1000000u / BANDWIDTH_H
 // wyżej niż CCA_RSSI_THRESHOLD_MAX_DBM. Stały próg −100 dBm blokował zestaw XIAO: tor odbiorczy
 // Wio-SX1262 ma tło −88…−75 dBm (hardware/radio-pair/evidence/rnode-xiao-2026-10-31.txt, 2026-11-02).
 constexpr int16_t CCA_RSSI_THRESHOLD_DBM = -100;
-constexpr int16_t CCA_RSSI_THRESHOLD_MAX_DBM = -60;  // silniejsza stała nośna nadal zajmuje kanał
+constexpr int16_t CCA_RSSI_THRESHOLD_MAX_DBM = -60;  // przy wysokim tle silna ramka nadal zajmuje kanał
 constexpr int16_t CCA_FLOOR_MARGIN_DB = 10;
+// Próbki RSSI z pierwszych RSSI_SETTLE_MS po SetRx nie idą do tła ani do aktywności: SX1262 podaje najpierw
+// −127 dBm, a do około 3,3 ms wartości zaniżone (hardware/xiao-wici/evidence/cca-cad-2026-11-03.md).
+constexpr uint32_t RSSI_SETTLE_MS = 10;
 // CAD: 2 symbole, cadDetPeak 22 i cadDetMin 10 według Semtech AN1200.48 dla SF7/125 kHz
-// (RadioLib przyjmuje cadDetPeak = SF + 13 = 20). Wartości do sprawdzenia w T4.
+// (RadioLib przyjmuje cadDetPeak = SF + 13 = 20). Wartości do sprawdzenia w T4. Wykrycie potwierdza
+// drugi CAD (sx1262_link.cpp, cad): pojedynczy CAD zgłasza czasem wykrycie przy pustym kanale.
 constexpr uint8_t CAD_SYMBOLS = 2;
 constexpr uint8_t CAD_DET_PEAK = 22;
 constexpr uint8_t CAD_DET_MIN = 10;

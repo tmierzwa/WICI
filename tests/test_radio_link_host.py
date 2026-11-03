@@ -562,6 +562,7 @@ struct Chip {
     int txCountdown = -1, cadCountdown = -1;
     bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true, rxenAtCad = false;
     bool cadBusy = false, cadHang = false;  // CAD wykrywa preambułę; CAD bez końca
+    int cadDetects = 0;                     // tyle następnych CAD wykrywa (jak fałszywe wykrycie przy cadBusy false)
     uint8_t fallback = 0x20, rxPtr = 0, cadParams[7] = {}, dioIrq[8] = {};
     unsigned cadCount = 0;
     uint8_t hookOp = 0;               // polecenie, przed którym model zmienia stan eteru (hook)
@@ -679,7 +680,8 @@ void digitalWrite(uint8_t pin, uint8_t level) {
             ++chip.txCount;
         }
         if (!chip.cadHang && chip.cadCountdown > 0 && --chip.cadCountdown == 0) {
-            chip.irq |= sx1262::IRQ_CAD_DONE | (chip.cadBusy ? sx1262::IRQ_CAD_DETECTED : 0);
+            const bool detected = chip.cadBusy || (chip.cadDetects > 0 && chip.cadDetects-- > 0);
+            chip.irq |= sx1262::IRQ_CAD_DONE | (detected ? sx1262::IRQ_CAD_DETECTED : 0);
             chip.mode = sx1262::MODE_STBY_RC;  // CAD_ONLY: zawsze STDBY_RC, niezależnie od trybu powrotu
             chip.cadCountdown = -1;
             ++chip.cadCount;
@@ -942,6 +944,27 @@ int main() {
     printf("CADBUSY %d %d %s %d %d %u %04X\n", static_cast<int>(cadBusy), static_cast<int>(cadHung), hungMode, cadHangMs >= 20,
            static_cast<int>(cadInRx), chip.cadCount, chip.irq);
     printf("CADHUNGRXEN %d\n", hungRxen);
+    // Wykrycie potwierdza drugi CAD: jedno wykrycie i wolny drugi CAD to Free i licznik niepotwierdzonych,
+    // dwa wykrycia to Busy bez zmiany licznika; drugi CAD bez SetStandby (z STDBY_RC po pierwszym).
+    link.prepareTx(frame, 30);
+    chip.cadDetects = 1;
+    unsigned cads = chip.cadCount;
+    const unsigned long unconfirmed0 = link.cadUnconfirmed();
+    chip.ops.clear();
+    const radiolink::Cad single = link.cad();
+    const unsigned singleCads = chip.cadCount - cads;
+    const int standbysBetween = static_cast<int>(std::count(chip.ops.begin(), chip.ops.end(), sx1262::OP_SET_STANDBY));
+    const unsigned long unconfirmed1 = link.cadUnconfirmed();
+    chip.cadDetects = 2;
+    cads = chip.cadCount;
+    const radiolink::Cad twice = link.cad();
+    printf("CADCONFIRM %d %u %d %lu %d %u %lu %s\n", static_cast<int>(single), singleCads, standbysBetween, unconfirmed1 - unconfirmed0,
+           static_cast<int>(twice), chip.cadCount - cads, link.cadUnconfirmed() - unconfirmed1, link.stateName());
+    chip.cadDetects = 0;
+    // Wolny pierwszy CAD: jeden CAD.
+    cads = chip.cadCount;
+    const radiolink::Cad free1 = link.cad();
+    printf("CADFREE %d %u\n", static_cast<int>(free1), chip.cadCount - cads);
 
     // Przed wyjściem z odbioru: nieodczytana ramka albo ramka w toku odracza nadanie, bez kasowania flag
     // i bez zapisu bufora.
@@ -1080,14 +1103,51 @@ int main() {
     const sx1262::RxService crcNext = link.serviceRx(rxf, false);
     const unsigned long lateAfterCrc = link.rxLate();
     printf("CRCNEXT %d %lu\n", static_cast<int>(crcNext), lateAfterCrc - lateBeforeCrc);
-    // Bez zadania odbioru pętla próbkuje także RSSI dla okna CCA.
+    // Bez zadania odbioru pętla próbkuje także RSSI dla okna CCA, ale nie w pierwszych RSSI_SETTLE_MS po SetRx.
     link.startRx(true, 0);
     link.clearActivity();
     chip.rssiInst = 180;  // -90 dBm
     link.pollRx(rxf);
+    const bool loopEarly = !link.activity().quietFor(millis(), 50, 1u << sx1262::Activity::RSSI);
+    fakeUs += lora::RSSI_SETTLE_MS * 1000;
+    link.pollRx(rxf);
     const bool loopRssi = !link.activity().quietFor(millis(), 50, 1u << sx1262::Activity::RSSI);
     chip.rssiInst = 220;
-    printf("LOOPRSSI %d\n", loopRssi);
+    printf("LOOPRSSI %d %d\n", loopEarly, loopRssi);
+    // Tło z próbek po starcie odbioru: przed każdą próbką ustaloną SetRx i próbka -127 dBm (jak SX1262 tuż po
+    // SetRx); tło -85 dBm i próg -75 dBm, a nie -127 dBm i dolna granica -100 dBm.
+    for (int bucket = 0; bucket < 6; ++bucket) {
+        link.startRx(true, 0);
+        chip.rssiInst = 254;  // -127 dBm
+        link.serviceRx(rxf, true);
+        fakeUs += lora::RSSI_SETTLE_MS * 1000;
+        chip.rssiInst = 170;  // -85 dBm
+        link.serviceRx(rxf, true);
+        fakeUs += 2000000;
+    }
+    chip.rssiInst = 220;
+    printf("SETTLEFLOOR %d %d\n", link.noiseFloorDbm(), link.ccaThresholdDbm());
+    // Okno ślepoty odbiornika: RSSI może zdradzać ramkę przez czas najdłuższej ramki od startu odbioru, od końca
+    // odebranej ramki i od wygaśnięcia preambuły bez ramki; poza tym oknem nie.
+    link.startRx(true, 0);
+    link.clearActivity();
+    const bool hideStart = link.rssiMayHideFrame();
+    fakeUs += 440000;
+    const bool hideLater = link.rssiMayHideFrame();
+    airFrame(40, 0x31);
+    link.serviceRx(rxf, false);
+    const bool hideAfterFrame = link.rssiMayHideFrame();
+    fakeUs += 440000;
+    const bool hideAfterFrameLater = link.rssiMayHideFrame();
+    airHeader(0x50, 0);  // preambuła i nagłówek bez końca ramki
+    link.serviceRx(rxf, false);
+    fakeUs += 440000;    // ramka w toku wygasła (FRAME_MAX_MS)
+    const bool hideAfterExpiry = link.rssiMayHideFrame();
+    fakeUs += 440000;
+    printf("HIDE %d %d %d %d %d %d\n", hideStart, hideLater, hideAfterFrame, hideAfterFrameLater, hideAfterExpiry,
+           link.rssiMayHideFrame());
+    link.startRx(true, 0);
+    link.clearActivity();
     link.idle();
     const sx1262::RxService notRx = link.serviceRx(rxf, false);
     printf("NOTRX %d\n", static_cast<int>(notRx));
@@ -1247,7 +1307,8 @@ int main() {
     tl.setBackgroundRx(true);
     tl.startRx(true, 0);
     const rxwatch::TaskSignals& sig = tl.taskSignals();
-    // Pierwszy obieg z próbką RSSI; następny w tym samym takcie bez DIO1 nie dotyka układu.
+    // Pierwszy obieg czyta flagi (próbka RSSI dopiero po RSSI_SETTLE_MS od SetRx); następny w tym samym takcie
+    // bez DIO1 nie dotyka układu.
     chip.ops.clear();
     tl.taskCycle(false);
     const size_t opsFirst = chip.ops.size();
@@ -1260,11 +1321,14 @@ int main() {
     const int beforeTask = static_cast<int>(tl.pollRx(tf));
     const bool rxDoneKept = chip.irq & sx1262::IRQ_RX_DONE;
     // DIO1 wysoki: obieg zadania odbiera ramkę do pierścienia z czasem próbki; pollRx czyta pierścień.
+    // Czas ramki z obiegu zadania, nie z późniejszego odczytu pierścienia w pętli (5 ms później).
+    const uint32_t cycleStartMs = millis();
     tl.taskCycle(true);
-    const uint32_t sampleMs = millis();
+    const uint32_t cycleEndMs = millis();
+    fakeUs += 5000;
     const int fromRing = static_cast<int>(tl.pollRx(tf));
     const size_t tfLength = tf.length;
-    const bool tfBytes = bytesFrom(tf, 0x11), tfTime = tf.receivedMs == sampleMs;
+    const bool tfBytes = bytesFrom(tf, 0x11), tfTime = tf.receivedMs >= cycleStartMs && tf.receivedMs <= cycleEndMs;
     const int ringEmpty = static_cast<int>(tl.pollRx(tf));
     printf("TASKFRAME %d %d %d %zu %d %d %d\n", beforeTask, rxDoneKept, fromRing, tfLength, tfBytes, tfTime, ringEmpty);
     // Ramka z błędem CRC i ramka spóźniona idą jako Bad (rx_bad w Bench), jak bez zadania.
@@ -1443,6 +1507,7 @@ struct FakeLora : radiolink::Driver {
     std::vector<uint8_t> loaded;
     bool rxActive = false, rxVariable = false, rxPending = false, failDebtAtCad = false, cw = false;
     int cadBusy = 0, rssiBusy = 0, taskCyclesPerFrame = 0, discards = 0;
+    bool hideFrame = true;  // rssiMayHideFrame: RSSI może jeszcze zdradzać ramkę (okno ślepoty odbiornika)
     radiolink::Activity mark = radiolink::Activity::None;
     uint32_t markMs = 0;
     void op(const char* name) { ops.push_back(std::string(name) + ":" + std::to_string(dj.debt().a)); }
@@ -1473,6 +1538,7 @@ struct FakeLora : radiolink::Driver {
         return radiolink::RxPoll::Frame;
     }
     bool receivingFrame() override { return false; }
+    bool rssiMayHideFrame() override { return hideFrame; }
     radiolink::Rssi rssi() override {
         radiolink::Rssi r;
         r.valid = rxActive;
@@ -1634,6 +1700,23 @@ int main() {
     const std::string activityOps = ops();
     printf("ACTIVITY %lu %lu %lu %d|%s\n", static_cast<unsigned long>(bench.link().rxBusy), static_cast<unsigned long>(bench.link().rssiBusy),
            static_cast<unsigned long>(bench.link().deferrals - deferralsBefore), txDone, activityOps.c_str());
+    settle();
+
+    // Obca energia: RSSI ponad progiem przy każdej decyzji, ale poza oknem ślepoty odbiornika: nadanie bez
+    // odroczenia, liczone raz w rssi_ignored, rssi_busy bez zmian.
+    txDone = -1;
+    radio.ops.clear();
+    radio.hideFrame = false;
+    radio.rssiBusy = 1000;
+    const uint32_t foreignDeferrals = bench.link().deferrals, foreignBusy = bench.link().rssiBusy;
+    const uint32_t foreignIgnored = bench.link().rssiIgnored;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(3000);
+    printf("FOREIGN %lu %lu %lu %d\n", static_cast<unsigned long>(bench.link().deferrals - foreignDeferrals),
+           static_cast<unsigned long>(bench.link().rssiBusy - foreignBusy),
+           static_cast<unsigned long>(bench.link().rssiIgnored - foreignIgnored), txDone);
+    radio.rssiBusy = 0;
+    radio.hideFrame = true;
     settle();
 
     // Nieodczytana ramka w układzie przy wyjściu z odbioru: odroczenie (rx_busy), układ zostaje w odbiorze.
@@ -2376,9 +2459,9 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "SECOND"), "SECOND 0 1 20 A1 STBY_XOSC")
 
     def test_cad_busy_hung_and_from_receive(self):
-        # Busy (1); no CadDone within the limit: Error (2) and STDBY_XOSC; CAD from RX refused (2);
-        # two CADs finished; CAD flags cleared.
-        self.assertEqual(line(self.out, "CADBUSY"), "CADBUSY 1 2 STBY_XOSC 1 2 2 0000")
+        # Busy (1, confirmed by a second CAD); no CadDone within the limit: Error (2) and STDBY_XOSC;
+        # CAD from RX refused (2); three CADs finished (two for Busy); CAD flags cleared.
+        self.assertEqual(line(self.out, "CADBUSY"), "CADBUSY 1 2 STBY_XOSC 1 2 3 0000")
         self.assertEqual(line(self.out, "CADHUNGRXEN"), "CADHUNGRXEN 0")  # RXEN low again after the hung CAD
 
     def test_pending_reception_defers_transmit_without_clearing(self):
@@ -2409,7 +2492,25 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "CRCNEXT"), "CRCNEXT 2 0")
 
     def test_loop_without_receive_task_samples_rssi(self):
-        self.assertEqual(line(self.out, "LOOPRSSI"), "LOOPRSSI 1")
+        # Not in the first RSSI_SETTLE_MS after SetRx (0), afterwards a mark (1).
+        self.assertEqual(line(self.out, "LOOPRSSI"), "LOOPRSSI 0 1")
+
+    def test_rssi_may_hide_a_frame_only_after_receiver_blindness(self):
+        # After RX start (1) and not 440 ms later (0); after a received frame (1) and not 440 ms later (0); after a
+        # preamble without a frame expired (1) and not 440 ms after the expiry (0).
+        self.assertEqual(line(self.out, "HIDE"), "HIDE 1 0 1 0 1 0")
+
+    def test_rssi_right_after_rx_start_does_not_lower_the_floor(self):
+        # A -127 dBm sample right after each SetRx is ignored: floor -85 dBm, threshold -75 dBm
+        # (radio.md, „Dostęp do kanału”, punkt 5; evidence cca-cad-2026-11-03).
+        self.assertEqual(line(self.out, "SETTLEFLOOR"), "SETTLEFLOOR -85 -75")
+
+    def test_cad_detection_is_confirmed_by_a_second_cad(self):
+        # One detection then a free CAD: Free (0) after 2 CADs with no SetStandby between, one unconfirmed;
+        # two detections: Busy (1) after 2 CADs, counter unchanged; the chip stays in STDBY_RC (CAD_ONLY).
+        self.assertEqual(line(self.out, "CADCONFIRM"), "CADCONFIRM 0 2 0 1 1 2 0 STBY_RC")
+        # A free first CAD: Free after one CAD.
+        self.assertEqual(line(self.out, "CADFREE"), "CADFREE 0 1")
 
     def test_continuous_receive_buffer_continues_and_wraps(self):
         self.assertEqual(line(self.out, "RING1"), "RING1 1 255 1 0")
@@ -2718,6 +2819,11 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(ops.split()[:5], ["window", "prep:0", "cad:0", "rx", "window"])
         self.assertEqual(ops.split()[5:], ["prep:0", "cad:0", "send:912", "rx"])  # 12 x 76 ms (21 B frame: 73 ms + 3 ms ramp)
         self.assertEqual(counts, "1 1 1")  # cad_busy, deferrals, sent
+
+    def test_foreign_energy_outside_the_blind_window_does_not_defer(self):
+        # RSSI above the threshold with no frame the receiver could have missed: sent without deferral,
+        # rssi_busy unchanged, one rssi_ignored (radio.md, „Dostęp do kanału”, punkt 5).
+        self.assertEqual(line(self.out, "FOREIGN"), "FOREIGN 0 0 1 1")
 
     def test_activity_in_the_window_and_rssi_defer_before_cad(self):
         counts, ops = line(self.out, "ACTIVITY")[len("ACTIVITY "):].split("|")

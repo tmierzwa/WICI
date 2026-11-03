@@ -120,6 +120,7 @@ public:
     void clearActivity() override { activity_.clear(); }  // po rekonfiguracji i IDLE (pętla, pod blokadą)
     uint32_t rxLate() const override { return rxLate_.load(std::memory_order_relaxed); }
     radiolink::Activity recentActivity(uint32_t windowMs) override;
+    bool rssiMayHideFrame() override;
 
     // Odbiór w tle (stacja L0, plan interfejsu LoRa, L6). taskCycle() to jeden obieg zadania odbioru (co takt):
     // licznik obiegów; przy wysokim DIO1 (koniec ramki, poziom czytany przez wywołującego bez blokady) albo
@@ -165,9 +166,11 @@ public:
     int16_t noiseFloorDbm() const { return noise_.floor(); }  // cca::NoiseFloor::UNKNOWN przed pomiarem
     radiolink::TxPrep prepareTx(const uint8_t* frame, size_t length) override;
     radiolink::Cad cad() override;
+    uint32_t cadUnconfirmed() const override { return cadUnconfirmed_; }
     bool sendPrepared(radiolink::TxTiming* timing) override;
 
 private:
+    radiolink::Cad cadOnce();  // jeden CAD ze stanu spoczynku
     bool toStandby();    // STDBY_XOSC: między nadawaniem, odbiorem i CAD; false przy przekroczeniu czasu BUSY
     void toStandbyRc();  // STDBY_RC: konfiguracja, uśpienie, idle()
     bool load(const uint8_t* frame, size_t length);
@@ -189,6 +192,8 @@ private:
     std::atomic<bool> inFrame_{false};  // preambuła albo nagłówek wykryte, ramka jeszcze nieodebrana (CCA czyta bez blokady)
     bool headerSeen_ = false;   // próbka widziała i skasowała HeaderValid bieżącej ramki
     uint32_t lastSampleMs_ = 0; // ostatnia udana próbka odbioru (millis), do wykrycia spóźnienia
+    std::atomic<uint32_t> rxStartMs_{0};  // ostatni SetRx (millis): RSSI ustala się przez lora::RSSI_SETTLE_MS
+    uint32_t cadUnconfirmed_ = 0;
     std::atomic<uint32_t> inFrameSinceMs_{0};
     uint16_t irqSeen_ = 0;
     int32_t offsetSteps_ = 0;

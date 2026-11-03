@@ -840,7 +840,10 @@ const char* Bench::linkSend(const uint8_t* data, size_t length, bool stack) {
 
 void Bench::startCca(uint32_t now, bool first) {
     txState_ = TxState::CCA;
-    if (first) ccaFirstMs_ = now;
+    if (first) {
+        ccaFirstMs_ = now;
+        ccaRssiIgnored_ = false;
+    }
     ccaStartMs_ = now;
     ccaCheckMs_ = now;
     ccaFrames_ = link_.rxOk + link_.rxBad;
@@ -850,13 +853,18 @@ bool Bench::channelBusy() {
     if (radio_.framing() == radiolink::Framing::RNODE) {
         // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
         // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.
-        switch (radio_.recentActivity(CCA_MS)) {
-            case radiolink::Activity::Rx: ++link_.rxBusy; return true;
-            case radiolink::Activity::Rssi: ++link_.rssiBusy; return true;
-            case radiolink::Activity::None: break;
+        const radiolink::Activity activity = radio_.recentActivity(CCA_MS);
+        if (activity == radiolink::Activity::Rx) { ++link_.rxBusy; return true; }
+        bool rssiHigh = activity == radiolink::Activity::Rssi;
+        if (!rssiHigh) {
+            const radiolink::Rssi r = radio_.rssi();
+            rssiHigh = r.valid && r.dbm > radio_.ccaThresholdDbm();
         }
-        const radiolink::Rssi r = radio_.rssi();
-        if (r.valid && r.dbm > radio_.ccaThresholdDbm()) { ++link_.rssiBusy; return true; }
+        if (!rssiHigh) return false;
+        // Sama energia zajmuje kanał tylko, gdy może być ramką, której początku odbiornik nie słyszał; dłużej to
+        // sygnał obcy, a odroczenie przed nim nie chroni odbiorcy (radio.md, „Dostęp do kanału”, punkt 5).
+        if (radio_.rssiMayHideFrame()) { ++link_.rssiBusy; return true; }
+        ccaRssiIgnored_ = true;
         return false;
     }
     // P1: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo RSSI ponad progiem CCA.
@@ -989,6 +997,7 @@ void Bench::sendLora(uint32_t now) {
     if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
     bool ok = radio_.sendPrepared(nullptr);
     ++link_.txFragments;
+    if (ccaRssiIgnored_) ++link_.rssiIgnored;
     if (!rawLora_) splitter_ = next;
     // Ramka 2 zaraz po ramce 1, bez sprawdzania kanału (jak RNode); ramka 1 bez TxDone kończy datagram.
     if (ok && count == 2) {
@@ -1058,9 +1067,10 @@ void Bench::printLink() {
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
     if (radio_.framing() == radiolink::Framing::RNODE) {
         const loraframe::Stats& a = loraAssembler_.stats();
-        Serial.printf("\"cad_busy\":%lu,\"rssi_busy\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
+        Serial.printf("\"cad_busy\":%lu,\"cad_unconfirmed\":%lu,\"rssi_busy\":%lu,\"rssi_ignored\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
                       "\"rx_late\":%lu,\"rx_ring_overflow\":%lu,\"cca_threshold_dbm\":%d,\"tx_wait_ms\":%lu}}\n",
-                      static_cast<unsigned long>(link_.cadBusy), static_cast<unsigned long>(link_.rssiBusy),
+                      static_cast<unsigned long>(link_.cadBusy), static_cast<unsigned long>(radio_.cadUnconfirmed()),
+                      static_cast<unsigned long>(link_.rssiBusy), static_cast<unsigned long>(link_.rssiIgnored),
                       static_cast<unsigned long>(link_.rxBusy), static_cast<unsigned long>(a.split_lost),
                       static_cast<unsigned long>(a.header_only), static_cast<unsigned long>(a.assembly_timeout),
                       static_cast<unsigned long>(radio_.rxLate()), static_cast<unsigned long>(radio_.rxRingOverflow()),

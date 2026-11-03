@@ -102,8 +102,9 @@ struct LinkCounters {
     uint32_t deferrals = 0;     // odroczenia CCA
     uint32_t longDeferrals = 0; // nadania odroczone przez CCA łącznie o ponad 1 s (bez czekania na dług)
     uint32_t cadBusy = 0;       // LoRa: CAD wykrył preambułę
-    uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji
+    uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji, gdy może zdradzać ramkę
     uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, albo nieodczytana ramka w układzie
+    uint32_t rssiIgnored = 0;   // LoRa: datagramy nadane mimo RSSI ponad progiem bez możliwej ukrytej ramki (energia obca)
 };
 
 // HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused
@@ -309,6 +310,7 @@ private:
     uint32_t ccaFirstMs_ = 0;    // pierwsze wejście w CCA (po odczekaniu długu): miara odroczeń
     uint32_t ccaStartMs_ = 0;
     uint32_t ccaFrames_ = 0;     // ramki odebrane do początku okna CCA
+    bool ccaRssiIgnored_ = false; // LoRa: w tym nadaniu CCA pominęło RSSI ponad progiem (obca energia)
     uint32_t ccaCheckMs_ = 0;
     uint32_t backoffUntilMs_ = 0;
     uint8_t txDeferrals_ = 0;

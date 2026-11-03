@@ -1,0 +1,81 @@
+# Zestaw prób 2026-11-03: dwa XIAO, jeden przeskok
+
+Ciąg dalszy [prób z 2026-11-02](xiao-zestaw-2026-11-02.md): próba 11 w pełnej długości, próby 4 i 5 przed poprawką dostępu do kanału i po niej, próba 3 z panelem dyżurnego. Pomiary i poprawkę dostępu do kanału opisuje [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md).
+
+## Sprzęt, obrazy i plan sieci
+
+Te same urządzenia, ten sam plan sieci i ta sama aplikacja stanowiska co 2026-11-02 (root `44B176AD28A0`, stacja 20 `68EE8F60D16C`, RAK4631 z `lora-raw-0.2` jako podsłuch, sieć 100, root 1). Stanowisko z commitu `72d4089`, nośnik testowy, panel 8780. Zestaw XIAO trzyma konfigurację w PSRAM: przetrwa wgranie obrazu i restart, nie przetrwa odłączenia zasilania ([README](../README.md#wgranie-i-przygotowanie)). Rano płytki trzeba było więc skonfigurować od nowa.
+
+Obrazy XIAO według czasu:
+
+- od 08:22: firmware z `72d4089`, potem obraz diagnostyczny do pomiarów z [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md);
+- od 09:44: poprawka dostępu do kanału, punkty 1 i 2 (RSSI po SetRx, potwierdzony CAD);
+- od 10:09: dodatkowo punkt 3 (RSSI zajmuje kanał tylko w oknie ślepoty odbiornika);
+- od 10:25: dodatkowo poprawka czasu bezczynności ekranu (niżej, próba 3).
+
+## Próba 2: ramki v3 (`72d4089`)
+
+| Krok | Wynik |
+|---|---|
+| `REQ 1 0` na A, 08:25:48 | DATA 119 B od 20, HACK 27 B od roota; bez RECEIVED, bo stanowisko nie ufało jeszcze stacji 20 („nieznany numer stacji”) |
+| zaufanie stacji 20 w panelu (dwóch dyżurnych) | – |
+| `REQ 1 0`, 08:35:47 | DATA 119 B, HACK; RECEIVED: DATA 98 B od roota, HACK 27 B od A |
+| `REQ 1 96`, 08:36:05 | DATA 215 B, HACK; RECEIVED 98 B, HACK od A |
+| `RX 255` / `TXPKT 1 255`, `RXPER` | w trybie przygotowania na obu XIAO (potwierdzenie przyciskiem BOOT), obraz od 10:25: |
+| A → root, 10:34:01 | A: `sent` 1, `tx_ms` 417 (oczekiwane 416); root: `RXPER` `rx_ok` 1, `rx_bad` 0, `len` 255, RSSI −17 dBm, SNR 12,5 dB; podsłuch: 255 B, CRC poprawne |
+| root → A, 10:34:18 | root: `sent` 1, `tx_ms` 417; A: `RXPER` `rx_ok` 1, `rx_bad` 0, `len` 255, RSSI −17 dBm, SNR 13,3 dB; podsłuch: 255 B, CRC poprawne |
+| `PREP 0` na obu | `prep` false, `APP` `link` true |
+
+Wszystkie ramki v3 z `mac_ok` w podsłuchu, 0 ramek z błędem CRC. Wynik: kryterium spełnione. Ramka DATA ma 215 B (S + 96 + 52 przy `sa1_bytes` 67), bo `REQ` ma najwyżej 96 B tekstu; procedura przewiduje ten przypadek.
+
+## Próba 11: cisza radiowa, pełne 30 min (`72d4089`)
+
+| Krok | Wynik |
+|---|---|
+| `SILENCE 1` na roocie, 08:45:45 | `{"silence":true}` |
+| `REQ 5` na A, 08:45:47 | 5 zgłoszeń |
+| 30 min ciszy | w podsłuchu żadnej ramki od roota; A nadała 150 DATA (25 numerów seq: ponowienia i ponowienia SA1), ostatnią o 09:12:15; root przekazywał je stanowisku bez HACK |
+| `SILENCE 0`, 09:15:49 | BEACON roota od razu, 5/5 RECEIVED od 09:15:53 do 09:16:05, każdy z HACK od A |
+
+Wynik: kryterium spełnione. Podsłuch działał przez cały czas ciszy (bez wiersza `gap`).
+
+## Próby 4 i 5: czas HACK i W10
+
+Czas HACK z podsłuchu jak 2026-11-02 (koniec DATA do końca HACK, zegar podsłuchu).
+
+| | `72d4089` | punkty 1 i 2 | punkty 1–3 |
+|---|---|---|---|
+| Próba 4 (`REQ 20`) | 20/20 w 68 s, 2 ponowienia DATA (odmowy HACK przez CAD), root: 1 `tx_drop` | 20/20 w 82 s, 0 ponowień | – |
+| Próba 5 (`REQ 10` co minutę, 5 razy) | 50/50 w 330 s, 2 DATA bez HACK | 50/50 w 330 s, 0 ponowień | 50/50 w 331 s, 0 ponowień |
+| Najdłuższy HACK roota (podsłuch) | 111,9 ms | 121,5 ms | 140,9 ms |
+| HACK powyżej 200 ms, `hack_late` | 0, 0 | 0, 0 | 0, 0 |
+| Odroczenia nadania, root | +139 w próbie 5 | 0 w próbie 5 | 2 |
+| `rssi_ignored` / `cad_unconfirmed` | – | – / stacja 3 | root 1 / stacja 3 |
+
+Najdłuższy HACK po punkcie 3 (140,9 ms) mieści się w kryterium 200 ms. Średnio root odpowiadał po 109 ms (`end_ms_mean`), jak przed poprawką. Przyczyny odroczeń i ponowień na `72d4089` opisuje [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md).
+
+## Próba 3: zgłoszenie z przycisków i decyzja w panelu (obraz od 10:25)
+
+Przyciski stacji: polecenie `KEY` na porcie diagnostyki (XIAO ma tylko BOOT jako OK). Panel: API panelu z kontem `dyzurny-1`, jak przeglądarka dyżurnego.
+
+| Krok | Wynik |
+|---|---|
+| MENU → ZGŁOSZENIE → WODA PITNA, 1 osoba, PILNE – KILKA GODZIN, bez frazy, OK = WYŚLIJ (10:27) | ekran wyniku z numerem 2334; DATA od 20, HACK od roota; koperta przyjęta na stanowisku w 12,5 ms |
+| RECEIVED | DATA 98 B od roota, HACK od A |
+| panel: PRZECZYTANE (stan 2), po 20 s decyzja PRZEKAZANE DALEJ (stan 4, adresat i czas) | dwie DATA od roota, każda z HACK od A |
+| stacja: WIADOMOŚCI → 2334 | „PRZEKAZANE DALEJ (PSP / POGOTOWIE / POWIAT)”, WODA PITNA, 1, PILNE – KILKA GODZIN |
+| `APP` na A | `sent` 1, `delivered` 1, `received` 3, `failed` 0, `intents` 0 |
+| baza stanowiska | jedno zgłoszenie 2334, stan 4, jedna decyzja |
+
+Wynik: kryterium spełnione.
+
+Błąd znaleziony w tej próbie: menu wracało samo do ekranu głównego zaraz po `KEY OK`. `loop()` odczytuje `now` na początku obiegu, a `KEY` w `pollSerial()` zapisuje czas naciśnięcia z późniejszego `millis()`. `tick(now)` liczył wtedy `now - lastPressMs_` bez znaku: wynik około 49 dni, więc bezczynność od razu odesłała ekran do MAIN. Fizyczne przyciski dostają `now` obiegu, dlatego błąd dotyczył tylko poleceń z USB. Poprawka: `elapsed()` w `ui.cpp` daje 0, gdy chwila odniesienia jest późniejsza (bezczynność, przytrzymanie, powtarzanie); test hosta `test_press_after_loop_time_does_not_trigger_idle`.
+
+## Surowe logi
+
+- `podsluch-2026-11-03.jsonl`: 08:25–09:23 (próby 2, 4, 5, 11 na `72d4089`, potem pomiary z RAK jako nadajnikiem);
+- `podsluch-2026-11-03b.jsonl`: od 09:45 (próby po poprawce, próba 3);
+- `diag-root-2026-11-03*.log`, `diag-a-2026-11-03*.log`: porty diagnostyki z czasem laptopa (sekundy Unix): bez sufiksu do 09:23, `b` 09:45–10:09, `c` od 10:09;
+- `stanowisko-2026-11-03.log`: przyjęcia kopert na stanowisku (kolejka i przyjęcie w ms).
+
+Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../../LICENSE.md)).
