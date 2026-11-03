@@ -203,6 +203,7 @@ class Przyjecie:
         self.announce, self.online, self.random = announce, online, random
         self.next_announce, self.was_online = None, None
         self.copies, self.next_copy, self.copy_failed = copies, 0, False
+        self.copy_first = False   # po odzyskaniu: wysyłka czeka na wynik kopii z nowym P (_copy_written)
         self.last_copy_at = None   # czas najnowszej kopii na dysku komputera (panel, przekazanie zmiany)
         self.log = log or (lambda line: print(line, file=sys.stderr, flush=True))
         self.wysylka = wysylka.Wysylka(send, outcome, self.log, random)
@@ -450,7 +451,9 @@ class Przyjecie:
         if self.saved < self.store.db.total_changes or self.recovery:
             return   # w trybie odzyskania także bez kopii: trzy dobre kopie zostają
         if self.copies is not None and self.clock() >= self.next_copy:
-            self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
+            self._copy()
+        if self.copy_first:
+            return   # po odzyskaniu nowa kopia z nowym P powstaje przed pierwszym nadaniem; nieudana też zwalnia
         changes_before = self.store.db.total_changes
         with self.store.db:
             self.store.db.execute("DELETE FROM wici_sent WHERE at < ?", (self.clock() - WICI_SENT_S,))
@@ -493,6 +496,7 @@ class Przyjecie:
         self._submit("copy", write, at=now)
 
     def _copy_written(self, item):
+        self.copy_first = False   # jak przed wątkiem zapisu: także nieudana kopia nie blokuje wysyłki
         e = item["error"]
         if e is not None and not isinstance(e, SAVE_ERRORS):
             self.log(f"stanowisko: kopia na dysku komputera: {e!r}")
@@ -537,7 +541,7 @@ class Przyjecie:
                 db.execute("DROP TABLE kopia")
             self.recovery = False
             if self.copies is not None:
-                self.next_copy = 0   # nowa kopia z nowym P przed pierwszym nadaniem (tick)
+                self.next_copy, self.copy_first = 0, True   # nowa kopia z nowym P przed pierwszym nadaniem (tick)
             return p
         p = self.call(finish)
         self.call(lambda store: self.tick())

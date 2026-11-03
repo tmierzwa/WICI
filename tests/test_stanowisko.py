@@ -1133,7 +1133,15 @@ class RecoveryTest(WithCopies):
         self.assertEqual((self.sent, self.copies.files()), ([], []))
         with self.assertRaises(ValueError):
             self.reception.finish_recovery("dyzurny-1", 0, False)   # bez potwierdzenia zegara
+        # Przegląd 10: kopię pisze wątek zapisu, a wysyłka czeka na jej wynik.
+        gate, write = threading.Event(), self.copies.write
+        self.copies.write = lambda *a, **k: (gate.wait(5), write(*a, **k))[1]
         self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.reception.call(lambda s: self.reception.tick())
+        self.assertEqual((self.sent, self.copies.files()), ([], []))
+        gate.set()
+        self.tick()
+        self.tick()
         self.assertEqual(self.sent[0][1], received_for(content))
         _, payload = kopie.Kopie.read(self.copies.files()[0], self.key)
         with contextlib.closing(sqlite3.connect(":memory:")) as db:
@@ -1142,6 +1150,22 @@ class RecoveryTest(WithCopies):
         self.assertEqual(self.actions()[-2:], ["odtworzenie", "odzyskanie_koniec"])
         self.assertIsNone(durable(self.medium, self.key, "SELECT name FROM sqlite_master WHERE name='kopia'"))
         self.assertEqual(durable(self.medium, self.key, "SELECT blocked FROM env_send_guard WHERE id=1"), (1,))
+
+    def test_a_failed_copy_after_recovery_does_not_hold_sending(self):
+        # Jak przed wątkiem zapisu: nieudana kopia jest ponawiana po minucie, a wysyłka rusza po jej wyniku.
+        self.restored(self.keep_copy(), "nowy")
+        self.sent.clear()
+        content = request()
+        self.deliver(self.STATION, content)
+
+        def broken(*a, **k):
+            raise OSError("dysk pełny")
+        self.copies.write = broken
+        self.reception.finish_recovery("dyzurny-1", 0, True)
+        self.tick()
+        self.tick()
+        self.assertEqual(self.sent[0][1], received_for(content))
+        self.assertIn("kopia_nieudana", self.actions())
 
     def test_restore_needs_two_different_officers_and_an_empty_medium(self):
         self.tick()
