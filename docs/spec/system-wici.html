@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Specyfikacja systemu WICI — projekt struktury i uzgodnione założenia.">
-  <title>Specyfikacja systemu WICI — projekt 0.2</title>
+  <title>Specyfikacja systemu WICI — projekt 0.3</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -27,8 +27,6 @@
     section { padding-top: 2.1rem; }
     .meta { color: var(--muted); }
     .status { display: inline-block; padding: .2rem .6rem; border: 1px solid var(--line); border-radius: .2rem; font-weight: 700; font-size: .85rem; }
-    .explain { margin: 1rem 0; padding: .8rem 1rem; border-left: .25rem solid var(--accent); background: #edf5f3; }
-    .explain strong { display: block; }
     table { width: 100%; border-collapse: collapse; margin: .8rem 0 1rem; font-size: .94rem; }
     th, td { border-bottom: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
     th { background: #edf2f2; }
@@ -36,7 +34,6 @@
     figure { margin: 1.2rem 0; padding: 1rem; border: 1px solid var(--line); }
     svg { display: block; width: 100%; height: auto; }
     figcaption { margin-top: .6rem; color: var(--muted); font-size: .9rem; }
-    footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
     @media (max-width: 48rem) { .layout { display: block; padding: 0; } nav { position: static; padding: 1rem; } main { padding: 1.5rem; } }
     @media print { body { background: white; font-size: 11pt; } .layout { display: block; padding: 0; } nav, .skip { display: none; } main { padding: 0; border: 0; } section, figure, table { break-inside: avoid; } a { color: inherit; } }
   </style>
@@ -51,7 +48,7 @@
       <li><a href="#model">Model systemu</a></li>
       <li><a href="#dane">Funkcje i dane</a></li>
       <li><a href="#aplikacja">Protokół aplikacyjny</a></li>
-      <li><a href="#bezpieczenstwo">Bezpieczeństwo</a></li>
+      <li><a href="#bezpieczenstwo">Bezpieczeństwo i koperta</a></li>
       <li><a href="#siec">Sieć i radio</a></li>
       <li><a href="#lokalne">Interfejsy i trwałość</a></li>
       <li><a href="#eksploatacja">Eksploatacja</a></li>
@@ -61,18 +58,17 @@
   </nav>
   <main id="tresc">
     <header>
-      <p class="meta">WICI-SPEC · język oryginału: polski · format: HTML</p>
+      <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.2 — struktura do uzgodnienia</span> · 3 listopada 2026 r.</p>
-      <p>Dokument określi zachowanie systemu potrzebne do budowy niezależnych, współpracujących implementacji. Ta wersja zawiera uzgodnione założenia i zakres przyszłych wymagań; nie stanowi jeszcze podstawy deklaracji zgodności.</p>
+      <p><span class="status">Projekt 0.3</span> · 3 listopada 2026 r.</p>
+      <p>Uzgodniono założenia WICI-ZAL-001–008. Pozostała treść określa zakres prac nad specyfikacją. Nie stanowi podstawy deklaracji zgodności.</p>
     </header>
 
     <section id="status" aria-labelledby="h-status">
       <h2 id="h-status">1. Przedmiot i status</h2>
-      <p>Specyfikacja obejmuje funkcje, formaty wymiany, bezpieczeństwo, ograniczenia i weryfikację systemu WICI. Szczegóły konstrukcji urządzeń oraz organizacja kodu należą do implementacji, o ile nie wpływają na współdziałanie lub zgodność.</p>
-      <p>Po przyjęciu specyfikacja będzie nadrzędna wobec kodu i wcześniejszej dokumentacji. Rozbieżność wymaga poprawy implementacji albo jawnie zatwierdzonej zmiany specyfikacji.</p>
-      <p>Wymagania otrzymają trwałe identyfikatory, zakres obowiązywania i metodę sprawdzenia. Wielkimi literami zapisuje się wyrażenia normatywne: <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong>. Sposób użycia wielkich liter odpowiada zasadzie rozróżnienia wymagań od zwykłego tekstu w <a href="https://www.rfc-editor.org/rfc/rfc8174.html">BCP 14 / RFC 8174</a>; znaczenie polskich wyrażeń określi przyjęta wersja specyfikacji.</p>
-      <aside class="explain"><strong>Wyjaśnienie statusu</strong> Poniższy zakres rozdziałów wskazuje, co trzeba zdefiniować. Nie ustanawia parametrów ani zachowania protokołu. Uzgodnione są tylko założenia WICI-ZAL-001–008.</aside>
+      <p>Specyfikacja ma pozwolić na budowę niezależnych, współpracujących implementacji. Określi funkcje, wymieniane dane, formaty, zasady bezpieczeństwa, ograniczenia i sposób sprawdzania zgodności. Konstrukcja urządzeń i organizacja kodu pozostają poza jej zakresem, jeśli nie wpływają na współdziałanie.</p>
+      <p>Po przyjęciu specyfikacja będzie dokumentem odniesienia dla kodu i dokumentacji szczegółowej. Rozbieżność wymaga poprawy implementacji albo zatwierdzenia zmiany specyfikacji. Publikacja określi licencję, identyfikator wydania, dostęp do wcześniejszych wersji i sposób zgłaszania błędów.</p>
+      <p>Każde wymaganie otrzyma identyfikator, zakres obowiązywania i metodę sprawdzenia. Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> będą miały znaczenie określone w przyjętej wersji. Wielkie litery odróżnią je od zwykłego tekstu, zgodnie z zasadą opisaną w <a href="https://www.rfc-editor.org/rfc/rfc8174.html">RFC 8174</a>.</p>
       <h3>Założenia uzgodnione</h3>
       <table>
         <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
@@ -91,11 +87,12 @@
 
     <section id="model" aria-labelledby="h-model">
       <h2 id="h-model">2. Model systemu</h2>
-      <p>Do zdefiniowania: granice systemu, role stacji i stanowiska odbiorczego, relacje między komponentami oraz obowiązkowe i opcjonalne profile. Słownik rozróżni urządzenie od roli, tożsamość od adresu oraz wiadomość od koperty i ramki.</p>
+      <p>Model określi granice systemu, role stacji i stanowiska odbiorczego oraz relacje między komponentami. Słownik rozróżni urządzenie od roli, tożsamość od adresu oraz wiadomość od koperty i ramki. Profile obowiązkowe i opcjonalne zostaną wskazane w rozdziale 9.</p>
+      <p>Integracja z systemem zewnętrznym wymaga osobnego kontraktu dla wymiany danych, tożsamości, potwierdzeń i ochrony granicy systemu. Dotyczy to również ewentualnej integracji z Reticulum.</p>
       <figure>
-        <svg viewBox="0 0 760 175" role="img" aria-labelledby="diagram-title diagram-desc">
+        <svg viewBox="0 0 760 125" role="img" aria-labelledby="diagram-title diagram-desc">
           <title id="diagram-title">Warstwy komunikacji WICI</title>
-          <desc id="diagram-desc">Wiadomość aplikacyjna trafia do koperty kryptograficznej, następnie do ramki sieci WICI i przez transmisję radiową do drugiego końca. Reticulum może wystąpić wyłącznie po stronie opcjonalnej integracji.</desc>
+          <desc id="diagram-desc">Wiadomość aplikacyjna jest opakowywana w kopertę kryptograficzną, następnie w ramkę sieci WICI i nadawana przez radio.</desc>
           <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#135a54"/></marker></defs>
           <g fill="#edf5f3" stroke="#135a54" stroke-width="1.5">
             <rect x="8" y="38" width="155" height="67" rx="5"/><rect x="203" y="38" width="155" height="67" rx="5"/>
@@ -108,49 +105,47 @@
             <text x="670" y="65"><tspan x="670">Transmisja</tspan><tspan x="670" dy="22">radiowa</tspan></text>
           </g>
           <g stroke="#135a54" stroke-width="2" marker-end="url(#arrow)"><line x1="168" y1="72" x2="196" y2="72"/><line x1="363" y1="72" x2="391" y2="72"/><line x1="558" y1="72" x2="586" y2="72"/></g>
-          <text x="8" y="145" fill="#50616a" font-family="system-ui, sans-serif" font-size="14">Integracje zewnętrzne, w tym ewentualne Reticulum, pozostają poza tą ścieżką podstawową.</text>
         </svg>
-        <figcaption>Schemat pojęciowy. Formaty, granice zaufania i sposób przekazywania danych wymagają określenia w rozdziałach 4–7.</figcaption>
+        <figcaption>Strzałki pokazują kolejność opakowania wiadomości przed nadaniem. Schemat nie określa formatów ani granic zaufania.</figcaption>
       </figure>
     </section>
 
     <section id="dane" aria-labelledby="h-dane">
       <h2 id="h-dane">3. Funkcje i dane</h2>
-      <p>Do zdefiniowania: zakres zgłoszeń i odpowiedzi, role uprawnione do każdej operacji, identyfikatory, stany zgłoszenia oraz relacje między zgłoszeniem, jego rewizjami i wiadomościami. Osobno trzeba określić stan transmisji i stan obsługi.</p>
-      <p>Każda funkcja otrzyma warunek wejścia, wynik, możliwe błędy i zachowanie po powtórzeniu operacji.</p>
+      <p>Zakres funkcji obejmie zgłoszenia i odpowiedzi. Dla każdej operacji trzeba określić uprawnioną rolę, warunek wejścia, wynik, błędy i skutek ponowienia. Model danych opisze identyfikatory oraz relacje między zgłoszeniem, jego rewizjami i wiadomościami.</p>
+      <p>Stan transmisji i stan obsługi zgłoszenia wymagają odrębnych definicji.</p>
     </section>
 
     <section id="aplikacja" aria-labelledby="h-aplikacja">
       <h2 id="h-aplikacja">4. Protokół aplikacyjny</h2>
-      <p>Do zdefiniowania: typy wiadomości, pola i kodowanie, walidacja, maszyny stanów, znaczenie potwierdzeń, ponowienia, deduplikacja oraz wynik nieznany po utracie odpowiedzi. Format musi mieć przykłady reprezentacji bajtowej i przypadki odrzucenia.</p>
+      <p>Opis protokołu obejmie typy wiadomości, pola, kodowanie, walidację i maszyny stanów. Określi też znaczenie potwierdzeń, ponowienia, deduplikację oraz wynik nieznany po utracie odpowiedzi. Każdy format otrzyma przykład reprezentacji bajtowej i przypadki odrzucenia.</p>
     </section>
 
     <section id="bezpieczenstwo" aria-labelledby="h-bezpieczenstwo">
-      <h2 id="h-bezpieczenstwo">5. Bezpieczeństwo</h2>
-      <p>Do zdefiniowania: model zagrożeń, tożsamości, uprawnienia, cykl życia kluczy i ochrona danych. Koperta kryptograficzna wymaga dokładnego formatu, algorytmów, zakresu uwierzytelnienia, zasad świeżości i reguł odrzucania. Niezależna implementacja musi móc sprawdzić ją za pomocą wektorów testowych.</p>
+      <h2 id="h-bezpieczenstwo">5. Bezpieczeństwo i koperta</h2>
+      <p>Model bezpieczeństwa określi zagrożenia, tożsamości, uprawnienia, cykl życia kluczy i ochronę danych. Specyfikacja koperty poda jej format, algorytmy, zakres uwierzytelnienia, reguły świeżości i odrzucania. Wektory testowe pozwolą sprawdzić niezależną implementację.</p>
     </section>
 
     <section id="siec" aria-labelledby="h-siec">
       <h2 id="h-siec">6. Sieć i radio</h2>
-      <p>Do zdefiniowania: format i adresowanie ramek, odkrywanie sąsiadów, trasy, przekazywanie, potwierdzenia skoku, kolejki, przeciążenie i brak trasy. Profil radiowy określi parametry transmisji, dostęp do kanału, limity nadawania i metodę ich pomiaru.</p>
-      <p>Reguły sieciowe i radiowe muszą określać zachowanie przy błędach i po restarcie, także przy ponowieniu tej samej ramki.</p>
+      <p>Protokół sieciowy określi format i adresowanie ramek, sąsiadów, trasy, przekazywanie, potwierdzenia skoku, kolejki oraz zachowanie przy przeciążeniu i braku trasy. Profil radiowy poda parametry transmisji, zasady dostępu do kanału, limity nadawania, metodę pomiaru i warunki wykorzystania pasma.</p>
+      <p>Reguły obejmą błędy, restart i ponowny odbiór tej samej ramki.</p>
     </section>
 
     <section id="lokalne" aria-labelledby="h-lokalne">
       <h2 id="h-lokalne">7. Interfejsy i trwałość</h2>
-      <p>Do zdefiniowania: kontrakty lokalnych interfejsów, synchronizacja po przerwaniu połączenia, limity przepływu oraz granice uprawnień. Wymagania trwałości określą moment potwierdzenia zapisu, zachowanie przy zaniku zasilania, pełnej pamięci, odtwarzaniu i migracji tożsamości.</p>
+      <p>Kontrakty lokalnych interfejsów określą wymieniane dane, synchronizację po przerwaniu połączenia, limity przepływu i uprawnienia. Wymagania trwałości wskażą moment potwierdzenia zapisu oraz zachowanie przy zaniku zasilania, pełnej pamięci, odtwarzaniu, migracji tożsamości i usuwaniu danych.</p>
     </section>
 
     <section id="eksploatacja" aria-labelledby="h-eksploatacja">
       <h2 id="h-eksploatacja">8. Eksploatacja</h2>
-      <p>Do zdefiniowania: przygotowanie i uruchomienie, obsada stanowiska, zastępstwo, tryby pracy, wskazania wymagające działania człowieka, diagnostyka i zakończenie pracy. Opis obejmie również zachowanie przy braku łączności i ograniczonej energii.</p>
+      <p>Wymagania eksploatacyjne określą przygotowanie, uruchomienie, obsadę stanowiska, zastępstwo, tryby pracy, diagnostykę i zakończenie pracy. Obejmą czytelność wskazań, działania wymagane od człowieka oraz zachowanie przy braku łączności i ograniczonej energii.</p>
     </section>
 
     <section id="zgodnosc" aria-labelledby="h-zgodnosc">
       <h2 id="h-zgodnosc">9. Wersje i zgodność</h2>
-      <p>Do zdefiniowania: wersje formatów i protokołów, profile obowiązkowe i opcjonalne, granice zasobów, zasady rozszerzeń oraz zgodność wsteczna. Każde wymaganie będzie powiązane z profilem i sprawdzalne testem, pomiarem albo przeglądem.</p>
-      <p>Materiały zgodności obejmą schematy formatów, rejestr kodów, wektory testowe, scenariusze awaryjne i raport współdziałania niezależnych implementacji. Publikacja wskaże licencję, identyfikator wydania, archiwum wersji i tryb zgłaszania błędów.</p>
-      <p>Integracja z systemem zewnętrznym, w tym ewentualne Reticulum, otrzyma osobny kontrakt. Nie zmieni wymagań ścieżki podstawowej bez zmiany specyfikacji.</p>
+      <p>Rozdział określi wersje formatów i protokołów, profile, granice zasobów, zasady rozszerzeń i zgodność wsteczną. Każde wymaganie zostanie powiązane z profilem i metodą sprawdzenia: testem, pomiarem albo przeglądem.</p>
+      <p>Schematy formatów, rejestr kodów, wektory testowe i scenariusze awaryjne będą podstawą prób współdziałania niezależnych implementacji.</p>
     </section>
 
     <section id="decyzje" aria-labelledby="h-decyzje">
@@ -168,7 +163,6 @@
         </tbody>
       </table>
     </section>
-    <footer>WICI-SPEC · projekt 0.2 · układ i zakres do uzgodnienia przed opracowaniem wymagań technicznych.</footer>
   </main>
 </div>
 </body>
