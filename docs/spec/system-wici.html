@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Specyfikacja systemu WICI — projekt struktury i uzgodnione założenia.">
-  <title>Specyfikacja systemu WICI — projekt 0.6</title>
+  <title>Specyfikacja systemu WICI — projekt 0.7</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -62,8 +62,8 @@
     <header>
       <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.6</span> · 3 listopada 2026 r.</p>
-      <p>Uzgodniono założenia WICI-ZAL-001–009. Pozostała treść określa zakres prac nad specyfikacją. Nie stanowi podstawy deklaracji zgodności.</p>
+      <p><span class="status">Projekt 0.7</span> · 3 listopada 2026 r.</p>
+      <p>Uzgodniono założenia WICI-ZAL-001–009. Pozostała treść zawiera plan wymagań i wstępną inwentaryzację. Nie jest zatwierdzoną specyfikacją ani podstawą deklaracji zgodności.</p>
     </header>
 
     <section id="status" aria-labelledby="h-status">
@@ -169,9 +169,23 @@
     <section id="decyzje" aria-labelledby="h-decyzje">
       <h2 id="h-decyzje">Inwentaryzacja i decyzje</h2>
       <h3>Inwentaryzacja</h3>
-      <p>Każda pozycja wskaże zachowanie lub założenie, źródło, stan implementacji i prób oraz wynik przeglądu: przyjęcie do wymagań, zmianę albo odrzucenie. Inwentaryzacja nie ustanawia wymagań.</p>
+      <p class="explain">Punkt odniesienia: <a href="https://github.com/tmierzwa/WICI/commit/d637149016ed4a5e2436ee8cc4ed4f8ab6fc330b">main po scaleniu PR 181</a>. Wpisy wskazują kandydatów na wymagania i luki; obecność kodu lub testu nie oznacza zatwierdzenia wymagania ani zaliczenia próby wyrobu.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Stan zastany</th><th>Źródło i luka</th></tr></thead>
+        <tbody>
+          <tr><td>WICI-INV-001</td><td>SA1 ma sześć typów wiadomości i limit 256 B treści.</td><td><a href="../../firmware/src/sa1.h">Kodek</a>, <a href="oprogramowanie.md">opis</a>; reguły i testy wymagają przeglądu przed przyjęciem.</td></tr>
+          <tr><td>WICI-INV-002</td><td>Koperta v1 przenosi SA1 w całości albo w dwóch częściach; kod przewiduje osobny rodzaj dowodu doręczenia.</td><td><a href="transport.md">Opis</a>, <a href="../../firmware/src/envelope.h">kodek</a>, <a href="../../tests/test_envelope_vectors.py">wektory</a>; przegląd bezpieczeństwa pozostaje do wykonania.</td></tr>
+          <tr><td>WICI-INV-003</td><td>WICI-Link v3 definiuje DATA, HACK i BEACON oraz ładunek do 228 B.</td><td><a href="wici-link.md">Opis</a>, <a href="../../firmware/src/wici_link.h">kodek</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby dwóch węzłów</a>; D21 pozostaje otwarta.</td></tr>
+          <tr><td>WICI-INV-004</td><td>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są otwarte.</td><td><a href="wici-link.md">Opis i pytanie 7</a>, <a href="../../tests/native/wici_network_check.cpp">test programowy</a>; brak próby sprzętowej przez przekaźnik.</td></tr>
+          <tr><td>WICI-INV-005</td><td>Potwierdzenie skoku i przyjęcie SA1 mają różne znaczenie; stanowisko zapisuje przyjętą wiadomość przed potwierdzeniem.</td><td><a href="transport.md">Opis</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">kod stanowiska</a>, <a href="../../tests/test_stanowisko_wici.py">testy</a>; pełny przebieg wieloskokowy wymaga próby.</td></tr>
+          <tr><td>WICI-INV-006</td><td>Profil pilotażu używa SX1262 i LoRa SF7; dostęp do kanału obejmuje CAD, RSSI i limit czasu nadawania.</td><td><a href="radio.md">Opis</a>, <a href="../../firmware/src/wici_radio.cpp">kod</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>; badania konfiguracji wyrobu pozostają otwarte.</td></tr>
+          <tr><td>WICI-INV-007</td><td>Interfejs USB ma kontrakt v2 i limit 1024 B wiersza; stacja przechowuje zgłoszenia i skrzynkę w FRAM.</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.h">kod USB</a>, <a href="../../firmware/src/store.h">magazyn</a>; zachowanie po zaniku zasilania wymaga prób na sprzęcie docelowym.</td></tr>
+          <tr><td>WICI-INV-008</td><td>Dokumenty opisują wyrób i kryteria prób, lecz próby pełnej konfiguracji wyrobu nie są zaliczone.</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">odbiór</a>; nie ma jeszcze kompletu dowodów oceny zgodności.</td></tr>
+        </tbody>
+      </table>
+      <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
       <h3>Źródła do przeglądu</h3>
-      <p class="explain">Źródłem bieżącego stanu implementacji jest aktualna wersja <a href="https://github.com/tmierzwa/WICI/pull/181">PR 181</a>, również przed scaleniem. Dla plików zmienianych w tym PR należy czytać jego najnowszy stan; dla pozostałych — gałąź główną. Przed każdą inwentaryzacją trzeba ponownie sprawdzić wersję PR. Żaden z tych materiałów nie staje się przez to normatywną częścią specyfikacji.</p>
+      <p class="explain"><a href="https://github.com/tmierzwa/WICI/pull/181">PR 181</a> jest scalony. Przy dalszej inwentaryzacji należy zapisać aktualny commit gałęzi głównej i ponownie sprawdzić zmienione pliki. Poniższe materiały pozostają źródłami, nie normatywną częścią specyfikacji.</p>
       <table>
         <thead><tr><th>Obszar</th><th>Źródła</th></tr></thead>
         <tbody>
@@ -195,12 +209,14 @@
           <tr><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
           <tr><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
           <tr><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
+          <tr><td>WICI-DEC-009</td><td>Przełączanie dróg w dół w łańcuchach 3–15 skoków i sposób sprawdzenia pełnego zakresu protokołu.</td></tr>
         </tbody>
       </table>
       <h3>Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.7</td><td>Po scaleniu PR 181 rozpoczęto inwentaryzację kodu, opisów i prób; wskazano luki przed przyjęciem wymagań.</td></tr>
           <tr><td>0.6</td><td>Rozdzielono zasady pracy przed i po pierwszej wersji normatywnej; dodano warunek D21, zakres protokołu, decyzję o nośnikach i źródła do inwentaryzacji.</td></tr>
           <tr><td>0.5</td><td>Wskazano PR 181 jako źródło bieżącego stanu implementacji.</td></tr>
           <tr><td>0.4</td><td>Zaktualizowano WICI-ZAL-006, zasady synchronizacji z kodem oraz układ części dotyczących wyrobu, dowodów i źródeł.</td></tr>
