@@ -31,7 +31,8 @@ bool Relay::begin() {
     active_ = sent_ = false;
     activePriority_ = false;
     outgoingLength_ = 0;
-    nextSlot_ = owedHacks_ = 0;
+    nextSlot_ = 0;
+    owedHacks_.reset();
     for (Attempt& attempt : prepared_) attempt = Attempt();
     for (Hold& hold : holds_) hold = Hold();
     learn_ = (1u << wici_relay::SLOTS) - 1;  // recover hints of frames queued before a restart
@@ -87,17 +88,11 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     }
     if (!(frame.flags & wici_link::ACKREQ))
         return stored == wici_relay::Admission::FORWARDED ? Receipt::IGNORED : Receipt::STORED_NO_HACK;
-    if (stored == wici_relay::Admission::STORED) {
-        // The HACK of a K1 admission can be lost. The sender's first retry
-        // then gets its HACK even if a replayed copy just used the repeat
-        // allowance, so a replay cannot push K1 traffic into SA1 retries.
-        if (queue_.k1Neighbor(slot)) owedHacks_ |= bit;
-        else owedHacks_ &= static_cast<uint8_t>(~bit);
-    } else if (stored == wici_relay::Admission::DUPLICATE && (owedHacks_ & bit)) {
-        owedHacks_ &= static_cast<uint8_t>(~bit);
-    } else if (!repeatHack_.allow(nowS)) {
-        return Receipt::IGNORED;
-    }
+    // The HACK of an admission can be lost. The sender's first retry then
+    // gets its HACK even after the frame left the queue or a replayed copy
+    // used the repeat allowance (OwedHacks).
+    if (stored == wici_relay::Admission::STORED) owedHacks_.admitted(wire, length);
+    else if (!owedHacks_.take(wire, length) && !repeatHack_.allow(nowS)) return Receipt::IGNORED;
     hackLength = wici_link::encodeHack(key_, frame, wici_link::macEcho(wire, length), hack, capacity);
     return hackLength ? Receipt::HACK_READY : Receipt::REJECTED;
 }

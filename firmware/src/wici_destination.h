@@ -52,6 +52,7 @@ private:
     AdmitFn admit_;
     void* context_;
     wici_link::RepeatHack repeatHack_;
+    wici_link::OwedHacks owedHacks_;
 };
 
 }  // namespace wici_destination

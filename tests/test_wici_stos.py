@@ -114,20 +114,53 @@ class WiciBearerTest(unittest.TestCase):
                                  ("unauthenticated", wici_link.KISS_HACK_NO_LEARN)):
             with self.subTest(outcome):
                 self.bearer.received = lambda *_: outcome
-                self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 45, bytes(25)))
+                self.clock.value += wici_stos.REPEAT_HACK_S   # each a first receipt, the repeat allowance free
+                self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 45,
+                                          bytes([len(self.port.writes)] * 25)))
                 written = self.port.writes[-1]
                 self.assertEqual(written[1], command)   # KISS command byte after FEND
                 reply = wici_link.decode(self.key, 100, unpack(written[:1] + bytes(1) + written[2:]))
                 self.assertEqual((reply.kind, reply.destination, reply.sequence), (wici_link.HACK, 4, 45))
 
+    def test_repeat_hacks_are_limited_except_the_owed_first_retry(self):
+        # L4/E8: a keyless replay of a recorded frame cost the root 13 x 87 ms per HACK without any limit.
+        data = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 45, bytes(25))
+        hacks = lambda: len(self.port.writes)
+        self.feed(data)
+        self.assertEqual(hacks(), 1)
+        self.bearer.received = lambda *_: "duplicate"
+        self.feed(data)                      # the sender's first retry (its HACK was lost): owed
+        self.feed(data)                      # a replay: the repeat allowance
+        self.feed(data)                      # a replay within 5 s: no HACK
+        self.assertEqual((hacks(), self.bearer.dropped["repeat"]), (3, 1))
+        # A copy of the same envelope in another frame (another route or seq) is a repeat too.
+        self.feed(dataclasses.replace(data, source=6, sequence=46))
+        self.assertEqual((hacks(), self.bearer.dropped["repeat"]), (3, 2))
+        self.clock.value += wici_stos.REPEAT_HACK_S
+        self.feed(data)
+        self.assertEqual(hacks(), 4)
+        # After an hour the frame is forgotten; its envelope still makes it a limited repeat.
+        self.clock.value += wici_stos.SEEN_S + 1
+        self.feed(data)
+        self.feed(data)
+        self.assertEqual((hacks(), self.bearer.dropped["repeat"]), (5, 3))
+
     def test_late_admission_gets_no_hack(self):
         # Past the deadline the admission still completes on the database thread; the
         # station's retry is then a duplicate and gets its HACK at once.
         self.bearer.received = lambda *_: (_ for _ in ()).throw(TimeoutError("late"))
-        self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 43, bytes(25)))
+        late = wici_link.Frame(wici_link.DATA, wici_link.ACKREQ, 100, 4, 5, 0, 7, 43, bytes(25))
+        self.feed(late)
         self.assertEqual(self.port.writes, [])
         self.assertEqual(self.bearer.dropped["late"], 1)
         self.assertEqual(self.bearer.dropped["admission"], 0)
+        # The retry is owed its HACK, also when a replay has just used the repeat allowance.
+        self.bearer.received = lambda *_: "duplicate"
+        self.feed(dataclasses.replace(late, sequence=42, payload=bytes([1] * 25)))
+        self.feed(late)
+        self.assertEqual((len(self.port.writes), self.bearer.dropped["repeat"]), (2, 0))
+        self.feed(late)
+        self.assertEqual((len(self.port.writes), self.bearer.dropped["repeat"]), (2, 1))
         # A frame read long ago is still admitted, with no time left for a HACK decision.
         self.bearer.received = self.admit
         self.bearer._receive(wici_link.encode(self.key, wici_link.Frame(

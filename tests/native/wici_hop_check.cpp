@@ -370,9 +370,9 @@ int main() {
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(lateContention.contendedK2());  // K1 is known at admission, no deferred check
-    // Review finding 2/6: the first retry of a K1 frame gets its HACK even
-    // when a replayed copy just used the repeat allowance (the admission
-    // HACK may have been lost).
+    // Review finding 2/6, L4/E8: the first retry of any admitted frame gets
+    // its HACK even when a replayed copy just used the repeat allowance and
+    // after the frame left the queue (the admission HACK may have been lost).
     static Memory owedMemory;
     wici_hop::Relay owed(owedMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
     assert(owed.begin());
@@ -387,14 +387,27 @@ int main() {
                wici_hop::Receipt::HACK_READY);
     }
     assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY);  // repeat allowance used at t=200
+           wici_hop::Receipt::HACK_READY);  // the first retry is owed, K2 too
+    assert(owed.receiveData(k2Wire, k2Length, 200, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::HACK_READY);  // a replay: repeat allowance used at t=200
+    assert(owed.receiveData(k2Wire, k2Length, 201, hack, sizeof(hack), hackLength) ==
+           wici_hop::Receipt::IGNORED);
     wici_link::Frame k1 = k2;
     k1.sequence = 210; k1.payload[4] = 90; k1.payload[8] = 40;
     n = wici_link::encode(key, k1, wire, sizeof(wire));
     assert(owed.receiveData(wire, n, 200, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);  // durable K1 admission, HACK at once
+    // The frame leaves the queue (K1 first) before the sender's retry arrives.
+    assert(owed.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 200) && owed.prepare(200));
+    out = owed.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 40);
+    assert(owed.transmitted(true, 200));
+    reply.source = 1; reply.destination = 2; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(owed.receiveHack(hack, hackLength, 200));
     assert(owed.receiveData(wire, n, 201, hack, sizeof(hack), hackLength) ==
-           wici_hop::Receipt::HACK_READY);  // owed HACK is not rate limited
+           wici_hop::Receipt::HACK_READY);  // owed HACK is not rate limited, also after forwarding
     assert(owed.receiveData(wire, n, 202, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::IGNORED);     // but owed only once
 

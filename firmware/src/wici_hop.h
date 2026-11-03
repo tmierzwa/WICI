@@ -129,7 +129,7 @@ private:
     uint8_t learn_ = 0;  // queue slots whose down-route hint is not learned yet
     wici_link::RepeatHack repeatHack_;
     uint8_t nextSlot_ = 0;
-    uint8_t owedHacks_ = 0;  // K1 slots whose first sender retry gets a HACK regardless of RepeatHack
+    wici_link::OwedHacks owedHacks_;
 };
 
 }  // namespace wici_hop

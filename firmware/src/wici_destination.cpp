@@ -26,6 +26,7 @@ Destination::Destination(journal::Storage& storage, Config config, const uint8_t
 bool Destination::begin() {
     ready_ = false;
     repeatHack_.reset();
+    owedHacks_.reset();
     if (!keysReady_) return false;
     for (uint8_t i = 0; i < 2; ++i) {
         if (!replay_[i].begin(config_.network, config_.own, config_.receiver[i], envelopeKeys_[i]) ||
@@ -91,7 +92,9 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
         }
     }
     if (!(frame.flags & wici_link::ACKREQ)) return Outcome::ACCEPTED;
-    if (repeat && !repeatHack_.allow(nowS)) return Outcome::IGNORED;
+    // The first retry of a frame admitted as new gets its HACK outside the repeat allowance (OwedHacks).
+    if (!repeat) owedHacks_.admitted(wire, length);
+    else if (!owedHacks_.take(wire, length) && !repeatHack_.allow(nowS)) return Outcome::IGNORED;
     hackLength = wici_link::encodeHack(linkKey_, frame, wici_link::macEcho(wire, length), hack, capacity);
     return hackLength ? Outcome::HACK_READY : Outcome::REJECTED;
 }

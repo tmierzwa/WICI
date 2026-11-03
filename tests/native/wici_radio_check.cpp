@@ -124,13 +124,15 @@ int main() {
     uint8_t wire[255]; size_t n = encode(key, frame, wire);
     assert(shelter.receive(wire, n, 1234, 10) == wici_radio::Event::HACK_SENT);
     assert(admitted == 1 && air.hackCount == 1 && air.hackLength == 21 && air.receivedMs == 1234);
+    // The sender's first retry (its HACK was lost) is owed a HACK outside the repeat allowance.
     assert(shelter.receive(wire, n, 1235, 10) == wici_radio::Event::HACK_SENT && admitted == 1);
-    // A keyless replay of an admitted frame earns one HACK per 5 s, so it
+    // A keyless replay of an admitted frame earns one more HACK per 5 s, so it
     // cannot pile silence debt on the destination.
-    assert(shelter.receive(wire, n, 1236, 14) == wici_radio::Event::IGNORED && air.hackCount == 2);
-    assert(shelter.receive(wire, n, 1237, 15) == wici_radio::Event::HACK_SENT && air.hackCount == 3);
+    assert(shelter.receive(wire, n, 1236, 10) == wici_radio::Event::HACK_SENT && air.hackCount == 3);
+    assert(shelter.receive(wire, n, 1237, 14) == wici_radio::Event::IGNORED && air.hackCount == 3);
+    assert(shelter.receive(wire, n, 1238, 15) == wici_radio::Event::HACK_SENT && air.hackCount == 4);
     wire[n - 1] ^= 1;
-    assert(shelter.receive(wire, n, 1238, 15) == wici_radio::Event::REJECTED && air.hackCount == 3);
+    assert(shelter.receive(wire, n, 1239, 15) == wici_radio::Event::REJECTED && air.hackCount == 4);
 
     // A transit frame is HACKed only after durable queue admission.
     frame.source = 4; frame.sequence = 11; frame.length = 25;
@@ -139,7 +141,7 @@ int main() {
     n = encode(key, frame, wire);
     air.hackOk = false;
     assert(shelter.receive(wire, n, 1300, 11) == wici_radio::Event::ADMITTED);
-    assert(air.hackCount == 4 && air.receivedMs == 1300);
+    assert(air.hackCount == 5 && air.receivedMs == 1300);
     // Review D1: the planned parent carries DATA from boot, before any BEACON;
     // without its BEACON the station has no rank and sends no BEACON.
     assert(shelter.routes().parent() == 5 && shelter.routes().rank(11) == 0xFFFF && !shelter.beacon(11));
@@ -403,9 +405,10 @@ int main() {
     memcpy(part.payload, sealed[0].bytes, part.length);
     n = encode(key, part, wire);
     assert(parted.receive(wire, n, 9000, 40) == wici_radio::Event::HACK_SENT);
-    assert(parted.receive(wire, n, 9001, 40) == wici_radio::Event::HACK_SENT);
-    assert(parted.receive(wire, n, 9002, 44) == wici_radio::Event::IGNORED);
-    assert(parted.receive(wire, n, 9003, 45) == wici_radio::Event::HACK_SENT && partAir.hackCount == 3);
+    assert(parted.receive(wire, n, 9001, 40) == wici_radio::Event::HACK_SENT);  // owed: the first retry
+    assert(parted.receive(wire, n, 9002, 40) == wici_radio::Event::HACK_SENT);  // the repeat allowance
+    assert(parted.receive(wire, n, 9003, 44) == wici_radio::Event::IGNORED);
+    assert(parted.receive(wire, n, 9004, 45) == wici_radio::Event::HACK_SENT && partAir.hackCount == 4);
 
     // Review D1/D8: an own SA1 leaves at once to the planned parent (no
     // BEACON yet). A radio TX failure counts like a HACK timeout: three

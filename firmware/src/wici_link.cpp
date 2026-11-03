@@ -90,6 +90,29 @@ bool decode(const uint8_t key[32], uint16_t netId, const uint8_t* wire, size_t s
     return true;
 }
 
+void OwedHacks::admitted(const uint8_t* bare, size_t length) {
+    if (!bare || length < TAG) return;
+    memcpy(macs_[next_], bare + length - TAG, TAG);
+    owed_[next_] = true;
+    next_ = static_cast<uint8_t>((next_ + 1) % SIZE);
+}
+
+bool OwedHacks::take(const uint8_t* bare, size_t length) {
+    if (!bare || length < TAG) return false;
+    for (uint8_t i = 0; i < SIZE; ++i) {
+        if (!owed_[i] || memcmp(macs_[i], bare + length - TAG, TAG)) continue;
+        owed_[i] = false;
+        return true;
+    }
+    return false;
+}
+
+void OwedHacks::reset() {
+    memset(macs_, 0, sizeof(macs_));
+    memset(owed_, 0, sizeof(owed_));
+    next_ = 0;
+}
+
 uint16_t macEcho(const uint8_t* bare, size_t length) {
     if (!bare || length < TAG) return 0;
     return static_cast<uint16_t>((bare[length - TAG] << 8) | bare[length - TAG + 1]);

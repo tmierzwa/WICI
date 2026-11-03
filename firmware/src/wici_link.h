@@ -68,6 +68,25 @@ private:
     bool sent_ = false;
 };
 
+// The last frames this node admitted as new, by their network MAC. The first
+// repeat of each with the same bytes (the sender's retry after a lost HACK)
+// gets its HACK outside RepeatHack, so replayed recordings that use up the
+// allowance cannot stop it; a recorded older frame or a copy over another
+// route stays limited (wici-link.md, rule 4). RAM only.
+class OwedHacks {
+public:
+    static constexpr uint8_t SIZE = 8;
+    void admitted(const uint8_t* bare, size_t length);
+    // true once per admitted frame still in the ring
+    bool take(const uint8_t* bare, size_t length);
+    void reset();
+
+private:
+    uint8_t macs_[SIZE][TAG] = {};
+    bool owed_[SIZE] = {};
+    uint8_t next_ = 0;
+};
+
 struct Frame {
     Type type = Type::DATA;
     uint8_t flags = 0;

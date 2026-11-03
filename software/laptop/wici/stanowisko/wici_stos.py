@@ -16,6 +16,11 @@ from .wysylka import FLOODED, FORWARDED
 # (wici-link.md, „Cel i root”); USB and the serial read take part of that.
 HACK_BUDGET_S = 0.08
 FRESH = ("partial", "complete", "proof")   # outcomes of `received` that let the root learn a down route
+# Repeat HACKs as on every node (wici-link.md, rule 4): a frame seen in the last hour, or a new frame with a known
+# envelope, gets a HACK at most once per REPEAT_HACK_S, except the first repeat of a frame first answered as new
+# (the sender's retry after a lost HACK). Without the limit a replayed recording cost the root 13 x 87 ms per HACK.
+REPEAT_HACK_S = 5
+SEEN_S = 3600
 
 
 @dataclass
@@ -78,7 +83,9 @@ class WiciStos:
         self.outstanding = None  # item submitted to the root without echo or refusal yet
         self.turn = 0            # destination of the last submission
         self.last_rx = None
-        self.dropped = {"bad_link": 0, "admission": 0, "late": 0, "outbound": 0, "refused": 0}
+        self.dropped = {"bad_link": 0, "admission": 0, "late": 0, "outbound": 0, "refused": 0, "repeat": 0}
+        self.seen = {}           # MAC of a frame answered with HACK -> [first seen, first repeat still owed]
+        self.repeat_at = None    # last repeat HACK under the limit
 
     def start(self):
         if self.running:
@@ -218,6 +225,8 @@ class WiciStos:
             outcome = self.received(frame.payload, max(0.0, HACK_BUDGET_S - (time.monotonic() - read_at)))
         except TimeoutError:
             self.dropped["late"] += 1
+            # The admission completes on the database thread: the station's retry is owed its HACK.
+            self.seen.setdefault(bytes(wire[-wici_link.TAG:]), [self.clock(), True])
             self.log(f"stanowisko: koperta WICI od {frame.source} seq {frame.sequence} bez HACK: przyjęcie po "
                      f"{(time.monotonic() - read_at) * 1000:.0f} ms, za późno")
             return
@@ -226,11 +235,32 @@ class WiciStos:
             self.log(f"stanowisko: odmowa koperty WICI: {exc!r}")
             return
         if frame.flags & wici_link.ACKREQ:
+            if not self._hack_allowed(wire, outcome):
+                self.dropped["repeat"] += 1
+                return
             reply = wici_link.Frame(wici_link.HACK, 0, self.network, self.root,
                                     frame.source, 0, 1, frame.sequence, wici_link.mac_echo(wire))
             # Only a fresh part authenticated by the envelope MAC proves that its sender is behind this
             # neighbour now; a duplicate, a set-aside or an unauthenticated frame may be replayed or forged.
             self._write(reply, wici_link.KISS_DATA if outcome in FRESH else wici_link.KISS_HACK_NO_LEARN)
+
+    def _hack_allowed(self, wire, outcome):
+        now = self.clock()
+        while self.seen and now - next(iter(self.seen.values()))[0] > SEEN_S:
+            del self.seen[next(iter(self.seen))]
+        mac = bytes(wire[-wici_link.TAG:])
+        seen = self.seen.get(mac)
+        if seen is None:
+            self.seen[mac] = [now, outcome != "duplicate"]
+            if outcome != "duplicate":
+                return True
+        elif seen[1]:
+            seen[1] = False
+            return True
+        if self.repeat_at is not None and now - self.repeat_at < REPEAT_HACK_S:
+            return False
+        self.repeat_at = now
+        return True
 
     def _tick(self):
         now = self.clock()
