@@ -69,6 +69,7 @@ class Nosnik:
         self.journal_id = None           # znacznik migawki, za którą idzie dziennik przyjęć tego pokolenia
         self.journal_files = {}          # pokolenie -> [plik dopisywany, nagłówek, liczba rekordów]
         self.journal_tails = {}          # pokolenie -> (nagłówek, liczba rekordów) plików przeczytanych na starcie
+        self.journal_sealed = set()      # pokolenia, których dziennik zamknął błąd zapisu: nic więcej za nim
 
     def exists(self):
         return self.kit.exists() or database.has_copies(self.base) or any(
@@ -210,7 +211,14 @@ class Nosnik:
         return self.base / f"{JOURNAL_PREFIX}{gen}"
 
     def journal_append(self, key, gen, journal, payload):
-        """Append one record after the snapshot (gen, journal) with fsync; True on return means durable."""
+        """Append one record after the snapshot (gen, journal) with fsync; True on return means durable.
+
+        After a failed append nothing more goes into this file: the record may be on the medium whole, cut off
+        or not at all, and a record behind it would turn a cut-off tail into damage in the middle. Appends to
+        this snapshot then raise until the next snapshot starts a new file (Przyjecie takes it at the next tick,
+        because the admitted change is not durable)."""
+        if gen in self.journal_sealed:
+            raise StorageError(f"dziennik przyjęć {self._journal_path(gen).name} zamknięty po błędzie zapisu")
         entry = self.journal_files.get(gen)
         if entry is None:
             path, head = self._journal_path(gen), JOURNAL_MAGIC + bytes.fromhex(journal)
@@ -228,9 +236,23 @@ class Nosnik:
             entry = self.journal_files[gen] = [f, head, count]
         f, head, count = entry
         sealed = syscrypto.seal(key, payload, head + count.to_bytes(4, "big"))
-        f.write(len(sealed).to_bytes(4, "big") + sealed)
-        f.flush()
-        database._fsync(f.fileno())
+        start = f.tell()
+        try:
+            f.write(len(sealed).to_bytes(4, "big") + sealed)
+            f.flush()
+            database._fsync(f.fileno())
+        except BaseException:
+            self.journal_files.pop(gen, None)
+            self.journal_sealed.add(gen)
+            try:   # najlepiej bez nieudanego rekordu; gdy i to zawiedzie, zostaje ostatnim w pliku
+                f.truncate(start)
+                f.flush()
+                database._fsync(f.fileno())
+            except OSError:
+                pass
+            finally:
+                f.close()
+            raise
         entry[2] = count + 1
 
     def journal_records(self, key):
@@ -275,6 +297,7 @@ class Nosnik:
         """Remove the journals of snapshots older than `below`: their records are in snapshot `below`."""
         for gen, path in self._journal_paths():
             if gen < below:
+                self.journal_sealed.discard(gen)
                 entry = self.journal_files.pop(gen, None)
                 if entry is not None:
                     entry[0].close()
@@ -285,6 +308,7 @@ class Nosnik:
             entry[0].close()
         self.journal_files.clear()
         self.journal_tails.clear()
+        self.journal_sealed.clear()
 
     def journal_pending(self, key):
         """True when the last session ended without its final snapshot and left admitted frames to replay."""

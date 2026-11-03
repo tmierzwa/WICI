@@ -339,6 +339,28 @@ class WiciAdmissionTest(StationTestCase):
         self.assertEqual(self.admit(halves[1]), "complete")   # the first part came back from the journal
         self.assertEqual(self.received(), 2)
 
+    def test_a_failed_journal_append_closes_the_file_until_the_next_snapshot(self):
+        """Nothing goes into the journal behind a failed record: the next start would read it as damage in the
+        middle. Frames wait without HACK (the root retries) until the next tick's snapshot starts a new file."""
+        from wici import database
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        real, failed = database._fsync, []
+
+        def flaky(fd):
+            if not failed:
+                failed.append(fd)
+                raise OSError("EIO")
+            return real(fd)
+        with unittest.mock.patch.object(database, "_fsync", side_effect=flaky):
+            with self.assertRaises(OSError):
+                self.admit(self.seal(8)[0])
+        with self.assertRaises(OSError):
+            self.admit(self.seal(8)[0])   # the root's retry: still no HACK
+        self.tick()
+        self.assertEqual(self.admit(self.seal(9)[0]), "complete")
+        self.crash()
+        self.assertEqual(self.received(), 3)
+
     def test_admission_does_not_wait_for_a_snapshot_being_written(self):
         release, cut, real = threading.Event(), threading.Event(), self.medium.save
 
