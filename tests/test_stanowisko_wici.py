@@ -263,6 +263,42 @@ class WiciAdmissionTest(StationTestCase):
         self.assertEqual(durable(self.medium, self.key, "SELECT sum(source=?), sum(source=?) FROM received",
                                  (old_source, self.source)), (1, 1))
 
+    def test_a_station_off_the_list_gets_received_over_wici_link_and_nothing_else(self):
+        """Through the real path (outbox tick, Bearers, send_wici): the outbox hold alone decides trust, so the
+        RECEIVED of a message approved in quarantine goes out sealed, while a STATUS for it stays held."""
+        from tests.test_stanowisko import FakeStack
+        from wici.stanowisko import bearers, panel, wzorzec
+
+        class Link(OnlineLink):
+            address = bytes(16)
+
+            def __init__(self):
+                self.sent = []
+
+            def send_frames(self, frames):
+                self.sent.append(frames)
+                return frames
+
+            def outcome(self, message):
+                return None   # in flight for the whole test
+        link = Link()
+        stack = bearers.Bearers({"wici": link}, "wici")
+        stack.reception = self.reception
+        self.reception.wysylka.send, self.reception.wysylka.outcome = stack.send, stack.outcome
+        self.reception.call(lambda s: s.remove_trusted(self.source))
+        content = request()
+        self.admit(self.seal(50, content)[0])   # quarantined: a removed station
+        mid, revision = wzorzec.decode_message(content)[2:4]
+        d = panel.Dyzur(self.reception, self.medium, self.key, FakeStack(), clock=lambda: self.now)
+        d.login("dyzurny-1", self.envelopes["dyzurny-1"])
+        d.quarantine({"source": self.source.hex(), "id": mid, "revision": revision, "decision": "approve"})
+        self.reception.call(lambda s: self.reception.wysylka.status(s, self.source, mid, revision, 2, self.now))
+        self.tick()
+        self.assertEqual(len(link.sent), 1)
+        key = self.envelope.derive_key(self.station_private, self.receiver_public, 100, 2, 4, own_id=4)
+        self.assertEqual(self.envelope.open_part(key, link.sent[0][0]).plaintext, received_for(content))
+        self.assertEqual(d.view()["node"]["held"], 1)
+
     def test_panel_alarm_shows_every_frame_acknowledged_without_admission(self):
         self.assertFalse(self.reception.envelope_alarm()["active"])
         self.assertEqual(self.admit(self.seal(7, sender=9)[0]), "unauthenticated")

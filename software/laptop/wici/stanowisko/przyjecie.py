@@ -729,9 +729,9 @@ class Przyjecie:
         link = bearer.status(self.clock())
         if self.recovery or not link["online"] or not link["room"]:
             return None   # bez miejsca w drodze nie zamyka koperty: licznik zostaje na następną próbę
-        row = self.store.db.execute(
-            "SELECT n.station FROM numery n JOIN trusted t ON t.source=n.source "
-            "WHERE n.net_id=? AND n.source=?", (bearer.network, dest)).fetchone()
+        # Zaufanie rozstrzyga tylko wysylka.SENDABLE: do stacji spoza listy wychodzi tu sam RECEIVED.
+        row = self.store.db.execute("SELECT station FROM numery WHERE net_id=? AND source=?",
+                                    (bearer.network, dest)).fetchone()
         if row is None:
             return None
         try:
@@ -767,8 +767,7 @@ class Przyjecie:
             raise envelope.EnvelopeError("recovery mode cannot send WICI envelopes")
         wzorzec.decode_message(content)  # refuse malformed SA1 before consuming a nonce
         private, active = self._active_identity(net_id)
-        row = self.store.db.execute("SELECT n.public_key FROM numery n JOIN trusted t ON t.source=n.source "
-                                    "WHERE n.net_id=? AND n.station=?",
+        row = self.store.db.execute("SELECT public_key FROM numery WHERE net_id=? AND station=?",
                                     (net_id, station_id)).fetchone()
         if row is None or len(row[0]) != 64:
             raise envelope.EnvelopeError("unknown numbered station")
