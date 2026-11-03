@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Specyfikacja systemu WICI — projekt struktury i uzgodnione założenia.">
-  <title>Specyfikacja systemu WICI — projekt 0.7</title>
+  <title>Specyfikacja systemu WICI — projekt 0.8</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -62,7 +62,7 @@
     <header>
       <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.7</span> · 3 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.8</span> · 3 listopada 2026 r.</p>
       <p>Uzgodniono założenia WICI-ZAL-001–009. Pozostała treść zawiera plan wymagań i wstępną inwentaryzację. Nie jest zatwierdzoną specyfikacją ani podstawą deklaracji zgodności.</p>
     </header>
 
@@ -75,15 +75,15 @@
       <table class="id-table">
         <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
         <tbody>
-          <tr><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest niezależnym dokumentem nadrzędnym, określającym wymagane właściwości i zachowanie rozwiązania.</td></tr>
-          <tr><td>WICI-ZAL-002</td><td>Specyfikacja stanowi dokument odniesienia dla dokumentacji szczegółowej oraz implementacji.</td></tr>
-          <tr><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
-          <tr><td>WICI-ZAL-004</td><td>Reticulum pozostaje poza architekturą podstawową. Może być rozpatrywane jako zewnętrzny protokół na potrzeby ewentualnej współpracy i integracji.</td></tr>
-          <tr><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
-          <tr><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Do jej zatwierdzenia zmianę kodu w obszarze objętym specyfikacją odnotowuje się w inwentaryzacji. Po zatwierdzeniu zmianie kodu w tym obszarze towarzyszy aktualizacja wymagań albo wpis o braku wpływu na specyfikację.</td></tr>
-          <tr><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
-          <tr><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
-          <tr><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
+          <tr id="wici-zal-001"><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest niezależnym dokumentem nadrzędnym, określającym wymagane właściwości i zachowanie rozwiązania.</td></tr>
+          <tr id="wici-zal-002"><td>WICI-ZAL-002</td><td>Specyfikacja stanowi dokument odniesienia dla dokumentacji szczegółowej oraz implementacji.</td></tr>
+          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
+          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum pozostaje poza architekturą podstawową. Może być rozpatrywane jako zewnętrzny protokół na potrzeby ewentualnej współpracy i integracji.</td></tr>
+          <tr id="wici-zal-005"><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
+          <tr id="wici-zal-006"><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Do jej zatwierdzenia zmianę kodu w obszarze objętym specyfikacją odnotowuje się w inwentaryzacji. Po zatwierdzeniu zmianie kodu w tym obszarze towarzyszy aktualizacja wymagań albo wpis o braku wpływu na specyfikację.</td></tr>
+          <tr id="wici-zal-007"><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
+          <tr id="wici-zal-008"><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
+          <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
         </tbody>
       </table>
       <p class="explain">Podstawa architektury zakłada pozytywny wynik decyzji <a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21</a> z koncepcji, czyli próby przy stole WICI-Link v3 na docelowym sprzęcie. Decyzja pozostaje otwarta.</p>
@@ -173,14 +173,23 @@
       <table>
         <thead><tr><th>ID</th><th>Stan zastany</th><th>Źródło i luka</th></tr></thead>
         <tbody>
-          <tr><td>WICI-INV-001</td><td>SA1 ma sześć typów wiadomości i limit 256 B treści.</td><td><a href="../../firmware/src/sa1.h">Kodek</a>, <a href="oprogramowanie.md">opis</a>; reguły i testy wymagają przeglądu przed przyjęciem.</td></tr>
-          <tr><td>WICI-INV-002</td><td>Koperta v1 przenosi SA1 w całości albo w dwóch częściach; kod przewiduje osobny rodzaj dowodu doręczenia.</td><td><a href="transport.md">Opis</a>, <a href="../../firmware/src/envelope.h">kodek</a>, <a href="../../tests/test_envelope_vectors.py">wektory</a>; przegląd bezpieczeństwa pozostaje do wykonania.</td></tr>
-          <tr><td>WICI-INV-003</td><td>WICI-Link v3 definiuje DATA, HACK i BEACON oraz ładunek do 228 B.</td><td><a href="wici-link.md">Opis</a>, <a href="../../firmware/src/wici_link.h">kodek</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby dwóch węzłów</a>; D21 pozostaje otwarta.</td></tr>
-          <tr><td>WICI-INV-004</td><td>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są otwarte.</td><td><a href="wici-link.md">Opis i pytanie 7</a>, <a href="../../tests/native/wici_network_check.cpp">test programowy</a>; brak próby sprzętowej przez przekaźnik.</td></tr>
-          <tr><td>WICI-INV-005</td><td>Potwierdzenie skoku i przyjęcie SA1 mają różne znaczenie; stanowisko zapisuje przyjętą wiadomość przed potwierdzeniem.</td><td><a href="transport.md">Opis</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">kod stanowiska</a>, <a href="../../tests/test_stanowisko_wici.py">testy</a>; pełny przebieg wieloskokowy wymaga próby.</td></tr>
-          <tr><td>WICI-INV-006</td><td>Profil pilotażu używa SX1262 i LoRa SF7; dostęp do kanału obejmuje CAD, RSSI i limit czasu nadawania.</td><td><a href="radio.md">Opis</a>, <a href="../../firmware/src/wici_radio.cpp">kod</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>; badania konfiguracji wyrobu pozostają otwarte.</td></tr>
-          <tr><td>WICI-INV-007</td><td>Interfejs USB ma kontrakt v2 i limit 1024 B wiersza; stacja przechowuje zgłoszenia i skrzynkę w FRAM.</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.h">kod USB</a>, <a href="../../firmware/src/store.h">magazyn</a>; zachowanie po zaniku zasilania wymaga prób na sprzęcie docelowym.</td></tr>
-          <tr><td>WICI-INV-008</td><td>Dokumenty opisują wyrób i kryteria prób, lecz próby pełnej konfiguracji wyrobu nie są zaliczone.</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">odbiór</a>; nie ma jeszcze kompletu dowodów oceny zgodności.</td></tr>
+          <tr id="wici-inv-001"><td>WICI-INV-001</td><td>SA1 ma sześć typów wiadomości i limit 256 B treści.</td><td><a href="../../firmware/src/sa1.h">Kodek</a>, <a href="oprogramowanie.md">opis</a>; reguły i testy wymagają przeglądu przed przyjęciem.</td></tr>
+          <tr id="wici-inv-002"><td>WICI-INV-002</td><td>Koperta v1 przenosi SA1 w całości albo w dwóch częściach; kod przewiduje osobny rodzaj dowodu doręczenia.</td><td><a href="transport.md">Opis</a>, <a href="../../firmware/src/envelope.h">kodek</a>, <a href="../../tests/test_envelope_vectors.py">wektory</a>; przegląd bezpieczeństwa pozostaje do wykonania.</td></tr>
+          <tr id="wici-inv-003"><td>WICI-INV-003</td><td>WICI-Link v3 definiuje DATA, HACK i BEACON oraz ładunek do 228 B.</td><td><a href="wici-link.md">Opis</a>, <a href="../../firmware/src/wici_link.h">kodek</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby dwóch węzłów</a>; D21 pozostaje otwarta.</td></tr>
+          <tr id="wici-inv-004"><td>WICI-INV-004</td><td>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są otwarte.</td><td><a href="wici-link.md">Opis i pytanie 7</a>, <a href="../../tests/native/wici_network_check.cpp">test programowy</a>; brak próby sprzętowej przez przekaźnik.</td></tr>
+          <tr id="wici-inv-005"><td>WICI-INV-005</td><td>Potwierdzenie skoku i przyjęcie SA1 mają różne znaczenie; stanowisko zapisuje przyjętą wiadomość przed potwierdzeniem.</td><td><a href="transport.md">Opis</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">kod stanowiska</a>, <a href="../../tests/test_stanowisko_wici.py">testy</a>; pełny przebieg wieloskokowy wymaga próby.</td></tr>
+          <tr id="wici-inv-006"><td>WICI-INV-006</td><td>Profil pilotażu używa SX1262 i LoRa SF7; dostęp do kanału obejmuje CAD, RSSI i limit czasu nadawania.</td><td><a href="radio.md">Opis</a>, <a href="../../firmware/src/wici_radio.cpp">kod</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>; badania konfiguracji wyrobu pozostają otwarte.</td></tr>
+          <tr id="wici-inv-007"><td>WICI-INV-007</td><td>Interfejs USB ma kontrakt v2 i limit 1024 B wiersza; stacja przechowuje zgłoszenia i skrzynkę w FRAM.</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.h">kod USB</a>, <a href="../../firmware/src/store.h">magazyn</a>; zachowanie po zaniku zasilania wymaga prób na sprzęcie docelowym.</td></tr>
+          <tr id="wici-inv-008"><td>WICI-INV-008</td><td>Kandydaci na właściwości wyrobu i profili:
+            <ul>
+              <li>Wydanie, poziom 1: gotowość radiowa ≤60 s bez komputera; przekazywanie ruchu przez cały czas pracy; ≥48 h jako przekaźnik na ogniwach AA; zasilanie 12 V w zakresie 11,3–16 V z przełączaniem bez resetu. Pilotaż sprawdza 48 h tylko w temperaturze pokojowej.</li>
+              <li>Warunek D21 przed pilotażem: 50/50 zgłoszeń z RECEIVED przez jeden przekaźnik w czasie &lt;15 min. Ogólny cel W10 to 50/50 w ciągu 30 min.</li>
+              <li>Wydanie, stanowisko: zmiana komputera w ≤15 min.</li>
+              <li>Po pilotażu, poziom 3: strona dla 15 aktywnych użytkowników.</li>
+            </ul>
+          </td><td><a href="projekt.md">Zakres projektu</a>, <a href="odbior.md">próby</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W02, W10, W22, W23, W25</a>; próby pełnej konfiguracji wyrobu nie są zaliczone.</td></tr>
+          <tr id="wici-inv-009"><td>WICI-INV-009</td><td>Numerowana konfiguracja wiąże <code>net_id</code> oraz numery u16 stacji i dwóch tożsamości odbiorcy z kartami i kluczami. <code>priority_keys</code> zawiera klucze sąsiadów; <code>behind</code> jest dopuszczone tylko u roota. Przygotowanie odrzuca klucze o małym rzędzie i nie przyjmuje kluczy przez radio. Kod obejmuje przeniesienie stacji, aktywację zapasowej tożsamości odbiorcy oraz wymianę głównej po odzyskaniu bazy.</td><td><a href="transport.md">Klucze</a>, <a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/config.cpp">stacja</a>, <a href="../../software/laptop/wici/configdoc.py">przygotowanie</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">stanowisko</a>; <a href="#wici-dec-004">WICI-DEC-004</a> jest otwarta. Profil pilotażu nie zapewnia poufności przyszłej ani rotacji kluczy przez radio.</td></tr>
+          <tr id="wici-inv-010"><td>WICI-INV-010</td><td>Bez pola <code>network</code> stacja używa Reticulum i nie używa koperty WICI. Stanowisko może uruchomić równoległy port Reticulum (<code>--reticulum-port</code>).</td><td><a href="transport.md">Opis</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/laptop/wici/stanowisko/__main__.py">stanowisko</a>; wobec <a href="#wici-zal-004">WICI-ZAL-004</a> wymaga decyzji o usunięciu tej ścieżki albo osobnym kontrakcie integracji (<a href="#wici-dec-008">WICI-DEC-008</a>).</td></tr>
         </tbody>
       </table>
       <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
@@ -201,21 +210,22 @@
       <table class="id-table">
         <thead><tr><th>ID</th><th>Przedmiot</th></tr></thead>
         <tbody>
-          <tr><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu pierwszej wersji normatywnej.</td></tr>
-          <tr><td>WICI-DEC-002</td><td>Rola zatwierdzająca, kryteria przeglądu i sposób egzekwowania wspólnej zmiany kodu i specyfikacji.</td></tr>
-          <tr><td>WICI-DEC-003</td><td>Zakres wykorzystania dotychczasowych projektów SA1, koperty i WICI-Link.</td></tr>
-          <tr><td>WICI-DEC-004</td><td>Model tożsamości i bezpieczeństwa niezależny od Reticulum.</td></tr>
-          <tr><td>WICI-DEC-005</td><td>Gwarancje przyjęcia, potwierdzenia i ponowienia dla obu kierunków komunikacji.</td></tr>
-          <tr><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
-          <tr><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
-          <tr><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
-          <tr><td>WICI-DEC-009</td><td>Przełączanie dróg w dół w łańcuchach 3–15 skoków i sposób sprawdzenia pełnego zakresu protokołu.</td></tr>
+          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-002"><td>WICI-DEC-002</td><td>Rola zatwierdzająca, kryteria przeglądu i sposób egzekwowania wspólnej zmiany kodu i specyfikacji.</td></tr>
+          <tr id="wici-dec-003"><td>WICI-DEC-003</td><td>Zakres wykorzystania dotychczasowych projektów SA1, koperty i WICI-Link.</td></tr>
+          <tr id="wici-dec-004"><td>WICI-DEC-004</td><td>Model tożsamości i bezpieczeństwa niezależny od Reticulum.</td></tr>
+          <tr id="wici-dec-005"><td>WICI-DEC-005</td><td>Gwarancje przyjęcia, potwierdzenia i ponowienia dla obu kierunków komunikacji.</td></tr>
+          <tr id="wici-dec-006"><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
+          <tr id="wici-dec-007"><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
+          <tr id="wici-dec-008"><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td>Przełączanie dróg w dół w łańcuchach 3–15 skoków i sposób sprawdzenia pełnego zakresu protokołu.</td></tr>
         </tbody>
       </table>
       <h3>Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.8</td><td>Dodano do inwentaryzacji przygotowanie kluczy, zakres liczbowych właściwości wyrobu i obecną ścieżkę Reticulum.</td></tr>
           <tr><td>0.7</td><td>Po scaleniu PR 181 rozpoczęto inwentaryzację kodu, opisów i prób; wskazano luki przed przyjęciem wymagań.</td></tr>
           <tr><td>0.6</td><td>Rozdzielono zasady pracy przed i po pierwszej wersji normatywnej; dodano warunek D21, zakres protokołu, decyzję o nośnikach i źródła do inwentaryzacji.</td></tr>
           <tr><td>0.5</td><td>Wskazano PR 181 jako źródło bieżącego stanu implementacji.</td></tr>
