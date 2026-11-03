@@ -235,6 +235,34 @@ class WiciAdmissionTest(StationTestCase):
                 self.reception.call(lambda s: inbox.receive(part, key, now, lambda full: None))
             self.assertNotIsInstance(raised.exception, self.inbox.PermanentRejection)
 
+    def test_after_a_rebind_the_number_admits_only_the_new_key(self):
+        """A replaced station (new key, same number 4) through the panel rebind: the old key's envelope no
+        longer authenticates, the new key's starts its own replay window and its own sending counters."""
+        from cryptography.hazmat.primitives.asymmetric import x25519
+        from tests.test_stanowisko import FakeStack, station_card
+        from wici.stanowisko import panel
+        d = panel.Dyzur(self.reception, self.medium, self.key, FakeStack(), clock=lambda: self.now)
+        d.login("dyzurny-1", self.envelopes["dyzurny-1"])
+        self.assertEqual(self.admit(self.seal(400)[0]), "complete")
+        old_private, self.station_private = self.station_private, bytes(range(100, 132))
+        key = (x25519.X25519PrivateKey.from_private_bytes(self.station_private).public_key().public_bytes_raw()
+               + os.urandom(32))
+        card = dict(station_card(key), net_id=100, id=4, x25519=key[:32].hex())
+        ask = {"card": card, "fingerprint": card["fingerprint"], "account2": "dyzurny-2",
+               "password2": self.envelopes["dyzurny-2"]}
+        d.trust({**ask, "replace": d.trust(ask)["replace"]})
+        self.assertEqual(self.admit(self.seal(0)[0]), "complete")   # counter 0: a fresh window
+        old_source, self.source = self.source, nosnik.lxmf_address(key)
+        frame = self.reception.call(lambda s: self.reception.send_wici(OnlineLink(), self.source,
+                                                                       received_for(request())))[0]
+        new_key = self.envelope.derive_key(self.station_private, self.receiver_public, 100, 2, 4, own_id=4)
+        self.assertEqual(int.from_bytes(frame[5:9], "big"), 0)   # own counters for the new key
+        self.envelope.open_part(new_key, frame)   # sealed for the new key
+        self.station_private = old_private
+        self.assertEqual(self.admit(self.seal(401)[0]), "unauthenticated")
+        self.assertEqual(durable(self.medium, self.key, "SELECT sum(source=?), sum(source=?) FROM received",
+                                 (old_source, self.source)), (1, 1))
+
     def test_panel_alarm_shows_every_frame_acknowledged_without_admission(self):
         self.assertFalse(self.reception.envelope_alarm()["active"])
         self.assertEqual(self.admit(self.seal(7, sender=9)[0]), "unauthenticated")

@@ -439,7 +439,17 @@ var VIEWS = {
         el("div", {class: "file-pick"}, button("Wybierz plik", "", function () { picking = true; file.click(); }), chosen, file)),
         field("Odcisk z ekranu stacji (16 cyfr)", fp)), info, second.node,
       row(button("Dodaj do zaufanych", "primary", function () {
-        action("/api/operator/trust", Object.assign({card: card_, fingerprint: fp.value}, second.values()), error);
+        var body = Object.assign({card: card_, fingerprint: fp.value}, second.values());
+        action("/api/operator/trust", body, error).then(function (v) {
+          if (!v || !v.replace) return;
+          // Numer zajęty: serwer niczego nie zmienił; przepięcie dopiero po potwierdzeniu, z tym samym opisem.
+          var r = v.replace, what = "Numer " + r.station + " w sieci " + r.net_id;
+          ask(what + (r.old ? " ma " + r.old.name + " (odcisk " + r.old.fingerprint + "). Przepiąć go na tę kartę? " +
+                "Tamta stacja straci zaufanie, a jej wiadomości trafią do kwarantanny." : " przejdzie na tę kartę.") +
+              (r.renumbered_from ? " Ta stacja traci dawny numer " + r.renumbered_from + "." : ""),
+              "Przepnij numer", "danger")
+            .then(function (yes) { if (yes) action("/api/operator/trust", Object.assign({replace: r}, body), error); });
+        }).catch(function () {});
       })),
       error));
   },

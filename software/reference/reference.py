@@ -326,9 +326,13 @@ class OSPStore:
     def remove_trusted(self, source: bytes) -> None:
         """One duty officer removes a station from the trusted list; adding it back is add_trusted (two people)."""
         with self.db:
-            if self.db.execute("DELETE FROM trusted WHERE source=?", (source,)).rowcount != 1:
-                raise ValueError("Station is not trusted")
-            self.db.execute("INSERT OR IGNORE INTO removed(source) VALUES(?)", (source,))
+            self.remove_trusted_in_transaction(source)
+
+    def remove_trusted_in_transaction(self, source: bytes) -> None:
+        """Same trust change on the caller's transaction, for an atomic rebind of a station number."""
+        if self.db.execute("DELETE FROM trusted WHERE source=?", (source,)).rowcount != 1:
+            raise ValueError("Station is not trusted")
+        self.db.execute("INSERT OR IGNORE INTO removed(source) VALUES(?)", (source,))
 
     def removed_messages(self, source: bytes) -> int | None:
         """Messages from a removed station (possible takeover alarm); None if the station was not removed."""

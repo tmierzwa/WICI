@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS karty (
     fingerprint TEXT NOT NULL
 );
 -- Numbered WICI envelope identities; retained after removing trust so a number cannot
--- silently be assigned to a different key on the same medium.
+-- silently be assigned to a different key on the same medium (only the panel rebind moves it).
 CREATE TABLE IF NOT EXISTS numery (
     net_id INTEGER NOT NULL,
     station INTEGER NOT NULL,

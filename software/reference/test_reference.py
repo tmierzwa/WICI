@@ -485,6 +485,21 @@ class Trust(unittest.TestCase):
         self.assertIsNone(self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (self.unknown,)).fetchone())
         self.assertEqual(self.store.removed_messages(self.unknown), 0)
 
+    def test_trust_swap_is_one_transaction(self):
+        new = b"N" * 16
+        self.store.add_trusted(self.unknown, PUBKEY, ("A", "B"))
+        with self.assertRaises(ValueError), self.store.db:   # a failed swap leaves the old trust
+            self.store.remove_trusted_in_transaction(self.unknown)
+            self.store.add_trusted_in_transaction(new, PUBKEY, ("A", "A"))
+        self.assertIsNone(self.store.removed_messages(self.unknown))
+        with self.store.db:
+            self.store.remove_trusted_in_transaction(self.unknown)
+            self.store.add_trusted_in_transaction(new, PUBKEY, ("A", "B"))
+        self.assertEqual(self.store.removed_messages(self.unknown), 0)
+        self.assertEqual(self.store.db.execute("SELECT source FROM trusted").fetchall(), [(new,)])
+        with self.assertRaises(ValueError), self.store.db:
+            self.store.remove_trusted_in_transaction(self.unknown)
+
     def test_quarantine_limits(self):
         def request(revision):
             return encode_message(REQUEST[:3] + [revision] + REQUEST[4:])

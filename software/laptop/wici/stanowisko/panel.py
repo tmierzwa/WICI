@@ -256,7 +256,12 @@ class Dyzur:
 
     def trust(self, body):
         """Add a station from its card, after comparing the fingerprint with the station screen, with the
-        consent of two logged-in duty officers."""
+        consent of two logged-in duty officers.
+
+        A numbered card whose number (or whose key's other number) is already bound changes nothing and
+        returns {"replace": ...}: what the rebind would undo. Sent again with that "replace", the same
+        consent rebinds in one transaction: the old key loses trust as with untrust, and the number goes
+        to the new key (stanowisko-osp.md, „Zaufanie”)."""
         user, other = self.second(body)
         card = body.get("card")
         if not isinstance(card, dict):
@@ -282,33 +287,62 @@ class Dyzur:
         name = station_name(key)
 
         def add(store):
+            holder = renumbered = replace = None
             if numbered:
-                existing = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
-                                            (net_id, station_id)).fetchone()
-                other_binding = store.db.execute("SELECT station, public_key FROM numery WHERE net_id=? AND source=?",
-                                                 (net_id, lxmf)).fetchone()
-                if (existing and existing != (lxmf, key)) or (other_binding and other_binding != (station_id, key)):
-                    raise ValueError("numer stacji jest już związany z innym kluczem lub adresem")
+                holder = store.db.execute("SELECT source, public_key FROM numery WHERE net_id=? AND station=?",
+                                          (net_id, station_id)).fetchone()
+                holder = holder if holder and holder != (lxmf, key) else None
+                renumbered = store.db.execute("SELECT station FROM numery WHERE net_id=? AND source=? AND station<>?",
+                                              (net_id, lxmf, station_id)).fetchone()
+                if holder or renumbered:
+                    replace = {"net_id": net_id, "station": station_id,
+                               "old": holder and {"name": station_name(holder[1]), "fingerprint": fingerprint(holder[1])},
+                               "renumbered_from": renumbered and renumbered[0]}
+            if body.get("replace", None) != replace:
+                if "replace" not in body:
+                    return replace   # nic nie zmienia: panel pyta dyżurnych o przepięcie numeru
+                raise ValueError("powiązanie numeru stacji zmieniło się: wczytaj kartę i sprawdź ponownie")
+            old_trusted = holder is not None and store.db.execute(
+                "SELECT 1 FROM trusted WHERE source=?", (holder[0],)).fetchone() is not None
             with store.db:
+                if old_trusted:
+                    self._drop_trust(store, holder[0])
+                if replace:
+                    store.db.execute("DELETE FROM numery WHERE net_id=? AND (station=? OR source=?)",
+                                     (net_id, station_id, lxmf))
                 store.add_trusted_in_transaction(lxmf, key, (user, other))
                 if numbered:
                     store.db.execute("INSERT OR IGNORE INTO numery VALUES(?,?,?,?)", (net_id, station_id, lxmf, key))
                 store.db.execute("INSERT OR REPLACE INTO karty VALUES(?,?,?,?)",
                                  (lxmf, name, json.dumps(address, ensure_ascii=False), fingerprint(key)))
+            if old_trusted:
+                self._forget_bearer(holder[0])
+                self._logged(store, user, "zaufana_usunieta", "numer przepięty na nowy klucz", holder[0])
+            if replace:
+                self._logged(store, user, "numer_przepiety", json.dumps(
+                    {**replace, "fingerprint": fingerprint(key), "zgoda": [user, other]}, ensure_ascii=False), lxmf)
             self._logged(store, user, "zaufana_dodana", f"zgoda {user} i {other}", lxmf)
-        self.p.call(add)
-        return {"name": name}
+        replace = self.p.call(add)
+        return {"replace": replace} if replace else {"name": name}
+
+    def _drop_trust(self, store, source):
+        """In the caller's transaction: the station leaves the trusted list with its reply path."""
+        store.remove_trusted_in_transaction(source)
+        store.db.execute("DELETE FROM bearer_route WHERE source=?", (source,))
+        store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
+
+    def _forget_bearer(self, source):
+        self.p.last_bearer.pop(source, None)
+        self.p.bearer_override.pop(source, None)
 
     def untrust(self, body):
         user = self.current()
         source = _source(body)
 
         def remove(store):
-            store.remove_trusted(source)
-            store.db.execute("DELETE FROM bearer_route WHERE source=?", (source,))
-            store.db.execute("DELETE FROM bearer_override WHERE source=?", (source,))
-            self.p.last_bearer.pop(source, None)
-            self.p.bearer_override.pop(source, None)
+            with store.db:
+                self._drop_trust(store, source)
+            self._forget_bearer(source)
             self._logged(store, user, "zaufana_usunieta", "", source)
         self.p.call(remove)
         return {"ok": True}

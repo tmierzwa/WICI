@@ -1477,21 +1477,81 @@ class PanelTest(StationTestCase):
         view = self.d.view()
         self.assertEqual(view["removed"], [{"source": card["lxmf"], "station": card["name"], "messages": 1}])
 
-    def test_numbered_card_cannot_rebind_station_number(self):
+    def trusted_cards(self):
+        return [t["source"] for t in self.d.view()["trusted"] if t["source"] != self.STATION.hex()]
+
+    def numbers(self):
+        return self.reception.call(lambda s: s.db.execute(
+            "SELECT net_id, station, hex(source) FROM numery ORDER BY net_id, station").fetchall())
+
+    def test_station_number_moves_to_a_new_key_only_on_explicit_rebind(self):
         second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
         first = station_card(os.urandom(64))
         first.update(net_id=100, id=4, x25519=first["key"][:64])
         self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        old = bytes.fromhex(first["lxmf"])
+        self.reception.call(lambda s: s.db.execute("INSERT INTO bearer_override VALUES(?, 'wici')", (old,)))
+        self.reception.bearer_override[old] = "wici"
         other = station_card(os.urandom(64))
         other.update(net_id=100, id=4, x25519=other["key"][:64])
-        with self.assertRaisesRegex(ValueError, "numer stacji"):
-            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
-        self.d.untrust({"source": first["lxmf"]})
-        with self.assertRaisesRegex(ValueError, "numer stacji"):
-            self.d.trust({"card": other, "fingerprint": other["fingerprint"], **second})
+        ask = {"card": other, "fingerprint": other["fingerprint"], **second}
+        before = (self.numbers(), self.log())
+        # Number held by another key: nothing changes, the panel gets what the rebind would undo.
+        replace = self.d.trust(ask)["replace"]
+        self.assertEqual(replace, {"net_id": 100, "station": 4, "renumbered_from": None,
+                                   "old": {"name": first["name"], "fingerprint": first["fingerprint"]}})
+        self.assertEqual((self.numbers(), self.log()), before)
+        with self.assertRaisesRegex(ValueError, "zmieniło się"):   # confirmed for another binding
+            self.d.trust({**ask, "replace": dict(replace, station=5)})
+        with self.assertRaises(database.LoginError):   # the rebind needs the second officer too
+            self.d.trust({**ask, "replace": replace, "account2": "dyzurny-1", "password2": self.envelopes["dyzurny-1"]})
+        self.assertEqual(self.numbers(), before[0])
+        self.assertEqual(self.d.trust({**ask, "replace": replace})["name"], other["name"])
+        self.assertEqual(self.numbers(), [(100, 4, other["lxmf"].upper())])
+        view = self.d.view()
+        self.assertEqual(self.trusted_cards(), [other["lxmf"]])
+        self.assertNotIn(old, self.reception.bearer_override)
+        self.assertEqual(self.reception.call(lambda s: s.db.execute(
+            "SELECT count(*) FROM bearer_override WHERE source=?", (old,)).fetchone()), (0,))
+        self.assertEqual(self.log()[-3:], [("dyzurny-1", "zaufana_usunieta"), ("dyzurny-1", "numer_przepiety"),
+                                           ("dyzurny-1", "zaufana_dodana")])
+        entry = json.loads(next(e["detail"] for e in view["log"] if e["op"] == "numer_przepiety"))
+        self.assertEqual((entry["old"]["fingerprint"], entry["fingerprint"], entry["zgoda"]),
+                         (first["fingerprint"], other["fingerprint"], ["dyzurny-1", "dyzurny-2"]))
+        self.deliver(old, request())   # the old key is a removed station: quarantine and the takeover alarm
+        self.assertEqual(self.d.view()["removed"][0]["messages"], 1)
+        # The same key under another number: its old number is freed, again only after confirmation.
+        renumber = {**ask, "card": dict(other, id=5)}
+        replace = self.d.trust(renumber)["replace"]
+        self.assertEqual(replace, {"net_id": 100, "station": 5, "old": None, "renumbered_from": 4})
+        self.d.trust({**renumber, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 5, other["lxmf"].upper())])
+        # A number left by an untrusted key also moves only on rebind; no trust to remove then.
+        self.d.untrust({"source": other["lxmf"]})
+        third = station_card(os.urandom(64))
+        third.update(net_id=100, id=5, x25519=third["key"][:64])
+        ask = {"card": third, "fingerprint": third["fingerprint"], **second}
+        replace = self.d.trust(ask)["replace"]
+        self.d.trust({**ask, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 5, third["lxmf"].upper())])
+        self.assertEqual(self.log()[-2:], [("dyzurny-1", "numer_przepiety"), ("dyzurny-1", "zaufana_dodana")])
         with self.assertRaisesRegex(ValueError, "klucz koperty"):
-            self.d.trust({"card": dict(other, id=5, x25519="00" * 32),
-                          "fingerprint": other["fingerprint"], **second})
+            self.d.trust({"card": dict(third, id=6, x25519="00" * 32), "fingerprint": third["fingerprint"], **second})
+
+    def test_rebind_rolls_back_as_a_whole(self):
+        second = {"account2": "dyzurny-2", "password2": self.envelopes["dyzurny-2"]}
+        first, other = station_card(os.urandom(64)), station_card(os.urandom(64))
+        for c in (first, other):
+            c.update(net_id=100, id=4, x25519=c["key"][:64])
+        self.d.trust({"card": first, "fingerprint": first["fingerprint"], **second})
+        ask = {"card": other, "fingerprint": other["fingerprint"], **second}
+        replace = self.d.trust(ask)["replace"]
+        self.reception.call(lambda store: store.db.execute(
+            "CREATE TRIGGER refuse_number BEFORE INSERT ON numery BEGIN SELECT RAISE(ABORT, 'fault'); END"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.d.trust({**ask, "replace": replace})
+        self.assertEqual(self.numbers(), [(100, 4, first["lxmf"].upper())])
+        self.assertEqual(self.trusted_cards(), [first["lxmf"]])
 
     def test_numbered_card_and_trust_roll_back_together(self):
         card = station_card(os.urandom(64))
