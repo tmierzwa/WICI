@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Specyfikacja systemu WICI — projekt struktury i uzgodnione założenia.">
-  <title>Specyfikacja systemu WICI — projekt 0.3</title>
+  <title>Specyfikacja systemu WICI — projekt 0.4</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -27,10 +27,11 @@
     section { padding-top: 2.1rem; }
     .meta { color: var(--muted); }
     .status { display: inline-block; padding: .2rem .6rem; border: 1px solid var(--line); border-radius: .2rem; font-weight: 700; font-size: .85rem; }
+    .explain { margin: 1rem 0; padding: .8rem 1rem; border-left: .25rem solid var(--accent); background: #edf5f3; }
     table { width: 100%; border-collapse: collapse; margin: .8rem 0 1rem; font-size: .94rem; }
     th, td { border-bottom: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
     th { background: #edf2f2; }
-    td:first-child { white-space: nowrap; }
+    .id-table td:first-child { white-space: nowrap; }
     figure { margin: 1.2rem 0; padding: 1rem; border: 1px solid var(--line); }
     svg { display: block; width: 100%; height: auto; }
     figcaption { margin-top: .6rem; color: var(--muted); font-size: .9rem; }
@@ -44,33 +45,33 @@
   <nav aria-label="Spis treści">
     <strong>Spis treści</strong>
     <ol>
-      <li><a href="#status">Przedmiot i status</a></li>
-      <li><a href="#model">Model systemu</a></li>
+      <li><a href="#status">Przedmiot, status i zasady</a></li>
+      <li><a href="#model">Model i zakres systemu</a></li>
       <li><a href="#dane">Funkcje i dane</a></li>
       <li><a href="#aplikacja">Protokół aplikacyjny</a></li>
       <li><a href="#bezpieczenstwo">Bezpieczeństwo i koperta</a></li>
       <li><a href="#siec">Sieć i radio</a></li>
       <li><a href="#lokalne">Interfejsy i trwałość</a></li>
-      <li><a href="#eksploatacja">Eksploatacja</a></li>
-      <li><a href="#zgodnosc">Wersje i zgodność</a></li>
+      <li><a href="#eksploatacja">Wyrób i eksploatacja</a></li>
+      <li><a href="#zgodnosc">Wersje, zgodność i dowody</a></li>
     </ol>
-    <a href="#decyzje">Decyzje otwarte</a>
+    <a href="#decyzje">Źródła i decyzje otwarte</a>
   </nav>
   <main id="tresc">
     <header>
       <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.3</span> · 3 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.4</span> · 3 listopada 2026 r.</p>
       <p>Uzgodniono założenia WICI-ZAL-001–008. Pozostała treść określa zakres prac nad specyfikacją. Nie stanowi podstawy deklaracji zgodności.</p>
     </header>
 
     <section id="status" aria-labelledby="h-status">
-      <h2 id="h-status">1. Przedmiot i status</h2>
-      <p>Specyfikacja ma pozwolić na budowę niezależnych, współpracujących implementacji. Określi funkcje, wymieniane dane, formaty, zasady bezpieczeństwa, ograniczenia i sposób sprawdzania zgodności. Konstrukcja urządzeń i organizacja kodu pozostają poza jej zakresem, jeśli nie wpływają na współdziałanie.</p>
+      <h2 id="h-status">1. Przedmiot, status i zasady</h2>
+      <p>Specyfikacja ma pozwolić na budowę niezależnych, współpracujących implementacji oraz określić wymagane właściwości wyrobu. Obejmie funkcje, dane, formaty, bezpieczeństwo, ograniczenia i metody sprawdzenia. Nie narzuca konstrukcji ani organizacji kodu, chyba że wybór wpływa na zgodność, bezpieczeństwo lub współdziałanie.</p>
       <p>Po przyjęciu specyfikacja będzie dokumentem odniesienia dla kodu i dokumentacji szczegółowej. Rozbieżność wymaga poprawy implementacji albo zatwierdzenia zmiany specyfikacji. Publikacja określi licencję, identyfikator wydania, dostęp do wcześniejszych wersji i sposób zgłaszania błędów.</p>
       <p>Każde wymaganie otrzyma identyfikator, zakres obowiązywania i metodę sprawdzenia. Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> będą miały znaczenie określone w przyjętej wersji. Wielkie litery odróżnią je od zwykłego tekstu, zgodnie z zasadą opisaną w <a href="https://www.rfc-editor.org/rfc/rfc8174.html">RFC 8174</a>.</p>
       <h3>Założenia uzgodnione</h3>
-      <table>
+      <table class="id-table">
         <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
         <tbody>
           <tr><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest niezależnym dokumentem nadrzędnym, określającym wymagane właściwości i zachowanie rozwiązania.</td></tr>
@@ -78,15 +79,19 @@
           <tr><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
           <tr><td>WICI-ZAL-004</td><td>Reticulum pozostaje poza architekturą podstawową. Może być rozpatrywane jako zewnętrzny protokół na potrzeby ewentualnej współpracy i integracji.</td></tr>
           <tr><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
-          <tr><td>WICI-ZAL-006</td><td>Uzgodnienie i skompletowanie specyfikacji poprzedza tworzenie kodu oraz weryfikację zgodności implementacji.</td></tr>
+          <tr><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Każdej zmianie kodu, również przed zatwierdzeniem pierwszej wersji specyfikacji, towarzyszy zmiana specyfikacji.</td></tr>
           <tr><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
           <tr><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
         </tbody>
       </table>
+      <h3>Utrzymanie zgodności z kodem</h3>
+      <p>Przed pierwszym zatwierdzeniem opis zachowania istniejącego kodu jest kandydatem na wymaganie. Test lub obecność kodu nie nadają mu samodzielnie statusu normatywnego. Zatwierdzona specyfikacja staje się podstawą dla implementacji i jej oceny.</p>
+      <p>Zmiana kodu i zmiana specyfikacji należą do tej samej zmiany w repozytorium. Wskazuje ona dotknięte wymagania, testy i wpływ na ocenę zgodności wyrobu. Gdy zachowanie pozostaje takie samo, wpis w historii specyfikacji odnotowuje ten fakt i sposób sprawdzenia. Zmiana kodu bez aktualizacji specyfikacji nie jest przyjmowana. Kontrola repozytorium ma egzekwować tę regułę przed zatwierdzeniem pierwszej wersji normatywnej.</p>
+      <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami. Akapity wyróżnione kolorem objaśniają treść; nie ustanawiają wymagań.</p>
     </section>
 
     <section id="model" aria-labelledby="h-model">
-      <h2 id="h-model">2. Model systemu</h2>
+      <h2 id="h-model">2. Model i zakres systemu</h2>
       <p>Model określi granice systemu, role stacji i stanowiska odbiorczego oraz relacje między komponentami. Słownik rozróżni urządzenie od roli, tożsamość od adresu oraz wiadomość od koperty i ramki. Profile obowiązkowe i opcjonalne zostaną wskazane w rozdziale 9.</p>
       <p>Integracja z systemem zewnętrznym wymaga osobnego kontraktu dla wymiany danych, tożsamości, potwierdzeń i ochrony granicy systemu. Dotyczy to również ewentualnej integracji z Reticulum.</p>
       <figure>
@@ -138,29 +143,55 @@
     </section>
 
     <section id="eksploatacja" aria-labelledby="h-eksploatacja">
-      <h2 id="h-eksploatacja">8. Eksploatacja</h2>
+      <h2 id="h-eksploatacja">8. Wyrób i eksploatacja</h2>
+      <h3>Obsługa i zachowanie w pracy</h3>
       <p>Wymagania eksploatacyjne określą przygotowanie, uruchomienie, obsadę stanowiska, zastępstwo, tryby pracy, diagnostykę i zakończenie pracy. Obejmą czytelność wskazań, działania wymagane od człowieka oraz zachowanie przy braku łączności i ograniczonej energii.</p>
+      <h3>Bezpieczeństwo urządzenia i kompatybilność elektromagnetyczna</h3>
+      <p>Wymagania wynikowe obejmą bezpieczne zasilanie, warunki środowiskowe, emisje i odporność elektromagnetyczną oraz ekspozycję na pole radiowe. Sposób realizacji i wyniki badań należą do dokumentacji ocenianej konfiguracji wyrobu.</p>
     </section>
 
     <section id="zgodnosc" aria-labelledby="h-zgodnosc">
-      <h2 id="h-zgodnosc">9. Wersje i zgodność</h2>
-      <p>Rozdział określi wersje formatów i protokołów, profile, granice zasobów, zasady rozszerzeń i zgodność wsteczną. Każde wymaganie zostanie powiązane z profilem i metodą sprawdzenia: testem, pomiarem albo przeglądem.</p>
+      <h2 id="h-zgodnosc">9. Wersje, zgodność i dowody</h2>
+      <h3>Wersje i profile</h3>
+      <p>Rozdział określi wersje formatów i protokołów, profile, granice zasobów, zasady rozszerzeń i zgodność wsteczną.</p>
+      <h3>Sprawdzanie wymagań</h3>
+      <p>Każde wymaganie zostanie powiązane z profilem, ocenianą konfiguracją i metodą sprawdzenia: testem, pomiarem albo przeglądem. Rejestr zgodności wskaże wynik i dowód dla danej wersji wyrobu.</p>
       <p>Schematy formatów, rejestr kodów, wektory testowe i scenariusze awaryjne będą podstawą prób współdziałania niezależnych implementacji.</p>
+      <h3>Dokumentacja ocenianego wyrobu</h3>
+      <p class="explain">Dla ocenianego wyrobu radiowego osobna dokumentacja techniczna powiąże wymagania specyfikacji z wersją sprzętu, firmware, anteną, zasilaniem, analizą ryzyka, zastosowanymi normami i wynikami badań, zgodnie z <a href="https://eur-lex.europa.eu/eli/dir/2014/53/oj/eng">art. 21 i załącznikiem V dyrektywy RED</a>. Zmiana konfiguracji wymaga ponownej oceny wpływu na te dowody. Przed oceną wyrobu trzeba sprawdzić aktualne wymagania prawne, w tym <a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng">rozporządzenie CRA</a>. Specyfikacja nie zastępuje dokumentacji technicznej wyrobu ani deklaracji zgodności UE.</p>
     </section>
 
     <section id="decyzje" aria-labelledby="h-decyzje">
-      <h2 id="h-decyzje">Decyzje otwarte</h2>
+      <h2 id="h-decyzje">Źródła i decyzje otwarte</h2>
+      <h3>Źródła do przeglądu</h3>
+      <p class="explain">Istniejące opisy i kod posłużą do inwentaryzacji. Żaden z poniższych plików nie staje się przez to normatywną częścią tej specyfikacji. Rozbieżności trzeba rozstrzygnąć przed zatwierdzeniem odpowiednich wymagań.</p>
       <table>
+        <thead><tr><th>Obszar</th><th>Źródła</th></tr></thead>
+        <tbody>
+          <tr><td>Funkcje i dane</td><td><a href="oprogramowanie.md">Oprogramowanie</a>, <a href="../../firmware/src/station.cpp">program stacji</a>, <a href="stanowisko-osp.md">stanowisko</a></td></tr>
+          <tr><td>Transport i bezpieczeństwo</td><td><a href="transport.md">Transport</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a></td></tr>
+          <tr><td>Sieć i radio</td><td><a href="wici-link.md">WICI-Link</a>, <a href="radio.md">Radio</a>, <a href="../../firmware/src/wici_link.cpp">kod łącza</a></td></tr>
+          <tr><td>Interfejsy i trwałość</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.cpp">kod USB</a>, <a href="../../firmware/src/store.cpp">magazyn</a></td></tr>
+          <tr><td>Wyrób i dowody</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">Próby i odbiór</a></td></tr>
+        </tbody>
+      </table>
+      <h3>Decyzje otwarte</h3>
+      <table class="id-table">
         <thead><tr><th>ID</th><th>Przedmiot</th></tr></thead>
         <tbody>
-          <tr><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu wersji podstawowej.</td></tr>
-          <tr><td>WICI-DEC-002</td><td>Tryb zatwierdzania specyfikacji oraz zarządzania zmianami.</td></tr>
+          <tr><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu pierwszej wersji normatywnej.</td></tr>
+          <tr><td>WICI-DEC-002</td><td>Rola zatwierdzająca, kryteria przeglądu i sposób egzekwowania wspólnej zmiany kodu i specyfikacji.</td></tr>
           <tr><td>WICI-DEC-003</td><td>Zakres wykorzystania dotychczasowych projektów SA1, koperty i WICI-Link.</td></tr>
           <tr><td>WICI-DEC-004</td><td>Model tożsamości i bezpieczeństwa niezależny od Reticulum.</td></tr>
           <tr><td>WICI-DEC-005</td><td>Gwarancje przyjęcia, potwierdzenia i ponowienia dla obu kierunków komunikacji.</td></tr>
           <tr><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
           <tr><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
         </tbody>
+      </table>
+      <h3>Historia zmian</h3>
+      <table>
+        <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
+        <tbody><tr><td>0.4</td><td>Zaktualizowano WICI-ZAL-006, zasady synchronizacji z kodem oraz układ części dotyczących wyrobu, dowodów i źródeł.</td></tr></tbody>
       </table>
     </section>
   </main>
