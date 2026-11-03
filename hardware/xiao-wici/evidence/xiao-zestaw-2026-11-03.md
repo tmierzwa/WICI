@@ -11,7 +11,10 @@ Obrazy XIAO według czasu:
 - od 08:22: firmware z `72d4089`, potem obraz diagnostyczny do pomiarów z [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md);
 - od 09:44: poprawka dostępu do kanału, punkty 1 i 2 (RSSI po SetRx, potwierdzony CAD);
 - od 10:09: dodatkowo punkt 3 (RSSI zajmuje kanał tylko w oknie ślepoty odbiornika);
-- od 10:25: dodatkowo poprawka czasu bezczynności ekranu (niżej, próba 3).
+- od 10:25: dodatkowo poprawka czasu bezczynności ekranu (niżej, próba 3);
+- od 12:40: obraz z `d5d364b` (poprawki przeglądu końcowego, grupa A: okno ślepoty od wygaśnięcia preambuły, termin HACK z zapasem na start TCXO, błąd drugiego CAD odracza, drogi w dół), stanowisko z tego samego commitu.
+
+Przed obrazem z `d5d364b` płytki były odłączone od zasilania. Zestaw XIAO stracił wtedy konfigurację i tożsamość (nowe nazwy: root WICI-E64309, stacja WICI-D17A28), więc trzeba było przygotować je od nowa. Stanowisko trzyma numer 20 związany z kluczem porannej stacji i nie ma operacji, która zwolni numer dla nowego klucza (usunięcie zaufania go nie zwalnia). Nowa stacja dostała więc numer 21. Na l0 i v2 tożsamość jest w FRAM i przetrwa zanik zasilania, ale wymiana albo utrata stacji zestawu XIAO kończy się tak samo.
 
 ## Próba 2: ramki v3 (`72d4089`)
 
@@ -43,16 +46,16 @@ Wynik: kryterium spełnione. Podsłuch działał przez cały czas ciszy (bez wie
 
 Czas HACK z podsłuchu jak 2026-11-02 (koniec DATA do końca HACK, zegar podsłuchu).
 
-| | `72d4089` | punkty 1 i 2 | punkty 1–3 |
-|---|---|---|---|
-| Próba 4 (`REQ 20`) | 20/20 w 68 s, 2 ponowienia DATA (odmowy HACK przez CAD), root: 1 `tx_drop` | 20/20 w 82 s, 0 ponowień | – |
-| Próba 5 (`REQ 10` co minutę, 5 razy) | 50/50 w 330 s, 2 DATA bez HACK | 50/50 w 330 s, 0 ponowień | 50/50 w 331 s, 0 ponowień |
-| Najdłuższy HACK roota (podsłuch) | 111,9 ms | 121,5 ms | 140,9 ms |
-| HACK powyżej 200 ms, `hack_late` | 0, 0 | 0, 0 | 0, 0 |
-| Odroczenia nadania, root | +139 w próbie 5 | 0 w próbie 5 | 2 |
-| `rssi_ignored` / `cad_unconfirmed` | – | – / stacja 3 | root 1 / stacja 3 |
+| | `72d4089` | punkty 1 i 2 | punkty 1–3 | `d5d364b` (12:50) |
+|---|---|---|---|---|
+| Próba 4 (`REQ 20`) | 20/20 w 68 s, 2 ponowienia DATA (odmowy HACK przez CAD), root: 1 `tx_drop` | 20/20 w 82 s, 0 ponowień | – | – |
+| Próba 5 (`REQ 10` co minutę, 5 razy) | 50/50 w 330 s, 2 DATA bez HACK | 50/50 w 330 s, 0 ponowień | 50/50 w 331 s, 0 ponowień | 50/50 w 330 s, 0 ponowień, każda DATA z HACK |
+| Najdłuższy HACK roota (podsłuch) | 111,9 ms | 121,5 ms | 140,9 ms | 112,4 ms |
+| HACK powyżej 200 ms, `hack_late` | 0, 0 | 0, 0 | 0, 0 | 0, 0 |
+| Odroczenia nadania, root | +139 w próbie 5 | 0 w próbie 5 | 2 | 2 (stacja 1) |
+| `rssi_ignored` / `cad_unconfirmed` | – | – / stacja 3 | root 1 / stacja 3 | 0 / stacja 2 |
 
-Najdłuższy HACK po punkcie 3 (140,9 ms) mieści się w kryterium 200 ms. Średnio root odpowiadał po 109 ms (`end_ms_mean`), jak przed poprawką. Przyczyny odroczeń i ponowień na `72d4089` opisuje [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md).
+Najdłuższy HACK po punkcie 3 (140,9 ms) mieści się w kryterium 200 ms. Na obrazie z `d5d364b` (stacja 21, nowa konfiguracja) root odpowiadał po 107 ms średnio (`end_ms_mean`), najdłużej 112 ms według roota i 112,4 ms w podsłuchu; HACK stacji za RECEIVED najdłużej 105,3 ms. Podsłuch nie widział żadnej ramki z błędem CRC. Średnio root odpowiadał po 109 ms (`end_ms_mean`), jak przed poprawką. Przyczyny odroczeń i ponowień na `72d4089` opisuje [cca-cad-2026-11-03.md](cca-cad-2026-11-03.md).
 
 ## Próba 3: zgłoszenie z przycisków i decyzja w panelu (obraz od 10:25)
 
@@ -76,6 +79,7 @@ Błąd znaleziony w tej próbie: menu wracało samo do ekranu głównego zaraz p
 - `podsluch-2026-11-03.jsonl`: 08:25–09:23 (próby 2, 4, 5, 11 na `72d4089`, potem pomiary z RAK jako nadajnikiem);
 - `podsluch-2026-11-03b.jsonl`: od 09:45 (próby po poprawce, próba 3);
 - `diag-root-2026-11-03*.log`, `diag-a-2026-11-03*.log`: porty diagnostyki z czasem laptopa (sekundy Unix): bez sufiksu do 09:23, `b` 09:45–10:09, `c` od 10:09;
-- `stanowisko-2026-11-03.log`: przyjęcia kopert na stanowisku (kolejka i przyjęcie w ms).
+- `stanowisko-2026-11-03.log`: przyjęcia kopert na stanowisku (kolejka i przyjęcie w ms);
+- `podsluch-2026-11-03d.jsonl`, `diag-root-2026-11-03d.log`, `diag-a-2026-11-03d.log`, `stanowisko-2026-11-03d.log`: obraz z `d5d364b` od 12:40 (próba 5 12:50–12:56).
 
 Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../../LICENSE.md)).
