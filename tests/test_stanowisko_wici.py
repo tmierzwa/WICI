@@ -361,6 +361,48 @@ class WiciAdmissionTest(StationTestCase):
         self.crash()
         self.assertEqual(self.received(), 3)
 
+    def test_after_a_crash_with_a_snapshot_in_flight_admission_goes_on_at_once(self):
+        """The journal of the snapshot that never landed is replayed; the next snapshot takes a number above it,
+        so live frames never meet that journal, and it is pruned with the snapshot that covers it."""
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        release = threading.Event()
+
+        def lost(*args):
+            release.wait(10)
+            raise OSError("power cut")
+        with unittest.mock.patch.object(self.medium, "save", side_effect=lost):
+            change = threading.Thread(target=lambda: self.assertRaises(
+                nosnik.StorageError, self.reception.action, "dyzurny-1", "logowanie"))
+            change.start()
+            deadline = time.monotonic() + 5
+            while not self.reception.in_flight and time.monotonic() < deadline:
+                time.sleep(0.001)
+            self.assertEqual(self.admit(self.seal(8)[0]), "complete")   # into the journal of that snapshot
+            release.set()
+            change.join(10)
+            self.reception.stop(save=False)
+        self.reception = self.open()
+        self.assertEqual(self.received(), 2)
+        self.assertEqual([self.admit(self.seal(counter)[0]) for counter in range(20, 25)], ["complete"] * 5)
+        self.tick()
+        self.assertEqual(self.admit(self.seal(30)[0]), "complete")
+        self.tick()
+        self.assertEqual([p.name for p in self.journals()][:-1], [])   # only the newest snapshot's journal
+        self.crash()
+        self.assertEqual(self.received(), 8)
+
+    def test_a_snapshot_written_outside_the_writer_takes_the_journal_with_its_mark(self):
+        """A failed writer snapshot left a number in memory; the new station password saves the same number
+        with another mark. The journal follows that snapshot, or the next start would drop it as foreign."""
+        with unittest.mock.patch.object(self.medium, "save", side_effect=OSError("stick")):
+            with self.assertRaises(nosnik.StorageError):
+                self.reception.action("dyzurny-1", "logowanie")
+        self.reception.call(lambda s: (self.reception.flush(), self.medium.save(self.key, s.db.serialize())),
+                            durable=False)
+        self.assertEqual(self.admit(self.seal(7)[0]), "complete")
+        self.crash()
+        self.assertEqual(self.received(), 1)
+
     def test_admission_does_not_wait_for_a_snapshot_being_written(self):
         release, cut, real = threading.Event(), threading.Event(), self.medium.save
 
@@ -437,15 +479,16 @@ class WiciAdmissionTest(StationTestCase):
                     self.open()
 
     def test_journal_of_another_snapshot_with_the_same_number_is_never_replayed(self):
-        # A restored or re-keyed medium writes its snapshot under the next number, with a new mark; the journal of
-        # a snapshot that never landed under that number belongs to the old database and goes.
+        # Every save takes a number above the journals (next_gen), so this pairing needs an explicit number: a
+        # snapshot with another mark under the number of a journal never takes that journal, which goes.
         self.assertEqual(self.admit(self.seal(7)[0]), "complete")
         self.reception.stop(save=False)
         medium = nosnik.Nosnik(self.medium.root, FAST)
         body = medium.load(self.key)
         path = self.journals()[-1]
         path.rename(path.with_name(f"{nosnik.JOURNAL_PREFIX}{medium.gen + 1}"))
-        medium.save(self.key, body)
+        self.assertEqual(medium.next_gen(), medium.gen + 2)
+        medium.save(self.key, body, medium.gen + 1)
         self.reception = self.open()
         self.assertEqual(self.received(), 0)
         self.assertEqual(self.journals(), [])

@@ -183,14 +183,14 @@ class Nosnik:
 
     def save(self, key, body, gen=None, journal=None):
         """Seal body and replace the older of the two files with it (fsync, then rename). gen and journal: the
-        generation and journal mark chosen when the body was taken (Przyjecie); else the next generation and a
-        new mark, so no older intake journal is ever replayed on top of this body."""
+        generation and journal mark chosen when the body was taken (Przyjecie); else next_gen() and a new mark,
+        so no older intake journal is ever replayed on top of this body."""
         self.base.mkdir(exist_ok=True)
         try:
             recovery = self.kit.recovery()
         except StorageError:
             recovery = None
-        gen = self.gen + 1 if gen is None else gen
+        gen = self.next_gen() if gen is None else gen
         journal = os.urandom(8).hex() if journal is None else journal
         if gen <= self.gen:
             raise StorageError(f"pokolenie migawki {gen} nie jest nowsze niż {self.gen}")
@@ -212,6 +212,12 @@ class Nosnik:
 
     def _journal_path(self, gen):
         return self.base / f"{JOURNAL_PREFIX}{gen}"
+
+    def next_gen(self):
+        """A generation above every snapshot and every intake journal on the medium. A new snapshot never shares
+        its number with a journal left by a crash (a snapshot in flight that never landed), so every journal
+        file belongs to one mark, and the stale one falls below the new snapshot and is pruned with it."""
+        return max([self.gen] + [gen for gen, _ in self._journal_paths()]) + 1
 
     def journal_append(self, key, gen, journal, payload):
         """Append one record after the snapshot (gen, journal) with fsync; True on return means durable.

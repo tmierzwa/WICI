@@ -350,7 +350,7 @@ class Przyjecie:
                 force or self.journal_count >= JOURNAL_RECORDS or time.monotonic() - self.journal_first >= JOURNAL_S)):
             return
         body = self.store.db.serialize()
-        gen, mark = max(self.base_gen, self.medium.gen) + 1, os.urandom(8).hex()
+        gen, mark = max(self.base_gen + 1, self.medium.next_gen()), os.urandom(8).hex()
         # Ramki przyjęte od tej chwili idą do dziennika za tą migawką, nawet zanim trafi na nośnik.
         self.base_gen, self.base_id, self.journal_count, self.journal_first = gen, mark, 0, None
         self.in_flight, self.want, self.captured = True, False, total
@@ -418,8 +418,9 @@ class Przyjecie:
             return True
         if self.intake is None:
             return self._save_now()   # zmiana poza przyjęciem ramki: nie ma czego dopisać do dziennika
-        if self.medium.gen > self.base_gen and not self.in_flight:
+        if self.medium.gen >= self.base_gen and self.medium.journal_id != self.base_id and not self.in_flight:
             # Migawka zapisana poza wątkiem zapisu (nowe hasło stanowiska) obejmuje wszystko: dziennik idzie za nią.
+            # Porównanie znacznika, nie tylko numeru: po nieudanej migawce w pamięci numer może się zgadzać.
             self.base_gen, self.base_id = self.medium.gen, self.medium.journal_id
         if self.base_id is None:
             return self._save_now()   # nośnik bez migawki z dziennikiem (pierwszy start, starszy format)
