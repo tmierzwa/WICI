@@ -54,19 +54,31 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
         (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ)) return Outcome::REJECTED;
     const uint16_t sender = get16(frame.payload + 1), recipient = get16(frame.payload + 3);
     if (recipient != config_.own) return Outcome::REJECTED;
+    // An envelope this station can never admit (unknown receiver identity, failed
+    // envelope MAC, unknown type, counter below the window, a part that conflicts
+    // with the stored one). From a relay it gets a HACK under the repeat allowance,
+    // so that relay does not keep it for 30 min; from the root it gets none,
+    // because there the station's HACK proves delivery to the receiver
+    // (wici-link.md, rule 1). The receiver retries with a new counter.
+    const auto refuse = [&]() {
+        if (!(frame.flags & wici_link::ACKREQ) || frame.source == config_.root || !repeatHack_.allow(nowS))
+            return Outcome::REJECTED;
+        hackLength = wici_link::encodeHack(linkKey_, frame, wici_link::macEcho(wire, length), hack, capacity);
+        return hackLength ? Outcome::SETTLED : Outcome::REJECTED;
+    };
     uint8_t peer = 2;
     for (uint8_t i = 0; i < 2; ++i) if (sender == config_.receiver[i]) peer = i;
-    if (peer == 2) return Outcome::REJECTED;
+    if (peer == 2) return refuse();
     envelope::Part part;
     if (!envelope::openPart(envelopeKeys_[peer], frame.payload, frame.length, part) ||
-        part.sender != sender || part.recipient != recipient || part.type != 0) return Outcome::REJECTED;
+        part.sender != sender || part.recipient != recipient || part.type != 0) return refuse();
     bool repeat = replay_[peer].accepted(part.counter);
     if (!repeat) {
         envelope::ReplayWindow proposed;
-        if (!replay_[peer].propose(part.counter, proposed)) return Outcome::REJECTED;
+        if (!replay_[peer].propose(part.counter, proposed)) return refuse();  // below the window
         if (part.number == 0) {
             if (parts_[peer].pending() && parts_[peer].pendingCounter() == part.counter)
-                return Outcome::REJECTED;  // one counter cannot change from fragments to whole
+                return refuse();  // one counter cannot change from fragments to whole
             if (!admit_(config_.network, sender, recipient, part.plaintext, part.length, context_) ||
                 !replay_[peer].commit(part.counter)) return Outcome::REJECTED;
             if (resolved) *resolved = Resolved{true, peer, part.counter};
@@ -85,9 +97,15 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
                 // A failed tombstone does not revoke durable SA1/replay state;
                 // begin() finishes it when the module is read again.
                 if (!parts_[peer].clear()) ready_ = false;
-            } else {
-                if (result == envelope::FragmentResult::IO_ERROR) ready_ = false;
+            } else if (result == envelope::FragmentResult::IO_ERROR) {
+                ready_ = false;
                 return Outcome::REJECTED;
+            } else {
+                // A part of another counter while one is pending may be admitted
+                // after that one completes or times out: no HACK, the relay retries.
+                if (parts_[peer].pending() && parts_[peer].pendingCounter() != part.counter)
+                    return Outcome::REJECTED;
+                return refuse();
             }
         }
     }

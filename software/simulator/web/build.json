@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "e39c13cadbbb3aa3b694b800bcf1de761de12cf8ab1218612fd1678bd0d986a4",
-   "bytes": 780885,
+   "sha256": "27be022ff4be314512f8b13ab8f48168be8ff4c17314330e041b7d61a7ccf6cf",
+   "bytes": 781525,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -294,8 +294,8 @@
   "firmware/src/wici_airtime.h": "7411414a67fc7d8bae365ae981a3873614ca9fe94e81b51433bbbae486775800",
   "firmware/src/wici_beacon.cpp": "2d152b983b86e65e15b3f42db89d6787a98cf05d186b6c4e69dbddf2e878e209",
   "firmware/src/wici_beacon.h": "cf13c41b6af3a6c58eff13b332d66b9c981ad097766dab2fd87d22baf212cfc3",
-  "firmware/src/wici_destination.cpp": "1a92f9cb7ee9d958aad5d02da6c624d31e1fdbf0941919328dde8d997426f932",
-  "firmware/src/wici_destination.h": "c669fdf21666ef9497903f450cdd55a07a33d9fb944967d3fdbf92cf9db0c18a",
+  "firmware/src/wici_destination.cpp": "ae7ee5fadc1c3877605c6a830905a3af2b924ee77398252e841cb5a4750f2413",
+  "firmware/src/wici_destination.h": "36c04a9d2d2bf6712355f34d0a4b94a33db57da43012e8ce38fda83089d991d4",
   "firmware/src/wici_epoch.cpp": "71fb0ec0ad9c26902c272ec64a5f9908797706676b5fb284a9bd9f7711ea1926",
   "firmware/src/wici_epoch.h": "11d17e2ea21667cdf88702684cdb9e60e36fc9a27abd0a52127009f4dba4bc10",
   "firmware/src/wici_flood.cpp": "1a8b56e43df88e3e253bc3cc1570d99d02d56b7af22b9982caa9f49f8ab5135c",
@@ -308,7 +308,7 @@
   "firmware/src/wici_hop_auth.h": "7c26a8486852e9505bd47d75b5c6f06dd1d9fb5a83793980f86fdd78eca07f6c",
   "firmware/src/wici_link.cpp": "6410398c8298135c0aa1fe66028e2c794c9b280ecd4299f483dd83470da19a52",
   "firmware/src/wici_link.h": "b964df4b4f73c9725789c2c8677fedac9b0907f12c15123772ab160aefb94bd7",
-  "firmware/src/wici_radio.cpp": "40e2c23de833ea433911d9eea894446caf5a3e30c4ec5797fd69047452bc3494",
+  "firmware/src/wici_radio.cpp": "09a06b1897c27fec115e51e539cd99ebc43801649a96141d005b6f74d6338d6b",
   "firmware/src/wici_radio.h": "b44165c29b1f2cb967693c69660987bf45b70e3b651e5e72f04e99f510169880",
   "firmware/src/wici_relay.cpp": "599444ee45eeaf4e68632ab6e078600a89fda3b10e89eea44ca08d8f76f39ffd",
   "firmware/src/wici_relay.h": "b6270ded3c0021b136a60ae12bbab4a6418ea5f262e7ac445f2855fac1a374a1",

@@ -25,7 +25,7 @@ Shelter::Shelter(journal::Storage& storage, wici_route::Config route, uint8_t tt
       outbound_{envelope::Counter(storage, 0), envelope::Counter(storage, 1)},
       destination_(storage, {route.network, route.own,
                             {static_cast<uint16_t>(receiverIds ? receiverIds[0] : 0),
-                             static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}},
+                             static_cast<uint16_t>(receiverIds ? receiverIds[1] : 0)}, route.root},
                    ifac, privateKey, receiverPublic, admit, admitContext),
       relay_(storage, route, ifac, true, receiverIds, behind, behindCount, peers, peerCount),
       air_(air), random_(random), randomContext_(randomContext) {
@@ -147,10 +147,12 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         // after any other hop, a flood or a HACK the radio refused (silence,
         // deadline), only a proof envelope does.
         const bool hackToRoot = frame.source == root_ && (frame.flags & wici_link::ACKREQ);
-        const bool hackSent = result == wici_destination::Outcome::HACK_READY &&
-                              air_.sendHack(hack, hackLength, receivedMs);
+        const bool hackReady = result == wici_destination::Outcome::HACK_READY ||
+                               result == wici_destination::Outcome::SETTLED;
+        const bool hackSent = hackReady && air_.sendHack(hack, hackLength, receivedMs);
         if (resolved.valid && !(hackToRoot && hackSent)) addProof(resolved.peer, resolved.counter);
-        if (result == wici_destination::Outcome::HACK_READY) return hackSent ? Event::HACK_SENT : Event::ADMITTED;
+        if (result == wici_destination::Outcome::SETTLED) return hackSent ? Event::HACK_SENT : Event::REJECTED;
+        if (hackReady) return hackSent ? Event::HACK_SENT : Event::ADMITTED;
         return result == wici_destination::Outcome::ACCEPTED ? Event::ADMITTED :
                result == wici_destination::Outcome::IGNORED ? Event::IGNORED : Event::REJECTED;
     }

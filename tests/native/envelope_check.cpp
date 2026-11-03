@@ -173,8 +173,13 @@ int main(int argc, char** argv) {
     link.sequence = 11; link.length = conflictingWhole[0].length;
     memcpy(link.payload, conflictingWhole[0].bytes, link.length);
     size_t conflictLength = wici_link::encode(linkKey, link, radio, sizeof(radio));
-    if (afterRestart.receive(radio, conflictLength, 102, hack, sizeof(hack), hackLength) !=
-        wici_destination::Outcome::REJECTED || admitted != 1) return 29;
+    // L7/E3: a frame this station can never admit gets a HACK from a relay (no proof), none from the root.
+    if (afterRestart.receive(radio, conflictLength, 106, hack, sizeof(hack), hackLength) !=  // allowance used at 101
+        wici_destination::Outcome::SETTLED || admitted != 1 || hackLength != 21) return 29;
+    wici_destination::Destination fromRoot(destinationMemory, {0x1234, 20, {10, 30}, 1},
+                                           ifac, b, peers, admit, &admitted);
+    if (!fromRoot.begin() || fromRoot.receive(radio, conflictLength, 110, hack, sizeof(hack), hackLength) !=
+        wici_destination::Outcome::REJECTED || hackLength != 0) return 35;
     link.source = 20;
     conflictLength = wici_link::encode(linkKey, link, radio, sizeof(radio));
     if (afterRestart.receive(radio, conflictLength, 102, hack, sizeof(hack), hackLength) !=
@@ -193,6 +198,32 @@ int main(int argc, char** argv) {
     radio[radioLength - 1] ^= 1;
     if (afterPart.receive(radio, radioLength, 105, hack, sizeof(hack), hackLength) !=
         wici_destination::Outcome::IGNORED || admitted != 2) return 27;
+    // Each permanent refusal from a relay: settled with a HACK, nothing admitted. Spaced by the 5 s allowance.
+    const auto refused = [&](const envelope::Frame& envelopeFrame, uint32_t nowS, uint8_t tweak) {
+        link.sequence = static_cast<uint16_t>(link.sequence + 1); link.length = envelopeFrame.length;
+        memcpy(link.payload, envelopeFrame.bytes, link.length);
+        if (tweak == 1) link.payload[2] = 11;                  // unknown receiver identity
+        if (tweak == 2) link.payload[link.length / 2] ^= 1;    // envelope MAC fails
+        const size_t n = wici_link::encode(linkKey, link, radio, sizeof(radio));
+        return afterPart.receive(radio, n, nowS, hack, sizeof(hack), hackLength);
+    };
+    envelope::Frame single[2];
+    if (envelope::seal(ab, 10, 20, 1000, plain, sizeof(plain), 236, single) != 1 ||
+        refused(single[0], 110, 0) != wici_destination::Outcome::HACK_READY || admitted != 3) return 36;
+    if (envelope::seal(ab, 10, 20, 900, plain, sizeof(plain), 236, single) != 1 ||
+        refused(single[0], 120, 0) != wici_destination::Outcome::SETTLED || admitted != 3) return 37;  // below the window
+    if (refused(single[0], 121, 0) != wici_destination::Outcome::REJECTED) return 38;  // repeat allowance used
+    if (envelope::seal(ab, 10, 20, 1001, plain, sizeof(plain), 236, single) != 1 ||
+        refused(single[0], 130, 1) != wici_destination::Outcome::SETTLED ||
+        refused(single[0], 140, 2) != wici_destination::Outcome::SETTLED || admitted != 3) return 39;
+    if (envelope::seal(ab, 10, 20, 1002, counters, 4, 236, single, envelope::TYPE_PROOF) != 1 ||
+        refused(single[0], 150, 0) != wici_destination::Outcome::SETTLED || admitted != 3) return 40;  // proofs go up only
+    // A part of another counter while one waits may be admitted later: no HACK, the relay retries.
+    envelope::Frame halves[2], others[2];
+    if (envelope::seal(ab, 10, 20, 1003, large, sizeof(large), 153, halves) != 2 ||
+        envelope::seal(ab, 10, 20, 1004, large, sizeof(large), 153, others) != 2 ||
+        refused(halves[0], 160, 0) != wici_destination::Outcome::HACK_READY ||
+        refused(others[0], 170, 0) != wici_destination::Outcome::REJECTED || hackLength != 0) return 41;
 
     // Correctly encrypted envelopes with a reserved kind type, from the Python side.
     for (int i = 1; i < argc; ++i) {

@@ -12,12 +12,15 @@ namespace wici_destination {
 struct Config {
     uint16_t network = 0, own = 0;
     uint16_t receiver[2] = {};
+    uint16_t root = 0;  // the receiver's radio node: a HACK to it proves delivery
 };
 
 using AdmitFn = bool (*)(uint16_t network, uint16_t sender, uint16_t recipient,
                          const uint8_t* content, size_t length, void* context);
 
-enum class Outcome : uint8_t { IGNORED, ACCEPTED, HACK_READY, REJECTED };
+// SETTLED: a frame this station can never admit, from a relay; the HACK only
+// ends that relay's retries and resolves nothing (no delivery proof).
+enum class Outcome : uint8_t { IGNORED, ACCEPTED, HACK_READY, SETTLED, REJECTED };
 
 // A whole SA1 message this frame resolved (admitted, or settled as a duplicate,
 // late or skipped message): the station owes its sender a delivery proof.
