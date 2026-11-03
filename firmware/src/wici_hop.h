@@ -13,6 +13,10 @@ namespace wici_hop {
 
 enum class Receipt : uint8_t { IGNORED, HACK_READY, STORED_NO_HACK, REJECTED };
 
+// Hold after rounds of 3 attempts without HACK to one next hop: 2^rounds s,
+// at most HOLD_MAX_S (wici-link.md, "Potwierdzenie na każdym skoku"). Other next hops are not held.
+constexpr uint32_t HOLD_MAX_S = 300;
+
 // Every unicast DATA reaching receiveData() has passed the pairwise hop tag,
 // so its link source is an authenticated neighbour. K1 is unicast transit to
 // or from an active receiver identity, at most one queue slot per neighbour.
@@ -76,6 +80,9 @@ public:
     // silence debt and randomized backoff; false leaves it queued for reroute.
     // The third failed attempt of a downward frame forgets its down route.
     bool timeout(uint32_t nowS);
+    // An authenticated frame from `neighbor` (HACK, unicast DATA, checked
+    // BEACON) ends its hold: transfers to it go again at once.
+    void heard(uint16_t neighbor);
     // Origin traffic uses the same durable link sequence space as relay traffic.
     bool nextSequence(uint16_t& sequence) { return sequence_.next(sequence); }
     bool active() const { return active_; }
@@ -88,9 +95,19 @@ private:
     struct Attempt {
         uint32_t generation = 0;
         uint16_t next = 0, sequence = 0, lateNext = 0, lateSequence = 0;
-        uint8_t attempts = 1;  // tries of this frame (same seq) so far; a radio refusal (yield) keeps the count
+        uint8_t attempts = 1;  // tries in this round of 3; a radio refusal (yield) keeps the count
         bool valid = false, onAir = false, late = false;
     };
+    // A next hop that missed `rounds` rounds of 3 attempts in a row; no
+    // transfer to it is prepared before `untilS` (RAM only).
+    struct Hold {
+        uint16_t id = 0;
+        uint8_t rounds = 0;
+        uint32_t untilS = 0;
+    };
+    bool held(uint16_t next, uint32_t nowS) const;
+    void failedRound(uint16_t next, uint32_t nowS);
+    Hold holds_[wici_route::NEIGHBORS];
     wici_route::Config config_;
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};

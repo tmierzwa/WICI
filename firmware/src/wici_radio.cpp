@@ -79,6 +79,7 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         if (ownActive_ && ownAwaiting_ && frame.source == ownNext_ &&
             frame.destination == own_ && frame.sequence == ownSeq_[ownPart_]) {
             ownAwaiting_ = ownDelayPending_ = false;
+            relay_.heard(ownNext_);
             relay_.routes().hopResult(ownNext_, true, nowS);
             if (++ownPart_ == ownCount_) finishOwn(true);
             else ownAttempts_ = 0;
@@ -173,6 +174,7 @@ Event Shelter::applyBeacon(uint32_t nowS) {
     beaconStats_.lastMs = p.ms;
     if (p.ms > beaconStats_.maxMs) beaconStats_.maxMs = p.ms;
     const bool admitted = p.valid && relay_.routes().beacon(p.sender, p.beacon, p.cost16, nowS);
+    if (admitted) relay_.heard(p.sender);  // a root back with its laptop ends the hold at once
     pendingState_.store(IDLE, std::memory_order_release);
     return admitted ? Event::ADMITTED : Event::REJECTED;
 }

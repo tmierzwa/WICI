@@ -31,6 +31,7 @@ bool Relay::begin() {
     outgoingLength_ = 0;
     nextSlot_ = owedHacks_ = 0;
     for (Attempt& attempt : prepared_) attempt = Attempt();
+    for (Hold& hold : holds_) hold = Hold();
     learn_ = (1u << wici_relay::SLOTS) - 1;  // recover hints of frames queued before a restart
     repeatHack_.reset();
     return keyReady_ && queue_.begin(key_, config_.network, config_.own) && routes_.begin() &&
@@ -49,6 +50,7 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (!wici_link::decode(key_, config_.network, wire, length, frame) ||
         frame.type != wici_link::Type::DATA ||
         (frame.destination != config_.own && frame.destination != wici_link::BROADCAST)) return Receipt::IGNORED;
+    if (frame.destination == config_.own) heard(frame.source);  // unicast: the pairwise tag names it
     // This component is for transit traffic. A final recipient must durably
     // admit the decrypted envelope in its own inbox before answering HACK.
     if (get16(frame.payload + 3) == config_.own || !id(get16(frame.payload + 1)) ||
@@ -141,6 +143,8 @@ bool Relay::prepare(uint32_t nowS) {
                               routes_.down(get16(frame.payload + 3)) : routes_.parent();
         // Never hand a frame back to the neighbor it came from.
         if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
+        // A next hop that stopped answering is held; frames to others still go.
+        if (next != wici_link::BROADCAST && held(next, nowS)) continue;
         // The last allowed hop must end at the root (up) or at the envelope
         // destination (down): a relay there refuses it. The frame waits for a
         // next hop that ends there (e.g. the planned parent back after a
@@ -244,6 +248,7 @@ bool Relay::receiveHack(const uint8_t* wire, size_t length, uint32_t nowS) {
         else continue;
         if (!queue_.remove(slot, nowS)) return false;  // a new generation voids the record
         if (active_ && slot_ == slot) active_ = false;
+        heard(next);
         routes_.hopResult(next, true, nowS);
         return true;
     }
@@ -260,12 +265,39 @@ bool Relay::timeout(uint32_t nowS) {
         return true;
     }
     active_ = false;  // No HACK: keep the durable queue item for another route.
+    attempt.attempts = 1;  // the next round (after the hold or via another next hop) has 3 attempts again
+    failedRound(next_, nowS);
     // A relay learns no route over a working one (Table::learn), so a station
     // that moved is found again only after the old route goes: the next
     // frame floods, and the station's next uplink frame teaches the new
     // route. A failed write takes ready() down.
     if (downTo_) routes_.forget(downTo_, next_);
     return false;
+}
+
+bool Relay::held(uint16_t next, uint32_t nowS) const {
+    for (const Hold& hold : holds_)
+        if (hold.id == next) return nowS < hold.untilS;
+    return false;
+}
+
+void Relay::failedRound(uint16_t next, uint32_t nowS) {
+    // Without the hold a silent next hop (a root without its laptop) would
+    // get a round every 0.5-2 s until the 60% pool ran out, and transit would
+    // stay blocked for up to an hour after it came back.
+    Hold* slot = nullptr;
+    for (Hold& hold : holds_) {
+        if (hold.id == next) { slot = &hold; break; }
+        if (!slot || hold.untilS < slot->untilS) slot = &hold;  // free or the earliest to end
+    }
+    if (slot->id != next) *slot = Hold{next, 0, 0};
+    if (slot->rounds < 9) ++slot->rounds;
+    slot->untilS = nowS + (slot->rounds < 9 ? 1u << slot->rounds : HOLD_MAX_S);  // 2, 4 ... 256, then 300 s
+}
+
+void Relay::heard(uint16_t neighbor) {
+    for (Hold& hold : holds_)
+        if (hold.id == neighbor) hold = Hold();
 }
 
 }  // namespace wici_hop

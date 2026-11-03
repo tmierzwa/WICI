@@ -494,6 +494,33 @@ int main() {
     assert(looped.receiveData(wire, n, 330, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
     assert(looped.routes().parent() == 6);
 
+    // Final review B2: a round of 3 attempts without HACK holds that next hop
+    // for 2, 4 ... 256, then 300 s, so a silent root (no laptop) costs a few
+    // frames per 5 min instead of the whole transit pool. An authenticated
+    // frame from it ends the hold at once.
+    static Memory holdMemory;
+    wici_hop::Relay holding(holdMemory, {100, 2, 1, 1, 0}, ifac);
+    assert(holding.begin());
+    up = incoming; up.sequence = 600; up.payload[8] = 93;
+    n = wici_link::encode(key, up, wire, sizeof(wire));
+    assert(holding.receiveData(wire, n, 600, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    const auto round = [&](uint32_t at) {
+        assert(holding.prepare(at));
+        for (unsigned attempt = 0; attempt < 3; ++attempt)
+            assert(holding.transmitted(true, at) && holding.timeout(at) == (attempt < 2));
+    };
+    uint32_t at = 600;
+    const uint32_t holds[] = {2, 4, 8, 16, 32, 64, 128, 256, 300, 300};
+    for (const uint32_t holdS : holds) {
+        round(at);
+        assert(!holding.prepare(at + holdS - 1));
+        at += holdS;
+    }
+    round(at);
+    assert(!holding.prepare(at + 1));
+    holding.heard(1);  // e.g. the root's BEACON after its laptop came back
+    assert(holding.prepare(at + 1));
+
     // Review 11b, finding 3: a transfer the radio refused, prepared again for
     // the same next hop, keeps its seq, so refusals burn none. After a
     // reroute it gets a new seq, and a HACK for the attempt that was on air
