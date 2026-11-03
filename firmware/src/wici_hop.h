@@ -80,8 +80,9 @@ public:
     // silence debt and randomized backoff; false leaves it queued for reroute.
     // The third failed attempt of a downward frame forgets its down route.
     bool timeout(uint32_t nowS);
-    // An authenticated frame from `neighbor` (HACK, unicast DATA, checked
-    // BEACON) ends its hold: transfers to it go again at once.
+    // A HACK from `neighbor` for an attempt of this relay or its checked
+    // BEACON ends its hold: transfers to it go again at once. DATA does not
+    // (a recorded one replays).
     void heard(uint16_t neighbor);
     // Origin traffic uses the same durable link sequence space as relay traffic.
     bool nextSequence(uint16_t& sequence) { return sequence_.next(sequence); }

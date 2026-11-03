@@ -544,8 +544,9 @@ int main() {
 
     // Final review B2: a round of 3 attempts without HACK holds that next hop
     // for 2, 4 ... 256, then 300 s, so a silent root (no laptop) costs a few
-    // frames per 5 min instead of the whole transit pool. An authenticated
-    // frame from it ends the hold at once.
+    // frames per 5 min instead of the whole transit pool. A HACK echoing an
+    // attempt or a checked BEACON from it ends the hold at once; a DATA does
+    // not, because a recorded one replays (link frames have no replay window).
     static Memory holdMemory;
     wici_hop::Relay holding(holdMemory, {100, 2, 1, 1, 0}, ifac);
     assert(holding.begin());
@@ -565,6 +566,21 @@ int main() {
         at += holdS;
     }
     round(at);
+    assert(!holding.prepare(at + 1));
+    wici_link::Frame recorded = incoming;   // root -> relay, down to station 4, from when the root had its laptop
+    recorded.flags = wici_link::ACKREQ | wici_link::DOWN; recorded.source = 1; recorded.sequence = 7;
+    recorded.payload[2] = 1; recorded.payload[4] = 4; recorded.payload[8] = 94;
+    n = wici_link::encode(key, recorded, wire, sizeof(wire));
+    // Replayed by a keyless listener: the frame itself goes on to station 4, the hop to the root stays held.
+    holding.receiveData(wire, n, at + 1, hack, sizeof(hack), hackLength);
+    assert(holding.prepare(at + 1));
+    out = holding.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 4);
+    assert(holding.transmitted(true, at + 1));
+    reply.source = 4; reply.sequence = parsed.sequence;
+    setEcho(reply, wici_link::macEcho(out, outLength));
+    hackLength = wici_link::encode(key, reply, hack, sizeof(hack));
+    assert(holding.receiveHack(hack, hackLength, at + 1));
     assert(!holding.prepare(at + 1));
     holding.heard(1);  // e.g. the root's BEACON after its laptop came back
     assert(holding.prepare(at + 1));

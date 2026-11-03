@@ -53,7 +53,8 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (!wici_link::decode(key_, config_.network, wire, length, frame) ||
         frame.type != wici_link::Type::DATA ||
         (frame.destination != config_.own && frame.destination != wici_link::BROADCAST)) return Receipt::IGNORED;
-    if (frame.destination == config_.own) heard(frame.source);  // unicast: the pairwise tag names it
+    // No heard() here: link frames have no replay window, so a recorded DATA would end a hold (B2). Only a HACK
+    // echoing an attempt of this relay and a checked BEACON do (receiveHack, Shelter::receive).
     // This component is for transit traffic. A final recipient must durably
     // admit the decrypted envelope in its own inbox before answering HACK.
     if (get16(frame.payload + 3) == config_.own || !id(get16(frame.payload + 1)) ||

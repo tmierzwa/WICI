@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "b9fd64cf69cd97e807758708ab5e443a465397ab43255100855ba2094d505bc9",
-   "bytes": 781801,
+   "sha256": "58bd584a00ec0561a45c3bb457e2730c05abec8bc87bf85674f2abb4591afd37",
+   "bytes": 781769,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -302,8 +302,8 @@
   "firmware/src/wici_flood.h": "d819d2a1f53460651253a53c6ee328fc75ee914f2035911b0e1d286125469709",
   "firmware/src/wici_gateway.cpp": "bdaff723fc50f753c0a7b9c4a677d4cdb749e26c94e66c6d9c93427f2b59308e",
   "firmware/src/wici_gateway.h": "f9ac0095eca1ed69b2482fabcc7844d971ab1942643e90002d67955072112d0d",
-  "firmware/src/wici_hop.cpp": "f8ac8698b7bb4513dbba3664fa500da39a978259fd49f93f9138ad75bea3402a",
-  "firmware/src/wici_hop.h": "d84e7430995767b07ed14855f395749716fbcbd10eb341aa8ccdb913b1209604",
+  "firmware/src/wici_hop.cpp": "850472cdc1eb2b251a367e66211b72b168db92352ccf519439d14a6dbf841933",
+  "firmware/src/wici_hop.h": "cc0d129ad05069bc3e47ad75d32ea49576f866b4de5ce1b36a010c5c75627f6f",
   "firmware/src/wici_hop_auth.cpp": "870a166e73c9bf087c897bcacf1f610e6fdc7415d581d94b6f663f2156a982f4",
   "firmware/src/wici_hop_auth.h": "7c26a8486852e9505bd47d75b5c6f06dd1d9fb5a83793980f86fdd78eca07f6c",
   "firmware/src/wici_link.cpp": "6410398c8298135c0aa1fe66028e2c794c9b280ecd4299f483dd83470da19a52",
