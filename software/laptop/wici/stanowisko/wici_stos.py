@@ -29,9 +29,7 @@ class Delivery:
     destination: int
     part: int = 0
     sequence: int | None = None
-    next_hop: int | None = None
-    echo: bytes = b""  # wici_link.mac_echo of the part on air: the HACK must repeat it
-    on_air: bytes = b""  # the root's echo of the last attempt: a retry sends these bytes again
+    on_air: bytes = b""  # the root's echo of the last attempt: its HACK completes the part, a retry resends it
     submissions: int = 0
     attempts: int = 0
     sent_at: float = 0.0
@@ -147,7 +145,7 @@ class WiciStos:
 
     def _next_part(self, item):
         item.part += 1
-        item.sequence = item.next_hop = None
+        item.sequence = None
         item.on_air = b""
         item.submissions = item.attempts = 0
         item.retry_at = 0
@@ -177,6 +175,16 @@ class WiciStos:
     def _sent(self, payload):
         """The item in flight whose current fragment is this payload."""
         return next((item for item in self.flight.values() if item.frames[item.part] == payload), None)
+
+    def _answers(self, item, hack):
+        """Whether the HACK repeats seq and MAC echo of the item's last attempt from its next hop. Also after
+        600 ms, until the retry goes to the root: the retry is the same bytes, so the HACK proves receipt, and a
+        replay may have taken the HACK the next hop owed the retry (wici-link.md, rule 4)."""
+        if not item.on_air or (item.sequence is None and self.outstanding is item):
+            return False
+        sent = wici_link.decode(self.key, self.network, item.on_air)
+        return (sent.destination, sent.sequence, wici_link.mac_echo(item.on_air)) == (
+            hack.source, hack.sequence, hack.payload)
 
     def _refused(self, wire):
         """The root cannot take the frame we wrote now (KISS command 1, the same bytes)."""
@@ -212,8 +220,7 @@ class WiciStos:
                 return
             if (item is not None and frame.flags == (wici_link.ACKREQ | wici_link.DOWN) and
                     item.sequence is None):
-                item.sequence, item.next_hop = frame.sequence, frame.destination
-                item.echo = wici_link.mac_echo(wire)
+                item.sequence = frame.sequence
                 item.on_air = bytes(wire)
                 if self.outstanding is item:
                     self.outstanding = None
@@ -222,9 +229,7 @@ class WiciStos:
                 item.retry_at = item.sent_at + 0.6
                 return
         if frame.kind == wici_link.HACK and frame.destination == self.root:
-            item = next((i for i in self.flight.values()
-                         if i.next_hop == frame.source and i.sequence == frame.sequence and
-                         i.echo == frame.payload), None)
+            item = next((i for i in self.flight.values() if self._answers(i, frame)), None)
             if item is not None:
                 # Only the station's own HACK says it settled the part; a relay's says it holds it.
                 item.last_own = frame.source == item.destination
@@ -293,7 +298,7 @@ class WiciStos:
                     self.dropped["outbound"] += 1
                 else:
                     # As on every hop: the same bytes after 0.5-2 s, while the next hop still owes their HACK.
-                    item.sequence = item.next_hop = None
+                    item.sequence = None
                     item.retry_at = now + random.uniform(0.5, 2)
         if self.outstanding is not None and now < self.outstanding.retry_at:
             return   # the root's slot holds our frame until its echo or refusal

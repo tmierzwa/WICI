@@ -77,7 +77,10 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     if (!wici_link::decode(linkKey_, network_, wire, length, frame)) return Event::REJECTED;
     if (frame.destination != own_ && frame.destination != wici_link::BROADCAST) return Event::IGNORED;
     if (frame.type == wici_link::Type::HACK) {
-        if (ownActive_ && ownAwaiting_ && frame.source == ownNext_ &&
+        // Also after the 600 ms, until the retry goes to the radio: the retry
+        // is the same bytes, so the HACK proves receipt, and a replay may
+        // have taken the HACK the parent owed the retry (rule 4).
+        if (ownActive_ && (ownAwaiting_ || ownDelayPending_) && frame.source == ownNext_ &&
             frame.destination == own_ && frame.sequence == ownSeq_[ownPart_] &&
             wici_link::hackEcho(frame) == wici_link::macEcho(ownFrames_[ownPart_], ownLengths_[ownPart_])) {
             ownAwaiting_ = ownDelayPending_ = false;

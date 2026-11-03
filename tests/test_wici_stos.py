@@ -343,6 +343,29 @@ class WiciBearerTest(unittest.TestCase):
         self.assertEqual((self.sent().source, self.sent().destination, self.sent().payload),
                          (1, 5, self.part(4, 2)))
 
+    def test_late_hack_completes_the_part_until_the_retry_goes_to_the_root(self):
+        # Review 9: the retry is the same bytes, so a HACK after 600 ms proves receipt; a replay may have taken
+        # the HACK the next hop owed the retry. Once the retry is with the root, its echo restarts the wait.
+        late = self.bearer.send_frames((self.part(4, 1),))
+        handed = self.bearer.send_frames((self.part(9, 1),))
+        self.bearer._tick()
+        self.echo(4, 70, self.part(4, 1))
+        self.clock.value += 0.7
+        self.bearer._tick()   # 4: no HACK in time; 9 goes to the root
+        self.echo(9, 71, self.part(9, 1))
+        self.feed(self.hack(4, 70))
+        self.assertTrue(late.result)
+        self.clock.value += 0.7
+        self.bearer._tick()   # 9: no HACK in time
+        self.clock.value = handed.retry_at
+        self.bearer._tick()
+        self.assertIs(self.bearer.outstanding, handed)
+        self.feed(self.hack(9, 71))
+        self.assertIsNone(handed.result)
+        self.echo(9, 71, self.part(9, 1))
+        self.feed(self.hack(9, 71))
+        self.assertTrue(handed.result)
+
     def test_undeliverable_station_does_not_hold_back_others(self):
         stuck = self.bearer.send_frames((self.part(4),))
         other = self.bearer.send_frames((self.part(9),))

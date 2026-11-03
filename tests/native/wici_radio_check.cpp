@@ -373,6 +373,31 @@ int main() {
     n = encode(key, reply, wire);
     assert(failover.receive(wire, n, at + 100, 30) == wici_radio::Event::ADMITTED);
     assert(failoverDelivery.calls == 1 && failoverDelivery.handle == 77 && failoverDelivery.acknowledged);
+    // Review 9: a HACK after the 600 ms still completes the frame until the
+    // retry goes to the radio (a replay may have taken the owed one); once
+    // the retry is handed over, only a HACK after its TX counts.
+    const auto hackOfSent = [&] {
+        assert(wici_link::decode(key, 100, failoverAir.data, failoverAir.dataLength, sent));
+        reply.source = sent.destination; reply.sequence = sent.sequence;
+        setEcho(reply, wici_link::macEcho(failoverAir.data, failoverAir.dataLength));
+        return encode(key, reply, wire);
+    };
+    for (const uint32_t handle : {78u, 79u}) {
+        assert(failover.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, handle));
+        at += 1000; failover.poll(at, 31);
+        const unsigned sentCount = failoverAir.dataCount;
+        failover.onTxDone(true, at, 31);
+        at += 600; failover.poll(at, 31);   // no HACK in time
+        n = hackOfSent();
+        if (handle == 79) {
+            at += 500; failover.poll(at, 31);   // the retry is handed to the radio
+            assert(failoverAir.dataCount == sentCount + 1);
+            assert(failover.receive(wire, n, at + 1, 31) != wici_radio::Event::ADMITTED);
+            failover.onTxDone(true, at + 2, 31);
+        }
+        assert(failover.receive(wire, n, at + 3, 31) == wici_radio::Event::ADMITTED);
+        assert(failoverDelivery.handle == handle && failoverDelivery.acknowledged);
+    }
     // Finding 9: a BEACON the radio would refuse (silence, budget, busy)
     // spends neither a seq nor an Ed25519 signature.
     assert(failover.routes().rank(30) != 0xFFFF && failover.beacon(30));
