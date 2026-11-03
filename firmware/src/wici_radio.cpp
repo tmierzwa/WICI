@@ -143,11 +143,13 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
         wici_destination::Resolved resolved;
         const auto result = destination_.receive(wire, length, nowS, hack, sizeof(hack), hackLength, &resolved);
         // A HACK to the root reaches the receiver itself and proves the message;
-        // after any other hop or a flood, only a proof envelope does.
-        if (resolved.valid && !(frame.source == root_ && (frame.flags & wici_link::ACKREQ)))
-            addProof(resolved.peer, resolved.counter);
-        if (result == wici_destination::Outcome::HACK_READY)
-            return air_.sendHack(hack, hackLength, receivedMs) ? Event::HACK_SENT : Event::ADMITTED;
+        // after any other hop, a flood or a HACK the radio refused (silence,
+        // deadline), only a proof envelope does.
+        const bool hackToRoot = frame.source == root_ && (frame.flags & wici_link::ACKREQ);
+        const bool hackSent = result == wici_destination::Outcome::HACK_READY &&
+                              air_.sendHack(hack, hackLength, receivedMs);
+        if (resolved.valid && !(hackToRoot && hackSent)) addProof(resolved.peer, resolved.counter);
+        if (result == wici_destination::Outcome::HACK_READY) return hackSent ? Event::HACK_SENT : Event::ADMITTED;
         return result == wici_destination::Outcome::ACCEPTED ? Event::ADMITTED :
                result == wici_destination::Outcome::IGNORED ? Event::IGNORED : Event::REJECTED;
     }

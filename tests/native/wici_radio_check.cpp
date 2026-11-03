@@ -555,11 +555,20 @@ int main() {
     assert(arrive(5, 5, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
     step();
     assert(proofAir.dataCount == 0 && !prover.ownBusy());
+    // From the root, but the radio refused the HACK (silence, deadline): the root never saw it, so a proof follows.
+    proofAir.hackOk = false;
+    assert(arrive(4, 5, wici_link::ACKREQ) == wici_radio::Event::ADMITTED);
+    proofAir.hackOk = true;
+    step();
+    assert(proofAir.dataCount == 1);
+    uint16_t refusedSeq = expectProof(0, {4});
+    sentOk();
+    hackFrom5(refusedSeq);
     // Through relay 7: the station proves counter 6 to the receiver, via its parent.
     assert(arrive(6, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
     step();
-    assert(proofAir.dataCount == 1 && prover.ownBusy());
-    uint16_t proofSeq = expectProof(0, {6});
+    assert(proofAir.dataCount == 2 && prover.ownBusy());
+    uint16_t proofSeq = expectProof(1, {6});
     // A REQUEST waits behind the proof (a busy link is no failed try), and
     // the proof's end reports nothing to the station application.
     assert(!prover.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 91));
@@ -569,13 +578,13 @@ int main() {
     // A repeat resolves nothing new: no second proof.
     assert(arrive(6, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
     step();
-    assert(proofAir.dataCount == 1);
+    assert(proofAir.dataCount == 2);
     // A flood (no HACK at all) and a relay: one proof names both counters.
     assert(arrive(7, 5, wici_link::DOWN) == wici_radio::Event::ADMITTED);
     assert(arrive(8, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
     step();
-    assert(proofAir.dataCount == 2);
-    proofSeq = expectProof(1, {7, 8});
+    assert(proofAir.dataCount == 3);
+    proofSeq = expectProof(2, {7, 8});
     sentOk();
     hackFrom5(proofSeq);
     // The own SA1 goes first; no proof starts in silence; a full list drops its oldest.
@@ -584,16 +593,16 @@ int main() {
     assert(prover.proofsDropped() == 1);
     step();
     wici_link::Frame own;
-    assert(proofAir.dataCount == 3 && wici_link::decode(key, 100, proofAir.data, proofAir.dataLength, own));
+    assert(proofAir.dataCount == 4 && wici_link::decode(key, 100, proofAir.data, proofAir.dataLength, own));
     assert(own.payload[0] == 0x40);  // the station's SA1, not the proof
     sentOk();
     hackFrom5(own.sequence);
     assert(proofDelivery.calls == 1 && proofDelivery.handle == 92);
     proofAir.acceptOk = false;
     step();
-    assert(proofAir.dataCount == 3 && !prover.ownBusy());
+    assert(proofAir.dataCount == 4 && !prover.ownBusy());
     proofAir.acceptOk = true;
     step();
-    assert(proofAir.dataCount == 4);
-    expectProof(3, {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26});
+    assert(proofAir.dataCount == 5);
+    expectProof(4, {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26});
 }
