@@ -225,6 +225,57 @@ int main(int argc, char** argv) {
         refused(halves[0], 160, 0) != wici_destination::Outcome::HACK_READY ||
         refused(others[0], 170, 0) != wici_destination::Outcome::REJECTED || hackLength != 0) return 41;
 
+    // E4: SA1 admission and the replay window are two writes. Power lost after each FRAM write of the
+    // resolving part: the retry after restart still resolves the message, admitted at least once
+    // (the station's SA1 admission is idempotent), and is never lost.
+    const auto crashWindow = [&](const envelope::Frame* parts, size_t count) {
+        // The station's SA1 transaction is a FRAM write too: after the cut it fails like the window.
+        static Memory crash;
+        struct Count { int times = 0; } count_;
+        const wici_destination::AdmitFn durable = [](uint16_t, uint16_t, uint16_t, const uint8_t*, size_t, void* c) {
+            const uint8_t mark = 1;
+            if (!crash.write(sizeof(crash.data) - 1, &mark, 1)) return false;
+            ++static_cast<Count*>(c)->times;
+            return true;
+        };
+        bool betweenWrites = false;
+        for (int cut = 0;; ++cut) {
+            memset(crash.data, 0, sizeof(crash.data));
+            crash.writesLeft = -1;
+            count_ = Count();
+            int& times = count_.times;
+            wici_destination::Destination before(crash, {0x1234, 20, {10, 30}}, ifac, b, peers, durable, &count_);
+            if (!before.begin()) return 1;
+            uint32_t nowS = 200;
+            const auto send = [&](wici_destination::Destination& d, size_t i, wici_destination::Resolved& resolved) {
+                link.sequence = static_cast<uint16_t>(link.sequence + 1); link.length = parts[i].length;
+                memcpy(link.payload, parts[i].bytes, link.length);
+                const size_t n = wici_link::encode(linkKey, link, radio, sizeof(radio));
+                return d.receive(radio, n, nowS += 10, hack, sizeof(hack), hackLength, &resolved);
+            };
+            wici_destination::Resolved resolved;
+            for (size_t i = 0; i + 1 < count; ++i)
+                if (send(before, i, resolved) != wici_destination::Outcome::HACK_READY) return 2;
+            crash.writesLeft = cut;
+            const auto first = send(before, count - 1, resolved);
+            const bool uncut = crash.writesLeft > 0;
+            crash.writesLeft = -1;
+            if (uncut) return first == wici_destination::Outcome::HACK_READY && resolved.valid && times == 1 &&
+                              betweenWrites ? 0 : 3;
+            if (resolved.valid != (first == wici_destination::Outcome::HACK_READY) || times > 1) return 4;
+            const bool proved = resolved.valid;
+            wici_destination::Destination after(crash, {0x1234, 20, {10, 30}}, ifac, b, peers, durable, &count_);
+            if (!after.begin() || send(after, count - 1, resolved) != wici_destination::Outcome::HACK_READY) return 5;
+            // A message resolved before the cut is a repeat now: its proof was lost with the RAM list,
+            // and the receiver's resend under a new counter proves it (wici-link.md, dowód doręczenia).
+            if (proved ? resolved.valid || times != 1 : !resolved.valid || times < 1) return 6;
+            if (times == 2) betweenWrites = true;
+        }
+    };
+    envelope::Frame whole[2];
+    if (envelope::seal(ab, 10, 20, 2000, plain, sizeof(plain), 236, whole) != 1 || crashWindow(whole, 1)) return 42;
+    if (envelope::seal(ab, 10, 20, 2001, large, sizeof(large), 153, halves) != 2 || crashWindow(halves, 2)) return 43;
+
     // Correctly encrypted envelopes with a reserved kind type, from the Python side.
     for (int i = 1; i < argc; ++i) {
         uint8_t reserved[envelope::MAX_FRAME];
