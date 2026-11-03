@@ -131,12 +131,11 @@ bool Table::commit() {
     return true;
 }
 
-Table::Plan Table::plan(uint16_t destination, uint16_t via) const {
-    if (destination == via) return Plan::PLANNED;
+bool Table::planned(uint16_t destination, uint16_t via) const {
+    if (destination == via) return true;
     for (uint16_t i = 0; i < behindCount_; ++i)
-        if (behind_[i].station == destination && behind_[i].via == via)
-            return behind_[i].backup ? Plan::BACKUP : Plan::PLANNED;
-    return Plan::NONE;
+        if (behind_[i].station == destination && behind_[i].via == via) return true;
+    return false;
 }
 
 bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
@@ -147,11 +146,7 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
     for (size_t i = 0; i < ROUTES; ++i) {
         if (routes_[i].destination == destination) {
             if (routes_[i].via == via) return true;
-            // A claim does not move a working route, except a planned-path
-            // one over a backup-only one: a captured backup neighbour that
-            // claimed the station first gives way to its genuine uplink.
-            if (!replace && destination != via &&
-                plan(destination, via) <= plan(destination, routes_[i].via)) return false;
+            if (!replace && destination != via) return false;  // a claim does not move a working route
             const Route old = routes_[i];
             routes_[i].via = via;
             if (!commit()) { routes_[i] = old; return false; }

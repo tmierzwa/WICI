@@ -31,7 +31,7 @@ constexpr size_t PROFILE_MAX = 15;
 constexpr uint32_t DOC_MAX = 7680;
 constexpr uint16_t STATIONS_MAX = 1000;
 constexpr size_t PRIORITY_KEYS_MAX = 50;
-constexpr size_t BEHIND_MAX = 128;         // wpisy `behind` i `behind_backup` we wszystkich `priority_keys` razem
+constexpr size_t BEHIND_MAX = 128;         // wpisy `behind` we wszystkich `priority_keys` razem
 constexpr uint8_t TTL_DEFAULT = 7;         // `network.ttl`, gdy dokument go nie podaje
 constexpr const char* LXMF_NAME = "lxmf.delivery";
 constexpr const char* SA1_NAME = "wici.sa1";
@@ -63,14 +63,11 @@ struct PriorityKey {
     uint8_t x25519[32] = {};
 };
 
-// Plan sieci dla dróg w dół: stacja `station` leży za sąsiadem `via`. `backup` = false: sąsiad leży
-// na planowej drodze stacji (`priority_keys[].behind`, najwyżej jeden sąsiad na stację); true: tylko na
-// zapasowej (`priority_keys[].behind_backup`). Sąsiad zawsze może być planową drogą do samego siebie,
-// więc nie ma tu wpisu dla siebie.
+// Plan sieci dla dróg w dół: stacja `station` leży za sąsiadem `via` (`priority_keys[].behind`, tylko u roota).
+// Sąsiad zawsze może być drogą do samego siebie, więc nie ma tu wpisu dla siebie.
 struct Behind {
     uint16_t station = 0;
     uint16_t via = 0;
-    bool backup = false;
 };
 
 struct Config {

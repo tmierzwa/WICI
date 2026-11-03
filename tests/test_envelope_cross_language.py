@@ -284,42 +284,32 @@ class CrossLanguageEnvelope(unittest.TestCase):
             (dict(station, receiver=dict(station["receiver"], backup=weak_backup)), "receiver",
              ["receiver.backup.key"]),
         )
-        # Plan-bound down routes: optional `behind` (planned path) and `behind_backup` (backup path only)
-        # lists per neighbour, validated identically.
+        # Plan-bound down routes: optional `behind` list per neighbour, only in the root's document (a relay
+        # learns down routes only to its neighbours), validated identically.
         behind = "priority_keys", ["priority_keys.0.behind"]
+        first = dict(neighbour, id=4)
         second = {"id": 5, "ed25519": honest.hex(), "x25519": "ef" * 32}
+        root = {"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"},
+                "network": dict(network, station=1, parent=0), "priority_keys": [first]}
         cases += (
-            (dict(station, priority_keys=[dict(neighbour, behind=[5, 6, 7]), dict(second, behind_backup=[6])]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind_backup=[6]), dict(second, behind=[6])]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=[6], behind_backup=[7, 8])]), "ok", []),
-            # The planned path of a station runs through one neighbour; the two lists do not overlap.
-            (dict(station, priority_keys=[dict(neighbour, behind=[6]), dict(second, behind=[6])]),
-             "priority_keys", ["priority_keys.1.behind"]),
-            (dict(station, priority_keys=[dict(neighbour, behind=[6], behind_backup=[6])]),
-             "priority_keys", ["priority_keys.0.behind_backup"]),
-            (dict(station, priority_keys=[dict(neighbour, behind_backup=[7, 7])]),
-             "priority_keys", ["priority_keys.0.behind_backup"]),
-            (dict(station, priority_keys=[dict(neighbour, behind_backup=[1])]),
-             "priority_keys", ["priority_keys.0.behind_backup"]),
-            (dict(station, priority_keys=[dict(neighbour, behind_backup=6)]),
-             "priority_keys", ["priority_keys.0.behind_backup"]),
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 69)),
-                                               behind_backup=list(range(100, 165)))]),
-             "priority_keys", ["priority_keys"]),                                    # 129 > BEHIND_MAX, both lists
-            (dict(station, priority_keys=[dict(neighbour, behind=[])]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 125)))]), "ok", []),
-            (dict(station, priority_keys=[dict(neighbour, behind=[1])]), *behind),        # the neighbour itself
-            (dict(station, priority_keys=[dict(neighbour, behind=[4])]), *behind),        # this station
-            (dict(station, priority_keys=[dict(neighbour, behind=[3])]), *behind),        # a receiver
-            (dict(station, priority_keys=[dict(neighbour, behind=[6, 6])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[0])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[65535])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=[True])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=["6"])]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=6)]), *behind),
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(10000, 10080)))]), *behind),  # 640 B
-            (dict(station, priority_keys=[dict(neighbour, behind=list(range(5, 69))),
-                                          dict(second, behind=list(range(100, 165)))]),
+            (dict(station, priority_keys=[dict(neighbour, behind=[6])]), *behind),     # a station document
+            (dict(station, priority_keys=[dict(neighbour, behind=[])]), *behind),
+            (root, "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[6, 7, 8]), dict(second, behind=[6])]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[])]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=list(range(5, 125)))]), "ok", []),
+            (dict(root, priority_keys=[dict(first, behind=[4])]), *behind),            # the neighbour itself
+            (dict(root, priority_keys=[dict(first, behind=[1])]), *behind),            # this station
+            (dict(root, priority_keys=[dict(first, behind=[3])]), *behind),            # a receiver
+            (dict(root, priority_keys=[dict(first, behind=[6, 6])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[0])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[65535])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=[True])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=["6"])]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=6)]), *behind),
+            (dict(root, priority_keys=[dict(first, behind=list(range(10000, 10080)))]), *behind),  # 640 B
+            (dict(root, priority_keys=[dict(first, behind=list(range(6, 70))),
+                                       dict(second, behind=list(range(100, 165)))]),
              "priority_keys", ["priority_keys"]),                                    # 129 > BEHIND_MAX
         )
         with tempfile.TemporaryDirectory() as directory:

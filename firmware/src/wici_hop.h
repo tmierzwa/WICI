@@ -17,11 +17,11 @@ enum class Receipt : uint8_t { IGNORED, HACK_READY, STORED_NO_HACK, REJECTED };
 // so its link source is an authenticated neighbour. K1 is unicast transit to
 // or from an active receiver identity, at most one queue slot per neighbour.
 // A down route to a station is learned via a neighbour only when the network
-// plan puts the station behind it (`behind` or `behind_backup`, from
-// priority_keys) or the station is that neighbour, and replaces a working
-// route only when it is via the planned path and the working one via a
-// backup-only neighbour (wici_route::Table::learn): 3 downward attempts
-// without HACK forget it.
+// plan puts the station behind it (`behind`, from priority_keys) or the
+// station is that neighbour, and never replaces a working route
+// (wici_route::Table::learn): 3 downward attempts without HACK forget it.
+// Configuration gives `behind` only to the root, so a station relay learns
+// routes only to its neighbours; any other station is reached by flooding.
 class Relay {
 public:
     // Flooding requires SA1 retries independent of local TX success (a flood

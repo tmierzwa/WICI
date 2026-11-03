@@ -101,10 +101,9 @@ bool Relay::learnPending(uint32_t nowS) {
     if (active_ && !queue_.pending(slot_)) active_ = false;  // expired or forwarded before a crash
     uint8_t wire[wici_link::MAX_FRAME];
     // Hints newest first, by admission time (slot order says nothing): a
-    // route is learned only where none exists or over a backup-only one
-    // (Table::learn), so after a restart the newest frame of a station sets
-    // it and older ones of the same plan class do not move it. Frames
-    // admitted in the same second keep slot order.
+    // route is learned only where none exists (Table::learn), so after a
+    // restart the newest frame of a station sets it and older ones do not
+    // move it. Frames admitted in the same second keep slot order.
     while (learn_) {
         uint8_t slot = wici_relay::SLOTS;
         for (uint8_t i = 0; i < wici_relay::SLOTS; ++i)
@@ -258,10 +257,10 @@ bool Relay::timeout(uint32_t nowS) {
         return true;
     }
     active_ = false;  // No HACK: keep the durable queue item for another route.
-    // A relay learns no route over a working one of the same plan class
-    // (Table::learn), so a station that moved is found again only after the
-    // old route goes: the next frame floods, and the station's next uplink
-    // frame teaches the new route. A failed write takes ready() down.
+    // A relay learns no route over a working one (Table::learn), so a station
+    // that moved is found again only after the old route goes: the next
+    // frame floods, and the station's next uplink frame teaches the new
+    // route. A failed write takes ready() down.
     if (downTo_) routes_.forget(downTo_, next_);
     return false;
 }

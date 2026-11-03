@@ -45,8 +45,7 @@ public:
     // `peers` (priority_keys, must outlive the table) are the neighbours with a
     // pairwise key; without them every neighbour counts as paired. `behind`
     // (the network plan, must outlive the table) lists the stations behind
-    // each neighbour, on their planned path or only on a backup one; a
-    // neighbour always stands for itself on its planned path.
+    // each neighbour; a neighbour always stands for itself.
     Table(journal::Storage& storage, Config config,
           const config::PriorityKey* peers = nullptr, uint8_t peerCount = 0,
           const config::Behind* behind = nullptr, uint16_t behindCount = 0)
@@ -62,18 +61,13 @@ public:
     // and only as the network plan allows: `destination` is `via` itself or
     // stands behind it (`behind`). Anything else is refused (false, ready()
     // unchanged); relays and the root share this one check. An existing
-    // route to another station is replaced with `replace` (the root, on the
-    // laptop's "learn" HACK for a fresh authenticated envelope). A relay
-    // cannot authenticate the claimed envelope sender: it learns a missing
-    // route (none yet, or forgotten after 3 downward failures) and replaces
-    // only a route via a backup-only neighbour by one via the neighbour on
-    // the planned path; equal classes never replace each other. The route
-    // of a neighbour to itself (pairwise tag) always replaces.
+    // route to another station is replaced only with `replace` (the root, on
+    // the laptop's "learn" HACK for a fresh authenticated envelope); a relay
+    // cannot authenticate the claimed envelope sender, so it learns only a
+    // missing route (none yet, or forgotten after 3 downward failures). The
+    // route of a neighbour to itself (pairwise tag) always replaces.
     bool learn(uint16_t destination, uint16_t via, bool replace = false);
-    // Plan class of `destination` via `via`; ordered, a higher one wins.
-    enum class Plan : uint8_t { NONE, BACKUP, PLANNED };
-    Plan plan(uint16_t destination, uint16_t via) const;
-    bool planned(uint16_t destination, uint16_t via) const { return plan(destination, via) != Plan::NONE; }
+    bool planned(uint16_t destination, uint16_t via) const;
     bool forget(uint16_t destination, uint16_t via);
     uint16_t down(uint16_t destination) const;  // BROADCAST when no route
     // Every check of beacon() that needs no signature: fields, epoch age and

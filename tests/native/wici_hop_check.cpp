@@ -431,6 +431,13 @@ int main() {
     n = wici_link::encode(key, uplink, wire, sizeof(wire));
     assert(unplanned.receiveData(wire, n, 250, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
     assert(unplanned.learnPending(250) && unplanned.routes().down(7) == wici_link::BROADCAST);
+    // A station relay as configured (`behind` only in the root's document):
+    // no plan, so only the neighbour's own frame teaches a route, to itself.
+    uplink.payload[2] = 4; uplink.sequence = 251; uplink.payload[8] = 81;
+    n = wici_link::encode(key, uplink, wire, sizeof(wire));
+    assert(unplanned.receiveData(wire, n, 251, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(unplanned.learnPending(251) && unplanned.routes().down(4) == 4);
+    assert(unplanned.routes().down(7) == wici_link::BROADCAST);
 
     // Review D7, finding 7: an item whose hop limit would end at a relay
     // (that relay refuses hops == ttl) is not sent there and spends no seq;
@@ -640,28 +647,6 @@ int main() {
     assert(!moved.prepare(445));  // no route and no flooding here: the frame waits in the queue
     upward(3, 446, 446);
     assert(moved.routes().down(7) == 3);  // learned again, via the new neighbour
-
-    // Review P1: station 7 has its planned path via 3 and a backup one via
-    // 4. A captured 4 claims 7 first and would pin the route (it HACKs and
-    // drops downlinks, so the 3-failure forget never fires); 7's genuine
-    // uplink via 3 dislodges it, and a later claim via 4 moves nothing.
-    static Memory classMemory;
-    const config::Behind classes[] = {{7, 3}, {7, 4, true}};
-    wici_hop::Relay classed(classMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, classes, 2);
-    assert(classed.begin());
-    uplink = incoming; uplink.payload[2] = 7;
-    const uint16_t via[] = {4, 3, 4};  // captured backup claim, genuine planned uplink, claim again
-    const uint16_t expected[] = {4, 3, 3};
-    for (uint8_t i = 0; i < 3; ++i) {
-        uplink.source = via[i];
-        uplink.sequence = static_cast<uint16_t>(450 + i); uplink.payload[8] = static_cast<uint8_t>(110 + i);
-        n = wici_link::encode(key, uplink, wire, sizeof(wire));
-        assert(classed.receiveData(wire, n, 450, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
-        assert(classed.learnPending(450) && classed.routes().down(7) == expected[i]);
-    }
-    wici_hop::Relay classedAgain(classMemory, {100, 2, 1, 1, 0}, ifac, false, rootReceiver, classes, 2);
-    assert(classedAgain.begin() && classedAgain.learnPending(451));  // after a restart: newest first, same result
-    assert(classedAgain.routes().down(7) == 3);
 
     // Round 3 (3): after a restart the hints are learned in admission order,
     // not slot order: an older frame of station 9 via 4 in slot 1 does not

@@ -109,22 +109,19 @@ class ConfigDocTest(unittest.TestCase):
                          ["priority_keys.0"])
         self.assertEqual(self.fields(dict(doc, priority_keys=[neighbor] * 51)),
                          ["priority_keys"])
-        # `behind`: stations the network plan places behind the neighbour (down-route learning).
-        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6, 7])])), [])
-        for bad in ([5], [4], [2], [6, 6], [0], ["6"], 6):
-            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=bad)])),
+        # `behind`: stations the network plan places behind the neighbour (down-route learning), only in
+        # the root's document; a station relay learns down routes only to its neighbours.
+        for behind in ([6, 7], []):
+            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=behind)])),
+                             ["priority_keys.0.behind"], behind)
+        root = {"role": "wezel", "ifac": "ab" * 16, "radio": {"profile": "p1"},
+                "network": dict(network, station=1, parent=0)}
+        second = dict(neighbor, id=6)
+        self.assertEqual(self.fields(dict(root, priority_keys=[dict(neighbor, behind=[4, 7]),
+                                                               dict(second, behind=[4])])), [])
+        for bad in ([5], [1], [2], [7, 7], [0], ["7"], 7):
+            self.assertEqual(self.fields(dict(root, priority_keys=[dict(neighbor, behind=bad)])),
                              ["priority_keys.0.behind"], bad)
-            self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind_backup=bad)])),
-                             ["priority_keys.0.behind_backup"], bad)
-        # `behind_backup`: stations for which the neighbour lies only on a backup path; the lists of one
-        # neighbour do not overlap and a station's planned path runs through one neighbour.
-        second = dict(neighbor, id=7)
-        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6], behind_backup=[8]),
-                                                              dict(second, behind_backup=[6])])), [])
-        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6], behind_backup=[6])])),
-                         ["priority_keys.0.behind_backup"])
-        self.assertEqual(self.fields(dict(doc, priority_keys=[dict(neighbor, behind=[6]), dict(second, behind=[6])])),
-                         ["priority_keys.1.behind"])
 
     def test_limits_follow_the_firmware(self):
         self.assertEqual(self.fields(station_doc(addresses=[])), ["addresses"])
