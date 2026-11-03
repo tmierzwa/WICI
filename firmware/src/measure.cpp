@@ -545,17 +545,19 @@ void Bench::poll() {
         }
         return;
     }
+    // Odbiór przed nadawaniem: po postoju pętli decyzja CCA widzi już ramki z pierścienia odbioru
+    // (także czas na HACK po usłyszanej DATA z ACKREQ).
+    if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
+        rxPollMs_ = now;
+        if (rxMode_ == RxMode::TEST) receive();
+        else receiveLink();
+    }
     if (txState_ != TxState::IDLE) pollLinkTx();
     if (emcActive_) pollEmc(now);
     if (!prep && !emcActive_ && p1Ready && radio_.framing() != radiolink::Framing::NONE && rxMode_ == RxMode::NONE && !busy() &&
         now - autoRxMs_ >= 1000) {
         autoRxMs_ = now;  // najwyżej raz na sekundę, gdy układ nie wchodzi w odbiór
         if (enterRx(RxMode::LINK, 0)) log("link RX resumed");
-    }
-    if (rxMode_ != RxMode::NONE && now - rxPollMs_ >= 5) {
-        rxPollMs_ = now;
-        if (rxMode_ == RxMode::TEST) receive();
-        else receiveLink();
     }
 }
 
@@ -787,6 +789,16 @@ void Bench::receiveLora() {
             }
             ++link_.rxOk;
             ++link_.rxDatagrams;
+            // DATA z ACKREQ (jawny nagłówek, bez sprawdzania MAC: fałszywy kosztuje nadawcę tyle czasu
+            // nadawania co prawdziwy): odbiorca odpowie HACK najpóźniej 200 ms − czas HACK po jej końcu
+            // (z zapasem 10 ms na zobaczenie go, linkSendHack). Do tej chwili okno 50 ms nie wystarcza.
+            if ((received.bytes[0] >> 6) == wici_link::VERSION &&
+                ((received.bytes[0] >> 3) & 7) == static_cast<uint8_t>(wici_link::Type::DATA) &&
+                (received.bytes[0] & wici_link::ACKREQ)) {
+                const uint32_t until = received.receivedMs + HACK_DEADLINE_MS - radio_.frameAirMs(wici_link::RADIO_HACK);
+                if (!hackHold_ || static_cast<int32_t>(until - hackHoldUntilMs_) > 0) hackHoldUntilMs_ = until;
+                hackHold_ = true;
+            }
             rawFrameHandler_(received, rawFrameContext_);
             diagLine("{\"lorarx\":\"raw\",\"len\":%u,\"rssi_dbm\":%d}\n",
                      static_cast<unsigned>(received.length), received.rssiDbm);
@@ -856,6 +868,10 @@ void Bench::startCca(uint32_t now, bool first) {
 }
 
 bool Bench::channelBusy() {
+    if (hackHold_) {
+        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { ++link_.rxBusy; return true; }
+        hackHold_ = false;
+    }
     if (radio_.framing() == radiolink::Framing::RNODE) {
         // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
         // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.

@@ -88,6 +88,23 @@ Wynik: kryterium spełnione dla jednego przeskoku i rozsyłania. Pozostała otwa
 
 Poprawka znaleziona przed próbą: stacja pomijała dowód, gdy rozstrzygającą ramkę podał root z ACKREQ, także gdy radio odrzuciło jej HACK (cisza, termin). Root go wtedy nie dostał, a wiadomość zamykało dopiero ponowienie stanowiska. Teraz dowód pomija tylko HACK przyjęty przez radio; w T2 dowód objął też tę pierwszą kopię.
 
+## Start HACK po DATA (R2)
+
+Ile po końcu ramki DATA zaczyna się HACK, z podsłuchów RAK4631 z 2026-11-02 i 2026-11-03 (wszystkie z zestawami XIAO). Para DATA–HACK to ten sam `seq`, z `l_src` i `l_dst` zamienionymi. Start HACK to różnica znaczników końca odbioru minus czas HACK w eterze (27 B, SF7/125 kHz, 24 symbole preambuły: 83,2 ms). Ten sam zegar podsłuchu mierzy obie ramki, więc opóźnienie odbioru się znosi.
+
+| Podsłuch | HACK | mediana [ms] | p95 [ms] | p99 [ms] | najwięcej [ms] | ponad 50 ms |
+|---|---|---|---|---|---|---|
+| `podsluch-2026-11-02c.jsonl` | 44 | 17,3 | 34,2 | 40,6 | 40,6 | 0 |
+| `podsluch-2026-11-02d.jsonl` | 50 | 15,9 | 26,5 | 26,8 | 26,8 | 0 |
+| `podsluch-2026-11-02e.jsonl` | 115 | 16,9 | 27,5 | 32,6 | 35,5 | 0 |
+| `podsluch-2026-11-03.jsonl` | 151 | 18,2 | 26,8 | 28,4 | 28,7 | 0 |
+| `podsluch-2026-11-03b.jsonl` | 245 | 19,3 | 29,1 | 38,3 | 57,7 | 1 |
+| `podsluch-2026-11-03d.jsonl` | 103 | 21,0 | 27,5 | 29,2 | 32,8 | 0 |
+| `podsluch-2026-11-03e.jsonl` | 5 | 17,1 | 38,3 | 38,3 | 38,3 | 0 |
+| razem | 713 | 17,5 | 27,6 | 35,9 | 57,7 | 1 |
+
+Okno wolnego kanału (50 ms) nie obejmuje więc każdego HACK, a termin pozwala zacząć HACK do 103 ms po DATA. Stąd wstrzymanie własnych ramek do 113 ms po usłyszanej DATA z ACKREQ ([WICI-Link](../../../docs/spec/wici-link.md#potwierdzenie-na-każdym-skoku), reguła 2). Podsłuchy z 2026-11-02 leżą obok [zestawu z 2026-11-02](xiao-zestaw-2026-11-02.md).
+
 ## Surowe logi
 
 - `podsluch-2026-11-03.jsonl`: 08:25–09:23 (próby 2, 4, 5, 11 na `72d4089`, potem pomiary z RAK jako nadajnikiem);

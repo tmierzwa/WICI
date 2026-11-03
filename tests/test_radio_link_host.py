@@ -1454,6 +1454,7 @@ LORA_BENCH_HARNESS = r"""
 #include <vector>
 #include "loraframe.h"
 #include "lora_profile.h"
+#include "wici_link.h"
 #include "measure.h"
 #include "platform.h"
 #include "rx_watch.h"
@@ -2063,6 +2064,32 @@ int main() {
     printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
     printf("HACK_STATS ");
     bench.printHack();
+    // Po usłyszanej DATA v3 z ACKREQ własna ramka czeka do 200 ms − czas HACK (27 B) od DATA, czyli do
+    // ostatniej chwili, gdy HACK odbiorcy musi już nadawać; DATA bez ACKREQ trzyma tylko okno 50 ms.
+    bench.restoreDebt(0);
+    for (const uint8_t first : {static_cast<uint8_t>(0xC1), static_cast<uint8_t>(0xC0)}) {
+        settle();
+        radiolink::Frame heard;
+        heard.length = 30;
+        memset(heard.bytes, 0, heard.length);
+        heard.bytes[0] = first;
+        heard.receivedMs = millis();
+        radio.rxQueue.push_back(heard);
+        runFor(10);
+        const uint32_t busyBefore = bench.link().rxBusy;
+        radio.sent.clear();
+        txDone = -1;
+        bench.linkSend(raw.data(), raw.size(), true);
+        while (radio.sent.empty() && millis() - heard.receivedMs < 1000) {
+            fakeUs += 1000;
+            bench.poll();
+        }
+        const uint32_t sentAfterMs = millis() - heard.receivedMs;
+        untilDone(3000);
+        printf("HACK_HOLD %02X %lu %lu %lu\n", first, static_cast<unsigned long>(sentAfterMs),
+               static_cast<unsigned long>(bench.link().rxBusy - busyBefore),
+               static_cast<unsigned long>(lora::frameAirMs(wici_link::RADIO_HACK)));
+    }
     return 0;
 }
 """
@@ -2834,6 +2861,17 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "HACK_STATS"), 'HACK_STATS {"hack_sent":2,"hack_late":3,"hack_refused":7,'
                          '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,'
                          '"refused_by":{"state":4,"lock":0,"rx_pending":0,"prep":0,"cad":1,"debt":2,"tx":0}}')
+
+    def test_own_frame_waits_for_the_hack_after_heard_data_with_ackreq(self):
+        # Po DATA z ACKREQ (0xC1) kanał jest zajęty do 200 − 87 = 113 ms: HACK odbiorcy może zacząć się
+        # później niż okno 50 ms. Zajęty kanał odracza nadanie o losowe 100–1000 ms, jak każdy inny.
+        _, first, sent_ms, busy, hack_ms = line(self.out, "HACK_HOLD").split()
+        self.assertEqual((first, hack_ms, int(busy) >= 1), ("C1", "87", True))
+        self.assertGreaterEqual(int(sent_ms), 200 - 87)
+        # DATA bez ACKREQ (0xC0) nie czeka na HACK: ramka wychodzi zaraz po odebraniu (model nie ma okna 50 ms).
+        plain = [text for text in self.out if text.startswith("HACK_HOLD C0")][0].split()
+        self.assertEqual(plain[3], "0")
+        self.assertLess(int(plain[2]), 50)
 
     def test_transmit_order_debt_window_cad_debt_write_frames_receive(self):
         # The debt in the journal at each step: 0 up to the free CAD, 12 x (419 + 419) ms from frame 1 on.

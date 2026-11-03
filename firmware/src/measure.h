@@ -103,7 +103,7 @@ struct LinkCounters {
     uint32_t longDeferrals = 0; // nadania odroczone przez CCA łącznie o ponad 1 s (bez czekania na dług)
     uint32_t cadBusy = 0;       // LoRa: CAD wykrył preambułę
     uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji, gdy może zdradzać ramkę
-    uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, albo nieodczytana ramka w układzie
+    uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, nieodczytana ramka w układzie albo czas na HACK
     uint32_t rssiIgnored = 0;   // LoRa: datagramy nadane mimo RSSI ponad progiem bez możliwej ukrytej ramki (energia obca)
 };
 
@@ -313,6 +313,10 @@ private:
     bool ccaRssiIgnored_ = false; // LoRa: w tym nadaniu CCA pominęło RSSI ponad progiem (obca energia)
     uint32_t ccaCheckMs_ = 0;
     uint32_t backoffUntilMs_ = 0;
+    // WICI-Link: po usłyszanej DATA z ACKREQ własna DATA i BEACON czekają, aż HACK odpowiedzi musiał
+    // już się zacząć (wici-link.md, reguła 2); sam HACK idzie bez tego.
+    uint32_t hackHoldUntilMs_ = 0;
+    bool hackHold_ = false;
     uint8_t txDeferrals_ = 0;
 
     uint32_t debtUntilMs_ = 0;
