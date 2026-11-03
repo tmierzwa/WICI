@@ -9,6 +9,7 @@
 namespace wici_radio {
 namespace {
 using fram_record::get16;
+using fram_record::put32;
 bool reached(uint32_t now, uint32_t deadline) { return static_cast<int32_t>(now - deadline) >= 0; }
 }  // namespace
 
@@ -139,7 +140,12 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
     uint8_t hack[wici_link::MAX_FRAME];
     size_t hackLength = 0;
     if (get16(frame.payload + 3) == own_) {
-        const auto result = destination_.receive(wire, length, nowS, hack, sizeof(hack), hackLength);
+        wici_destination::Resolved resolved;
+        const auto result = destination_.receive(wire, length, nowS, hack, sizeof(hack), hackLength, &resolved);
+        // A HACK to the root reaches the receiver itself and proves the message;
+        // after any other hop or a flood, only a proof envelope does.
+        if (resolved.valid && !(frame.source == root_ && (frame.flags & wici_link::ACKREQ)))
+            addProof(resolved.peer, resolved.counter);
         if (result == wici_destination::Outcome::HACK_READY)
             return air_.sendHack(hack, hackLength, receivedMs) ? Event::HACK_SENT : Event::ADMITTED;
         return result == wici_destination::Outcome::ACCEPTED ? Event::ADMITTED :
@@ -230,6 +236,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
         retryAtMs_ = nowMs + backoff();
         delayPending_ = true;
     }
+    if (!ownActive_ && !submitted_ && (proofCount_[0] || proofCount_[1])) startProof();
     if (ownActive_) {
         if (ownAwaiting_) {
             if (!reached(nowMs, ownSentAtMs_ + wici_link::HACK_WAIT_MS)) return;
@@ -272,16 +279,49 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
 
 bool Shelter::queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, uint32_t handle,
                        bool exception) {
-    if (!ready() || ownActive_ || !sa1 || !length || length > envelope::MAX_SA1 || !handle ||
-        !delivery_) return false;
+    if (!handle || !delivery_) return false;
     uint8_t peer = 2;
     for (uint8_t i = 0; i < 2; ++i) if (recipient == receivers_[i]) peer = i;
+    return peer < 2 && startOwn(peer, envelope::TYPE_SA1, sa1, length, handle, exception);
+}
+
+void Shelter::addProof(uint8_t peer, uint32_t counter) {
+    if (peer > 1) return;
+    uint8_t& count = proofCount_[peer];
+    if (count == envelope::PROOF_COUNTERS) {  // the oldest goes; its message comes again
+        memmove(proofs_[peer], proofs_[peer] + 1, (count - 1) * sizeof(proofs_[peer][0]));
+        --count;
+        ++proofsDropped_;
+    }
+    proofs_[peer][count++] = counter;
+}
+
+// Not in silence (also not in its exception: that slot belongs to the
+// exception's own SA1) and not while the radio refuses own frames.
+bool Shelter::startProof() {
+    const uint8_t peer = proofCount_[0] ? 0 : 1;
+    const size_t length = proofCount_[peer] * 4u;
+    if (!air_.accepts(wici_link::TxClass::OWN, wici_link::HEADER + wici_link::TAG + envelope::OVERHEAD + length))
+        return false;
+    uint8_t plain[4 * envelope::PROOF_COUNTERS];
+    for (uint8_t i = 0; i < proofCount_[peer]; ++i) put32(plain + 4 * i, proofs_[peer][i]);
+    // The counters leave the list with the transfer, whatever its end: without
+    // a HACK the receiver resends and the station proves the new counter.
+    const bool started = startOwn(peer, envelope::TYPE_PROOF, plain, length, 0, false);
+    if (started) proofCount_[peer] = 0;
+    return started;
+}
+
+bool Shelter::startOwn(uint8_t peer, uint8_t type, const uint8_t* data, size_t length, uint32_t handle,
+                       bool exception) {
+    if (!ready() || ownActive_ || !data || !length || length > envelope::MAX_SA1) return false;
+    const uint16_t recipient = receivers_[peer];
     const uint16_t next = relay_.routes().parent();
-    if (peer == 2 || !next || next == wici_link::BROADCAST || next == own_) return false;
+    if (!next || next == wici_link::BROADCAST || next == own_) return false;
     envelope::Frame parts[2];
     const size_t count = envelope::sealReserved(outbound_[peer], outboundKeys_[peer], network_,
-                                                own_, recipient, sa1, length,
-                                                wici_link::MAX_PAYLOAD, parts);
+                                                own_, recipient, data, length,
+                                                wici_link::MAX_PAYLOAD, parts, type);
     if (!count || count > 2) return false;
     uint8_t frames[2][wici_link::MAX_FRAME] = {};
     size_t lengths[2] = {};
@@ -340,7 +380,7 @@ void Shelter::finishOwn(bool acknowledged) {
     ownActive_ = ownSubmitted_ = ownAwaiting_ = ownDelayPending_ = ownException_ = false;
     ownHandle_ = 0;
     ownCount_ = ownPart_ = ownAttempts_ = 0;
-    if (delivery_) delivery_(handle, acknowledged, deliveryContext_);
+    if (handle && delivery_) delivery_(handle, acknowledged, deliveryContext_);  // a proof has no handle
 }
 
 bool Shelter::beacon(uint32_t nowS) {

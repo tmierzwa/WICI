@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 #include "wici_hop.h"
+#include "envelope.h"
 #include "fram_record.h"
 
 namespace wici_hop {
@@ -19,8 +20,9 @@ Relay::Relay(journal::Storage& storage, wici_route::Config config, const uint8_t
 }
 
 bool Relay::priority(const wici_link::Frame& frame) const {
-    // Floods are K2.
-    if (frame.destination != config_.own) return false;
+    // Floods are K2. So is a delivery proof: K1 of its station stays for its
+    // SA1 (the type is plaintext, but marking it only demotes the own frame).
+    if (frame.destination != config_.own || (frame.payload[0] & 0x0F) == envelope::TYPE_PROOF) return false;
     const uint16_t receiver = get16(frame.payload + (frame.flags & wici_link::DOWN ? 1 : 3));
     return receiver == receivers_[0] || receiver == receivers_[1];
 }

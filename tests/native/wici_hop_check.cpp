@@ -229,6 +229,23 @@ int main() {
     }
     assert(order[0] == 10 && order[1] == 16 && order[2] == 11 && order[3] == 12);
 
+    // E1: a delivery proof (envelope type 1) is K2, so its station's K1 slot
+    // stays for its SA1: the REQUEST behind the proof leaves first.
+    static Memory proofMemory;
+    wici_hop::Relay proofRelay(proofMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
+    assert(proofRelay.begin());
+    traffic.source = 4; traffic.payload[2] = 4;
+    traffic.payload[0] = 0x41; traffic.sequence = 80; traffic.payload[8] = 20;  // the proof first
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(proofRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    traffic.payload[0] = 0x40; traffic.sequence = 81; traffic.payload[8] = 21;  // then its SA1
+    n = wici_link::encode(key, traffic, wire, sizeof(wire));
+    assert(proofRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(proofRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
+    assert(proofRelay.prepare(140));
+    out = proofRelay.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed) && parsed.payload[8] == 21);
+
     // A captured station C (7) can only spend its own K1 quota at its parent
     // B (2), and B's quota at the next relay A (3); A still has K1 room for
     // another neighbour D (8), and K2 from B is capped.

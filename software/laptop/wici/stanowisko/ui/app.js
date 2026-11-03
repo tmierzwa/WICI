@@ -474,7 +474,8 @@ var VIEWS = {
           info && info.silence ? "bad" : ""],
         ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
           info ? (info.radio_ok ? "good" : "bad") : ""],
-        ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting], ["Najdłużej czekająca", ago(n.oldest_s)]]),
+        ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting],
+        ["W tym przekazane przez przekaźnik, bez potwierdzenia stacji", n.forwarded], ["Najdłużej czekająca", ago(n.oldest_s)]]),
       row(button("Ogłoś adres odbiorcy", "", function () { action("/api/operator/announce"); }))));
   },
   handover: function (view) {

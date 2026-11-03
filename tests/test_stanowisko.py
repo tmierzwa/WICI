@@ -458,6 +458,49 @@ class SendingTest(StationTestCase):
         self.assertTrue(late and set(late) == {3600})
         self.assertEqual(len(self.sent), len(times) + 1)   # każde ponowienie to nowa wiadomość
 
+    def sends(self, hours):
+        """Times (s from now) of every send within hours, each finished at once with self.result."""
+        start, times = self.now, []
+        while self.now - start < hours * 3600:
+            self.now += 10
+            before = len(self.sent)
+            self.tick()
+            if len(self.sent) > before:
+                times.append(self.now - start)
+                self.tick()
+        return times
+
+    def test_forwarded_stays_open_and_waits_out_the_relay_custody(self):
+        # E1: a relay's HACK is no proof. The intent stays open; the next copy waits until the first one has
+        # left the relay queue (30 min), then twice as long each time, up to 4 h, with no contact.
+        self.result = wysylka.FORWARDED
+        self.deliver(self.STATION, request())
+        times = self.sends(14)
+        gaps = [b - a for a, b in zip([0] + times, times)]
+        self.assertEqual(gaps[:5], [2100, 4200, 8400, 14400, 14400])
+        self.assertEqual(self.waiting(), 1)
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT forwarded FROM outbox").fetchone()[0]),
+                         len(times) + 1)   # and the first send, at once after the REQUEST
+
+    def test_flooded_stays_open_on_the_failure_schedule(self):
+        self.result = wysylka.FLOODED
+        self.deliver(self.STATION, request())
+        times = self.sends(1)
+        self.assertEqual([b - a for a, b in zip([0] + times, times)][:4], [60, 120, 300, 900])
+        self.assertEqual(self.waiting(), 1)
+
+    def test_contact_sends_open_intents_at_once(self):
+        self.result = wysylka.FORWARDED
+        self.deliver(self.STATION, request())
+        self.tick()
+        self.assertEqual(len(self.sent), 1)
+        self.now += 60
+        self.reception.call(lambda s: self.reception.wysylka.contact(s.db, self.STATION))
+        self.tick()
+        self.assertEqual(len(self.sent), 2)
+        self.tick()   # contact also restarts the custody floor: 1 again, not 2
+        self.assertEqual(self.reception.call(lambda s: s.db.execute("SELECT forwarded FROM outbox").fetchone()[0]), 1)
+
     def test_retry_interval_has_twenty_percent_jitter(self):
         self.assertEqual(wysylka.retry_delay(1, 0, lambda: 0.0), 48)
         self.assertEqual(round(wysylka.retry_delay(3, 0, lambda: 0.999999)), 360)

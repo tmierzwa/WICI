@@ -5,7 +5,12 @@ docs/spec/stanowisko-osp.md, „Wysyłka”: every message to a station has an i
 same transaction as the event that caused it. Order as in the station: RECEIVED and STATUS, then REPLY and
 BULLETIN. At most 4 messages are in flight. After FAILED the intent is retried after 1, 2, 5 and 15 min, then
 every 15 min, and from 6 h after the first try every 60 min, each interval ±20% (as `retryDelayS` in
-firmware/src/station.cpp). Every retry is a new LXMF message; after DELIVERED the intent is done. A not yet
+firmware/src/station.cpp). Every retry is a new message (a new LXMF message, a new envelope counter); after
+DELIVERED the intent is done. On WICI-Link, DELIVERED is the station's own HACK for every part or its delivery
+proof (`proved`); a relay's HACK (FORWARDED) or a flood (FLOODED) only hands the message on, so the intent
+stays open: after FORWARDED the next try waits at least CUSTODY_S, doubled for each further FORWARDED up to
+CUSTODY_MAX_S, because a sooner copy would only queue behind the first one at the relay. Any fresh
+authenticated envelope from the station (`contact`) sends its open intents at once. A not yet
 delivered STATUS for the same (id, revision) is replaced by the newer one. A repeated REQUEST gets the stored
 RECEIVED and the newest STATUS again.
 
@@ -19,6 +24,7 @@ All functions run in the database thread (przyjecie.Przyjecie); messages in flig
 after a restart their intents are sent again, which the station handles by deduplication.
 """
 
+import hashlib
 import random as _random
 import secrets
 
@@ -32,6 +38,9 @@ RECOVERY_S = 86_400   # każde odzyskanie podnosi P o dobę ponad wcześniejsze 
 RETRY_S = (60, 120, 300, 900)              # po 1., 2., 3. i dalszych nieudanych próbach
 LATE_AFTER_S, LATE_RETRY_S = 6 * 3600, 3600
 STUCK_S = 1800   # LXMF zawsze kończy DELIVERED albo FAILED; to tylko zabezpieczenie przed zgubioną wiadomością
+FORWARDED, FLOODED = "forwarded", "flooded"   # wyniki WICI-Link poza True/False: przekazane bez dowodu stacji
+CUSTODY_S = 35 * 60          # 30 min wygasania w kolejce przekaźnika i zapas (wici-link.md, „Dowód doręczenia”)
+CUSTODY_MAX_S = 4 * 3600
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS outbox (
@@ -44,7 +53,8 @@ CREATE TABLE IF NOT EXISTS outbox (
     attempts INTEGER NOT NULL DEFAULT 0,
     first_try REAL,
     next_try REAL NOT NULL DEFAULT 0,
-    done INTEGER NOT NULL DEFAULT 0
+    done INTEGER NOT NULL DEFAULT 0,
+    forwarded INTEGER NOT NULL DEFAULT 0   -- kolejne próby FORWARDED bez kontaktu ze stacją
 );
 CREATE INDEX IF NOT EXISTS outbox_waiting ON outbox(done, seq);
 CREATE TABLE IF NOT EXISTS counters (
@@ -85,6 +95,8 @@ class Wysylka:
     def open(self, db, now):
         """Create the tables and check the clock at start (stanowisko-osp.md, „Wysyłka”)."""
         db.executescript(SCHEMA)
+        if "forwarded" not in {row[1] for row in db.execute("PRAGMA table_info(outbox)")}:   # baza sprzed E1
+            db.execute("ALTER TABLE outbox ADD COLUMN forwarded INTEGER NOT NULL DEFAULT 0")
         last = setting(db, "last_sent", None)
         if last is not None and now < last:
             raise ClockBehind(last)
@@ -165,8 +177,10 @@ class Wysylka:
                 continue
             del self.flight[seq]
             with db:
-                if result:
+                if result is True:
                     db.execute("UPDATE outbox SET done=1 WHERE seq=?", (seq,))
+                elif result in (FORWARDED, FLOODED):
+                    self._forwarded(db, seq, now, result == FORWARDED)
                 else:
                     self._failed(db, seq, now)
         free = IN_FLIGHT - len(self.flight)
@@ -200,3 +214,28 @@ class Wysylka:
         attempts, first = row
         delay = retry_delay(attempts, now - first, self.random)
         db.execute("UPDATE outbox SET attempts=?, next_try=? WHERE seq=?", (attempts, now + delay, seq))
+
+    def _forwarded(self, db, seq, now, custody):
+        """The message left on the network without the station's proof; the intent waits for it."""
+        row = db.execute("SELECT attempts + 1, coalesce(first_try, ?), forwarded FROM outbox WHERE seq=?",
+                         (now, seq)).fetchone()
+        if row is None:
+            return
+        attempts, first, forwarded = row
+        delay = retry_delay(attempts, now - first, self.random)
+        if custody:
+            forwarded += 1
+            delay = max(delay, min(CUSTODY_S * 2 ** (forwarded - 1), CUSTODY_MAX_S))
+        db.execute("UPDATE outbox SET attempts=?, next_try=?, forwarded=? WHERE seq=?",
+                   (attempts, now + delay, forwarded, seq))
+
+    def proved(self, db, dest, hashes):
+        """In the proof transaction: the station resolved the messages with these SHA-256 hashes of the
+        content, so their open intents are done (also a later intent with the same content)."""
+        for seq, payload in db.execute("SELECT seq, payload FROM outbox WHERE done=0 AND dest=?", (dest,)).fetchall():
+            if hashlib.sha256(payload).digest() in hashes:
+                db.execute("UPDATE outbox SET done=1 WHERE seq=?", (seq,))
+
+    def contact(self, db, dest):
+        """In the transaction of a fresh authenticated envelope from dest: the station is reachable now."""
+        db.execute("UPDATE outbox SET next_try=0, forwarded=0 WHERE done=0 AND dest=?", (dest,))

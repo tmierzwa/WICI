@@ -2,11 +2,14 @@
 #include <assert.h>
 #include <string.h>
 
+#include <initializer_list>
+
 #include <Crypto.h>
 #include <Curve25519.h>
 #include <Ed25519.h>
 
 #include "envelope.h"
+#include "fram_record.h"
 #include "wici_radio.h"
 #include "wici_epoch.h"
 #include "wici_beacon.h"
@@ -497,4 +500,100 @@ int main() {
     worker.run();
     async.poll(46400, 74);
     assert(async.beaconStats().checks == 3 && async.beaconStats().maxMs == 150);
+
+    // E1: delivery proof. A HACK to the root reaches the receiver and proves
+    // the message; after a relay or a flood only a proof envelope does.
+    static Memory proofMemory;
+    Air proofAir;
+    assert(envelope::startCounters(proofMemory));
+    wici_radio::Shelter prover(proofMemory, {100, 2, 5, 5, 0}, 7, receivers, ifac,
+                               ownSecret, receiverPublic, admit, &admitted,
+                               proofAir, randomZero, nullptr, nullptr, 0, rootEd, beaconProof, rootEd);
+    assert(prover.begin());
+    Delivery proofDelivery;
+    prover.onDelivery(delivered, &proofDelivery);
+    uint8_t backKey[32];  // station 2 -> receiver 1
+    assert(envelope::deriveKey(receiverSecret, ownPublic, 100, 2, 1, 1, backKey));
+    uint32_t ms = 50000;
+    auto arrive = [&](uint32_t counter, uint16_t from, uint8_t flags) {
+        envelope::Frame message[2];
+        assert(envelope::seal(envelopeKey, 1, 2, counter, reinterpret_cast<const uint8_t*>("SA1"), 3, 236,
+                              message) == 1);
+        wici_link::Frame data;
+        data.type = wici_link::Type::DATA; data.flags = flags; data.network = 100; data.source = from;
+        data.destination = flags & wici_link::ACKREQ ? 2 : wici_link::BROADCAST;
+        data.ttl = 7; data.sequence = static_cast<uint16_t>(counter); data.length = message[0].length;
+        memcpy(data.payload, message[0].bytes, data.length);
+        uint8_t raw[255];
+        const size_t length = encode(key, data, raw);
+        return prover.receive(raw, length, ms, ms / 1000);
+    };
+    // The proof the station must send for these counters, under its own counter `own`.
+    auto expectProof = [&](uint32_t own, std::initializer_list<uint32_t> counters) {
+        uint8_t plain[64]; size_t length = 0;
+        for (uint32_t c : counters) { fram_record::put32(plain + length, c); length += 4; }
+        envelope::Frame expected[2];
+        assert(envelope::seal(backKey, 2, 1, own, plain, length, 236, expected, envelope::TYPE_PROOF) == 1);
+        wici_link::Frame out;
+        assert(wici_link::decode(key, 100, proofAir.data, proofAir.dataLength, out));
+        assert(out.source == 2 && out.destination == 5 && out.flags == wici_link::ACKREQ);
+        assert(out.length == expected[0].length && !memcmp(out.payload, expected[0].bytes, out.length));
+        assert(out.payload[0] == 0x41 && proofAir.lastClass == wici_link::TxClass::OWN);
+        return out.sequence;
+    };
+    auto hackFrom5 = [&](uint16_t sequence) {
+        wici_link::Frame hackFrame;
+        hackFrame.type = wici_link::Type::HACK; hackFrame.network = 100; hackFrame.source = 5;
+        hackFrame.destination = 2; hackFrame.sequence = sequence; hackFrame.ttl = 1;
+        uint8_t raw[255];
+        const size_t length = encode(key, hackFrame, raw);
+        assert(prover.receive(raw, length, ms, ms / 1000) == wici_radio::Event::ADMITTED);
+    };
+    auto step = [&]() { ms += 10; prover.poll(ms, ms / 1000); };
+    auto sentOk = [&]() { ms += 10; prover.onTxDone(true, ms, ms / 1000); };
+    // From the root with ACKREQ: its HACK is the proof, no envelope follows.
+    assert(arrive(5, 5, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
+    step();
+    assert(proofAir.dataCount == 0 && !prover.ownBusy());
+    // Through relay 7: the station proves counter 6 to the receiver, via its parent.
+    assert(arrive(6, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
+    step();
+    assert(proofAir.dataCount == 1 && prover.ownBusy());
+    uint16_t proofSeq = expectProof(0, {6});
+    // A REQUEST waits behind the proof (a busy link is no failed try), and
+    // the proof's end reports nothing to the station application.
+    assert(!prover.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 91));
+    sentOk();
+    hackFrom5(proofSeq);
+    assert(!prover.ownBusy() && proofDelivery.calls == 0);
+    // A repeat resolves nothing new: no second proof.
+    assert(arrive(6, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
+    step();
+    assert(proofAir.dataCount == 1);
+    // A flood (no HACK at all) and a relay: one proof names both counters.
+    assert(arrive(7, 5, wici_link::DOWN) == wici_radio::Event::ADMITTED);
+    assert(arrive(8, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
+    step();
+    assert(proofAir.dataCount == 2);
+    proofSeq = expectProof(1, {7, 8});
+    sentOk();
+    hackFrom5(proofSeq);
+    // The own SA1 goes first; no proof starts in silence; a full list drops its oldest.
+    assert(prover.queueOwn(1, reinterpret_cast<const uint8_t*>("SA1"), 3, 92));
+    for (uint32_t c = 10; c < 27; ++c) assert(arrive(c, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
+    assert(prover.proofsDropped() == 1);
+    step();
+    wici_link::Frame own;
+    assert(proofAir.dataCount == 3 && wici_link::decode(key, 100, proofAir.data, proofAir.dataLength, own));
+    assert(own.payload[0] == 0x40);  // the station's SA1, not the proof
+    sentOk();
+    hackFrom5(own.sequence);
+    assert(proofDelivery.calls == 1 && proofDelivery.handle == 92);
+    proofAir.acceptOk = false;
+    step();
+    assert(proofAir.dataCount == 3 && !prover.ownBusy());
+    proofAir.acceptOk = true;
+    step();
+    assert(proofAir.dataCount == 4);
+    expectProof(3, {11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26});
 }

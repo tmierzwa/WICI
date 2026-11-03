@@ -733,12 +733,16 @@ bool Station::receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recip
     const config::Config& c = store_.config();
     const uint16_t active = c.receivers[store_.meta().receiver == config::BACKUP ?
                                         config::BACKUP : config::MAIN].number;
+    // Every rejection here is permanent, as in received(): true lets the
+    // envelope's replay window close it, so the receiver gets its proof and
+    // stops resending (oprogramowanie.md, dowód dopiero po rozstrzygnięciu).
     if (!store_.station() || !c.network.id || network != c.network.id ||
         recipient != c.network.station || sender != active || !content ||
         memchr(content, 0, length) != nullptr ||
         length > sa1::MAX_CONTENT) {
         ++stats_.rejected;
-        return false;
+        if (sender != active) services_.log("message from inactive or unknown receiver");
+        return true;
     }
     char copy[sa1::MAX_CONTENT + 1];
     memcpy(copy, content, length);
@@ -752,7 +756,7 @@ bool Station::receivedEnvelope(uint16_t network, uint16_t sender, uint16_t recip
         m.type < sa1::RECEIVED || m.type > sa1::BULLETIN ||
         !(wireLength = sa1::encode(m, wire, sizeof(wire)))) {
         ++stats_.rejected;
-        return false;
+        return true;
     }
     return acceptMessage(m, wire, wireLength);
 }

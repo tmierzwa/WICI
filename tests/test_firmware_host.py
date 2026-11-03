@@ -1670,7 +1670,9 @@ class HostUnitTests(unittest.TestCase):
                           f"inenv 100 2 4 {content}", f"inenv 101 2 4 {content}",
                           f"inenv 100 3 4 {content}", f"inenv 100 2 5 {content}",
                           "inenv 100 2 4 nonsense", "stats numbered"])
-        self.assertEqual(self.find(out, "envrx "), ["envrx 1", "envrx 0", "envrx 0", "envrx 0", "envrx 0"])
+        # Wrong network, inactive receiver, other station, malformed SA1: permanent rejections are
+        # resolved (true), so the envelope gets its HACK and the receiver its proof, as on LXMF.
+        self.assertEqual(self.find(out, "envrx "), ["envrx 1"] * 5)
         self.assertIn("received=1 rejected=4", self.find(out, "stats numbered")[0])
 
     def test_numbered_silence_exception_burns_three_durable_unacked_attempts(self):

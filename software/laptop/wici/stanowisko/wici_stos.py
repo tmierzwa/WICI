@@ -10,11 +10,12 @@ import time
 
 from .. import serialport
 from . import wici_link
+from .wysylka import FLOODED, FORWARDED
 
 # The root sends a HACK only up to 200 - 87 - 20 = 93 ms after the end of radio reception
 # (wici-link.md, „Cel i root”); USB and the serial read take part of that.
 HACK_BUDGET_S = 0.08
-FRESH = ("partial", "complete")   # outcomes of `received` that let the root learn a down route
+FRESH = ("partial", "complete", "proof")   # outcomes of `received` that let the root learn a down route
 
 
 @dataclass
@@ -28,7 +29,9 @@ class Delivery:
     attempts: int = 0
     sent_at: float = 0.0
     retry_at: float = 0.0
-    result: bool | None = None
+    relayed: bool = False   # a part's HACK came from a relay: only the station's proof closes the intent
+    flooded: bool = False   # a part left as a flood (no HACK at all)
+    result: bool | str | None = None
 
 
 class WiciStos:
@@ -132,6 +135,14 @@ class WiciStos:
         with self.lock:
             self.unfinished -= 1
 
+    def _next_part(self, item):
+        item.part += 1
+        item.sequence = item.next_hop = None
+        item.submissions = item.attempts = 0
+        item.retry_at = 0
+        if item.part == len(item.frames):
+            self._finish(item, FORWARDED if item.relayed else FLOODED if item.flooded else True)
+
     def _submit(self, item, now):
         part = item.frames[item.part]
         sender = int.from_bytes(part[1:3], "big")
@@ -175,9 +186,11 @@ class WiciStos:
         if frame.kind == wici_link.DATA and frame.source == self.root and frame.flags & wici_link.DOWN:
             item = self._sent(frame.payload)
             if item is not None and frame.destination == wici_link.BROADCAST and frame.flags == wici_link.DOWN:
-                # Emergency flood has no HACK. Report failure so Wysylka creates
-                # a fresh envelope counter for the next SA1 attempt.
-                self._finish(item, False)
+                # A flood has no HACK: the part is on air, and only the station's proof closes the intent.
+                if self.outstanding is item:
+                    self.outstanding = None
+                item.flooded = True
+                self._next_part(item)
                 return
             if (item is not None and frame.flags == (wici_link.ACKREQ | wici_link.DOWN) and
                     item.sequence is None):
@@ -192,12 +205,9 @@ class WiciStos:
             item = next((i for i in self.flight.values()
                          if i.next_hop == frame.source and i.sequence == frame.sequence), None)
             if item is not None:
-                item.part += 1
-                item.sequence = item.next_hop = None
-                item.submissions = item.attempts = 0
-                item.retry_at = 0
-                if item.part == len(item.frames):
-                    self._finish(item, True)
+                # Only the station's own HACK says it settled the part; a relay's says it holds it.
+                item.relayed = item.relayed or frame.source != item.destination
+                self._next_part(item)
                 return
         if frame.kind != wici_link.DATA or frame.destination != self.root:
             return

@@ -99,6 +99,7 @@ class WiciBearerTest(unittest.TestCase):
 
     def test_only_a_fresh_admission_lets_the_root_learn_a_route(self):
         for outcome, command in (("complete", wici_link.KISS_DATA), ("partial", wici_link.KISS_DATA),
+                                 ("proof", wici_link.KISS_DATA),   # fresh, authenticated by the envelope MAC
                                  ("duplicate", wici_link.KISS_HACK_NO_LEARN),
                                  ("rejected", wici_link.KISS_HACK_NO_LEARN),
                                  ("unauthenticated", wici_link.KISS_HACK_NO_LEARN)):
@@ -209,9 +210,37 @@ class WiciBearerTest(unittest.TestCase):
         self.bearer._tick()
         self.feed(wici_link.Frame(wici_link.DATA, wici_link.DOWN, 100, 5,
                                   wici_link.BROADCAST, 1, 7, 92, part))
-        self.assertFalse(item.result)
+        # On air without any HACK: the intent stays open for the station's proof (E1).
+        self.assertEqual(item.result, wici_stos.FLOODED)
         self.assertEqual(self.bearer.flight, {})
         self.assertIsNone(self.bearer.outstanding)
+
+    def test_flood_of_one_part_goes_on_with_the_next(self):
+        first, second = bytes([0x40, 0, 1, 0, 4]) + bytes(20), bytes([0x40, 0, 1, 0, 4]) + bytes([1] * 20)
+        item = self.bearer.send_frames((first, second))
+        self.bearer._tick()
+        self.feed(wici_link.Frame(wici_link.DATA, wici_link.DOWN, 100, 5, wici_link.BROADCAST, 1, 7, 92, first))
+        self.assertIsNone(item.result)
+        self.bearer._tick()
+        self.assertEqual(self.sent().payload, second)
+        self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN, 100, 5, 4, 1, 7, 93, second))
+        self.feed(wici_link.Frame(wici_link.HACK, 0, 100, 4, 5, 0, 1, 93))
+        self.assertEqual(item.result, wici_stos.FLOODED)
+
+    def test_only_the_stations_own_hack_proves_delivery(self):
+        # E1: a relay's HACK means it holds the part (custody), not that the station settled it.
+        first, second = bytes([0x40, 0, 1, 0, 4]) + bytes(20), bytes([0x40, 0, 1, 0, 4]) + bytes([1] * 20)
+        for hops, expected in (((4, 4), True), ((3, 3), wici_stos.FORWARDED), ((3, 4), wici_stos.FORWARDED),
+                               ((4, 3), wici_stos.FORWARDED)):
+            with self.subTest(hops):
+                item = self.bearer.send_frames((first, second))
+                for index, (hop, part) in enumerate(zip(hops, (first, second))):
+                    self.bearer._tick()
+                    self.assertEqual(self.sent().payload, part)
+                    self.feed(wici_link.Frame(wici_link.DATA, wici_link.ACKREQ | wici_link.DOWN, 100, 5, hop, 1, 7,
+                                              80 + index, part))
+                    self.feed(wici_link.Frame(wici_link.HACK, 0, 100, hop, 5, 0, 1, 80 + index))
+                self.assertEqual(item.result, expected)
 
     def destinations(self):
         return [wici_link.decode(self.key, 100, unpack(w)).payload[4] for w in self.port.writes]

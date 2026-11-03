@@ -19,6 +19,14 @@ using AdmitFn = bool (*)(uint16_t network, uint16_t sender, uint16_t recipient,
 
 enum class Outcome : uint8_t { IGNORED, ACCEPTED, HACK_READY, REJECTED };
 
+// A whole SA1 message this frame resolved (admitted, or settled as a duplicate,
+// late or skipped message): the station owes its sender a delivery proof.
+struct Resolved {
+    bool valid = false;
+    uint8_t peer = 0;  // receiver slot of the envelope sender
+    uint32_t counter = 0;
+};
+
 class Destination {
 public:
     Destination(journal::Storage& storage, Config config, const uint8_t ifac[16],
@@ -29,9 +37,10 @@ public:
     // False after an uncertain FRAM write of a replay window or part.
     bool ready() const { return ready_ && replay_[0].ready() && replay_[1].ready(); }
     // HACK_READY only after part storage or the SA1 effect and replay window
-    // are durable. Broadcast frames are accepted without a HACK.
+    // are durable. Broadcast frames are accepted without a HACK. A repeat or a
+    // first part alone resolves nothing.
     Outcome receive(const uint8_t* wire, size_t length, uint32_t nowS,
-                    uint8_t* hack, size_t capacity, size_t& hackLength);
+                    uint8_t* hack, size_t capacity, size_t& hackLength, Resolved* resolved = nullptr);
 
 private:
     Config config_;

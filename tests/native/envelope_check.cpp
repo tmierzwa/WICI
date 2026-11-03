@@ -78,6 +78,15 @@ int main(int argc, char** argv) {
         frames[0].bytes[index] ^= 1;
     }
 
+    // A delivery proof: two counters, whole u32 only; a station never opens one (SA1 only).
+    const uint8_t counters[] = {0, 0, 0, 7, 0xFF, 0xFF, 0xFF, 0xFF};
+    if (envelope::seal(ab, 10, 20, 8, counters, sizeof(counters), 236, frames, envelope::TYPE_PROOF) != 1) return 33;
+    hex("proof", frames[0].bytes, frames[0].length);
+    if (envelope::openPart(ab, frames[0].bytes, frames[0].length, opened) ||
+        envelope::seal(ab, 10, 20, 9, counters, 3, 236, frames, envelope::TYPE_PROOF) ||
+        envelope::seal(ab, 10, 20, 9, counters, 0, 236, frames, envelope::TYPE_PROOF) ||
+        envelope::seal(ab, 10, 20, 9, plain, sizeof(plain), 236, frames, 2)) return 34;
+
     uint8_t large[256];
     for (size_t i = 0; i < sizeof(large); ++i) large[i] = static_cast<uint8_t>(i);
     if (envelope::seal(ab, 10, 20, 0xFFFFFFFF, large, sizeof(large), 153, frames) != 2) return 6;

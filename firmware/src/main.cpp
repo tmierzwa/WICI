@@ -1830,14 +1830,14 @@ void handle(char* cmd) {
         }
         // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
         // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
-        char beacon[160] = "";
+        char beacon[192] = "";
         const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
         if (wiciShelter)
             snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
-                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld",
+                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u",
                      static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
                      static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
-                     static_cast<long>(beaconcheck::stackFree()));
+                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()));
         bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();

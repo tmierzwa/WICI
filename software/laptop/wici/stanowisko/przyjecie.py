@@ -15,6 +15,7 @@ intents to the stack, so nothing leaves before the change is durable. A change m
 the medium when call() returns.
 """
 
+import hashlib
 import queue
 import random
 import sqlite3
@@ -102,6 +103,19 @@ CREATE TABLE IF NOT EXISTS bearer_override (
     source BLOB PRIMARY KEY,
     bearer TEXT NOT NULL CHECK(bearer IN ('wici', 'reticulum'))
 );
+-- Koperty WICI wysłane do stacji: licznik koperty -> intencja (skrót treści), żeby dowód doręczenia stacji
+-- zamknął intencję także po ponowieniu pod nowym licznikiem. Klucz kierunku odbiorca -> stacja (key_id) oddziela
+-- liczniki nowej tożsamości od starych. Wiersze starsze niż WICI_SENT_S są usuwane.
+CREATE TABLE IF NOT EXISTS wici_sent (
+    net_id INTEGER NOT NULL,
+    receiver INTEGER NOT NULL,
+    station INTEGER NOT NULL,
+    key_id BLOB NOT NULL,
+    counter INTEGER NOT NULL,
+    payload_hash BLOB NOT NULL,
+    at REAL NOT NULL,
+    PRIMARY KEY (net_id, receiver, station, key_id, counter)
+);
 -- Wpisy decyzji, które nie idą radiem: stan 3 ze źródłem i czasem potwierdzenia, stan 4 z adresatem i czasem.
 CREATE TABLE IF NOT EXISTS decyzje (
     id INTEGER PRIMARY KEY,
@@ -116,6 +130,7 @@ CREATE TABLE IF NOT EXISTS decyzje (
 SAVE_ERRORS = (OSError, sqlite3.Error, syscrypto.CryptoError, nosnik.StorageError)
 REJECTED_MAX = 256         # wierszy env_rejected (po najwyżej 255 B ramki)
 REJECTED_PER_SENDER = 16   # wierszy env_rejected na numer nadawcy: przejęta stacja nie zużywa nośnika
+WICI_SENT_S = 7 * 86400    # jak długo spóźniony dowód doręczenia zamyka intencję
 
 
 class Late(TimeoutError):
@@ -274,6 +289,8 @@ class Przyjecie:
         if self.copies is not None and self.clock() >= self.next_copy:
             self._copy()   # przed wysyłką: po odzyskaniu nowa kopia z nowym P wychodzi pierwsza
         changes_before = self.store.db.total_changes
+        with self.store.db:
+            self.store.db.execute("DELETE FROM wici_sent WHERE at < ?", (self.clock() - WICI_SENT_S,))
         self.wysylka.tick(self.store.db, self.clock())
         # Same zapisy ewidencji wysyłki (próba, DELIVERED, następna próba) nie wymagają osobnej migawki: po
         # zaniku wiadomość wyjdzie ponownie, a stacja ją odrzuci jako powtórzenie. Trafią do następnej migawki.
@@ -412,7 +429,8 @@ class Przyjecie:
         self.jobs.put(lambda: self._receive(source, content, bearer))
 
     def receive_envelope_frame(self, net_id, wire, bearer=None, timeout=None):
-        """Authenticate a numbered WICI frame and durably admit it; "partial", "complete" or "duplicate".
+        """Authenticate a numbered WICI frame and durably admit it; "partial", "complete", "duplicate" or
+        "proof" (a station's delivery proof that closed the intents it names).
 
         Runs on the database thread. NotAuthenticated: the envelope does not authenticate a known
         station (nothing stored, counted in memory). envelope_inbox.PermanentRejection (an authenticated
@@ -558,8 +576,23 @@ class Przyjecie:
             raise envelope.EnvelopeError("unknown numbered station")
         if not hasattr(self, "envelope_sender"):
             self.envelope_sender = envelope_sender.Sender(self.store.db, self._save)
-        return self.envelope_sender.seal(private[:32], row[0][:32], net_id, active["id"], station_id,
-                                         content, max_payload)
+        frames = self.envelope_sender.seal(private[:32], row[0][:32], net_id, active["id"], station_id,
+                                           content, max_payload)
+        # Without this row a later proof is ignored and the intent is only resent: no loss.
+        with self.store.db:
+            self.store.db.execute(
+                "INSERT OR REPLACE INTO wici_sent VALUES(?,?,?,?,?,?,?)",
+                (net_id, active["id"], station_id, self._send_key_id(private, row[0], net_id, active["id"], station_id),
+                 int.from_bytes(frames[0][5:9], "big"), hashlib.sha256(content).digest(), self.clock()))
+        return frames
+
+    @staticmethod
+    def _send_key_id(private, station_key, net_id, receiver, station):
+        """Fingerprint of the receiver -> station envelope key, as in envelope_sender (env_send.key_id)."""
+        from .. import envelope
+
+        key = envelope.derive_key(private[:32], station_key[:32], net_id, receiver, station, own_id=receiver)
+        return hashlib.sha256(key).digest()
 
     def _receive_envelope_frame(self, net_id, wire, bearer=None):
         from .. import envelope
@@ -583,7 +616,7 @@ class Przyjecie:
         source, station_key = station
         try:
             key = envelope.derive_key(private[:32], station_key[:32], net_id, sender, recipient, own_id=recipient)
-            part = envelope.open_part(key, raw)
+            part = envelope.open_part(key, raw, (envelope.TYPE_SA1, envelope.TYPE_PROOF))
         except envelope.EnvelopeError as exc:
             raise NotAuthenticated("envelope authentication failed") from exc
         trusted = self.store.db.execute("SELECT 1 FROM trusted WHERE source=?", (source,)).fetchone() is not None
@@ -607,16 +640,27 @@ class Przyjecie:
                 "WHERE source=? AND id=? AND revision=?", (self.clock(), source, value[2], value[3]))
             self.wysylka.accepted(self.store.db, source, value[2], value[3])
 
-        def remember_bearer():
-            # Fresh parts only: a replayed frame must not move the reply route.
+        def fresh():
+            # Fresh parts and proofs only: a replayed frame must not move the reply route.
             if bearer is not None and trusted:
                 self.store.db.execute("INSERT OR REPLACE INTO bearer_route VALUES(?,?)", (source, bearer))
                 self.last_bearer[source] = bearer
+            self.wysylka.contact(self.store.db, source)
+
+        def close(counters):
+            sent = (net_id, recipient, sender, self._send_key_id(private, station_key, net_id, recipient, sender))
+            marks = ",".join("?" * len(counters))
+            where = f"net_id=? AND receiver=? AND station=? AND key_id=? AND counter IN ({marks})"
+            hashes = {bytes(row[0]) for row in self.store.db.execute(
+                f"SELECT payload_hash FROM wici_sent WHERE {where}", (*sent, *counters))}
+            self.wysylka.proved(self.store.db, source, hashes)
 
         # The KISS caller must be able to answer HACK inside 200 ms. The normal
         # one-second tick sends RECEIVED after the durable snapshot, without
         # putting LXMF path discovery or copy work on the hop-ACK path.
-        return inbox.receive(part, key, int(self.clock()), accept, remember_bearer)
+        if part.message_type == envelope.TYPE_PROOF:
+            return inbox.receive_proof(part, key, int(self.clock()), close, fresh)
+        return inbox.receive(part, key, int(self.clock()), accept, fresh)
 
     def _receive(self, source, content, bearer=None):
         at = self.clock()

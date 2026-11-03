@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "wici_flood.h"
 
+#include "envelope.h"
 #include "fram_record.h"
 
 namespace wici_flood {
@@ -10,7 +11,7 @@ uint32_t address(uint16_t slot) {
     return slot < SLOTS_A ? BASE_A + slot * SLOT_BYTES : BASE_B + (slot - SLOTS_A) * SLOT_BYTES;
 }
 bool header(const uint8_t* p) {
-    if (!p || p[0] >> 6 != 1 || (p[0] & 0x0F) > 1 || ((p[0] >> 4) & 3) == 3) return false;
+    if (!p || p[0] >> 6 != 1 || (p[0] & 0x0F) > envelope::TYPE_PROOF || ((p[0] >> 4) & 3) == 3) return false;
     const uint16_t sender = get16(p + 1), recipient = get16(p + 3);
     return id(sender) && id(recipient) && sender != recipient;
 }

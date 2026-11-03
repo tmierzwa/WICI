@@ -40,8 +40,9 @@ bool Destination::begin() {
 }
 
 Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
-                             uint8_t* hack, size_t capacity, size_t& hackLength) {
+                             uint8_t* hack, size_t capacity, size_t& hackLength, Resolved* resolved) {
     hackLength = 0;
+    if (resolved) *resolved = Resolved();
     if (!ready_ || !hack) return Outcome::REJECTED;
     wici_link::Frame frame;
     if (!wici_link::decode(linkKey_, config_.network, wire, length, frame) ||
@@ -67,6 +68,7 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
                 return Outcome::REJECTED;  // one counter cannot change from fragments to whole
             if (!admit_(config_.network, sender, recipient, part.plaintext, part.length, context_) ||
                 !replay_[peer].commit(part.counter)) return Outcome::REJECTED;
+            if (resolved) *resolved = Resolved{true, peer, part.counter};
         } else {
             uint8_t full[envelope::MAX_SA1];
             size_t fullLength = 0;
@@ -78,6 +80,7 @@ Outcome Destination::receive(const uint8_t* wire, size_t length, uint32_t nowS,
             } else if (result == envelope::FragmentResult::COMPLETE) {
                 if (!admit_(config_.network, sender, recipient, full, fullLength, context_) ||
                     !replay_[peer].commit(part.counter)) return Outcome::REJECTED;
+                if (resolved) *resolved = Resolved{true, peer, part.counter};
                 // A failed tombstone does not revoke durable SA1/replay state;
                 // begin() finishes it when the module is read again.
                 if (!parts_[peer].clear()) ready_ = false;

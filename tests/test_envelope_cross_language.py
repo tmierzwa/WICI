@@ -171,8 +171,12 @@ class CrossLanguageEnvelope(unittest.TestCase):
         key = envelope.derive_key(a, bp, 0x1234, 10, 20, own_id=10)
         whole, = envelope.seal(key, 10, 20, 7, b"[1,1,2]", 236)
         first, second = envelope.seal(key, 10, 20, 0xFFFFFFFF, bytes(range(256)), 153)
-        # Kind type 1 (formerly "TEST łącza") and 15 are reserved: correctly encrypted, still rejected.
+        proof, = envelope.seal(key, 10, 20, 8, bytes([0, 0, 0, 7, 0xFF, 0xFF, 0xFF, 0xFF]), 236, envelope.TYPE_PROOF)
+        # Kind type 1 (a delivery proof, E1) is no SA1 envelope, and 15 is reserved: correctly encrypted,
+        # both rejected on the SA1 path on both sides; the receiver opens a proof only where it asks for one.
         from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+        self.assertEqual(envelope.open_part(key, proof, (envelope.TYPE_SA1, envelope.TYPE_PROOF)).plaintext[4:],
+                         bytes([0xFF] * 4))
         reserved = []
         for kind in (0x41, 0x4F):
             header = bytes([kind]) + whole[1:9]
@@ -181,7 +185,7 @@ class CrossLanguageEnvelope(unittest.TestCase):
                 envelope.open_part(key, reserved[-1])
         binary = native("envelope_check", "envelope", "wici_link", "wici_destination", *DURABLE, crypto=True)
         actual = dict(line.split("=", 1) for line in run(binary, *(f.hex() for f in reserved)).splitlines())
-        self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "first": first.hex(),
+        self.assertEqual(actual, {"key": key.hex(), "whole": whole.hex(), "proof": proof.hex(), "first": first.hex(),
                                   "second": second.hex(), "reserved": "rejected"})
 
     def test_fragment_admission_matches_receiver_inbox(self):

@@ -15,8 +15,8 @@ import time
 import unittest
 import unittest.mock
 
-from tests.test_stanowisko import StationTestCase, durable, request
-from wici.stanowisko import nosnik, przyjecie, zamkniecie
+from tests.test_stanowisko import OnlineLink, StationTestCase, durable, received_for, request
+from wici.stanowisko import nosnik, przyjecie, wysylka, zamkniecie
 
 HAS_CRYPTO = importlib.util.find_spec("cryptography") is not None
 
@@ -50,6 +50,54 @@ class WiciAdmissionTest(StationTestCase):
     def seal(self, counter, content=None, sender=4, recipient=2, max_payload=236):
         key = self.envelope.derive_key(self.station_private, self.receiver_public, 100, sender, recipient, own_id=sender)
         return self.envelope.seal(key, sender, recipient, counter, content or request(), max_payload)
+
+    def proof(self, counter, counters, sender=4, recipient=2):
+        key = self.envelope.derive_key(self.station_private, self.receiver_public, 100, sender, recipient, own_id=sender)
+        plain = b"".join(c.to_bytes(4, "big") for c in counters)
+        return self.envelope.seal(key, sender, recipient, counter, plain, 236, self.envelope.TYPE_PROOF)[0]
+
+    def send(self, content):
+        """An intent for station 4 and one envelope of it through send_wici; returns its envelope counter."""
+        def go(store):
+            with store.db:
+                if store.db.execute("SELECT 1 FROM outbox WHERE payload=?", (content,)).fetchone() is None:
+                    self.reception.wysylka.enqueue(store.db, self.source, wysylka.RECEIVED, "x", 1, content)
+            return self.reception.send_wici(OnlineLink(), self.source, content)
+        return int.from_bytes(self.reception.call(go)[0][5:9], "big")
+
+    def open_intents(self):
+        return self.reception.call(lambda s: s.db.execute(
+            "SELECT payload, next_try FROM outbox WHERE done=0 ORDER BY seq").fetchall())
+
+    def test_station_proof_closes_the_intent_also_after_a_resend(self):
+        # E1: a relay's HACK left the intent open; the station's proof of any of its counters closes it.
+        content = received_for(request())
+        first, second = self.send(content), self.send(content)
+        self.assertNotEqual(first, second)
+        self.assertEqual(len(self.open_intents()), 1)
+        self.assertEqual(self.admit(self.proof(0, [first])), "proof")   # the late proof of the first copy
+        self.assertEqual(self.open_intents(), [])
+        self.assertEqual(self.admit(self.proof(0, [first])), "duplicate")   # replay: no second effect
+
+    def test_proof_of_unknown_counters_closes_nothing_but_counts_as_contact(self):
+        content = received_for(request())
+        self.send(content)
+        self.reception.call(lambda s: s.db.execute("UPDATE outbox SET next_try=9e9, forwarded=2"))
+        self.assertEqual(self.admit(self.proof(0, [777, 778])), "proof")
+        self.assertEqual(self.open_intents(), [(content, 0)])   # still open, sent again at once
+        # A proof to the other receiver number is not for this identity.
+        self.assertEqual(self.admit(self.proof(1, [0], recipient=3)), "unauthenticated")
+
+    def test_a_proof_is_not_an_sa1_envelope(self):
+        from wici import envelope
+        frame = self.proof(0, [5])
+        key = self.envelope.derive_key(self.station_private, self.receiver_public, 100, 4, 2, own_id=4)
+        with self.assertRaises(envelope.EnvelopeError):
+            envelope.open_part(key, frame)   # SA1 callers never see a proof
+        self.assertEqual(envelope.open_part(key, frame, (envelope.TYPE_SA1, envelope.TYPE_PROOF)).plaintext,
+                         bytes([0, 0, 0, 5]))
+        with self.assertRaises(envelope.EnvelopeError):
+            envelope.seal(key, 4, 2, 1, b"abc", 236, envelope.TYPE_PROOF)   # whole u32 counters only
 
     def admit(self, frame, net_id=100, timeout=5):
         return self.reception.admit_wici_frame(net_id, frame, timeout)

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Transactional receiver-side replay and two-fragment admission for WICI envelopes.
+"""Transactional receiver-side replay, two-fragment admission and delivery proofs for WICI envelopes.
 
 The caller supplies `admit` to write SA1 effects on the same SQLite connection and
 `persist` to durably snapshot the database before a hop acknowledgement is allowed.
@@ -15,7 +15,7 @@ import hashlib
 
 from .. import envelope
 
-PARTIAL, COMPLETE, DUPLICATE = "partial", "complete", "duplicate"
+PARTIAL, COMPLETE, DUPLICATE, PROOF = "partial", "complete", "duplicate", "proof"
 MAX_PENDING, PER_SENDER, FRAGMENT_S = 256, 4, 120
 
 SCHEMA = """
@@ -62,9 +62,7 @@ class Inbox:
         pair = (self.network, part.sender, part.recipient, hashlib.sha256(bytes(key)).digest())
         message = (*pair, part.counter)
         with self.db:
-            row = self.db.execute("SELECT highest, mask FROM env_replay WHERE network=? AND sender=? AND recipient=? "
-                                  "AND key_id=?", pair).fetchone()
-            window = envelope.ReplayWindow(row[0], int.from_bytes(row[1], "big")) if row else envelope.ReplayWindow()
+            window = self._window(pair)
             if window.highest >= 0 and window.highest - part.counter >= envelope.WINDOW:
                 # Outside the bitmap we cannot prove this counter was ever admitted, so it is never
                 # admitted: the caller keeps the bytes before the hop ACK, and the station's SA1 retry
@@ -124,3 +122,41 @@ class Inbox:
         if not self.persist():
             raise OSError("envelope state was not durably saved")
         return result
+
+    def receive_proof(self, part, key, now, close, fresh=None):
+        """Settle a station's delivery proof (envelope type PROOF) authenticated with `key`; PROOF or DUPLICATE.
+
+        It shares the replay window with that station's SA1 envelopes (one counter space). `close(counters)`
+        closes the intents sent under those counters and, like `fresh()`, runs on this connection without
+        committing, only for a proof not settled before. A proof outside the window is old: its intents were
+        resent meanwhile, and the bitmap cannot tell whether it was settled, so it changes nothing (DUPLICATE).
+        """
+        if type(now) is not int or now < 0 or len(key) != 32:
+            raise envelope.EnvelopeError("invalid inbox call")
+        if (part.message_type != envelope.TYPE_PROOF or part.number != 0 or
+                not 4 <= len(part.plaintext) <= 4 * envelope.PROOF_COUNTERS or len(part.plaintext) % 4):
+            raise PermanentRejection("invalid delivery proof")
+        pair = (self.network, part.sender, part.recipient, hashlib.sha256(bytes(key)).digest())
+        with self.db:
+            window = self._window(pair)
+            try:
+                if window.highest >= 0 and window.highest - part.counter >= envelope.WINDOW:
+                    raise envelope.EnvelopeError("old proof")
+                proposed = window.accept(part.counter)
+            except envelope.EnvelopeError:
+                result = DUPLICATE
+            else:
+                close([int.from_bytes(part.plaintext[i:i + 4], "big") for i in range(0, len(part.plaintext), 4)])
+                self.db.execute("INSERT OR REPLACE INTO env_replay VALUES(?,?,?,?,?,?)",
+                                (*pair, proposed.highest, proposed.mask.to_bytes(8, "big")))
+                result = PROOF
+                if fresh is not None:
+                    fresh()
+        if not self.persist():
+            raise OSError("envelope state was not durably saved")
+        return result
+
+    def _window(self, pair):
+        row = self.db.execute("SELECT highest, mask FROM env_replay WHERE network=? AND sender=? AND recipient=? "
+                              "AND key_id=?", pair).fetchone()
+        return envelope.ReplayWindow(row[0], int.from_bytes(row[1], "big")) if row else envelope.ReplayWindow()

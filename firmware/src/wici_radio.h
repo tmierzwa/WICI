@@ -79,6 +79,7 @@ public:
     // One own SA1 intent at a time. Its nonce and link sequences are reserved
     // durably before any frame is offered to the radio. Completion means that
     // every fragment received a next-hop HACK; SA1 confirmation is separate.
+    // A delivery proof uses the same slot only while no own intent waits for it.
     bool queueOwn(uint16_t recipient, const uint8_t* sa1, size_t length, uint32_t handle,
                   bool exception = false);
     // Signs and offers one BEACON with the rank at nowS (wici_route::Table::rank).
@@ -91,6 +92,8 @@ public:
     // routes, link sequence, envelope counters, replay windows) until begin().
     bool ready() const;
     uint16_t clearedRecords() const { return relay_.clearedRecords(); }
+    // Delivery proofs lost to a full list; the receiver resends those messages.
+    uint16_t proofsDropped() const { return proofsDropped_; }
     wici_route::Table& routes() { return relay_.routes(); }
 
 private:
@@ -139,6 +142,16 @@ private:
     uint32_t beaconCheckedMs_ = 0, settledS_ = 0;
     DeliveryFn delivery_ = nullptr;
     void* deliveryContext_ = nullptr;
+    // Counters of resolved SA1 messages per receiver slot, proved in one
+    // envelope (wici-link.md, „Dowód doręczenia”). RAM only: a lost proof
+    // costs the receiver one resend, which the station resolves as a duplicate.
+    uint32_t proofs_[2][envelope::PROOF_COUNTERS] = {};
+    uint8_t proofCount_[2] = {};
+    uint16_t proofsDropped_ = 0;
+    void addProof(uint8_t peer, uint32_t counter);
+    bool startProof();
+    bool startOwn(uint8_t peer, uint8_t type, const uint8_t* data, size_t length, uint32_t handle,
+                  bool exception);
     void finishOwn(bool acknowledged);
     void ownAttemptFailed(uint32_t nowMs);
     bool failoverOwn();
