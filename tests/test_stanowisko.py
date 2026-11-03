@@ -533,6 +533,31 @@ class SendingTest(StationTestCase):
         self.tick()
         self.assertEqual(self.kinds()[4:], [wysylka.RECEIVED, wysylka.REPLY])   # REPLY po RECEIVED
 
+    def test_reply_waits_for_the_proof_of_the_earlier_reply_of_its_request(self):
+        # The station skips a REPLY with an event below the one it took and proves it as late: an
+        # overtaken REPLY would end as delivered without reaching the station. Other requests do not wait.
+        other, _ = self.accepted()
+        mid, revision = self.accepted()
+        self.sent.clear()
+
+        def reply(m, text):
+            self.reception.call(lambda s: self.reception.wysylka.reply(s, self.STATION, m, revision, text, self.now))
+        self.result = "no path"
+        reply(mid, "pierwsza")
+        self.tick()               # FAILED: ponowienie po 60 s
+        self.now += 5
+        reply(mid, "druga")
+        reply(other, "inna")
+        self.result = True
+        self.tick()
+        self.tick()
+        self.assertEqual([wzorzec.decode_message(c)[5] for _, c in self.sent], ["inna"])
+        self.now += 60
+        for _ in range(3):
+            self.tick()
+        self.assertEqual([wzorzec.decode_message(c)[5] for _, c in self.sent], ["inna", "pierwsza", "druga"])
+        self.assertEqual(self.waiting(), 0)
+
     def test_newer_status_replaces_one_not_yet_delivered(self):
         mid, revision = self.accepted()
         self.result = "no path"

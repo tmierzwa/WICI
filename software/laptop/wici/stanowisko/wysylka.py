@@ -11,7 +11,9 @@ proof (`proved`); a relay's HACK (FORWARDED) or a flood (FLOODED) only hands the
 stays open: after FORWARDED the next try waits at least CUSTODY_S, doubled for each further FORWARDED up to
 CUSTODY_MAX_S, because a sooner copy would only queue behind the first one at the relay. Any fresh
 authenticated envelope from the station (`contact`) sends its open intents at once. A not yet
-delivered STATUS for the same (id, revision) is replaced by the newer one. A repeated REQUEST gets the stored
+delivered STATUS for the same (id, revision) is replaced by the newer one. A REPLY goes out only after the
+proof of every earlier REPLY of its id to that station: the station skips a REPLY with a lower `event` as late
+and proves it, so one overtaken would end as delivered without reaching the station. A repeated REQUEST gets the stored
 RECEIVED and the newest STATUS again.
 
 The `event` of STATUS, REPLY and BULLETIN is max(last value of its counter + 1, seconds since 2026-01-01
@@ -186,7 +188,11 @@ class Wysylka:
         free = IN_FLIGHT - len(self.flight)
         if free <= 0:
             return
-        rows = db.execute("SELECT seq, dest, payload FROM outbox WHERE done=0 AND next_try<=? "
+        # REPLY dopiero po dowodzie wcześniejszej REPLY tego id do tej stacji: stacja pomija i potwierdza
+        # REPLY z niższym `event` jako spóźnioną, więc wyprzedzona zamknęłaby się bez doręczenia.
+        rows = db.execute("SELECT seq, dest, payload FROM outbox WHERE done=0 AND next_try<=? AND NOT "
+                          "(kind=3 AND EXISTS (SELECT 1 FROM outbox AS e WHERE e.done=0 AND e.dest=outbox.dest "
+                          "AND e.kind=3 AND e.id=outbox.id AND e.seq<outbox.seq)) "
                           "ORDER BY kind > 2, seq LIMIT ?", (now, free + len(self.flight))).fetchall()
         for seq, dest, payload in rows:
             if free == 0:
