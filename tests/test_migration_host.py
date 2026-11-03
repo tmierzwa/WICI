@@ -286,12 +286,16 @@ class MigrationHostTest(unittest.TestCase):
         return set_prep(board, self.links[board], False)
 
     def transmits(self, board, minutes):
-        board.take_air()
-        before = len(board.air)
+        """Whether the station has transmitted since its program started, `minutes` from now at the latest.
+
+        Counted from the start of the current process, not from now: the one announce after start comes
+        0-120 s later (rns_announce.h), and the USB reader thread advances virtual time with wall time, so
+        it may already have gone out before this call."""
+        generation = board.generation
         for _ in range(minutes):
             board.advance(60_000_000)
         board.take_air()
-        return len(board.air) > before
+        return any(g >= generation for g, _ in board.air)
 
     def assert_migrated(self):
         """The target runs with the source identity and counters; the retired source never transmits."""
