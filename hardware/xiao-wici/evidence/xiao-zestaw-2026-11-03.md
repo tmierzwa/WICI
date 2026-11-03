@@ -88,6 +88,20 @@ Wynik: kryterium spełnione dla jednego przeskoku i rozsyłania. Pozostała otwa
 
 Poprawka znaleziona przed próbą: stacja pomijała dowód, gdy rozstrzygającą ramkę podał root z ACKREQ, także gdy radio odrzuciło jej HACK (cisza, termin). Root go wtedy nie dostał, a wiadomość zamykało dopiero ponowienie stanowiska. Teraz dowód pomija tylko HACK przyjęty przez radio; w T2 dowód objął też tę pierwszą kopię.
 
+## Obraz z grupą B (`65b53fb`, 21:09–21:20)
+
+Obraz z całą grupą B przeglądu końcowego (między innymi HACK z echem 2 B MAC potwierdzanej DATA, 29 B, wstrzymanie kanału do ostatniej chwili startu HACK, ponowne HACK poza limitem) wgrany na obie płytki; konfiguracja w PSRAM przetrwała wgranie (root WICI-E64309, stacja 21 WICI-D17A28). Stanowisko z `68a5335` na tym samym nośniku testowym, podsłuch jak wyżej. Echo sprawdza skrypt laptopa: bajty 11–12 HACK równe bajtom MAC sieci ramki DATA o tym samym `seq` (8 B MAC przed 8 B tagu pary).
+
+| Próba | Wynik |
+|---|---|
+| 2: `REQ 1 0` na A (21:10) | DATA 119 B od 21, HACK 29 B od roota, RECEIVED jako DATA 98 B, HACK 29 B od 21; CRC i MAC sieci poprawne; echo w obu HACK zgodne; stanowisko: przyjęcie 12,5 ms |
+| 5: `REQ 10` co minutę, 5 razy (21:11–21:17) | 50/50 w 330 s, 0 ponowień (50 DATA od 21, 50 różnych `seq`); 100 HACK, każdy z echem swojej DATA; najdłuższy HACK roota w podsłuchu 115,4 ms (`end_ms_max` 115), stacji 101,6 ms; `hack_late` 0 i `hack_refused` 0 na obu; przyjęcie na stanowisku mediana 6,0 ms, najwięcej 14,7 ms |
+| Wstrzymanie wysyłki (21:17) | stanowisko miało od rana otwartą intencję do porannej stacji 20 (WICI-B97DB3, tożsamość utracona przy odłączeniu zasilania), ponawianą przez WICI-Link od 8,5 h; po usunięciu jej z zaufanych w panelu: czekające 1 → 0, wstrzymane 0 → 1, także przy przekazaniu zmiany |
+| Dowód doręczenia: `SILENCE 1` na A, odpowiedź z panelu (21:17) | trzy DATA 142 B od roota z ACKREQ bez HACK (stacja: `refused_by.state` 3), ponowienie jako rozsyłanie (134 B) |
+| `SILENCE 0` na A | jedna DATA 60 B od 21 (dowód doręczenia), HACK roota 29 B z echem; stanowisko: `koperta WICI proof`, przyjęcie 23,2 ms; REPLY zamknięta (czekające 1 → 0); na ekranie A 3 nowe wiadomości (było 2) |
+
+Start HACK po końcu DATA (metoda jak niżej, HACK 29 B w tych samych symbolach, 83,2 ms w eterze): 103 HACK, mediana 19,0 ms, p95 27,8 ms, p99 32,2 ms, najwięcej 39,5 ms, żaden ponad 50 ms. Wynik: wszystkie cztery próby zaliczone na jednym przeskoku. Przekaźnika zestaw nie ma (dwa XIAO), więc trasy wieloskokowe sprawdzają nadal tylko testy natywne i symulator.
+
 ## Start HACK po DATA (R2)
 
 Ile po końcu ramki DATA zaczyna się HACK, z podsłuchów RAK4631 z 2026-11-02 i 2026-11-03 (wszystkie z zestawami XIAO). Para DATA–HACK to ten sam `seq`, z `l_src` i `l_dst` zamienionymi. Start HACK to różnica znaczników końca odbioru minus czas HACK w eterze (27 B, SF7/125 kHz, 24 symbole preambuły: 83,2 ms). Ten sam zegar podsłuchu mierzy obie ramki, więc opóźnienie odbioru się znosi.
@@ -113,5 +127,6 @@ Okno wolnego kanału (50 ms) nie obejmuje więc każdego HACK, a termin pozwala 
 - `stanowisko-2026-11-03.log`: przyjęcia kopert na stanowisku (kolejka i przyjęcie w ms);
 - `podsluch-2026-11-03d.jsonl`, `diag-root-2026-11-03d.log`, `diag-a-2026-11-03d.log`, `stanowisko-2026-11-03d.log`: obraz z `d5d364b` od 12:40 (próba 5 12:50–12:56).
 - `podsluch-2026-11-03e.jsonl`, `diag-root-2026-11-03e.log`, `diag-a-2026-11-03e.log`, `stanowisko-2026-11-03e.log`: obraz z `41f43ba` (dowód doręczenia, 15:55–15:59).
+- `podsluch-2026-11-03f.jsonl`, `diag-root-2026-11-03f.log`, `diag-a-2026-11-03f.log`, `stanowisko-2026-11-03f.log`: obraz z `65b53fb` (grupa B, 21:09–21:20).
 
 Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../../LICENSE.md)).
