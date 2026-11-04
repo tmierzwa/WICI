@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.17</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.18</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.17</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.18</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#operacje">Operacje</a>
@@ -111,6 +111,14 @@
             <div><dt>Warunek</dt><dd>Dyżurny wybiera stację i potwierdza działanie; stanowisko zapisuje je w dzienniku.</dd></div>
             <div><dt>Wynik</dt><dd>Wiadomości do tej stacji, także nowe, pozostają zapisane bez nadawania. Alarm 6 h gaśnie, a panel stale pokazuje stację na liście wstrzymanych. Usunięcie stacji z zaufanych daje ten sam skutek.</dd></div>
             <div><dt>Błąd i ponowienie</dt><dd>Pierwsza wiadomość od zaufanej stacji uwierzytelniona kopertą albo przycisk „Wznów” przywraca wysyłkę. Kontakt stacji usuniętej z zaufanych jej nie wznawia. Bez kontaktu ani działania dyżurnego żywa, lecz milcząca stacja nie dostanie nowych wiadomości. Operacji nie ma jeszcze w panelu (<a href="system-wici-decyzje.html#wici-inv-016">WICI-INV-016</a>).</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="odciecie-stacji">
+          <h4>Odcięcie przejętej stacji: dyżurny, osoba utrzymująca system</h4>
+          <dl>
+            <div><dt>Warunek</dt><dd>Stacja jest uznana za przejętą; dyżurny usuwa ją z listy zaufanych, a obsługa ma dostęp do jej sąsiadów przez USB.</dd></div>
+            <div><dt>Wynik</dt><dd>Z konfiguracji sąsiadów usuwa się jej klucze przez USB. Sąsiedzi odrzucają jej ramki jednoadresowe, HACK i BEACON-y. Klucz sieci zmienia się przez USB we wszystkich węzłach poza kryzysem albo przy następnym przygotowaniu; jednoczesnej obsługi dwóch kluczy nie ma (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>).</dd></div>
+            <div><dt>Granica</dt><dd>Do wymiany klucza sieci przejęta stacja może nadawać ramki rozsyłane, które zajmują kanał i pierścienie. Licznik odrzuceń nie ma potwierdzonej prezentacji w panelu, a instrukcja dyżurnego pomija objazd sąsiadów (<a href="system-wici-decyzje.html#wici-inv-022">WICI-INV-022</a>, <a href="system-wici-decyzje.html#wici-inv-024">WICI-INV-024</a>).</dd></div>
           </dl>
         </article>
         <article class="record">
@@ -206,7 +214,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.17 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.18 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

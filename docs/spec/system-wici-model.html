@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Granice, role i model komunikacji systemu WICI.">
-  <title>Model i zakres systemu — Specyfikacja WICI 0.17</title>
+  <title>Model i zakres systemu — Specyfikacja WICI 0.18</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Model i zakres systemu</h1>
-      <p><span class="status">Projekt 0.17</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.18</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#granice">Granice</a>
@@ -45,7 +45,7 @@
       <table>
         <thead><tr><th>Kandydat</th><th>Zakres do zatwierdzenia</th></tr></thead>
         <tbody>
-          <tr><td>Zamknięta sieć: stacje i tożsamości odbiorcy są znane z planu i kart przygotowania; klucze nie przychodzą przez radio.</td><td>Cecha protokołu i modelu zaufania; ostateczny model tożsamości pozostaje w <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>.</td></tr>
+          <tr><td>Zamknięta sieć: stacje i tożsamości odbiorcy są znane z planu i kart przygotowania; klucze nie przychodzą przez radio.</td><td>Cecha protokołu i modelu zaufania; format tożsamości i zasady odcięcia rozstrzyga <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>.</td></tr>
           <tr><td>Ruch biegnie między schronieniami a stanowiskiem odbiorczym, w obie strony; schronienia nie wymieniają wiadomości między sobą.</td><td>Zakres funkcji protokołu, do zatwierdzenia wraz z <a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>.</td></tr>
           <tr><td>Każda włączona stacja przekazuje ruch innych.</td><td>Cecha protokołu, niezależna od liczby skoków w profilu pilotażu.</td></tr>
           <tr><td>Stacje stoją w stałych miejscach, a trasy można zmierzyć przed kryzysem.</td><td>Założenie planowania sieci i profilu pilotażu. Zakres pracy poza stałymi miejscami pozostaje otwarty w <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</td></tr>
@@ -90,7 +90,7 @@
       <table>
         <thead><tr><th>Termin</th><th>Znaczenie w tym szkicu</th></tr></thead>
         <tbody>
-          <tr><td>Tożsamość; numer; <code>net_id</code></td><td>Tożsamość obejmuje klucz X25519 do uzgadniania kluczy i klucz Ed25519 do podpisu. Numer u16 wskazuje stację albo tożsamość odbiorcy w planie; <code>net_id</code> wskazuje sieć. Sam numer nie uwierzytelnia nadawcy. Ostateczny model: <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>.</td></tr>
+          <tr><td>Tożsamość; numer; <code>net_id</code></td><td>Tożsamość ma 64-bajtowy klucz publiczny X25519 ‖ Ed25519 i 16-bajtowy identyfikator wyznaczany <a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">stałym wzorem WICI</a>. Numer u16 wskazuje stację albo tożsamość odbiorcy w planie; <code>net_id</code> wskazuje sieć. Sam numer nie uwierzytelnia nadawcy (<a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>).</td></tr>
           <tr><td>Plan sieci</td><td>Przygotowana lista numerów stacji i odbiorcy, ich położenia oraz dróg do roota; obejmuje rodzica z planu i ewentualnego zapasowego.</td></tr>
           <tr><td>Karta stacji; karta odbiorcy</td><td>Pliki z kluczami publicznymi i danymi identyfikującymi stację albo obie tożsamości odbiorcy. Służą do ustanowienia zaufania przy przygotowaniu, nie do przenoszenia kluczy prywatnych.</td></tr>
           <tr><td>Klucz sieci; klucz pary sąsiadów; tag pary</td><td>Klucz sieci jest wspólny dla WICI-Link. Sąsiedzi wyprowadzają osobny klucz pary z własnych kluczy X25519. Tag pary uwierzytelnia jednoadresową ramkę między nimi; nie zastępuje ochrony koperty.</td></tr>
@@ -98,7 +98,7 @@
           <tr><td>Szew nośnika; nośnik komunikacji</td><td>Szew jest granicą między kopertą a sposobem jej przenoszenia. Nośnik próbuje dostarczyć bajty i zgłasza zdarzenia transportowe; WICI-Link jest podstawowym nośnikiem.</td></tr>
           <tr><td>HACK; dowód doręczenia; RECEIVED</td><td>HACK kończy odpowiedzialność nadawcy za dany skok, zwykle po trwałym zapisie; <a href="system-wici-siec.html#potwierdzenia">wyjątki</a> obejmują ramki odrzucane bez zapisu. Nie dowodzi przyjęcia SA1. Dowód doręczenia informuje o rozstrzygnięciu wiadomości przez stację. RECEIVED potwierdza trwały zapis danej rewizji zgłoszenia na nośniku stanowiska (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
           <tr><td>Przekazane; przekazane dalej</td><td>„Przekazane” jest wynikiem następnego skoku radiowego; nie potwierdza odbioru zgłoszenia przez stanowisko. „Przekazane dalej” to stan 4 obsługi: skierowanie zgłoszenia do służb. Te dwa wyniki są niezależne.</td></tr>
-          <tr><td>Zdarzenie SA1; zdarzenie kryzysowe</td><td>Zdarzenie SA1 jest wpisem z numerem <code>event</code>, na przykład nową decyzją dyżurnego. Zdarzenie kryzysowe obejmuje całą sytuację, której zamknięcie kończy ponawianie intencji. Służy temu operacja <a href="oprogramowanie.md">ZAMKNIJ ZDARZENIE</a>; jej pełny opis należy do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</td></tr>
+          <tr><td>Zdarzenie SA1; zdarzenie kryzysowe</td><td>Zdarzenie SA1 jest wpisem z numerem <code>event</code>, na przykład nową decyzją dyżurnego. Zdarzenie kryzysowe obejmuje całą sytuację, której zamknięcie kończy ponawianie intencji. Służy temu operacja <a href="oprogramowanie.md">ZAMKNIJ ZDARZENIE</a>; <a href="system-wici-decyzje.html#wici-inv-021">kod nie zamyka dziś wszystkich intencji</a>. Pełny opis operacji należy do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</td></tr>
           <tr><td>Zgłoszenie; rewizja</td><td>Zgłoszenie ma stałe <code>id</code>. Zmiana jego danych tworzy rewizję z tym samym <code>id</code> i wyższym <code>revision</code>; każda rewizja zawiera pełną treść i jest potwierdzana osobno.</td></tr>
           <tr><td>Root; rodzic; ranga; epoka</td><td>Root jest stacją stanowiska na początku drzewa tras WICI-Link. Rodzic to następny skok ku rootowi. Ranga wyraża koszt drogi do roota, a epoka oznacza trwały licznik jego uruchomień używany przy aktualizacji tras.</td></tr>
           <tr><td>BEACON</td><td>Podpisane ogłoszenie trasy z informacją o roocie, randze, epoce i rodzicu.</td></tr>
@@ -126,7 +126,7 @@
       </figure>
       <p class="meta">Źródła modelu: <a href="../concept/slownik.html">słownik koncepcji</a>, <a href="../concept/05-projekt-koncepcyjny-komunikacji.html">model komunikacji</a>, <a href="projekt.md">poziomy zestawu</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="wici-link.md">WICI-Link</a> i <a href="transport.md">transport</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.17 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.18 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
