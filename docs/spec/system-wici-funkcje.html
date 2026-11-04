@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.16</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.17</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.16</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.17</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#operacje">Operacje</a>
@@ -89,12 +89,28 @@
             <div><dt>Błąd i ponowienie</dt><dd>Po pierwszym przekazaniu stacja odmawia (<code>too_late</code>); pozostaje rewizja „potrzeba ustała”. Ponowne anulowanie już anulowanego wpisu nie zmienia wyniku.</dd></div>
           </dl>
         </article>
-        <article class="record">
+        <article class="record" id="przelaczenie-tozsamosci">
           <h4>Przełączenie tożsamości odbiorcy: gospodarz, stacja</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Polecenie poza radiem i lokalne potwierdzenie na stacji; warunki opisuje rozdział 2.</dd></div>
-            <div><dt>Wynik</dt><dd>Docelowo wraca najnowsza rewizja każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code> oraz nowym celem. Kod dziś wznawia tylko rewizje bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
+            <div><dt>Wynik</dt><dd>Docelowo wraca najnowsza rewizja każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code> oraz nowym celem. Etap wraca do „wysyłanie”, a ostatnia decyzja zostaje widoczna. Potwierdzenie i znacznik odczytu poprzedniej tożsamości kasują się; alarm braku potwierdzenia liczy czas od pierwszego nadania po zmianie. Kod dziś wznawia tylko rewizje bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
             <div><dt>Błąd i ponowienie</dt><dd>Stacja odrzuca wiadomości od tożsamości głównej. Powrót do niej wymaga trybu przygotowania; ponowienie nie tworzy nowej rewizji.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="powrot-nadawania">
+          <h4>Powrót nadawania po odtworzeniu kopii: osoba wydająca polecenie, obsługa stanowiska</h4>
+          <dl>
+            <div><dt>Warunek</dt><dd>Odtworzona kopia blokuje nadawanie pod starym kluczem. Polecenie wydaje osoba uprawniona do przejęcia stanowiska, dziś wójt.</dd></div>
+            <div><dt>Wynik</dt><dd>Stanowisko aktywuje jednorazową tożsamość zapasową, przyjmuje koperty na oba klucze w okresie przejściowym i przekazuje gospodarzom polecenie przełączenia poza radiem.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Po zużyciu tożsamości zapasowej nadawanie wraca dopiero po wgraniu nowych kart przez USB. Do odnowienia po zdarzeniu nie ma kolejnego zapasu. Kod obsługuje dziś aktywację tylko na pustym nośniku (<a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>).</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wstrzymanie-wysylki">
+          <h4>Wstrzymanie wysyłki do stacji: dyżurny, panel</h4>
+          <dl>
+            <div><dt>Warunek</dt><dd>Dyżurny wybiera stację i potwierdza działanie; stanowisko zapisuje je w dzienniku.</dd></div>
+            <div><dt>Wynik</dt><dd>Wiadomości do tej stacji, także nowe, pozostają zapisane bez nadawania. Alarm 6 h gaśnie, a panel stale pokazuje stację na liście wstrzymanych. Usunięcie stacji z zaufanych daje ten sam skutek.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Pierwsza wiadomość od zaufanej stacji uwierzytelniona kopertą albo przycisk „Wznów” przywraca wysyłkę. Kontakt stacji usuniętej z zaufanych jej nie wznawia. Bez kontaktu ani działania dyżurnego żywa, lecz milcząca stacja nie dostanie nowych wiadomości. Operacji nie ma jeszcze w panelu (<a href="system-wici-decyzje.html#wici-inv-016">WICI-INV-016</a>).</dd></div>
           </dl>
         </article>
         <article class="record">
@@ -168,10 +184,11 @@
       <table>
         <thead><tr><th>Miejsce</th><th>Etapy i wyniki transmisji</th></tr></thead>
         <tbody>
-          <tr><td>Stacja</td><td>„Zapisane” oznacza trwałą intencję; „wysyłanie” próbę na nośniku; „przekazane” wynik następnego skoku bez RECEIVED (w kodzie dziś „dostarczone”); „odebrane” następuje po potwierdzeniu aplikacyjnym; „anulowane” kończy intencję przed pierwszym przekazaniem.</td></tr>
+          <tr><td>Stacja</td><td>„Zapisane” oznacza trwałą intencję; „wysyłanie” próbę na nośniku; „przekazane” wewnętrzny wynik następnego skoku bez RECEIVED (w kodzie dziś „dostarczone”); „odebrane” następuje po potwierdzeniu aplikacyjnym; „anulowane” kończy intencję przed pierwszym przekazaniem.</td></tr>
           <tr><td>Stanowisko, WICI-Link</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód; wynik obejmuje także trwałe odrzucenie. „Przekazane”: HACK przekaźnika. „Rozesłane”: rozgłoszenie bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „przekazane” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
         </tbody>
       </table>
+      <p>Wynik skoku nie ma osobnego napisu na ekranach. Stacja pokazuje „wysyłanie” z numerem próby; docelowo panel pokazuje stan wiadomości „czeka” lub „rozstrzygnięta” (<a href="system-wici-decyzje.html#wici-inv-018">luka etykiet</a>). „Przekazane” może być widoczne w diagnostyce; stan 4 „przekazane dalej” dotyczy skierowania sprawy do służb (<a href="system-wici-model.html#sownik-techniczny">słownik</a>).</p>
       <p>Stan obsługi zmieniają zdarzenia aplikacyjne:</p>
       <table>
         <thead><tr><th>Stan widoczny dla gospodarza</th><th>Zdarzenie, które go uzasadnia</th></tr></thead>
@@ -189,7 +206,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.16 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.17 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
