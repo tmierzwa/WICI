@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wyrób, obsługa, zasilanie i próby eksploatacyjne systemu WICI.">
-  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.25</title>
+  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.26</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wyrób i eksploatacja</h1>
-      <p><span class="status">Projekt 0.25</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.26</span> · 4 listopada 2026 r.</p>
       <p>Rozdział opisuje zachowanie stacji i zestawu w użyciu oraz wyniki, które trzeba sprawdzić na ocenianej konfiguracji. Czynności krok po kroku pozostają w <a href="projekt.md">opisie zestawu</a> i instrukcjach obsługi.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -112,8 +112,9 @@
           <tr><td>Praca z AA<br><small>Wyrób</small></td><td>Na czterech ogniwach litowych AA (Li-FeS2) stacja jako przekaźnik działa przy ruchu T5 ≥48 h w 20 °C i ≥40 h w −10 °C. Czas pracy nasyconego przekaźnika, stale przekazującego ruch i nadającego na granicy długu ciszy, jest mierzony i zapisywany. Próg ustala się po pierwszym pomiarze na płytce v2, przed wydaniem. Wynik w −20 °C zapisuje się bez progu. Od ostrzeżenia „WYMIEŃ OGNIWA W CIĄGU 1 H” do kontrolowanego wyłączenia pozostaje ≥1 h w 20 °C i −10 °C.</td><td>Pilotaż: jeden komplet w temperaturze pokojowej; wydanie: dwa komplety z różnych partii na każde wykonanie w każdej temperaturze oraz próba nasycenia. Próby niewykonane (<a href="odbior.md#próby">T5/T6</a>, <a href="odbior.md#minimum-pilotażu">profil pilotażu</a>, <a href="system-wici-decyzje.html#wici-inv-030">luka próby</a>).</td></tr>
           <tr><td>Wejście 12 V<br><small>Wyrób</small></td><td>Zakres pracy 11,3–16 V; podłączenie, odłączenie i przejście na AA bez restartu. Odwrotna polaryzacja i podanie napięcia instalacji 24 V nie uszkadzają stacji ani nie ładują ogniw AA.</td><td>Tor v2 jest projektem. Progi, zaniki i prąd do ogniw sprawdza się na płytce przed terenem; <a href="elektronika.md#stany-zasilania-12-v">stany toru</a> i <a href="odbior.md#minimum-pilotażu">próba pilotażu</a>.</td></tr>
           <tr><td>Słaba energia<br><small>Wyrób</small></td><td>Wskazanie źródła i napięcia, ostrzeżenie o ogniwach oraz kontrolowane wyłączenie po zakończeniu zapisu. Stacja nie potwierdza zgłoszenia, którego nie zapisała.</td><td>Logika ekranu istnieje (<a href="../../firmware/src/ui.cpp">kod</a>); pomiar napięcia i wyłączenie w docelowym torze pozostają do wdrożenia i próby (<a href="odbior.md#minimum-pilotażu">warunki przed terenem</a>).</td></tr>
-          <tr><td>Czuwanie<br><small>Wyrób</small></td><td>Projektowany lekki sen MCU utrzymuje odbiór i przekazywanie. Nie gubi ramek ani nie zmienia ich kolejności, także przy nasyconym przekaźniku. Podłączony laptop wybudza stację i zapobiega ponownemu uśpieniu. Około 8 dni na AA to cel z modelu, nie granica wyrobu; czas czuwania mierzy się na płytce v2, a próg ustala po pomiarze. Do tego czasu plan odwiedzin opiera się na ≥48 h.</td><td>Tryb nie jest wdrożony. Potrzebne pomiar prądu i próba ramek przy nasyceniu (<a href="projekt.md#zakres">model</a>, <a href="oprogramowanie.md#czuwanie">projekt trybu</a>, <a href="system-wici-decyzje.html#wici-inv-030">luka próby</a>).</td></tr>
+          <tr><td>Czuwanie<br><small>Wyrób</small></td><td>Projektowany lekki sen MCU utrzymuje odbiór i przekazywanie. Nie gubi ramek ani nie zmienia ich kolejności, także przy nasyconym przekaźniku. Podłączony laptop wybudza stację i zapobiega ponownemu uśpieniu. Około 8 dni na AA to cel z modelu, nie granica wyrobu; czas czuwania mierzy się na płytce v2, a próg można ustalić po pomiarze. Do tego czasu plan odwiedzin opiera się na ≥48 h.</td><td>Tryb nie jest wdrożony. Potrzebne pomiar prądu i próba ramek przy nasyceniu (<a href="projekt.md#zakres">model</a>, <a href="oprogramowanie.md#czuwanie">projekt trybu</a>, <a href="system-wici-decyzje.html#wici-inv-030">luka próby</a>).</td></tr>
           <tr><td>Środowisko<br><small>Wyrób</small></td><td>Stacja pracuje w pomieszczeniu w −10…+40 °C. Miejsce poza tym zakresem nie jest objęte ocenianą konfiguracją. Antena pracuje na zewnątrz. Wilgotność do 95% bez kondensacji oraz brak kondensacji po przeniesieniu z zimna do 20 °C to kandydaci do potwierdzenia kartami części; wartość 95% nie pochodzi ze źródeł projektu.</td><td>Próby klimatyczne dla −10 i +40 °C oraz oględziny anteny i przepustu przed wydaniem. Starszy plan zawiera inne progi (<a href="system-wici-decyzje.html#wici-inv-026">luka</a>).</td></tr>
+          <tr><td>Środowisko pilotażu<br><small>Profil</small></td><td>Stacji pilotażowej używa się tylko w temperaturach dopuszczonych przez karty wszystkich modułów, ogniw i ekranu (zwykle od 0 °C dla modułów z elektrolitem). Miejsce chłodniejsze wymaga wcześniejszej próby w tej temperaturze.</td><td><a href="elektronika.md#stacja-pilotażowa">Stacja pilotażowa</a>, <a href="odbior.md#minimum-pilotażu">minimum pilotażu, pozycja e</a>.</td></tr>
           <tr><td>Obudowa<br><small>Wyrób</small></td><td>Obudowa stacji ma IP40. Zewnętrzne złącza anteny mają IP67 lub uszczelnienie taśmą.</td><td>Oględziny obudowy i montażu anteny; <a href="elektronika.md#stacja-pilotażowa">projekt v2</a>.</td></tr>
           <tr><td>Przechowywanie<br><small>Warunek wdrożenia</small></td><td>Stacja czeka na użycie w suchym miejscu w 5–30 °C, z ogniwami poza stacją.</td><td><a href="projekt.md#przechowywanie-i-przeglądy">Opis zestawu</a>; kontrola miejsca przed umieszczeniem stacji.</td></tr>
         </tbody>
@@ -162,7 +163,7 @@
       <p class="explain"><strong>Dlaczego próg nasycenia czeka na pomiar.</strong> Dług ciszy 12t ogranicza udział nadawania do około 1/13 czasu niezależnie od liczby skoków; próbę można wykonać na jednej stacji z generatorem ruchu. Sprawność przetwornicy i pobór MCU nie są zmierzone, a model ma małą marżę. Odrzucono próg 48 h przy nasyceniu oraz ruch modelowy dla 15 skoków jako podstawę progu.</p>
       <p class="explain"><strong>Granice środowiskowe.</strong> Odrzucono −20…+45 °C z koncepcji z powodu braku zapasu ekranu w −20 °C i większych wymagań wobec płytki. IP54 wymagałoby uszczelnienia okna, USB i komory ogniw bez uzasadnienia dla suchego miejsca i skrzynki.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.25 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.26 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
