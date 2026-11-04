@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.16</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.17</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.16</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.17</span> · 4 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. Reguły poniżej obejmują pełny protokół do 15 skoków; sprawność tras w dłuższych łańcuchach i odporność przy przeciążeniu pozostają do sprawdzenia (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>). „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -95,7 +95,7 @@
           <desc id="route-desc">Stacja C wysyła do rodzica B, B do A, A do roota. Każdy skok potwierdza swój odbiór. Kierunek w dół może wymagać rozsyłania, gdy brakuje wpisu drogi.</desc>
           <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#146a62"/></marker></defs>
           <g fill="#edf5f3" stroke="#146a62" stroke-width="2"><rect x="10" y="34" width="118" height="54" rx="5"/><rect x="205" y="34" width="118" height="54" rx="5"/><rect x="400" y="34" width="118" height="54" rx="5"/><rect x="595" y="34" width="118" height="54" rx="5"/></g>
-          <g fill="#183c39" font-family="system-ui,sans-serif" font-size="16" text-anchor="middle"><text x="69" y="67">Stacja C</text><text x="264" y="67">Stacja B</text><text x="459" y="67">Stacja A</text><text x="654" y="67">Root</text><text x="360" y="122" font-size="13">DATA → rodzic; HACK ← po trwałym przyjęciu na skoku</text></g>
+          <g fill="#183c39" font-family="system-ui,sans-serif" font-size="16" text-anchor="middle"><text x="69" y="67">Stacja C</text><text x="264" y="67">Stacja B</text><text x="459" y="67">Stacja A</text><text x="654" y="67">Root</text><text x="360" y="122" font-size="13">DATA → rodzic; HACK ← potwierdzenie skoku</text></g>
           <g stroke="#146a62" stroke-width="2" marker-end="url(#arr)"><line x1="130" y1="61" x2="201" y2="61"/><line x1="325" y1="61" x2="396" y2="61"/><line x1="520" y1="61" x2="591" y2="61"/></g>
         </svg>
         <figcaption>Przykładowe trzy skoki. Pole ramki dopuszcza do 15; limit dwóch przeskoków w pilotażu jest osobną regułą planowania.</figcaption>
@@ -111,7 +111,7 @@
 
       <h3 id="przekazywanie">Przekazywanie w obu kierunkach</h3>
       <p><strong>Reguła protokołu.</strong> DATA w górę idzie przez bieżącego rodzica do roota. Przekaźnik przepisuje nagłówek łącza i MAC, zwiększa <code>hops</code>, zachowuje kopertę. Ostatni dozwolony skok kończy się u roota albo stacji docelowej; ramka, która skończyłaby się u pośrednika, czeka w kolejce na odpowiednią drogę.</p>
-      <p><strong>Reguła protokołu.</strong> Droga w dół powstaje z ramki w górę tylko wtedy, gdy jej <code>src</code> jest sąsiadem uwierzytelnionym tagiem albo figuruje na jego liście <code>behind</code>. Root uczy się drogi do nadawcy koperty dopiero po świeżym uwierzytelnionym przyjęciu przez laptop (KISS 0x00); KISS 0x02 potwierdza skok bez nauki. Root może zastąpić starą drogę; przekaźnik bez takiego dowodu nie zastępuje drogi przez innego sąsiada. U roota droga znika po trzech kolejnych ramkach w dół bez HACK, u przekaźnika po trzeciej próbie ramki. KISS 0x02 nie uczy drogi do nadawcy koperty, lecz odświeża drogę do sąsiada podającego ramkę. Tablica 256 dróg jest trwała w FRAM.</p>
+      <p><strong>Reguła protokołu.</strong> Droga w dół powstaje z ramki w górę tylko wtedy, gdy jej <code>src</code> jest sąsiadem uwierzytelnionym tagiem albo figuruje na jego liście <code>behind</code>. Root uczy się drogi do nadawcy koperty dopiero po świeżym uwierzytelnionym przyjęciu przez laptop (KISS 0x00). Root może zastąpić starą drogę; przekaźnik bez takiego dowodu nie zastępuje drogi przez innego sąsiada. U roota droga znika po trzech kolejnych ramkach w dół bez HACK, u przekaźnika po trzeciej próbie ramki. KISS 0x02 nie uczy drogi do nadawcy koperty, lecz odświeża drogę do sąsiada podającego ramkę. Tablica 256 dróg jest trwała w FRAM.</p>
       <p><strong>Reguła protokołu.</strong> Bez drogi w dół węzeł rozsyła DATA z DOWN, bez ACKREQ, z <code>l_dst=0xffff</code>, słyszaną także przez poprzedniego nadawcę. Ramki jednoadresowej nie oddaje sąsiadowi, od którego ją dostał. Pierścień tożsamości kopert odrzuca powtórną kopię i blokuje kolejne rozsyłanie tej samej koperty przez 120 s, także po restarcie. Pełny pierścień odmawia kolejnego rozsyłania. Zapis przed nadaniem może zgubić jedną próbę przy zaniku; intencja SA1 ponawia ją z nowym licznikiem koperty.</p>
       <p><strong>Stan obrazu.</strong> Listę <code>behind</code> przyjmuje tylko konfiguracja roota. Przekaźnik uczy się dróg do swoich sąsiadów, a do dalszych stacji rozsyła. Przy 3–15 skokach rozsyłanie w dół jest zwykłą drogą: ostatni skok nie daje HACK, a SA1 ponawia intencję według odstępu profilu. Koszt takiej drogi nie jest policzony w obecnym modelu jednego przekaźnika (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</p>
 
@@ -184,7 +184,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.16 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.17 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
