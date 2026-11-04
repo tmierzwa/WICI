@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Przedmiot, status, założenia i zasady utrzymania specyfikacji WICI.">
+  <title>Status i zasady — Specyfikacja WICI 0.13</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+      <strong>Specyfikacja WICI</strong>
+      <ol>
+        <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-zasady.html" aria-current="page">1. Status i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+        <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+        <li><a href="system-wici-plan.html">5–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+      </ol>
+    </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Status i zasady</h1>
+      <p><span class="status">Projekt 0.13</span> · 4 listopada 2026 r.</p>
+    </header>
+      <nav class="section-nav" aria-label="Na tej stronie">
+        <a href="#zaozenia-uzgodnione">Założenia uzgodnione</a>
+        <a href="#utrzymanie-zgodnosci-z-kodem">Utrzymanie zgodności z kodem</a>
+      </nav>
+    <section id="status" aria-labelledby="h-status">
+      <h2 id="h-status">1. Przedmiot, status i zasady</h2>
+      <p>Specyfikacja ma pozwolić na budowę niezależnych, współpracujących implementacji oraz określić wymagane właściwości wyrobu. Obejmie funkcje, dane, formaty, bezpieczeństwo, ograniczenia i metody sprawdzenia. Nie narzuca konstrukcji ani organizacji kodu, chyba że wybór wpływa na zgodność, bezpieczeństwo lub współdziałanie.</p>
+      <p>Po przyjęciu specyfikacja będzie dokumentem odniesienia dla kodu i dokumentacji szczegółowej. Rozbieżność wymaga poprawy implementacji albo zatwierdzenia zmiany specyfikacji. Publikacja określi licencję, identyfikator wydania, dostęp do wcześniejszych wersji i sposób zgłaszania błędów.</p>
+      <p>Każde wymaganie otrzyma identyfikator, zakres obowiązywania i metodę sprawdzenia. Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> będą miały znaczenie określone w przyjętej wersji. Wielkie litery odróżnią je od zwykłego tekstu, zgodnie z zasadą opisaną w <a href="https://www.rfc-editor.org/rfc/rfc8174.html">RFC 8174</a>.</p>
+      <h3 id="zaozenia-uzgodnione">Założenia uzgodnione</h3>
+      <table class="id-table">
+        <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
+        <tbody>
+          <tr id="wici-zal-001"><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest niezależnym dokumentem nadrzędnym, określającym wymagane właściwości i zachowanie rozwiązania.</td></tr>
+          <tr id="wici-zal-002"><td>WICI-ZAL-002</td><td>Specyfikacja stanowi dokument odniesienia dla dokumentacji szczegółowej oraz implementacji.</td></tr>
+          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
+          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum pozostaje poza architekturą podstawową. Może być rozpatrywane jako zewnętrzny protokół na potrzeby ewentualnej współpracy i integracji.</td></tr>
+          <tr id="wici-zal-005"><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
+          <tr id="wici-zal-006"><td>WICI-ZAL-006</td><td>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie. Do jej zatwierdzenia zmianę kodu w obszarze objętym specyfikacją odnotowuje się w inwentaryzacji. Po zatwierdzeniu zmianie kodu w tym obszarze towarzyszy aktualizacja wymagań albo wpis o braku wpływu na specyfikację.</td></tr>
+          <tr id="wici-zal-007"><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
+          <tr id="wici-zal-008"><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
+          <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
+        </tbody>
+      </table>
+      <p class="explain">Podstawa architektury zakłada pozytywny wynik decyzji <a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21</a> z koncepcji, czyli próby przy stole WICI-Link v3 na docelowym sprzęcie. Decyzja pozostaje otwarta.</p>
+      <h3 id="utrzymanie-zgodnosci-z-kodem">Utrzymanie zgodności z kodem</h3>
+      <h4>Przed pierwszą wersją normatywną</h4>
+      <p>Zmiana kodu w obszarze objętym specyfikacją dodaje wpis do inwentaryzacji w tej samej zmianie. Kod i testy są źródłami kandydatów na wymagania; nie nadają im statusu normatywnego. Na tym etapie nie ma automatycznej kontroli repozytorium.</p>
+      <h4>Od pierwszej wersji normatywnej</h4>
+      <p>Każda zmiana kodu w obszarze objętym specyfikacją aktualizuje dotknięte wymagania albo zapisuje w historii specyfikacji deklarację „bez wpływu na specyfikację” wraz ze sposobem sprawdzenia. Zmiana wskazuje też dotknięte testy i wpływ na ocenę zgodności wyrobu. Regułę egzekwuje kontrola repozytorium; zakres ścieżek ustala WICI-DEC-002.</p>
+      <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami. Akapity wyróżnione kolorem objaśniają treść; nie ustanawiają wymagań.</p>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.13 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>

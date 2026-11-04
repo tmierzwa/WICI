@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.13</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+      <strong>Specyfikacja WICI</strong>
+      <ol>
+        <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+        <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+        <li><a href="system-wici-plan.html">5–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-decyzje.html" aria-current="page">Inwentaryzacja i decyzje</a></li>
+      </ol>
+    </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Inwentaryzacja i decyzje</h1>
+      <p><span class="status">Projekt 0.13</span> · 4 listopada 2026 r.</p>
+    </header>
+      <nav class="section-nav" aria-label="Na tej stronie">
+        <a href="#inwentaryzacja">Inwentaryzacja</a>
+        <a href="#zroda-do-przegladu">Źródła do przeglądu</a>
+        <a href="#decyzje-otwarte">Decyzje otwarte</a>
+        <a href="#historia-zmian">Historia zmian</a>
+      </nav>
+    <section id="decyzje" aria-labelledby="h-decyzje">
+      <h2 id="h-decyzje">Inwentaryzacja i decyzje</h2>
+      <h3 id="inwentaryzacja">Inwentaryzacja</h3>
+      <p class="explain">Punkt odniesienia: <a href="https://github.com/tmierzwa/WICI/commit/d637149016ed4a5e2436ee8cc4ed4f8ab6fc330b">main po scaleniu PR 181</a>. Wpisy wskazują kandydatów na wymagania i luki; obecność kodu lub testu nie oznacza zatwierdzenia wymagania ani zaliczenia próby wyrobu.</p>
+      <div class="record-list" aria-label="Inwentaryzacja WICI">
+        <article class="record" id="wici-inv-001">
+          <h4>WICI-INV-001</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>SA1 ma sześć typów wiadomości i limit 256 B treści.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="../../firmware/src/sa1.h">Kodek</a>, <a href="oprogramowanie.md">opis</a>; reguły i testy wymagają przeglądu przed przyjęciem.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-002">
+          <h4>WICI-INV-002</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Koperta v1 przenosi SA1 w całości albo w dwóch częściach; kod przewiduje osobny rodzaj dowodu doręczenia.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Opis</a>, <a href="../../firmware/src/envelope.h">kodek</a>, <a href="../../tests/test_envelope_vectors.py">wektory</a>; przegląd bezpieczeństwa pozostaje do wykonania.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-003">
+          <h4>WICI-INV-003</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>WICI-Link v3 definiuje DATA, HACK i BEACON oraz ładunek do 228 B.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="wici-link.md">Opis</a>, <a href="../../firmware/src/wici_link.h">kodek</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby dwóch węzłów</a>; D21 pozostaje otwarta.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-004">
+          <h4>WICI-INV-004</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są otwarte.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="wici-link.md">Opis i pytanie 7</a>, <a href="../../tests/native/wici_network_check.cpp">test programowy</a>; brak próby sprzętowej przez przekaźnik.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-005">
+          <h4>WICI-INV-005</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Potwierdzenie skoku i przyjęcie SA1 mają różne znaczenie; stanowisko zapisuje przyjętą wiadomość przed potwierdzeniem.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Opis</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">kod stanowiska</a>, <a href="../../tests/test_stanowisko_wici.py">testy</a>; pełny przebieg wieloskokowy wymaga próby.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-006">
+          <h4>WICI-INV-006</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Profil pilotażu używa SX1262 i LoRa SF7; dostęp do kanału obejmuje CAD, RSSI i limit czasu nadawania.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="radio.md">Opis</a>, <a href="../../firmware/src/wici_radio.cpp">kod</a>, <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>; badania konfiguracji wyrobu pozostają otwarte.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-007">
+          <h4>WICI-INV-007</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Interfejs USB ma kontrakt v2 i limit 1024 B wiersza; stacja przechowuje zgłoszenia i skrzynkę w FRAM.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.h">kod USB</a>, <a href="../../firmware/src/store.h">magazyn</a>; zachowanie po zaniku zasilania wymaga prób na sprzęcie docelowym.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-008">
+          <h4>WICI-INV-008</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Kandydaci na właściwości wyrobu i profili:
+            <ul>
+              <li>Wydanie, poziom 1: gotowość radiowa ≤60 s bez komputera; przekazywanie ruchu przez cały czas pracy; zasilanie 12 V w zakresie 11,3–16 V z przełączaniem bez resetu. Jako przekaźnik na ogniwach AA: ≥48 h w 20 °C, ≥40 h w −10 °C, zapis wyniku w −20 °C; po dwa komplety z różnych partii na każde wykonanie w każdej temperaturze. Pilotaż sprawdza ≥48 h na jednym komplecie w temperaturze pokojowej.</li>
+              <li>Warunek D21 przed pilotażem: 50/50 zgłoszeń z RECEIVED przez jeden przekaźnik w czasie &lt;15 min. Ogólny cel W10 to 50/50 w ciągu 30 min.</li>
+              <li>Wydanie, stanowisko: zmiana komputera w ≤15 min.</li>
+              <li>Po pilotażu, poziom 3: strona dla 15 aktywnych użytkowników.</li>
+            </ul></dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="projekt.md">Zakres projektu</a>, <a href="odbior.md">próby</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W02, W10, W22, W23, W25</a>; próby pełnej konfiguracji wyrobu nie są zaliczone.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-009">
+          <h4>WICI-INV-009</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Numerowana konfiguracja wiąże <code>net_id</code> oraz numery u16 stacji i dwóch tożsamości odbiorcy z kartami i kluczami. <code>priority_keys</code> zawiera klucze sąsiadów; <code>behind</code> jest dopuszczone tylko u roota. Przygotowanie odrzuca klucze o małym rzędzie i nie przyjmuje kluczy przez radio. Kod obejmuje przeniesienie stacji, aktywację zapasowej tożsamości odbiorcy oraz wymianę głównej po odzyskaniu bazy.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Klucze</a>, <a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/config.cpp">stacja</a>, <a href="../../software/laptop/wici/configdoc.py">przygotowanie</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">stanowisko</a>; <a href="#wici-dec-004">WICI-DEC-004</a> jest otwarta. Profil pilotażu nie zapewnia poufności przyszłej ani rotacji kluczy przez radio.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-010">
+          <h4>WICI-INV-010</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Bez pola <code>network</code> stacja używa Reticulum i nie używa koperty WICI. Stanowisko może uruchomić równoległy port Reticulum (<code>--reticulum-port</code>).</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Opis</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/laptop/wici/stanowisko/__main__.py">stanowisko</a>; wobec <a href="system-wici-zasady.html#wici-zal-004">WICI-ZAL-004</a> wymaga decyzji o usunięciu tej ścieżki albo osobnym kontrakcie integracji (<a href="#wici-dec-008">WICI-DEC-008</a>).</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-011">
+          <h4>WICI-INV-011</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Opis poziomów 2–3, po pilotażu, przewiduje stronę, na której mieszkaniec podaje miejsce w budynku i opis potrzeby oraz śledzi własne zgłoszenie. Laptop ma przechowywać zgłoszenie mieszkańca, powiązane SA1, skrót tokenu dostępu i czas; bez IP, MAC, numeru telefonu i nazwiska. Kiosk ma pokazywać formularz na laptopie i czyścić go po zgłoszeniu; panel gospodarza ma inny adres lokalny, osobne ciasteczko i ponowne logowanie. Próba strony przewiduje 50 podłączonych telefonów, w tym 15 aktywnych.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="oprogramowanie.md#strona-mieszkańca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</dd></div>
+          </dl>
+        </article>
+      </div>
+      <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
+      <h3 id="zroda-do-przegladu">Źródła do przeglądu</h3>
+      <p class="explain"><a href="https://github.com/tmierzwa/WICI/pull/181">PR 181</a> jest scalony. Przy dalszej inwentaryzacji należy zapisać aktualny commit gałęzi głównej i ponownie sprawdzić zmienione pliki. Poniższe materiały pozostają źródłami, nie normatywną częścią specyfikacji.</p>
+      <table>
+        <thead><tr><th>Obszar</th><th>Źródła</th></tr></thead>
+        <tbody>
+          <tr><td>Funkcje i dane</td><td><a href="oprogramowanie.md">Oprogramowanie</a>, <a href="../../firmware/src/station.cpp">program stacji</a>, <a href="../../firmware/src/sa1.cpp">SA1</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../concept/01-potrzeby-i-wymagania.html">potrzeby</a></td></tr>
+          <tr><td>Transport i bezpieczeństwo</td><td><a href="transport.md">Transport</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">zagrożenia</a></td></tr>
+          <tr><td>Sieć i radio</td><td><a href="wici-link.md">WICI-Link</a>, <a href="radio.md">Radio</a>, <a href="../../firmware/src/wici_link.cpp">kod łącza</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kod stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/bearers.py">nośniki stanowiska</a></td></tr>
+          <tr><td>Interfejsy i trwałość</td><td><a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/usbproto.cpp">kod USB</a>, <a href="../../firmware/src/store.cpp">magazyn</a></td></tr>
+          <tr><td>Wyrób i eksploatacja</td><td><a href="elektronika.md">Elektronika</a>, <a href="odbior.md">Próby i odbiór</a>, <a href="projekt.md">projekt</a></td></tr>
+          <tr><td>Decyzje</td><td><a href="../concept/08-plan-weryfikacji-i-decyzje.html">Plan weryfikacji i decyzje</a></td></tr>
+        </tbody>
+      </table>
+      <h3 id="decyzje-otwarte">Decyzje otwarte</h3>
+      <table class="id-table">
+        <thead><tr><th>ID</th><th>Przedmiot</th></tr></thead>
+        <tbody>
+          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-002"><td>WICI-DEC-002</td><td>Rola zatwierdzająca, kryteria przeglądu i sposób egzekwowania wspólnej zmiany kodu i specyfikacji.</td></tr>
+          <tr id="wici-dec-003"><td>WICI-DEC-003</td><td>Zakres wykorzystania dotychczasowych projektów SA1, koperty i WICI-Link.</td></tr>
+          <tr id="wici-dec-004"><td>WICI-DEC-004</td><td>Model tożsamości i bezpieczeństwa niezależny od Reticulum.</td></tr>
+          <tr id="wici-dec-005"><td>WICI-DEC-005</td><td>Gwarancje przyjęcia, potwierdzenia i ponowienia dla obu kierunków komunikacji.</td></tr>
+          <tr id="wici-dec-006"><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe.</td></tr>
+          <tr id="wici-dec-007"><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
+          <tr id="wici-dec-008"><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td>Przełączanie dróg w dół w łańcuchach 3–15 skoków i sposób sprawdzenia pełnego zakresu protokołu.</td></tr>
+        </tbody>
+      </table>
+      <h3 id="historia-zmian">Historia zmian</h3>
+      <table>
+        <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
+        <tbody>
+          <tr><td>0.13</td><td>Podzielono dokument na części i poprawiono układ stron bez zmiany treści technicznej.</td></tr>
+          <tr><td>0.12</td><td>Naszkicowano protokół SA1: format, przykłady bajtowe, zmiany stanu i ponawianie; wskazano niezgodności i decyzje do zatwierdzenia.</td></tr>
+          <tr><td>0.11</td><td>Doprecyzowano operacje, stany transmisji i przechowywanie danych w szkicu rozdziału 3.</td></tr>
+          <tr><td>0.10</td><td>Skorygowano model sieci i wypełniono szkic funkcji, danych oraz stanów zgłoszenia.</td></tr>
+          <tr><td>0.9</td><td>Naszkicowano model systemu i słownik; uzupełniono inwentaryzację baterii oraz strony mieszkańca.</td></tr>
+          <tr><td>0.8</td><td>Dodano do inwentaryzacji przygotowanie kluczy, zakres liczbowych właściwości wyrobu i obecną ścieżkę Reticulum.</td></tr>
+          <tr><td>0.7</td><td>Po scaleniu PR 181 rozpoczęto inwentaryzację kodu, opisów i prób; wskazano luki przed przyjęciem wymagań.</td></tr>
+          <tr><td>0.6</td><td>Rozdzielono zasady pracy przed i po pierwszej wersji normatywnej; dodano warunek D21, zakres protokołu, decyzję o nośnikach i źródła do inwentaryzacji.</td></tr>
+          <tr><td>0.5</td><td>Wskazano PR 181 jako źródło bieżącego stanu implementacji.</td></tr>
+          <tr><td>0.4</td><td>Zaktualizowano WICI-ZAL-006, zasady synchronizacji z kodem oraz układ części dotyczących wyrobu, dowodów i źródeł.</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.13 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>
