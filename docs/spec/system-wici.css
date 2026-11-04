@@ -46,7 +46,9 @@ table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; font-size
 .table-scroll table { margin: 0; }
 .chapter-table { table-layout: fixed; min-width: 52rem; }
 .chapter-table th:first-child { width: 11rem; }
-th, td { border-bottom: 1px solid var(--line); padding: .7rem .75rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+table:not(.id-table):not(.operations):not(.chapter-table) th:first-child { width: 11rem; }
+.threat-table th:first-child { width: 12rem; }
+th, td { border-bottom: 1px solid var(--line); padding: .7rem .75rem; text-align: left; vertical-align: top; overflow-wrap: break-word; }
 th { background: #e8f0ee; color: #143e3b; }
 tbody tr:nth-child(even) { background: #f7f9f9; }
 tbody tr:hover { background: #edf5f3; }
