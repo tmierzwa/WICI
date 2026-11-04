@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.17</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.18</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.17</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.18</span> · 4 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. Reguły poniżej obejmują pełny protokół do 15 skoków; sprawność tras w dłuższych łańcuchach i odporność przy przeciążeniu pozostają do sprawdzenia (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>). „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -103,7 +103,7 @@
       <p><strong>Reguła protokołu.</strong> Root jest radiowym węzłem stanowiska. Stacja ma rodzica z acyklicznego planu, opcjonalnego zapasowego i kandydata dynamicznego z ważnego BEACON-u. Po osiągnięciu progu braków HACK przechodzi po kręgu: planowy → zapasowy → najlepszy dynamiczny → planowy; brakujący kandydat jest pomijany. DATA od bieżącego rodzica, nowo przyjęta do kolejki, także sygnalizuje pętlę. Po HACK lub nowym BEACON-ie rodzica z planu stacja wraca do niego. Planowy i zapasowy działają także bez świeżego BEACON-u. Stacja bez kluczy roota i obu skonfigurowanych rodziców w <code>priority_keys</code> nie uruchamia łącza.</p>
       <p><strong>Parametr profilu.</strong> Koszt łącza w szesnastych częściach ETX to <code>256 / p</code> plus kara 1/16 za każdy dB SNR poniżej 0, najwyżej 32/16; <code>p</code> jest średnią skuteczności HACK w szesnastych, z wagą ostatniej próby 1/4.</p>
       <p><strong>Reguła protokołu.</strong> Ranga roota wynosi 0; stacja ogłasza rangę rodzica plus koszt łącza. Dynamiczny rodzic ma ważny BEACON bieżącej epoki, rangę niższą od najniższej rangi stacji w tej epoce i najniższy koszt <code>rank + koszt łącza</code>. Nowy dynamiczny zastępuje obecnego po przewadze z profilu (dziś 1,5 ETX). Sąsiad wskazujący stację jako własnego rodzica jest wykluczony.</p>
-      <p><strong>Reguła protokołu.</strong> BEACON niesie podpis epoki roota i podpis nadawcy. <code>epoch</code> jest trwałym licznikiem startów roota. Po zmianie epoki stacja czyści sąsiadów; starszą przyjmuje dopiero po 90 min bez ważnego BEACON-u bieżącej epoki od bieżącego rodzica. Wpis sąsiada i jego <code>seq</code> wygasa po 90 min. Ranga bez świeżego BEACON-u rodzica wygasa: stacja nadal przesyła DATA w górę, lecz nie ogłasza rangi. Sprawdzanie podpisów odbywa się poza torem HACK, najwyżej dla jednego BEACON-u na sekundę.</p>
+      <p><strong>Reguła protokołu.</strong> BEACON niesie podpis epoki roota i podpis nadawcy. Ranga jest deklaracją sąsiada ze skonfigurowanym kluczem, bez osobnego poświadczenia (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). <code>epoch</code> jest trwałym licznikiem startów roota. Po zmianie epoki stacja czyści sąsiadów; starszą przyjmuje dopiero po 90 min bez ważnego BEACON-u bieżącej epoki od bieżącego rodzica. Wpis sąsiada i jego <code>seq</code> wygasa po 90 min. Ranga bez świeżego BEACON-u rodzica wygasa: stacja nadal przesyła DATA w górę, lecz nie ogłasza rangi. Sprawdzanie podpisów odbywa się poza torem HACK, najwyżej dla jednego BEACON-u na sekundę.</p>
       <p><strong>Reguła protokołu.</strong> Root ogłasza trasę tylko przy otwartym porcie KISS stanowiska. Rodzic z planu i zapasowy wypierają sąsiada dynamicznego, nigdy odwrotnie.</p>
       <p><strong>Parametr profilu.</strong> BEACON wychodzi 1–5 s po starcie, dwa razy co 120 s, potem co 24–36 min oraz po zmianie rodzica albo rangi o co najmniej 1 ETX, także przy pojawieniu się lub wygaśnięciu rangi; najwyżej raz na 60 s. Tablica ma 16 sąsiadów.</p>
       <p><strong>Reguła protokołu.</strong> Graf rodziców z planu i zapasowych w konfiguracji jest acykliczny. Pole TTL i przekazywanie obejmują 1–15 skoków; <code>network.ttl</code> przyjmuje 1–15, domyślnie 7.</p>
@@ -132,7 +132,7 @@
       <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a> wynik następnego skoku nazywa się „przekazane”. Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
 
       <h3 id="kolejki">Kolejki i przeciążenie</h3>
-      <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Jego dalszy ruch spada do K2. Dowód rodzaju 1 i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
+      <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Tag poświadcza bieżący skok, więc ruch dalszej stacji dzieli gniazdo jej sąsiada (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Następne ramki tego sąsiada trafiają do K2. Dowód rodzaju 1 i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
       <p><strong>Reguła protokołu.</strong> Przyjęta ramka zostaje w FRAM, także po restarcie. Po HACK następnego skoku lub 30 min bez doręczenia trafia do pierścienia przekazanych; ten zatrzymuje powtórne przekazanie przez godzinę, lecz cel nadal chroni własne okno koperty. Ponowienie tej samej ramki może dostać HACK bez drugiego zapisu. Niepewny trwały rekord kolejki blokuje start łącza. Brak trasy, odmowa radia albo zablokowany sąsiad zostawiają ramkę do następnej próby; po seriach trzech niepowodzeń sąsiad jest wstrzymywany na 2–300 s. Własna intencja SA1 ponawia po utracie z kolejki.</p>
       <p><strong>Parametr profilu.</strong> Dziennik FRAM zlicza w oknie co najmniej 3600 s koszt <code>13 × czas TX</code> tranzytu i BEACON-ów. Ich wspólna pula to 60% czasu kanału; BEACON-y mają ponadto 2% czasu nadawania. Przy czekającym K1 ramka K2 wychodzi tylko, dopóki łączny koszt tranzytu i BEACON-ów nie przekroczy 25% czasu kanału. Własne ramki K0 nie należą do tej puli; ogranicza je dług ciszy. Wspólna pula zostawia im co najmniej 40% czasu kanału. Koszt jest zapisany przed nadaniem; odmowa po zapisie go nie cofa. Liczby i gniazda ograniczają zalew opisany w <a href="system-wici-bezpieczenstwo.html#zagrozenia">rozdziale 5</a>, ale nie potwierdzają przepustowości 15-skokowego łańcucha.</p>
 
@@ -177,14 +177,12 @@
         <li>Profil używa słowa synchronizacji 0x12. Czy własne słowo WICI zmniejszy liczbę obcych ramek trafiających do procesora? T4 ustali rejestry radia i zgodność węzłów.</li>
         <li>Koszt i wybór dynamicznego rodzica używają obecnych progów SNR, ETX i 1,5 ETX przewagi. Czy T5 potwierdzi stabilność tras? Wynik może zmienić progi profilu.</li>
         <li>Model v3 daje 8,5–11,7 min dla W10 przy 95% skuteczności skoku. Czy pomiar D21 potwierdzi ten budżet wraz z odroczeniami i HACK? Od tego zależy przyjęcie WICI-Link.</li>
-        <li>K1 jest poświadczona tagiem tylko na pierwszym skoku od przejętej stacji. Czy dłuższy łańcuch wymaga poświadczenia pochodzenia dalej? Zmieniłoby to format lub narzut ramki (<a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>).</li>
         <li><code>behind</code> ma dziś tylko root; przekaźnik nie zastępuje drogi w dół po przejściu stacji za zapasowego sąsiada. Jak przełączać ją przy 3–15 skokach i mierzyć awarię drogi? Rozstrzygnie to <a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>.</li>
         <li>Model nie liczy rozsyłania przy 3–15 skokach. Jaki jest czas kanału i skuteczność przy wielu sąsiadach oraz czy pula 60% i dwa gniazda K2 wystarczą? Wynik ustali potrzebę dróg w dół u przekaźników (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</li>
-        <li>BEACON podpisuje deklarowaną rangę, bez poświadczenia jej prawdziwości. Czy wymaga dodatkowego dowodu? Zmieniłoby to wybór rodzica dynamicznego (<a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>).</li>
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.17 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.18 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
