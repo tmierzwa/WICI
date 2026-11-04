@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.15</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.16</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.15</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.16</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#operacje">Operacje</a>
@@ -62,7 +62,7 @@
           <dl>
             <div><dt>Warunek</dt><dd>Dostępna strona i zapis lokalny.</dd></div>
             <div><dt>Wynik</dt><dd>Laptop nadaje lokalny identyfikator i zapisuje wpis w kolejce gospodarza; nie powstaje jeszcze SA1.</dd></div>
-            <div><dt>Błąd i ponowienie</dt><dd>Brak miejsca lub błąd zapisu oznacza brak potwierdzenia. Skutek utraty odpowiedzi HTTP i reguła ponowienia wymagają rozstrzygnięcia w <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a>.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Brak miejsca lub błąd zapisu oznacza brak potwierdzenia. Formularz dostaje losowy klucz przy wyświetleniu: ponowienie z tym samym kluczem i treścią zwraca istniejący numer, a inna treść daje konflikt. Strona jest jeszcze niewdrożona (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</dd></div>
           </dl>
         </article>
         <article class="record">
@@ -93,7 +93,7 @@
           <h4>Przełączenie tożsamości odbiorcy: gospodarz, stacja</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Polecenie poza radiem i lokalne potwierdzenie na stacji; warunki opisuje rozdział 2.</dd></div>
-            <div><dt>Wynik</dt><dd>Intencje rewizji bez RECEIVED wracają do kolejki z tym samym <code>id</code> i <code>revision</code>, lecz z nowym celem. Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
+            <div><dt>Wynik</dt><dd>Docelowo wraca najnowsza rewizja każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code> oraz nowym celem. Kod dziś wznawia tylko rewizje bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
             <div><dt>Błąd i ponowienie</dt><dd>Stacja odrzuca wiadomości od tożsamości głównej. Powrót do niej wymaga trybu przygotowania; ponowienie nie tworzy nowej rewizji.</dd></div>
           </dl>
         </article>
@@ -101,7 +101,7 @@
           <h4>Przyjęcie zgłoszenia: aplikacja stanowiska</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Poprawne REQUEST od zaufanej stacji albo zatwierdzone w kwarantannie; trwały zapis jest dostępny.</dd></div>
-            <div><dt>Wynik</dt><dd>Stanowisko zapisuje zgłoszenie i intencję RECEIVED w jednej transakcji; wysyła RECEIVED po zatwierdzeniu zapisu.</dd></div>
+            <div><dt>Wynik</dt><dd>Stanowisko zapisuje zgłoszenie i intencję RECEIVED na nośniku w jednej transakcji; po trwałym zapisie wysyła RECEIVED. Potwierdza ono przetrwanie awarii komputera, nie utraty nośnika ani przeczytanie zgłoszenia (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</dd></div>
             <div><dt>Błąd i ponowienie</dt><dd>Nieznany nadawca trafia do kwarantanny bez RECEIVED; błąd zapisu także go wstrzymuje. Powtórzenie tego samego zgłoszenia dostaje ten sam RECEIVED, a sprzeczna treść nie nadpisuje zapisu.</dd></div>
           </dl>
         </article>
@@ -109,15 +109,15 @@
           <h4>Odczyt i decyzja: dyżurny, aplikacja stanowiska</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Zgłoszenie w panelu; stan „pomoc skierowana” wymaga potwierdzenia od podmiotu dysponującego pomocą.</dd></div>
-            <div><dt>Wynik</dt><dd>Odczyt tworzy STATUS „odbiorca przeczytał”; późniejsze decyzje tworzą kolejne STATUS. Stanowisko zapisuje źródło i czas potwierdzenia skierowania pomocy.</dd></div>
-            <div><dt>Błąd i ponowienie</dt><dd>Brak wymaganego potwierdzenia blokuje stan „pomoc skierowana”. Powtórny odbiór tego samego <code>event</code> nie cofa stanu; skutek ponownego działania dyżurnego pozostaje w <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a>.</dd></div>
+            <div><dt>Wynik</dt><dd>Odczyt tworzy STATUS „odbiorca przeczytał”; późniejsze decyzje tworzą kolejne STATUS z jednym rosnącym <code>event</code> dla całego zgłoszenia. Po stanie 6 nowa decyzja wymaga potwierdzenia i wpisu w dzienniku. Stanowisko zapisuje źródło i czas potwierdzenia skierowania pomocy. Kod nadal blokuje zmianę po stanie 6 (<a href="system-wici-decyzje.html#wici-inv-019">WICI-INV-019</a>).</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Brak wymaganego potwierdzenia blokuje stan „pomoc skierowana”. Panel blokuje drugie działanie do odpowiedzi na pierwsze; po błędzie odsyła do sprawdzenia listy. Powtórzone działanie jest nowym zdarzeniem bez innego skutku niż pierwsze. Blokada i komunikat pozostają do wdrożenia (<a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>).</dd></div>
           </dl>
         </article>
         <article class="record">
           <h4>Odpowiedź tekstowa: dyżurny, aplikacja stanowiska</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Zgłoszenie i zalogowany dyżurny; stan „odbiorca nie może teraz pomóc” wymaga odpowiedzi z instrukcją.</dd></div>
-            <div><dt>Wynik</dt><dd>REPLY trafia do skrzynki stacji; odpowiedź ma własny <code>event</code>.</dd></div>
+            <div><dt>Wynik</dt><dd>REPLY trafia do skrzynki stacji; odpowiedź ma własny <code>event</code>. Stan 5 i REPLY zapisują się w jednej transakcji; kod dziś zatwierdza je osobno (<a href="system-wici-decyzje.html#wici-inv-020">WICI-INV-020</a>). Dowód stacji oznacza rozstrzygnięcie, także trwałe odrzucenie, bez potwierdzenia przeczytania.</dd></div>
             <div><dt>Błąd i ponowienie</dt><dd>Błąd zapisu lub wysyłki pozostawia intencję do ponowienia. Duplikat tego samego <code>event</code> nie tworzy drugiej odpowiedzi w stacji.</dd></div>
           </dl>
         </article>
@@ -126,7 +126,7 @@
           <dl>
             <div><dt>Warunek</dt><dd>Zalogowany dyżurny i lista stacji docelowych.</dd></div>
             <div><dt>Wynik</dt><dd>BULLETIN ma własne <code>id</code> i <code>event</code>; stanowisko tworzy wysyłkę osobno do każdej stacji. Komunikat nie uruchamia działań automatycznych stacji; ciszę radiową włącza gospodarz.</dd></div>
-            <div><dt>Błąd i ponowienie</dt><dd>Niepowodzenie dostarczenia do jednej stacji nie potwierdza dostarczenia do pozostałych. Powtórka tego samego <code>id</code> i <code>event</code> nie wraca do skrzynki; poprawka ma nowe <code>id</code>.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Brak dowodu od jednej stacji nie rozstrzyga wysyłki do pozostałych. Docelowo panel pokazuje osobno „czeka” i „rozstrzygnięta”, bez słowa „dostarczono”; obecne etykiety wymagają zmiany (<a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>). Powtórka tego samego <code>id</code> i <code>event</code> nie wraca do skrzynki; poprawka ma nowe <code>id</code>.</dd></div>
           </dl>
         </article>
         <article class="record">
@@ -168,8 +168,8 @@
       <table>
         <thead><tr><th>Miejsce</th><th>Etapy i wyniki transmisji</th></tr></thead>
         <tbody>
-          <tr><td>Stacja</td><td>„Zapisane” oznacza trwałą intencję; „wysyłanie” próbę na nośniku; „dostarczone” wynik nośnika bez RECEIVED; „odebrane” następuje po potwierdzeniu aplikacyjnym; „anulowane” kończy intencję przed pierwszym przekazaniem.</td></tr>
-          <tr><td>Stanowisko, WICI-Link</td><td>„Doręczone”: HACK samej stacji za każdą część albo jej dowód doręczenia. „Przekazane”: HACK przekaźnika. „Rozesłane”: rozgłoszenie bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „przekazane” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
+          <tr><td>Stacja</td><td>„Zapisane” oznacza trwałą intencję; „wysyłanie” próbę na nośniku; „przekazane” wynik następnego skoku bez RECEIVED (w kodzie dziś „dostarczone”); „odebrane” następuje po potwierdzeniu aplikacyjnym; „anulowane” kończy intencję przed pierwszym przekazaniem.</td></tr>
+          <tr><td>Stanowisko, WICI-Link</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód; wynik obejmuje także trwałe odrzucenie. „Przekazane”: HACK przekaźnika. „Rozesłane”: rozgłoszenie bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „przekazane” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
         </tbody>
       </table>
       <p>Stan obsługi zmieniają zdarzenia aplikacyjne:</p>
@@ -184,12 +184,12 @@
       </table>
       <p>Stacja wyświetla decyzję z najwyższym <code>event</code> STATUS, niezależnie od rewizji. Nowa rewizja wraca do etapu „zapisane”; poprzednia decyzja pozostaje widoczna pod nim do potwierdzenia nowej rewizji. Wiadomość dla <code>id</code> spoza rejestru albo z rewizją wyższą niż najnowsza jest pomijana i nie zmienia stanu.</p>
       <p>Źródłowy model przewiduje także stany „przekazane dalej”, „odbiorca nie może teraz pomóc” i „zamknięte”. „Przekazane dalej” nie oznacza potwierdzenia skierowania pomocy. Decyzję o pomocy podejmuje człowiek.</p>
-      <p class="explain">HACK i wynik nośnika „dostarczone” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w innym przypadku pokazuje „wynik nieznany”. Ostateczne gwarancje potwierdzeń i ponowień rozstrzyga <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a>.</p>
+      <p class="explain">HACK i wynik nośnika „przekazane” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w innym przypadku pokazuje „wynik nieznany”. Gwarancje określają <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozstrzygnięcia WICI-DEC-005</a>; obecne różnice kodu są w inwentaryzacji.</p>
       <h3 id="praca-bez-lacznosci">Praca bez łączności</h3>
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.15 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.16 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
