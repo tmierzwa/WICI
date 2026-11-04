@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.14</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.15</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -19,7 +19,8 @@
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
-        <li><a href="system-wici-plan.html">6–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
+        <li><a href="system-wici-plan.html">7–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html" aria-current="page">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -27,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.14</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.15</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -126,8 +127,15 @@
         <article class="record" id="wici-inv-012">
           <h4>WICI-INV-012</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd>Stacja zatwierdza przyjęcie SA1, a potem osobno zapisuje okno licznika koperty. Deduplikacja SA1 chroni przed drugim skutkiem po zaniku między zapisami.</dd></div>
-            <div><dt>Źródło i luka</dt><dd><a href="../../firmware/src/wici_destination.cpp">Kod stacji</a>, <a href="wici-link.md">opis WICI-Link</a> i <a href="transport.md">transport</a>; ten ostatni wymaga jednej transakcji. Reguła atomowości i próba zaniku wymagają uzgodnienia przed zatwierdzeniem <a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdziału 5</a>.</dd></div>
+            <div><dt>Stan zastany</dt><dd>Stacja zapisuje najpierw SA1, potem okno licznika koperty. Ta kolejność jest kandydatem na regułę: po zaniku między zapisami deduplikacja SA1 chroni przed drugim skutkiem.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="../../firmware/src/wici_destination.cpp">Kod stacji</a> i <a href="wici-link.md#implementacja">opis WICI-Link</a> uzasadniają dwa zapisy: odwrotna kolejność mogłaby zgubić wiadomość, a jedna transakcja wiązałaby łącze z magazynem stacji. <a href="transport.md#licznik-i-powtórzenia">Opis transportu</a> wymaga jednej transakcji. Wybór pozostaje otwarty; wymaga także próby zaniku.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-013">
+          <h4>WICI-INV-013</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Kodeki WICI-Link v3 w C++ i Pythonie dają zgodne bajty ramki oraz klucza łącza. Przykład jest zapisany w kodzie próby międzyjęzykowej, bez osobnego wersjonowanego pliku wektorów ramek.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="../../tests/test_envelope_cross_language.py">Próba</a>, <a href="../../tests/native/wici_link_check.cpp">kodek C++</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek Python</a>; przed niezależną implementacją potrzebny jest stały wektor obejmujący także tag pary i BEACON (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</dd></div>
           </dl>
         </article>
       </div>
@@ -164,6 +172,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.15</td><td>Uzupełniono granice ochrony i uzasadnienie kolejności zapisów; naszkicowano sieć i radio WICI-Link v3 oraz wpisano brak osobnego wektora ramek.</td></tr>
           <tr><td>0.14</td><td>Oznaczono rozbieżność decyzji po stanie 6, dodano przełączenie tożsamości do maszyny stanów, naszkicowano bezpieczeństwo i kopertę WICI oraz wpisano lukę atomowości przyjęcia.</td></tr>
           <tr><td>0.13</td><td>Podzielono dokument na części i poprawiono układ stron bez zmiany treści technicznej.</td></tr>
           <tr><td>0.12</td><td>Naszkicowano protokół SA1: format, przykłady bajtowe, zmiany stanu i ponawianie; wskazano niezgodności i decyzje do zatwierdzenia.</td></tr>
@@ -178,7 +187,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.14 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.15 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
