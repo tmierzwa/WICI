@@ -52,6 +52,8 @@ tbody tr:hover { background: #edf5f3; }
 .operations { min-width: 64rem; }
 code { font-size: .93em; overflow-wrap: anywhere; }
 figure { margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: .3rem; }
+.wide-diagram { overflow-x: auto; }
+.wide-diagram svg { min-width: 42rem; }
 svg { display: block; width: 100%; height: auto; }
 figcaption { margin-top: .7rem; color: var(--muted); font-size: .91rem; }
 .page-footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }

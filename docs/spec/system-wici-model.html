@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Granice, role i model komunikacji systemu WICI.">
-  <title>Model i zakres systemu — Specyfikacja WICI 0.19</title>
+  <title>Model i zakres systemu — Specyfikacja WICI 0.20</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -20,7 +20,8 @@
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
         <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
-        <li><a href="system-wici-plan.html">7–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
+        <li><a href="system-wici-plan.html">8–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -28,7 +29,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Model i zakres systemu</h1>
-      <p><span class="status">Projekt 0.19</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.20</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#granice">Granice</a>
@@ -98,7 +99,7 @@
           <tr><td>Szew nośnika; nośnik komunikacji</td><td>Szew jest granicą między kopertą a sposobem jej przenoszenia. Nośnik próbuje dostarczyć bajty i zgłasza zdarzenia transportowe; WICI-Link jest podstawowym nośnikiem.</td></tr>
           <tr><td>HACK; dowód doręczenia; RECEIVED</td><td>HACK kończy odpowiedzialność nadawcy za dany skok, zwykle po trwałym zapisie; <a href="system-wici-siec.html#potwierdzenia">wyjątki</a> obejmują ramki odrzucane bez zapisu. Nie dowodzi przyjęcia SA1. Dowód doręczenia informuje o rozstrzygnięciu wiadomości przez stację. RECEIVED potwierdza trwały zapis danej rewizji zgłoszenia na nośniku stanowiska (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
           <tr><td>Przekazane; przekazane dalej</td><td>„Przekazane” jest wynikiem następnego skoku radiowego; nie potwierdza odbioru zgłoszenia przez stanowisko. „Przekazane dalej” to stan 4 obsługi: skierowanie zgłoszenia do służb. Te dwa wyniki są niezależne.</td></tr>
-          <tr><td>Zdarzenie SA1; zdarzenie kryzysowe</td><td>Zdarzenie SA1 jest wpisem z numerem <code>event</code>, na przykład nową decyzją dyżurnego. Zdarzenie kryzysowe obejmuje całą sytuację, której zamknięcie kończy ponawianie intencji. Służy temu operacja <a href="oprogramowanie.md">ZAMKNIJ ZDARZENIE</a>; <a href="system-wici-decyzje.html#wici-inv-021">kod nie zamyka dziś wszystkich intencji</a>. Pełny opis operacji należy do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</td></tr>
+          <tr><td>Zdarzenie SA1; zdarzenie kryzysowe</td><td>Zdarzenie SA1 jest wpisem z numerem <code>event</code>, na przykład nową decyzją dyżurnego. Zdarzenie kryzysowe obejmuje całą sytuację, której zamknięcie kończy ponawianie intencji. Służy temu operacja <a href="oprogramowanie.md">ZAMKNIJ ZDARZENIE</a>; <a href="system-wici-decyzje.html#wici-inv-021">kod nie zamyka dziś wszystkich intencji</a>. Skutki dla trwałości opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</td></tr>
           <tr><td>Zgłoszenie; rewizja</td><td>Zgłoszenie ma stałe <code>id</code>. Zmiana jego danych tworzy rewizję z tym samym <code>id</code> i wyższym <code>revision</code>; każda rewizja zawiera pełną treść i jest potwierdzana osobno.</td></tr>
           <tr><td>Root; rodzic; ranga; epoka</td><td>Root jest stacją stanowiska na początku drzewa tras WICI-Link. Rodzic to następny skok ku rootowi. Ranga wyraża koszt drogi do roota, a epoka oznacza trwały licznik jego uruchomień używany przy aktualizacji tras.</td></tr>
           <tr><td>BEACON</td><td>Podpisane ogłoszenie trasy z informacją o roocie, randze, epoce i rodzicu.</td></tr>
@@ -126,7 +127,7 @@
       </figure>
       <p class="meta">Źródła modelu: <a href="../concept/slownik.html">słownik koncepcji</a>, <a href="../concept/05-projekt-koncepcyjny-komunikacji.html">model komunikacji</a>, <a href="projekt.md">poziomy zestawu</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="wici-link.md">WICI-Link</a> i <a href="transport.md">transport</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.19 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.20 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
