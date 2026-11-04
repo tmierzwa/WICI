@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wyrób, obsługa, zasilanie i próby eksploatacyjne systemu WICI.">
-  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.23</title>
+  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.24</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wyrób i eksploatacja</h1>
-      <p><span class="status">Projekt 0.23</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.24</span> · 4 listopada 2026 r.</p>
       <p>Rozdział opisuje zachowanie stacji i zestawu w użyciu oraz wyniki, które trzeba sprawdzić na ocenianej konfiguracji. Czynności krok po kroku pozostają w <a href="projekt.md">opisie zestawu</a> i instrukcjach obsługi.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -52,8 +52,8 @@
           <tr><td>Stacja wydania<br><small>Wyrób</small></td><td>Wariant sprzętu, anteny i firmware ustalony po pilotażu. Zmiana części mającej wpływ na bezpieczeństwo, kompatybilność elektromagnetyczną lub emisję radiową wymaga oceny jej wpływu na dowody tej konfiguracji.</td><td>Do ustalenia po pilotażu; drugie wykonanie i próby wyrobu pozostają otwarte (<a href="odbior.md#braki-do-wydania">braki do wydania</a>).</td></tr>
           <tr><td>Stanowisko odbiorcze<br><small>Profil</small></td><td>Stacja w roli roota, komputer i nośnik z bazą; zapasowa stacja i komputer, drugi nośnik kopii oraz własne zasilanie. Radio ocenia się wraz z używaną anteną i zasilaniem. <a href="stanowisko-osp.md#zestaw-stanowiska">Zestaw stanowiska</a>.</td><td>Próby ciągłości pracy i odtworzenia przed użyciem.</td></tr>
           <tr><td>Poziomy 2–3<br><small>Profil</small></td><td>Laptop i router pochodzą z miejsca uruchomienia. Kupiona stacja zasilania i ładowarka telefonów mają własne deklaracje zgodności; ich współpraca z zestawem wymaga próby. <a href="projekt.md#zakres">Zakres zestawu</a>.</td><td>Po pilotażu; aplikacja schronienia, strona i kiosk są projektem (<a href="system-wici-interfejsy.html#granice">rozdział 7</a>).</td></tr>
-          <tr><td>Niezależność wykonania<br><small>Warunek wdrożenia</small></td><td>W pilotażu moduł radiowy, FRAM i ekran mają po dwa źródła zakupu. Przed wydaniem powstaje i przechodzi próby drugie niezależne wykonanie z inną rodziną MCU albo innym układem radiowym.</td><td>W14; po pilotażu wybór drugiego wykonania i próby każdego wariantu (<a href="../concept/01-potrzeby-i-wymagania.html#wymagania-i-ich-pochodzenie">zakres</a>, <a href="odbior.md#próby">plan prób</a>).</td></tr>
-          <tr><td>Odtworzenie<br><small>Warunek wdrożenia</small></td><td>Do udostępnienia: źródła, kontrakty, BOM, pliki wykonawcze i instrukcja w zestawie pozwalającym odtworzyć urządzenie i oprogramowanie.</td><td>W15; T7 sprawdza odtworzenie pakietu, firmware i aplikacji przez dwóch niezależnych wykonawców, w tym osobę spoza zespołu, oraz zgodność wersji, skrótów, BOM i licencji (<a href="odbior.md#próby">plan prób</a>).</td></tr>
+          <tr><td>Niezależność wykonania<br><small>Wyrób</small></td><td>W pilotażu moduł radiowy, FRAM i ekran mają po dwa źródła zakupu. Przed wydaniem powstaje i przechodzi próby drugie niezależne wykonanie z inną rodziną MCU albo innym układem radiowym.</td><td>W14; po pilotażu wybór drugiego wykonania i próby każdego wariantu (<a href="../concept/01-potrzeby-i-wymagania.html#wymagania-i-ich-pochodzenie">zakres</a>, <a href="odbior.md#próby">plan prób</a>).</td></tr>
+          <tr><td>Odtworzenie<br><small>Wyrób</small></td><td>Do udostępnienia: źródła, kontrakty, BOM, pliki wykonawcze i instrukcja w zestawie pozwalającym odtworzyć urządzenie i oprogramowanie.</td><td>W15; T7 sprawdza odtworzenie pakietu, firmware i aplikacji przez dwóch niezależnych wykonawców, w tym osobę spoza zespołu, oraz zgodność wersji, skrótów, BOM i licencji (<a href="odbior.md#próby">plan prób</a>).</td></tr>
         </tbody>
       </table></div>
     </section>
@@ -63,7 +63,7 @@
       <figure class="wide-diagram">
         <svg viewBox="0 0 840 178" role="img" aria-labelledby="cykl-title cykl-desc" xmlns="http://www.w3.org/2000/svg">
           <title id="cykl-title">Cykl użycia zestawu WICI</title>
-          <desc id="cykl-desc">Przygotowanie i TEST prowadzą do uruchomienia stacji, potem do pracy z diagnostyką i w końcu do przeglądu. Brak łączności lub energii uruchamia kanał zastępczy i odtwarzanie, a nie potwierdzenie odbioru.</desc>
+          <desc id="cykl-desc">Przygotowanie i TEST prowadzą do uruchomienia stacji, potem do pracy z diagnostyką i w końcu do przeglądu. Przy braku łączności lub energii stosuje się formularz i gońca, jeśli droga jest bezpieczna, oraz odtwarzanie. Nie oznacza to potwierdzenia odbioru.</desc>
           <defs><marker id="cycle-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#135a54"/></marker></defs>
           <rect x="12" y="15" width="175" height="72" rx="6" fill="#e8f0ee" stroke="#135a54"/>
           <text x="99" y="43" text-anchor="middle" font-size="16" font-weight="700" fill="#172a33">Przygotowanie</text>
@@ -80,7 +80,8 @@
           <path d="M191 51 H217 M404 51 H430 M617 51 H643" stroke="#135a54" stroke-width="2" marker-end="url(#cycle-arrow)"/>
           <path d="M525 91 V111" stroke="#135a54" stroke-width="2" marker-end="url(#cycle-arrow)"/>
           <rect x="255" y="120" width="570" height="43" rx="6" fill="#f7f9f9" stroke="#cbd6da"/>
-          <text x="540" y="147" text-anchor="middle" font-size="14" fill="#172a33">Brak łączności lub energii → kanał zastępczy i odtwarzanie</text>
+          <text x="540" y="138" text-anchor="middle" font-size="13" fill="#172a33">Brak łączności lub energii</text>
+          <text x="540" y="156" text-anchor="middle" font-size="13" fill="#172a33">Formularz i goniec, gdy droga bezpieczna · odtwarzanie</text>
         </svg>
         <figcaption>Wynik TEST i stan radia są osobne od przyjęcia zgłoszenia na stanowisku.</figcaption>
       </figure>
@@ -91,8 +92,8 @@
           <tr><td>Ewidencja przygotowania<br><small>Warunek wdrożenia</small></td><td>Wpis wiąże stację, numer naklejki, skrót konfiguracji i wynik TEST.</td><td><a href="projekt.md#przygotowanie-przed-kryzysem">Opis przygotowania</a>.</td></tr>
           <tr><td>Uruchomienie<br><small>Wyrób</small></td><td>Radio ma osiągać gotowość w ≤60 s bez laptopa i bez wyboru języka. Ekran pokazuje adres do sprawdzenia i proponuje TEST. „RADIO WŁĄCZONE” oznacza gotowość lokalnego radia, a dopiero RECEIVED potwierdza przyjęcie zgłoszenia na stanowisku.</td><td><a href="../../firmware/src/ui.cpp">Kod ekranu</a>, <a href="../../firmware/src/main.cpp">start radia</a>, <a href="odbior.md#próby">próba stacji samodzielnej</a>.</td></tr>
           <tr><td>Praca<br><small>Wyrób</small></td><td>Stacja przyjmuje zgłoszenia i przekazuje ruch innych stacji bez laptopa. Ekran odróżnia zapis lokalny, wysyłanie z numerem próby, RECEIVED, odczyt i decyzję; alarm wskazuje brak potwierdzenia oraz stan zasilania. Brak miejsca lub błąd zapisu nie daje komunikatu sukcesu.</td><td><a href="../../firmware/src/station.cpp">Kod zgłoszeń</a>, <a href="../../firmware/src/ui.cpp">kod ekranu</a>, <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">wynik skoku</a>.</td></tr>
-          <tr><td>Przerwanie<br><small>Wyrób</small></td><td>Brak odpowiedzi stanowiska pozostawia zgłoszenie w stacji do ponowienia; ekran wskazuje ustalony kanał zastępczy. Błąd pamięci, pełny rejestr i niski poziom energii mają odrębne wskazania. Stan po zaniku zasilania opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</td><td><a href="../../firmware/src/ui.cpp">Kod wskazań</a>, <a href="projekt.md#uruchomienie-stacji-poziom-1">opis obsługi</a>.</td></tr>
-          <tr><td>Cisza radiowa<br><small>Wyrób</small></td><td>Po włączeniu przez gospodarza stacja nie nadaje, także ruchu innych stacji; odbiór, zapis i kolejka działają dalej. Ekran stale pokazuje „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”, a po zapisaniu własnego zgłoszenia wskazuje zapis w ciszy. Wyłączenie ciszy jest ręczne.</td><td><a href="oprogramowanie.md#tryby-kryzysowe">Opis trybu</a>, <a href="../../firmware/src/main.cpp">kod przełącznika</a>; W19.</td></tr>
+          <tr><td>Przerwanie<br><small>Wyrób</small></td><td>Brak odpowiedzi stanowiska pozostawia zgłoszenie w stacji do ponowienia; ekran wskazuje formularz i gońca, jeśli droga jest bezpieczna. Błąd pamięci, pełny rejestr i niski poziom energii mają odrębne wskazania. Stan po zaniku zasilania opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</td><td><a href="../../firmware/src/ui_texts.h">Teksty ekranu</a>, <a href="projekt.md#uruchomienie-stacji-poziom-1">opis obsługi</a>.</td></tr>
+          <tr><td>Cisza radiowa<br><small>Wyrób</small></td><td>W pełnej ciszy stacja nie nadaje, także ruchu innych stacji; odbiór, zapis i kolejka działają dalej. Wyjątek dla jednej pary (<code>id</code>, <code>revision</code>) ustawia się tylko z panelu laptopa przy ciszy operacyjnej, po potwierdzeniu przyciskiem na stacji; przełącznik CISZA go wyklucza. Obsługa laptopa schronienia należy do etapu po pilotażu. Ekran stale pokazuje „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”, a po zapisaniu własnego zgłoszenia wskazuje zapis w ciszy. Wyłączenie ciszy jest ręczne.</td><td><a href="oprogramowanie.md#tryby-kryzysowe">Opis trybu</a>, <a href="../../firmware/src/store.h">kod ciszy</a>, <a href="../../firmware/src/station.cpp">kod wyjątku</a>; W19.</td></tr>
           <tr><td>Język ekranu<br><small>Wyrób</small></td><td>Stacja poziomu 1 ma teksty po polsku, ukraińsku i angielsku; radio startuje bez czekania na wybór języka. Strona mieszkańca należy do etapu po pilotażu.</td><td><a href="../../firmware/src/ui.cpp">Kod ekranu</a>, <a href="oprogramowanie.md#teksty-ekranu">teksty</a>; W20.</td></tr>
           <tr><td>Diagnostyka<br><small>Wyrób</small></td><td>Gospodarz widzi na ekranie stan radia, czas od kontaktu, źródło energii, kolejkę i alarmy. Obsługa techniczna odczytuje liczniki odbioru, odrzuceń i nadawania, stan FRAM, wersję programu oraz przyczynę restartu przez port diagnostyczny. Pomiar napięcia docelowej stacji pozostaje luką.</td><td><a href="../../firmware/src/ui.cpp">Kod STAN</a>, <a href="../../firmware/src/main.cpp">kod INFO</a>, <a href="system-wici-decyzje.html#wici-inv-008">próby sprzętowe</a>.</td></tr>
         </tbody>
@@ -136,7 +137,7 @@
           <tr><td>Zasilanie i obudowa<br><small>Wyrób</small></td><td>Brak niebezpiecznego napięcia, przegrzania, ładowania ogniw pierwotnych i uszkodzenia przy przewidzianym błędzie podłączenia. Przewody 12 V i anteny są odciążone, a wymiana ogniw nie odsłania części niebezpiecznych.</td><td>Analiza ryzyka, oględziny konstrukcji, próby toru zasilania i temperatury; <a href="elektronika.md#zasilanie-stacji">projekt toru</a>.</td></tr>
           <tr><td>EMC<br><small>Wyrób</small></td><td>Stacja nie zakłóca niedopuszczalnie otoczenia i zachowuje bezpieczny stan oraz poprawność zapisów przy zakłóceniach. Zakres obejmuje także przewody USB, 12 V i antenowy w ocenianym układzie.</td><td>Badania emisji i odporności przypisane do wersji sprzętu i programu; <a href="odbior.md#próby">plan prób</a>.</td></tr>
           <tr><td>Radio i ekspozycja<br><small>Wyrób</small></td><td>Emisje, moc z anteną, dostęp do kanału i odporność odbiornika mieszczą się w warunkach ocenianego profilu. Montaż anteny ogranicza dostęp ludzi do strefy wymaganej przez wynik oceny ekspozycji.</td><td>Badania radia i ekspozycji dla użytej anteny oraz sposób montażu; <a href="radio.md#warunki-prawne-i-zgodność">profil i warunki</a>.</td></tr>
-          <tr><td>Cyberbezpieczeństwo RED<br><small>Wyrób</small></td><td>Do potwierdzenia przed oceną: zastosowanie art. 3 ust. 3 lit. d i e RED oraz rozporządzenia delegowanego (UE) 2022/30 do ocenianej konfiguracji. Jeśli mają zastosowanie, plan dowodów uwzględnia właściwy zakres EN 18031-1 i -2. Zapis nie stwierdza zgodności wyrobu.</td><td><a href="https://eur-lex.europa.eu/eli/reg_del/2022/30/oj/eng">Rozporządzenie 2022/30</a>, <a href="https://eur-lex.europa.eu/eli/reg_del/2026/339/oj/eng">uchylenie od 11 grudnia 2027 r.</a>; <a href="radio.md#warunki-prawne-i-zgodność">plan badań</a>.</td></tr>
+          <tr><td>Cyberbezpieczeństwo RED<br><small>Wyrób</small></td><td>Do potwierdzenia przed oceną: zastosowanie art. 3 ust. 3 lit. d i e RED oraz rozporządzenia delegowanego (UE) 2022/30 do ocenianej konfiguracji. Jeśli mają zastosowanie, plan dowodów uwzględnia właściwy zakres EN 18031-1 i -2. Rozporządzenie delegowane (UE) 2026/339 uchyla 2022/30 od 11 grudnia 2027 r. w związku z rozporządzeniem (UE) 2024/2847 (CRA). Wydanie po tej dacie wymaga oceny według aktów obowiązujących w dniu oceny; nie przesądza to, czy CRA obejmuje wyrób.</td><td><a href="https://eur-lex.europa.eu/eli/reg_del/2022/30/oj/eng">Rozporządzenie 2022/30</a>, <a href="https://eur-lex.europa.eu/eli/reg_del/2026/339/oj/eng">2026/339</a>, <a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng">CRA</a>; <a href="radio.md#warunki-prawne-i-zgodność">plan badań</a>.</td></tr>
         </tbody>
       </table></div>
       <p>Wykaz norm zharmonizowanych i właściwe akty trzeba sprawdzić dla daty oceny oraz dokładnej konfiguracji na <a href="https://single-market-economy.ec.europa.eu/single-market/goods/european-standards/harmonised-standards/radio-equipment_en">stronie Komisji Europejskiej</a>. Deklaracja modułu lub kupionego zasilacza nie dowodzi zgodności całej złożonej stacji.</p>
@@ -148,7 +149,7 @@
         <thead><tr><th>Etap</th><th>Przedmiot próby</th><th>Stan</th></tr></thead>
         <tbody>
           <tr><td>Przed terenem pilotażu<br><small>Profil</small></td><td>Tor AA/12 V i zanik przy zapisie, gotowość radia i TEST, pełna wymiana na stole, obsługa z kartą, badania konfiguracji pilotażowej. D21 obejmuje 50/50 zgłoszeń z RECEIVED przez jeden przekaźnik w &lt;15 min.</td><td>Warunki i liczby w <a href="odbior.md#minimum-pilotażu">minimum pilotażu</a>; D21 i próby pełnego zestawu pozostają otwarte.</td></tr>
-          <tr><td>Przed wydaniem<br><small>Profil</small></td><td>Powtórzenie prób na każdym wykonaniu stacji; zimno, obudowa, ESD, antena, 1000 odcięć zasilania, ciągłość stanowiska i badania zmienionej konfiguracji radiowej.</td><td>Zakres w <a href="odbior.md#próby">planie odbioru</a>; wyniki jeszcze nie zamykają wymagań wydania.</td></tr>
+          <tr><td>Przed wydaniem<br><small>Wyrób</small></td><td>Powtórzenie prób na każdym wykonaniu stacji; zimno, obudowa, ESD, antena, 1000 odcięć zasilania, ciągłość stanowiska i badania zmienionej konfiguracji radiowej.</td><td>Zakres w <a href="odbior.md#próby">planie odbioru</a>; wyniki jeszcze nie zamykają wymagań wydania.</td></tr>
           <tr><td>Po pilotażu<br><small>Profil</small></td><td>Laptop i USB w pracy, strona mieszkańca, kiosk, języki i dostępność strony oraz 24 h zasilania poziomu 3.</td><td>Rozszerzenia nie są wdrożone (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</td></tr>
         </tbody>
       </table></div>
@@ -159,7 +160,7 @@
         <li>Czy około 8 dni czuwania na AA ma być granicą wyrobu, czy tylko celem z modelu? Od odpowiedzi zależą pomiar poboru i kryterium odbioru.</li>
       </ul>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.23 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.24 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
