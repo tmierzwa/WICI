@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Specyfikacja systemu WICI — projekt modelu, założenia i inwentaryzacja.">
-  <title>Specyfikacja systemu WICI — projekt 0.9</title>
+  <meta name="description" content="Specyfikacja systemu WICI — projekt modelu, funkcji, danych i inwentaryzacji.">
+  <title>Specyfikacja systemu WICI — projekt 0.10</title>
   <style>
     :root { color-scheme: light; --ink: #172a33; --muted: #50616a; --line: #cbd6da; --accent: #135a54; --paper: #fff; --ground: #f1f4f4; }
     * { box-sizing: border-box; }
@@ -33,6 +33,8 @@
     th, td { border-bottom: 1px solid var(--line); padding: .5rem .6rem; text-align: left; vertical-align: top; }
     th { background: #edf2f2; }
     .id-table td:first-child { white-space: nowrap; }
+    .table-scroll { overflow-x: auto; }
+    .operations { min-width: 55rem; }
     figure { margin: 1.2rem 0; padding: 1rem; border: 1px solid var(--line); }
     svg { display: block; width: 100%; height: auto; }
     figcaption { margin-top: .6rem; color: var(--muted); font-size: .9rem; }
@@ -62,7 +64,7 @@
     <header>
       <p class="meta">WICI-SPEC</p>
       <h1>Specyfikacja systemu WICI</h1>
-      <p><span class="status">Projekt 0.9</span> · 3 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.10</span> · 4 listopada 2026 r.</p>
       <p>Uzgodniono założenia WICI-ZAL-001–009. Model systemu jest szkicem do weryfikacji; pozostała treść zawiera plan wymagań i wstępną inwentaryzację. Dokument nie jest zatwierdzoną specyfikacją ani podstawą deklaracji zgodności.</p>
     </header>
 
@@ -99,7 +101,18 @@
       <h2 id="h-model">2. Model i zakres systemu</h2>
       <h3>Granice</h3>
       <p>Docelowy zakres obejmuje stacje WICI, stanowisko odbiorcze z komputerem i stacją stanowiska oraz aplikację laptopa schronienia z panelem, stroną mieszkańca i trybem kiosku. Poziom 1 działa na samej stacji; poziom 2 dodaje laptop przez USB, a poziom 3 udostępnia stronę telefonom przez router obiektu. Funkcje poziomów 2–3 należą do etapu po pilotażu.</p>
-      <p>Router Wi-Fi obiektu, telefony mieszkańców, obsada schronienia i dyżurny są poza systemem. Poza podstawową architekturą są też Reticulum, Meshtastic, MeshCore i łącze IP do powiatu. Granicę współpracy z innym nośnikiem lub systemem obejmuje <a href="#wici-dec-008">WICI-DEC-008</a>; wymaga ona osobnego opisu wymiany danych, tożsamości i potwierdzeń.</p>
+      <p>Router Wi-Fi obiektu, telefony mieszkańców, źródła zasilania, gospodarz i zastępca, dyżurny, organizator sieci oraz służby przyjmujące zgłoszenia są poza systemem. Poza podstawową architekturą są też Reticulum, Meshtastic, MeshCore i łącze IP do powiatu. Granicę współpracy z innym nośnikiem lub systemem obejmuje <a href="#wici-dec-008">WICI-DEC-008</a>; wymaga ona osobnego opisu wymiany danych, tożsamości i potwierdzeń.</p>
+      <h3>Założenia modelu sieci</h3>
+      <table>
+        <thead><tr><th>Kandydat</th><th>Zakres do zatwierdzenia</th></tr></thead>
+        <tbody>
+          <tr><td>Zamknięta sieć: stacje i tożsamości odbiorcy są znane z planu i kart przygotowania; klucze nie przychodzą przez radio.</td><td>Cecha protokołu i modelu zaufania; ostateczny model tożsamości pozostaje w <a href="#wici-dec-004">WICI-DEC-004</a>.</td></tr>
+          <tr><td>Ruch biegnie między schronieniami a stanowiskiem odbiorczym, w obie strony; schronienia nie wymieniają wiadomości między sobą.</td><td>Zakres funkcji protokołu, do zatwierdzenia wraz z <a href="#wici-dec-001">WICI-DEC-001</a>.</td></tr>
+          <tr><td>Każda włączona stacja przekazuje ruch innych.</td><td>Cecha protokołu, niezależna od liczby skoków w profilu pilotażu.</td></tr>
+          <tr><td>Stacje stoją w stałych miejscach, a trasy można zmierzyć przed kryzysem.</td><td>Założenie planowania sieci i profilu pilotażu. Zakres pracy poza stałymi miejscami pozostaje otwarty w <a href="#wici-dec-006">WICI-DEC-006</a>.</td></tr>
+          <tr><td>Sieć obejmuje jedną gminę albo jej część.</td><td>Kandydat na granicę profilu, nie limit protokołu; <a href="#wici-dec-006">WICI-DEC-006</a>.</td></tr>
+        </tbody>
+      </table>
       <h3>Urządzenia i role</h3>
       <p>Rola opisuje zadanie, nie osobny typ urządzenia. Stacja schronienia przekazuje także ruch innych stacji; stacja stanowiska pełni zarazem rolę roota.</p>
       <table>
@@ -107,40 +120,44 @@
         <tbody>
           <tr><td>Stacja schronienia</td><td>Stacja WICI w schronieniu</td><td>Tworzy i przechowuje zgłoszenia SA1, prowadzi kolejkę, wymienia wiadomości z odbiorcą; na poziomach 2–3 łączy się z laptopem przez USB.</td></tr>
           <tr><td>Przekaźnik</td><td>Każda włączona stacja, także bez laptopa</td><td>Przekazuje ramki innych stacji i utrzymuje trasy oraz kolejkę przekazywania. Osobny przekaźnik to stacja poziomu 1.</td></tr>
-          <tr><td>Stacja stanowiska, węzeł stanowiska</td><td>Zwykła stacja w konfiguracji węzła stanowiska</td><td>Łączy radio z komputerem stanowiska przez USB i przekazuje ruch. Nie przechowuje tożsamości odbiorcy.</td></tr>
-          <tr><td>Root</td><td>Stacja stanowiska w WICI-Link</td><td>Jest początkiem drzewa tras; stacje kierują ku niemu ruch do odbiorcy. Nie jest komputerem stanowiska.</td></tr>
-          <tr><td>Komputer stanowiska i zapasowy</td><td>Przygotowane komputery stanowiska odbiorczego</td><td>Uruchamiają aplikację odbiorcy. Aktywny komputer przechowuje bazę zgłoszeń, karty zaufanych stacji i klucze odbiorcy na nośniku stanowiska; zapasowy przejmuje ten nośnik przy awarii.</td></tr>
-          <tr><td>Tożsamość odbiorcy: główna i zapasowa</td><td>Dwie pary kluczy tego samego stanowiska, nie dwa urządzenia</td><td>Główna uwierzytelnia odbiorcę podczas zwykłej pracy. Zapasowa służy do odzyskania pracy po utracie zaufania do głównej; stacje znają obie z karty odbiorcy.</td></tr>
-          <tr><td>Przygotowanie</td><td>Osoba utrzymująca system i aplikacja na komputerze bez połączenia z siecią</td><td>Ustalają plan sieci, numery, klucze i karty zaufania; konfiguracja trafia do stacji przez USB w trybie przygotowania.</td></tr>
+          <tr><td>Stacja stanowiska, węzeł stanowiska</td><td>Zwykła stacja w konfiguracji węzła stanowiska</td><td>Łączy radio z komputerem stanowiska przez USB i przekazuje ruch. Nie przechowuje tożsamości odbiorcy. Zapasową może być dowolna sprawna stacja przełączona w trybie przygotowania; wymiana nie zmienia tożsamości odbiorcy.</td></tr>
+          <tr><td>Root</td><td>Stacja stanowiska w WICI-Link</td><td>Jest początkiem drzewa tras; stacje kierują ku niemu ruch do odbiorcy. Nie jest komputerem stanowiska. Wymieniony lub wyczyszczony root liczy epoki od nowa.</td></tr>
+          <tr><td>Komputer stanowiska i zapasowy</td><td>Przygotowane komputery stanowiska odbiorczego</td><td>Uruchamiają aplikację odbiorcy. Aktywny komputer przechowuje bazę zgłoszeń, karty zaufanych stacji i klucz aktywnej tożsamości odbiorcy na nośniku stanowiska; zapasowy przejmuje ten nośnik przy awarii.</td></tr>
+          <tr><td>Tożsamość odbiorcy: główna i zapasowa</td><td>Dwie tożsamości tego samego stanowiska, nie dwa urządzenia</td><td>Stacja przyjmuje wiadomości tylko od tożsamości aktywnej, początkowo głównej. Jednorazowa paczka zapasowa leży w kopertach poza stanowiskiem. Gospodarz przełącza stację lokalnie, na polecenie słowne lub przez gońca, nigdy przez radio; powrót wymaga trybu przygotowania.</td></tr>
+          <tr><td>Przygotowanie</td><td>Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), i aplikacja przygotowania na laptopie</td><td>Ustala plan i numery, nadaje klucz sieci, rozprowadza karty z kluczami publicznymi i zapisuje konfigurację przez USB. Stacja sama generuje tożsamość przed wydaniem karty; jej klucz prywatny nie jest nadawany z zewnątrz.</td></tr>
         </tbody>
       </table>
       <figure>
         <svg viewBox="0 0 760 125" role="img" aria-labelledby="roles-title roles-desc">
           <title id="roles-title">Droga zgłoszenia i odpowiedzi</title>
-          <desc id="roles-desc">Zgłoszenie biegnie ze stacji schronienia przez przekaźniki do roota, a następnie do komputera stanowiska. Odpowiedź wraca tą drogą.</desc>
+          <desc id="roles-desc">Zgłoszenie biegnie radiem ze stacji schronienia przez przekaźniki do roota, a dalej przez USB do komputera stanowiska. Odpowiedź przechodzi przez te same role, lecz może wybrać inną trasę radiową.</desc>
           <g fill="#edf5f3" stroke="#135a54" stroke-width="1.5">
             <rect x="7" y="30" width="155" height="65" rx="5"/><rect x="201" y="30" width="155" height="65" rx="5"/>
             <rect x="395" y="30" width="155" height="65" rx="5"/><rect x="589" y="30" width="164" height="65" rx="5"/>
           </g>
           <g fill="#172a33" font-family="system-ui, sans-serif" font-size="16" text-anchor="middle">
             <text x="84" y="58"><tspan x="84">Stacja</tspan><tspan x="84" dy="22">schronienia</tspan></text>
-            <text x="278" y="58"><tspan x="278">Przekaźniki</tspan><tspan x="278" dy="22">(stacje)</tspan></text>
+            <text x="278" y="58"><tspan x="278">Przekaźniki</tspan><tspan x="278" dy="22">(0 lub więcej)</tspan></text>
             <text x="472" y="58"><tspan x="472">Root</tspan><tspan x="472" dy="22">(stacja)</tspan></text>
             <text x="671" y="58"><tspan x="671">Komputer</tspan><tspan x="671" dy="22">stanowiska</tspan></text>
           </g>
           <g fill="#135a54" font-family="system-ui, sans-serif" font-size="28" text-anchor="middle"><text x="181" y="72">↔</text><text x="375" y="72">↔</text><text x="570" y="72">↔</text></g>
+          <g fill="#50616a" font-family="system-ui, sans-serif" font-size="13" text-anchor="middle"><text x="181" y="114">radio</text><text x="375" y="114">radio</text><text x="570" y="114">USB</text></g>
         </svg>
-        <figcaption>Role i kierunki przepływu. Jedna stacja może łączyć rolę schronienia z rolą przekaźnika.</figcaption>
+        <figcaption>Odpowiedź przechodzi przez te same role, lecz nie musi wracać tą samą trasą: przekaźnik wybiera znaną drogę w dół, a bez niej rozsyła ramkę. Jedna stacja może łączyć rolę schronienia z rolą przekaźnika.</figcaption>
       </figure>
       <h3>Słownik techniczny</h3>
       <p>Schronienie to obiekt, w którym gromadzi się ludność; WICI nie wyznacza ani nie klasyfikuje takich obiektów. Stanowisko odbiorcze przyjmuje zgłoszenia schronień, przekazuje je służbom zdolnym do pomocy i odsyła odpowiedź. Nazwy ról w tabeli wyżej zachowują brzmienie ze <a href="../concept/slownik.html">słownika koncepcji</a>. Nośnik stanowiska jest dyskiem z danymi odbiorcy; nośnik komunikacji poniżej jest drogą przesyłania bajtów.</p>
       <table>
         <thead><tr><th>Termin</th><th>Znaczenie w tym szkicu</th></tr></thead>
         <tbody>
-          <tr><td>Tożsamość; numer; <code>net_id</code></td><td>Tożsamość jest parą kluczy. Numer u16 wskazuje stację albo tożsamość odbiorcy w planie sieci; <code>net_id</code> wskazuje sieć. Sam numer nie uwierzytelnia nadawcy.</td></tr>
+          <tr><td>Tożsamość; numer; <code>net_id</code></td><td>Tożsamość obejmuje klucz X25519 do uzgadniania kluczy i klucz Ed25519 do podpisu. Numer u16 wskazuje stację albo tożsamość odbiorcy w planie; <code>net_id</code> wskazuje sieć. Sam numer nie uwierzytelnia nadawcy. Ostateczny model: <a href="#wici-dec-004">WICI-DEC-004</a>.</td></tr>
+          <tr><td>Plan sieci</td><td>Przygotowana lista numerów stacji i odbiorcy, ich położenia oraz dróg do roota; obejmuje rodzica z planu i ewentualnego zapasowego.</td></tr>
+          <tr><td>Karta stacji; karta odbiorcy</td><td>Pliki z kluczami publicznymi i danymi identyfikującymi stację albo obie tożsamości odbiorcy. Służą do ustanowienia zaufania przy przygotowaniu, nie do przenoszenia kluczy prywatnych.</td></tr>
+          <tr><td>Klucz sieci; klucz pary sąsiadów; tag pary</td><td>Klucz sieci jest wspólny dla WICI-Link. Sąsiedzi wyprowadzają osobny klucz pary z własnych kluczy X25519. Tag pary uwierzytelnia jednoadresową ramkę między nimi; nie zastępuje ochrony koperty.</td></tr>
           <tr><td>SA1; koperta WICI; ramka WICI-Link</td><td>SA1 opisuje wiadomość aplikacyjną. Koperta chroni ją między stacją a odbiorcą. Ramka przenosi kopertę przez kolejne skoki radiowe.</td></tr>
           <tr><td>Szew nośnika; nośnik komunikacji</td><td>Szew jest granicą między kopertą a sposobem jej przenoszenia. Nośnik próbuje dostarczyć bajty i zgłasza zdarzenia transportowe; WICI-Link jest podstawowym nośnikiem.</td></tr>
-          <tr><td>HACK; dowód doręczenia; RECEIVED</td><td>HACK potwierdza przekazanie ramki na jednym skoku. Dowód doręczenia informuje odbiorcę o rozstrzygnięciu jego wiadomości przez stację. RECEIVED potwierdza trwałe przyjęcie danej rewizji zgłoszenia przez odbiorcę.</td></tr>
+          <tr><td>HACK; dowód doręczenia; RECEIVED</td><td>HACK oznacza, że następny skok trwale przyjął ramkę i przejął za nią odpowiedzialność; nie dowodzi dostarczenia do celu ani przyjęcia SA1. Dowód doręczenia informuje odbiorcę o rozstrzygnięciu jego wiadomości przez stację. RECEIVED potwierdza trwałe przyjęcie danej rewizji zgłoszenia przez odbiorcę.</td></tr>
           <tr><td>Zgłoszenie; rewizja</td><td>Zgłoszenie ma stałe <code>id</code>. Zmiana jego danych tworzy rewizję z tym samym <code>id</code> i wyższym <code>revision</code>; każda rewizja zawiera pełną treść i jest potwierdzana osobno.</td></tr>
           <tr><td>Root; rodzic; ranga; epoka</td><td>Root jest stacją stanowiska na początku drzewa tras WICI-Link. Rodzic to następny skok ku rootowi. Ranga wyraża koszt drogi do roota, a epoka oznacza trwały licznik jego uruchomień używany przy aktualizacji tras.</td></tr>
           <tr><td>BEACON</td><td>Podpisane ogłoszenie trasy z informacją o roocie, randze, epoce i rodzicu.</td></tr>
@@ -171,8 +188,57 @@
 
     <section id="dane" aria-labelledby="h-dane">
       <h2 id="h-dane">3. Funkcje i dane</h2>
-      <p>Zakres funkcji obejmie zgłoszenia i odpowiedzi. Dla każdej operacji trzeba określić uprawnioną rolę, warunek wejścia, wynik, błędy i skutek ponowienia. Model danych opisze identyfikatory oraz relacje między zgłoszeniem, jego rewizjami i wiadomościami.</p>
-      <p>Stan transmisji i stan obsługi zgłoszenia wymagają odrębnych definicji.</p>
+      <p>System przenosi wiadomości SA1 między schronieniem a stanowiskiem odbiorczym. Znaczenie wiadomości nie zależy od nośnika. Poniższe operacje i zakresy są kandydatami do zatwierdzenia; funkcje laptopa schronienia na poziomach 2–3 są opisem etapu po pilotażu.</p>
+      <h3>Operacje</h3>
+      <div class="table-scroll" role="region" aria-label="Operacje systemu WICI" tabindex="0">
+        <table class="operations">
+          <thead><tr><th>Operacja i wykonawca</th><th>Warunek wejścia</th><th>Wynik</th><th>Błąd i ponowienie</th></tr></thead>
+          <tbody>
+            <tr><td>Zgłoszenie z przycisków: gospodarz lub zastępca, stacja</td><td>Wybrano kategorię, liczbę osób i pilność; jest miejsce w rejestrze i kolejce.</td><td>Stacja tworzy <code>id</code>, zapisuje rewizję 0 i intencję wysyłki przed pokazaniem „zapisane w stacji”.</td><td>Pełna kolejka lub błąd pamięci nie daje potwierdzenia zapisu. Ponowienie wysyłki zachowuje <code>id</code> i rewizję; drugi wpis człowieka jest nowym zgłoszeniem.</td></tr>
+            <tr><td>Zgłoszenie z panelu: gospodarz lub zastępca, laptop (po pilotażu)</td><td>Zalogowany użytkownik i działający zapis lokalny; USB może być odłączone.</td><td>Laptop tworzy <code>id</code> i intencję przekazania; stacja po połączeniu zapisuje zgłoszenie i własną intencję wysyłki.</td><td>Odmowa zapisu w stacji lub zerwanie USB nie usuwa intencji laptopa. Ponowienie używa tej samej pary (<code>id</code>, <code>revision</code>); gdy skutku nie da się ustalić, panel pokazuje wynik nieznany.</td></tr>
+            <tr><td>Zgłoszenie mieszkańca: mieszkaniec, strona laptopa (po pilotażu)</td><td>Dostępna strona i zapis lokalny.</td><td>Laptop nadaje lokalny identyfikator i zapisuje wpis w kolejce gospodarza; nie powstaje jeszcze SA1.</td><td>Brak miejsca lub błąd zapisu oznacza brak potwierdzenia. Skutek utraty odpowiedzi HTTP i reguła ponowienia wymagają rozstrzygnięcia w <a href="#wici-dec-005">WICI-DEC-005</a>.</td></tr>
+            <tr><td>Zatwierdzenie wpisu mieszkańca: gospodarz lub zastępca, laptop (po pilotażu)</td><td>Wpis w kolejce, zalogowany użytkownik; sprawdzenie treści, połączenie potrzeb powtarzalnych i ustalenie pilności.</td><td>Powstaje zgłoszenie SA1 z nowym <code>id</code> i powiązaniem z wpisem mieszkańca; laptop zapisuje intencję przekazania do stacji.</td><td>Brak stacji wstrzymuje przekazanie, a błąd zapisu lokalnego zatwierdzenie. Zajęty krótki numer wymaga nowego <code>id</code>; inne ponowienie zachowuje <code>id</code> i rewizję.</td></tr>
+            <tr><td>Zmiana zgłoszenia: gospodarz lub zastępca, stacja albo laptop (po pilotażu)</td><td>Zgłoszenie istnieje i nie zostało anulowane.</td><td>Nowa rewizja z pełną treścią zastępuje najnowszą w rejestrze; wcześniejsza decyzja pozostaje widoczna.</td><td>Błąd zapisu pozostawia poprzednią rewizję. Ponowienie z tym samym (<code>id</code>, <code>revision</code>) nie tworzy drugiej zmiany; sprzeczna treść jest konfliktem.</td></tr>
+            <tr><td>Przyjęcie zgłoszenia: aplikacja stanowiska</td><td>Poprawne REQUEST od zaufanej stacji albo zatwierdzone w kwarantannie; trwały zapis jest dostępny.</td><td>Stanowisko zapisuje zgłoszenie i intencję RECEIVED w jednej transakcji; wysyła RECEIVED po zatwierdzeniu zapisu.</td><td>Nieznany nadawca trafia do kwarantanny bez RECEIVED; błąd zapisu także go wstrzymuje. Powtórzenie tego samego zgłoszenia dostaje ten sam RECEIVED, a sprzeczna treść nie nadpisuje zapisu.</td></tr>
+            <tr><td>Odczyt i decyzja: dyżurny, aplikacja stanowiska</td><td>Zgłoszenie w panelu; stan „pomoc skierowana” wymaga potwierdzenia od podmiotu dysponującego pomocą.</td><td>Odczyt tworzy STATUS „odbiorca przeczytał”; późniejsze decyzje tworzą kolejne STATUS. Stanowisko zapisuje źródło i czas potwierdzenia skierowania pomocy.</td><td>Brak wymaganego potwierdzenia blokuje stan „pomoc skierowana”. Powtórny odbiór tego samego <code>event</code> nie cofa stanu; skutek ponownego działania dyżurnego pozostaje w <a href="#wici-dec-005">WICI-DEC-005</a>.</td></tr>
+            <tr><td>Odpowiedź tekstowa: dyżurny, aplikacja stanowiska</td><td>Zgłoszenie i zalogowany dyżurny; stan „odbiorca nie może teraz pomóc” wymaga odpowiedzi z instrukcją.</td><td>REPLY trafia do skrzynki stacji; odpowiedź ma własny <code>event</code>.</td><td>Błąd zapisu lub wysyłki pozostawia intencję do ponowienia. Duplikat tego samego <code>event</code> nie tworzy drugiej odpowiedzi w stacji.</td></tr>
+            <tr><td>Komunikat ogólny: dyżurny, aplikacja stanowiska</td><td>Zalogowany dyżurny i lista stacji docelowych.</td><td>BULLETIN ma własne <code>id</code> i <code>event</code>; stanowisko tworzy wysyłkę osobno do każdej stacji.</td><td>Niepowodzenie dostarczenia do jednej stacji nie potwierdza dostarczenia do pozostałych. Powtórzona wiadomość o tym samym <code>id</code> i <code>event</code> nie wraca do skrzynki.</td></tr>
+            <tr><td>Próba łączności: gospodarz lub zastępca, stacja; odbiór przez dyżurnego</td><td>Stacja jest przygotowana; gospodarz uruchamia TEST z menu albo potwierdza propozycję po starcie.</td><td>TEST sprawdza drogę, zapis na stanowisku i obecność dyżurnego; jest pokazywany osobno od kolejki potrzeb.</td><td>Brak miejsca lub pamięci nie daje zapisu; brak RECEIVED wywołuje alarm. Ponowienie tej samej intencji zachowuje <code>id</code> i rewizję, a nowa próba tworzy nowy TEST.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="explain">Strona mieszkańca, kiosk i obsługa zgłoszeń przez laptop schronienia są opisane w źródłach, lecz nie występują jeszcze w kodzie po PR 181 (<a href="#wici-inv-011">WICI-INV-011</a>). Tabela pokazuje ich zamierzony kontrakt, a nie zaliczoną funkcję.</p>
+      <h3>Dane i identyfikatory</h3>
+      <table>
+        <thead><tr><th>Dane</th><th>Znaczenie i zakres z obecnych opisów</th></tr></thead>
+        <tbody>
+          <tr><td>Zgłoszenie i <code>id</code></td><td>REQUEST ma losowy identyfikator 16 B. Tworzy go stacja dla wpisu z przycisków, laptop dla wpisu z panelu lub zatwierdzonego wpisu mieszkańca. RECEIVED, STATUS i REPLY odnoszą się do tego samego <code>id</code>.</td></tr>
+          <tr><td>Rewizja <code>revision</code></td><td>Numer 0–65 535; pierwsze zgłoszenie ma 0. Zmiana zachowuje <code>id</code>, podnosi numer i zawiera pełne miejsce oraz treść. Każda rewizja jest przyjmowana osobno.</td></tr>
+          <tr><td>Licznik <code>event</code></td><td>1–2 147 483 647. RECEIVED ma 1; STATUS i REPLY mają osobne liczniki dla danego <code>id</code>, a BULLETIN licznik tożsamości odbiorcy. Liczniki zapobiegają cofnięciu stanu przez spóźnioną wiadomość.</td></tr>
+          <tr><td>Kategoria <code>category</code></td><td>0–9: pomoc medyczna, leki i sprzęt medyczny, ewakuacja, woda, żywność, ogrzewanie, energia i paliwo, sprawy sanitarne i higiena, bezpieczeństwo obiektu, informacja i poszukiwanie osób, inne.</td></tr>
+          <tr><td>Liczba osób <code>people</code></td><td>1–65 535 w wiadomości; wpis przyciskami: 1–999.</td></tr>
+          <tr><td>Miejsce <code>location</code> i opis <code>text</code></td><td><code>location</code>: 1–64 B, adres i wejście schronienia. Miejsce w budynku trafia na początek <code>text</code>. Opis zgłoszenia i REPLY: do 96 B; BULLETIN: do 192 B.</td></tr>
+          <tr><td>Pilność <code>urgency</code></td><td>0: w ciągu doby; 1: w ciągu kilku godzin; 2: bezpośrednie zagrożenie życia lub zdrowia.</td></tr>
+          <tr><td>Wpis mieszkańca przed zatwierdzeniem</td><td>Ma lokalny identyfikator strony, nie <code>id</code> SA1. Laptop zapisuje treść, skrót tokenu dostępu i czas; gospodarz może połączyć kilka wpisów w jedno zgłoszenie SA1.</td></tr>
+        </tbody>
+      </table>
+      <p>Opis danych nie przewiduje zapisu nazwisk, numerów telefonów, adresów IP ani MAC. Wolny opis może jednak zawierać dane o zdrowiu lub dane podane wbrew ostrzeżeniu przed wpisywaniem nazwisk. Zakres ochrony danych strony pozostaje luką <a href="#wici-inv-011">WICI-INV-011</a>. Granice liczbowe zależne od profilu należą do <a href="#wici-dec-006">WICI-DEC-006</a>.</p>
+      <h3>Transmisja i obsługa zgłoszenia</h3>
+      <p>Stacja przechowuje osobno intencję wysłania najnowszej rewizji i decyzję odbiorcy. Wynik nośnika, np. DELIVERED albo FAILED, dotyczy transmisji. Stan obsługi zmieniają dopiero poniższe zdarzenia aplikacyjne:</p>
+      <table>
+        <thead><tr><th>Stan widoczny dla gospodarza</th><th>Zdarzenie, które go uzasadnia</th></tr></thead>
+        <tbody>
+          <tr><td>Zapisane w stacji</td><td>Trwały zapis zgłoszenia i intencji wysyłki w stacji.</td></tr>
+          <tr><td>Odbiorca zapisał</td><td>RECEIVED po trwałym przyjęciu danej rewizji na stanowisku.</td></tr>
+          <tr><td>Odbiorca przeczytał</td><td>Dyżurny oznaczył zgłoszenie jako przeczytane; stanowisko wysłało STATUS.</td></tr>
+          <tr><td>Pomoc skierowana</td><td>Dyżurny zapisał potwierdzenie skierowania pomocy przez właściwy podmiot; stanowisko wysłało STATUS.</td></tr>
+        </tbody>
+      </table>
+      <p>Źródłowy model przewiduje także stany „przekazane dalej”, „odbiorca nie może teraz pomóc” i „zamknięte”. „Przekazane dalej” nie oznacza potwierdzenia skierowania pomocy. Decyzję o pomocy podejmuje człowiek.</p>
+      <p class="explain">HACK ani DELIVERED nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w innym przypadku pokazuje „wynik nieznany”. Ostateczne gwarancje potwierdzeń i ponowień rozstrzyga <a href="#wici-dec-005">WICI-DEC-005</a>.</p>
+      <h3>Praca bez łączności</h3>
+      <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
+      <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
 
     <section id="aplikacja" aria-labelledby="h-aplikacja">
@@ -239,7 +305,7 @@
           </td><td><a href="projekt.md">Zakres projektu</a>, <a href="odbior.md">próby</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W02, W10, W22, W23, W25</a>; próby pełnej konfiguracji wyrobu nie są zaliczone.</td></tr>
           <tr id="wici-inv-009"><td>WICI-INV-009</td><td>Numerowana konfiguracja wiąże <code>net_id</code> oraz numery u16 stacji i dwóch tożsamości odbiorcy z kartami i kluczami. <code>priority_keys</code> zawiera klucze sąsiadów; <code>behind</code> jest dopuszczone tylko u roota. Przygotowanie odrzuca klucze o małym rzędzie i nie przyjmuje kluczy przez radio. Kod obejmuje przeniesienie stacji, aktywację zapasowej tożsamości odbiorcy oraz wymianę głównej po odzyskaniu bazy.</td><td><a href="transport.md">Klucze</a>, <a href="usb-protocol.md">USB</a>, <a href="../../firmware/src/config.cpp">stacja</a>, <a href="../../software/laptop/wici/configdoc.py">przygotowanie</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">stanowisko</a>; <a href="#wici-dec-004">WICI-DEC-004</a> jest otwarta. Profil pilotażu nie zapewnia poufności przyszłej ani rotacji kluczy przez radio.</td></tr>
           <tr id="wici-inv-010"><td>WICI-INV-010</td><td>Bez pola <code>network</code> stacja używa Reticulum i nie używa koperty WICI. Stanowisko może uruchomić równoległy port Reticulum (<code>--reticulum-port</code>).</td><td><a href="transport.md">Opis</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/laptop/wici/stanowisko/__main__.py">stanowisko</a>; wobec <a href="#wici-zal-004">WICI-ZAL-004</a> wymaga decyzji o usunięciu tej ścieżki albo osobnym kontrakcie integracji (<a href="#wici-dec-008">WICI-DEC-008</a>).</td></tr>
-          <tr id="wici-inv-011"><td>WICI-INV-011</td><td>Opis poziomów 2–3, po pilotażu, przewiduje stronę, na której mieszkaniec podaje miejsce w budynku i opis potrzeby oraz śledzi własne zgłoszenie. Laptop ma przechowywać zgłoszenie mieszkańca, powiązane SA1, skrót tokenu dostępu i czas; bez IP, MAC, numeru telefonu i nazwiska. Kiosk ma pokazywać formularz na laptopie i czyścić go po zgłoszeniu; panel gospodarza ma inny adres lokalny, osobne ciasteczko i ponowne logowanie. Próba strony przewiduje 50 podłączonych telefonów, w tym 15 aktywnych.</td><td><a href="oprogramowanie.md#strona-mieszkanca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</td></tr>
+          <tr id="wici-inv-011"><td>WICI-INV-011</td><td>Opis poziomów 2–3, po pilotażu, przewiduje stronę, na której mieszkaniec podaje miejsce w budynku i opis potrzeby oraz śledzi własne zgłoszenie. Laptop ma przechowywać zgłoszenie mieszkańca, powiązane SA1, skrót tokenu dostępu i czas; bez IP, MAC, numeru telefonu i nazwiska. Kiosk ma pokazywać formularz na laptopie i czyścić go po zgłoszeniu; panel gospodarza ma inny adres lokalny, osobne ciasteczko i ponowne logowanie. Próba strony przewiduje 50 podłączonych telefonów, w tym 15 aktywnych.</td><td><a href="oprogramowanie.md#strona-mieszkańca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</td></tr>
         </tbody>
       </table>
       <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
@@ -275,6 +341,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.10</td><td>Skorygowano model sieci i wypełniono szkic funkcji, danych oraz stanów zgłoszenia.</td></tr>
           <tr><td>0.9</td><td>Naszkicowano model systemu i słownik; uzupełniono inwentaryzację baterii oraz strony mieszkańca.</td></tr>
           <tr><td>0.8</td><td>Dodano do inwentaryzacji przygotowanie kluczy, zakres liczbowych właściwości wyrobu i obecną ścieżkę Reticulum.</td></tr>
           <tr><td>0.7</td><td>Po scaleniu PR 181 rozpoczęto inwentaryzację kodu, opisów i prób; wskazano luki przed przyjęciem wymagań.</td></tr>
