@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.19</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.20</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -20,7 +20,8 @@
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
         <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
-        <li><a href="system-wici-plan.html">7–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
+        <li><a href="system-wici-plan.html">8–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html" aria-current="page">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -28,7 +29,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.19</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.20</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -192,7 +193,7 @@
           <h4>WICI-INV-021</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>ZAMKNIJ ZDARZENIE oznacza jako zakończone tylko intencje REPLY i BULLETIN (<code>kind</code> 3 i 4). RECEIVED i STATUS pozostają otwarte. Wysyłka nie sprawdza ustawienia <code>zamkniete</code>; nie zbadano, czy aplikacja nadal nadaje po zamknięciu.</dd></div>
-            <div><dt>Luka</dt><dd><a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Zamknięcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">wysyłka</a>, <a href="../../software/laptop/wici/stanowisko/panel.py">panel</a>; według <a href="#wici-dec-005">WICI-DEC-005</a> zamknięcie zdarzenia kończy ponawianie wszystkich intencji. Pełny opis operacji należy do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</dd></div>
+            <div><dt>Luka</dt><dd><a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Zamknięcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">wysyłka</a>, <a href="../../software/laptop/wici/stanowisko/panel.py">panel</a>; według <a href="#wici-dec-005">WICI-DEC-005</a> zamknięcie zdarzenia kończy ponawianie wszystkich intencji. Skutki dla trwałości opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-022">
@@ -206,7 +207,7 @@
           <h4>WICI-INV-023</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>ZAMKNIJ ZDARZENIE pozostawia klucze odbioru i tożsamości. Nie ma procedury niszczenia starych kluczy prywatnych w urządzeniach i kopiach na dysku komputera ani ponownego przygotowania po zdarzeniu.</dd></div>
-            <div><dt>Luka</dt><dd><a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Zamknięcie</a>; <a href="#wici-dec-004">WICI-DEC-004</a> wymaga nowych kluczy po zdarzeniu, wraz z wymianą klucza sieci i odnowieniem zapasu tożsamości. Procedura należy do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</dd></div>
+            <div><dt>Luka</dt><dd><a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Zamknięcie</a>; <a href="#wici-dec-004">WICI-DEC-004</a> wymaga nowych kluczy po zdarzeniu, wraz z wymianą klucza sieci i odnowieniem zapasu tożsamości. Zależność od zamknięcia opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-024">
@@ -263,6 +264,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.20</td><td>Dodano rozdział 7 o interfejsach lokalnych, granicach trwałego zapisu, synchronizacji i odtwarzaniu; odróżniono wdrożone interfejsy od projektu laptopa schronienia.</td></tr>
           <tr><td>0.19</td><td>Doprecyzowano ryzyko zapełnienia pierścieni rozsyłania przez przejętą stację; jego wystąpienie wymaga próby „Wrogi węzeł”.</td></tr>
           <tr><td>0.18</td><td>Rozstrzygnięto WICI-DEC-004: tożsamość, odcięcie przejętej stacji i granice ochrony. Zapisano luki wdrożenia WICI-INV-022–025 oraz rozbieżność przy zamknięciu zdarzenia WICI-INV-021.</td></tr>
           <tr><td>0.17</td><td>Doprecyzowano HACK, KISS 0x02 i słownik. Rozstrzygnięto etap oraz alarm po zmianie tożsamości, wstrzymanie wysyłki do stacji i nazwy widoczne na ekranach; zapisano luki wdrożenia.</td></tr>
@@ -282,7 +284,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.19 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.20 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

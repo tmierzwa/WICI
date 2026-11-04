@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zagrożenia, tożsamości, uprawnienia i koperta WICI — szkic specyfikacji.">
-  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.19</title>
+  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.20</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -20,7 +20,8 @@
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html" aria-current="page">5. Bezpieczeństwo</a></li>
         <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
-        <li><a href="system-wici-plan.html">7–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
+        <li><a href="system-wici-plan.html">8–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -28,7 +29,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Bezpieczeństwo i koperta</h1>
-      <p><span class="status">Projekt 0.19</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.20</span> · 4 listopada 2026 r.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#zagrozenia">Zagrożenia</a>
@@ -78,7 +79,7 @@
       <p>Tożsamość WICI ma 64-bajtowy klucz publiczny: X25519, a po nim Ed25519. Identyfikator stacji ma 16 B: <code>sha256(sha256("lxmf.delivery")[:10] ‖ sha256(klucz)[:16])[:16]</code>. Jest to wzór WICI zgodny z Reticulum. Obecne klucze, karty i baza stanowiska pozostają bez zmian (<a href="#rozstrzygniecia-dec-004">WICI-DEC-004</a>).</p>
       <p class="explain">Pola <code>lxmf</code> i <code>x25519</code> pozostają w obecnym formacie kart. Pierwsze dostanie nazwę WICI przy następnej zmianie formatu, a drugie jest kopią pierwszej połowy klucza (<a href="system-wici-decyzje.html#wici-inv-025">WICI-INV-025</a>).</p>
       <p>Stanowisko trzyma listę zaufanych stacji. Dodanie karty wymaga dwóch zalogowanych dyżurnych; usunięcie jednego. Wiadomości usuniętej stacji trafiają do kwarantanny z alarmem, a niewysłane STATUS, REPLY i BULLETIN do niej czekają. RECEIVED bez treści nadal wychodzi. Zatwierdzenie pojedynczej wiadomości z kwarantanny nie przywraca zaufania do stacji.</p>
-      <p>Przełączenie na tożsamość zapasową następuje lokalnie na stacji; wcześniejsza przestaje być aktywna. Po zmianie tożsamości stacja ma ponowić także potwierdzone, lecz niezamknięte wpisy według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>; kod wznawia dziś tylko wpisy bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Docelowo po odtworzeniu kopii stanowisko przyjmuje na oba klucze w okresie przejściowym, nie nadaje pod starym i wraca do nadawania przez jednorazową tożsamość zapasową albo nowe karty USB. Kod obsługuje dziś zapasową tożsamość tylko na pustym nośniku (<a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>). PRZENIEŚ STACJĘ przenosi tożsamość, granice liczników i okna powtórzeń; źródłowa przestaje nadawać przed eksportem. Brak pewnej granicy blokuje ponowne użycie tożsamości. ZNISZCZ DANE usuwa tożsamość i konfigurację; przygotowanie nadaje nowe klucze i karty. Szczegóły usuwania danych należą do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</p>
+      <p>Przełączenie na tożsamość zapasową następuje lokalnie na stacji; wcześniejsza przestaje być aktywna. Po zmianie tożsamości stacja ma ponowić także potwierdzone, lecz niezamknięte wpisy według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>; kod wznawia dziś tylko wpisy bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Docelowo po odtworzeniu kopii stanowisko przyjmuje na oba klucze w okresie przejściowym, nie nadaje pod starym i wraca do nadawania przez jednorazową tożsamość zapasową albo nowe karty USB. Kod obsługuje dziś zapasową tożsamość tylko na pustym nośniku (<a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>). PRZENIEŚ STACJĘ przenosi tożsamość, granice liczników i okna powtórzeń; źródłowa przestaje nadawać przed eksportem. Brak pewnej granicy blokuje ponowne użycie tożsamości. ZNISZCZ DANE usuwa tożsamość i konfigurację; przygotowanie nadaje nowe klucze i karty. Skutki dla trwałości opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</p>
 
       <h3 id="koperta-wici">Koperta WICI v1</h3>
       <p>Każda koperta ma nagłówek 9 B i znacznik 16 B. Liczby w nagłówku są zapisane w kolejności big-endian. Bieżący rodzaj 0 niesie SA1, a rodzaj 1 niesie dowód doręczenia od stacji do odbiorcy.</p>
@@ -133,7 +134,7 @@
           <tr><td>FRAM stacji</td><td>Stacja przechowuje zgłoszenia, skrzynkę i klucze. Opis wymaga szyfrowania rekordów AEAD przed wydaniem, lecz nie przed pilotażem; obecny obraz pilotażu nie ma jeszcze tej ochrony. Ochrona odczytu MCU także należy do docelowego obrazu.</td></tr>
         </tbody>
       </table>
-      <p>Usuwanie treści po zakończeniu zdarzenia i retencja należą do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>. ZNISZCZ DANE jest odrębną czynnością przy groźbie przejęcia.</p>
+      <p>Granice zapisu i usuwania treści po zakończeniu zdarzenia opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>. ZNISZCZ DANE jest odrębną czynnością przy groźbie przejęcia.</p>
 
       <h3 id="uprawnienia">Uprawnienia do działań wrażliwych</h3>
       <table>
@@ -158,7 +159,7 @@
       </ol>
       <p class="meta">Źródła: <a href="transport.md">transport i koperta</a>, <a href="wici-link.md">WICI-Link i zagrożenia</a>, <a href="oprogramowanie.md">zaufanie, dane i przygotowanie</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="odbior.md">próba „Wrogi węzeł”</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">koncepcja</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../firmware/src/wici_destination.cpp">przyjęcie na stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">zmiana tożsamości</a> i <a href="../../tests/vectors/envelope.json">wektor bajtowy</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.19 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.20 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

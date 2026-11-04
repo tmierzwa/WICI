@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interfejsy lokalne, granice zapisu i odtwarzanie stanu w systemie WICI.">
+  <title>Interfejsy i trwałość — Specyfikacja WICI 0.20</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+    <strong>Specyfikacja WICI</strong>
+    <ol>
+      <li><a href="system-wici.html">Start</a></li>
+      <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+      <li><a href="system-wici-model.html">2. Model systemu</a></li>
+      <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+      <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+      <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
+      <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
+      <li><a href="system-wici-interfejsy.html" aria-current="page">7. Interfejsy i trwałość</a></li>
+      <li><a href="system-wici-plan.html">8–9. Dalszy zakres</a></li>
+      <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Interfejsy i trwałość</h1>
+      <p><span class="status">Projekt 0.20</span> · 4 listopada 2026 r.</p>
+      <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
+    </header>
+    <nav class="section-nav" aria-label="Na tej stronie">
+      <a href="#granice">Granice interfejsów</a>
+      <a href="#usb">USB i synchronizacja</a>
+      <a href="#lokalne">Panele i strona</a>
+      <a href="#trwalosc">Trwałość</a>
+      <a href="#odtwarzanie">Przerwania i odtwarzanie</a>
+    </nav>
+    <section id="granice" aria-labelledby="h-granice">
+      <h2 id="h-granice">7. Granice interfejsów</h2>
+      <p class="explain"><strong>Status zakresu.</strong> Firmware stacji obsługuje USB v2, a komputer stanowiska obsługuje KISS i lokalny panel dyżurnego. Aplikacja laptopa schronienia na poziomach 2–3, strona mieszkańca i kiosk należą do etapu po pilotażu. Opis tych trzech elementów jest kontraktem projektowym, nie potwierdzeniem wdrożenia (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</p>
+      <table>
+        <thead><tr><th>Granica</th><th>Przenoszone dane i uprawnienia</th><th>Stan</th></tr></thead>
+        <tbody>
+          <tr><td>Stacja ↔ laptop schronienia</td><td>Drugi port USB CDC ACM: polecenia, zdarzenia, migawka i transfery przygotowania. Stacja przechowuje stan zgłoszeń, skrzynkę i konfigurację w FRAM; laptop ma ich kopię oraz własne dane mieszkańców. <a href="usb-protocol.md">Kontrakt USB v2</a>.</td><td>Port stacji wdrożony; obsługa laptopa schronienia po pilotażu.</td></tr>
+          <tr><td>Root ↔ komputer stanowiska</td><td>USB KISS: ramki WICI-Link, HACK po decyzji komputera, echo nadania i odmowa. Root obsługuje radio i trasy; komputer uwierzytelnia kopertę oraz przyjmuje zgłoszenie. <a href="wici-link.md#implementacja">Kontrakt WICI-Link</a>.</td><td>Wdrożony; budżet czasu zapisu na docelowym nośniku czeka na pomiar D21.</td></tr>
+          <tr><td>Dyżurny ↔ komputer stanowiska</td><td>Panel HTTP dostępny tylko przez <code>127.0.0.1</code>. Logowanie, decyzje, zaufanie, kopie, odzyskanie i zamknięcie wymagają uprawnień opisanych przy <a href="stanowisko-osp.md#panel-dyżurnego">panelu dyżurnego</a>.</td><td>Wdrożony z <a href="system-wici-decyzje.html#wici-inv-018">lukami w operacjach</a>.</td></tr>
+          <tr><td>Mieszkaniec ↔ laptop schronienia</td><td>Strona w LAN obiektu, a bez połączenia telefonów kiosk na laptopie. Panel gospodarza jest lokalny. Zgłoszenie mieszkańca trafia najpierw do kolejki gospodarza, bez wysłania SA1. <a href="oprogramowanie.md#api-lokalnej-strony-poziomy-23">Projekt API lokalnego</a>.</td><td>Po pilotażu; strona i kiosk niewdrożone.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="usb" aria-labelledby="h-usb">
+      <h2 id="h-usb">USB stacji i synchronizacja</h2>
+      <p>Port danych przenosi wiersze JSON UTF-8 zakończone LF. Wiersz ma najwyżej 1024 B bez LF, a część binarna najwyżej 512 B po dekodowaniu base64. <code>hello</code> podaje obsługiwane wersje; brak wspólnej wersji zatrzymuje polecenia. Wiersze mają <code>usb</code>, <code>seq</code> i <code>type</code>; odpowiedź wskazuje <code>re</code>. <code>seq</code> porządkuje sesję, lecz nie jest kluczem deduplikacji (<a href="usb-protocol.md#warstwa-przesyłu">warstwa przesyłu</a>).</p>
+      <table>
+        <thead><tr><th>Grupa</th><th>Polecenia i skutek</th></tr></thead>
+        <tbody>
+          <tr><td>Stan</td><td><code>sync</code>, <code>ack</code>, <code>snapshot</code>, <code>status</code>: odczyt i uzgodnienie kopii laptopa.</td></tr>
+          <tr><td>Praca stacji</td><td><code>submit</code>, <code>cancel</code>, <code>test</code>, <code>announce</code>, <code>mark_read</code>; <code>silence</code>, <code>close</code> i <code>destroy</code> wymagają potwierdzenia przyciskiem na stacji.</td></tr>
+          <tr><td>Przygotowanie</td><td><code>card</code>, <code>xfer_*</code>, <code>migrate</code> są ograniczone trybem przygotowania. <code>xfer_begin</code> z <code>op=firmware</code> jest dziś odrzucane jako <code>invalid</code>.</td></tr>
+        </tbody>
+      </table>
+      <p>Stacja buforuje jeden wiersz wyjściowy i czyta następne polecenie po jego wysłaniu; zablokowany odczyt laptopa nie wstrzymuje radia ani przycisków. Bez <code>ack</code> w drodze jest najwyżej 8 zdarzeń, ponawianych po 5 s. Zwykła odpowiedź ma limit 1 s, laptop czeka 3 s; po <code>pending</code> czeka 35 s, a operacje transferu mają osobne limity 10 lub 60 s (<a href="usb-protocol.md#limity-czasu">limity czasu</a>).</p>
+      <p>Stacja odpowiada <code>stored</code> lub <code>ok</code> po COMMIT w FRAM. Po utracie odpowiedzi laptop synchronizuje stan i, gdy wynik da się rozstrzygnąć, ponawia ten sam klucz treści, np. (<code>id</code>, <code>revision</code>), z nowym <code>seq</code>. Jeśli wpis i ślad jego zwolnienia wypadły z pamięci stacji albo zmieniła się epoka, panel pokazuje wynik nieznany i nie ponawia <code>submit</code> automatycznie (<a href="usb-protocol.md#niepewny-wynik-polecenia">niepewny wynik</a>).</p>
+      <figure class="wide-diagram">
+        <svg viewBox="0 0 820 180" role="img" aria-labelledby="diag-title diag-desc" xmlns="http://www.w3.org/2000/svg">
+          <title id="diag-title">Trwała synchronizacja stacji i laptopa</title>
+          <desc id="diag-desc">Stacja zatwierdza stan i zdarzenie w FRAM, przekazuje zdarzenia laptopowi przez USB, a laptop zatwierdza skutek i kursor razem w SQLite. Luka w pierścieniu zdarzeń wymaga pełnej migawki.</desc>
+          <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#135a54"/></marker></defs>
+          <rect x="10" y="15" width="235" height="100" rx="6" fill="#e8f0ee" stroke="#135a54"/>
+          <text x="127" y="44" text-anchor="middle" font-size="17" font-weight="700" fill="#172a33">Stacja · FRAM</text>
+          <text x="127" y="70" text-anchor="middle" font-size="14" fill="#172a33">stan + zdarzenie</text>
+          <text x="127" y="93" text-anchor="middle" font-size="14" fill="#172a33">jeden COMMIT</text>
+          <rect x="305" y="15" width="205" height="100" rx="6" fill="#f7f9f9" stroke="#cbd6da"/>
+          <text x="407" y="44" text-anchor="middle" font-size="17" font-weight="700" fill="#172a33">USB v2</text>
+          <text x="407" y="70" text-anchor="middle" font-size="14" fill="#172a33">zdarzenia lub migawka</text>
+          <text x="407" y="93" text-anchor="middle" font-size="14" fill="#172a33">(<tspan font-family="monospace">epoch</tspan>, <tspan font-family="monospace">ev</tspan>)</text>
+          <rect x="570" y="15" width="240" height="100" rx="6" fill="#e8f0ee" stroke="#135a54"/>
+          <text x="690" y="44" text-anchor="middle" font-size="17" font-weight="700" fill="#172a33">Laptop · SQLite</text>
+          <text x="690" y="70" text-anchor="middle" font-size="14" fill="#172a33">skutek + kursor</text>
+          <text x="690" y="93" text-anchor="middle" font-size="14" fill="#172a33">jeden COMMIT, potem ack</text>
+          <path d="M250 65 H295 M515 65 H560" stroke="#135a54" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="410" y="149" text-anchor="middle" font-size="14" fill="#50616a">Luka lub nowa epoka → migawka stosowana dopiero po <tspan font-family="monospace">snap_end</tspan></text>
+        </svg>
+        <figcaption>Potwierdzenie USB dotyczy kopii laptopa. Stacja pracuje dalej także po jego odłączeniu.</figcaption>
+      </figure>
+      <p>Stacja zapisuje zmianę i zdarzenie USB w jednej transakcji. Pierścień mieści 256 zdarzeń i nadpisuje najstarsze niezależnie od <code>ack</code>. Laptop zapisuje skutek zdarzenia i kursor (<code>epoch</code>, <code>ev</code>) w jednej transakcji SQLite; dopiero potem wysyła zbiorczy <code>ack</code>. Przy luce, zmianie epoki lub kursorze wyprzedzającym stację pobiera migawkę. Stosuje ją atomowo po <code>snap_end</code>, zachowując własne dane mieszkańców; przerwana lub zdezaktualizowana migawka nie zmienia jego bazy (<a href="usb-protocol.md#synchronizacja">synchronizacja</a>).</p>
+    </section>
+
+    <section id="lokalne" aria-labelledby="h-lokalne">
+      <h2 id="h-lokalne">Panele i strona mieszkańca</h2>
+      <table>
+        <thead><tr><th>Interfejs</th><th>Dostęp i granica potwierdzenia</th></tr></thead>
+        <tbody>
+          <tr><td>Panel dyżurnego</td><td>Tylko <code>127.0.0.1</code>; sesja z jednorazowego odnośnika <code>/start</code>, konto dyżurnego i blokada po bezczynności. Zmiana dokonana przez panel wraca po trwałym zapisie na nośniku. <a href="system-wici-decyzje.html#wici-inv-018">Obsługa niepewnego wyniku w interfejsie</a> i <a href="system-wici-decyzje.html#wici-inv-020">atomowość REPLY ze stanem 5</a> wymagają poprawy.</td></tr>
+          <tr><td>Panel gospodarza</td><td>Projekt dla laptopa schronienia: dostęp tylko przez <code>127.0.0.1</code>; gospodarz zatwierdza wpis mieszkańca i tworzy intencję przekazania do stacji. Zapis lokalny nie oznacza jeszcze zapisu w FRAM ani wysyłki radiowej.</td></tr>
+          <tr><td>Strona mieszkańca</td><td>Projekt dla LAN obiektu: <code>POST /api/request</code> zwraca <code>201</code> dopiero po trwałym zapisie wpisu i skrótu tokenu w kolejce laptopa. Powtórzenie formularza z tym samym losowym kluczem i treścią zwraca istniejący numer; zmiana treści daje konflikt (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>). Podgląd własnego wpisu wymaga tokenu w ciasteczku.</td></tr>
+          <tr><td>Kiosk</td><td>Projekt dla tego samego laptopa, gdy telefony nie mają dostępu do strony. Po wpisie pokazuje numer i wraca do pustego formularza. Nie utrzymuje sesji mieszkańca; stan sprawdza gospodarz po numerze.</td></tr>
+        </tbody>
+      </table>
+      <p>Strona LAN, kiosk i panel gospodarza mają osobne zasady dostępu. Szczegóły adresów, tokenów i ochrony formularza zawiera <a href="oprogramowanie.md#api-lokalnej-strony-poziomy-23">projekt API</a>; przed wdrożeniem wymagają rozstrzygnięcia ochrony danych strony (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</p>
+    </section>
+
+    <section id="trwalosc" aria-labelledby="h-trwalosc">
+      <h2 id="h-trwalosc">Trwałość i znaczenie potwierdzeń</h2>
+      <table>
+        <thead><tr><th>Miejsce</th><th>Trwała granica</th><th>Co oznacza potwierdzenie</th></tr></thead>
+        <tbody>
+          <tr><td>Stacja</td><td>Rekord transakcji FRAM zapisuje pełne nowe bajty zmienianych gniazd. Po zaniku zasilania zatwierdzony rekord jest wykonywany ponownie, a niezatwierdzony odrzucany. Stan zgłoszenia i intencja wysyłki powstają razem. <a href="oprogramowanie.md#trwałość-i-potwierdzenia">Zapis FRAM</a>.</td><td>„Zapisane w stacji” i USB <code>stored</code> pojawiają się po COMMIT. Pełny rejestr lub błąd pamięci nie daje sukcesu.</td></tr>
+          <tr><td>Laptop schronienia (projekt)</td><td>Własne wpisy, tokeny i intencje są w lokalnej bazie; trwałość bazy w pamięci procesu zapewnia zaszyfrowana migawka po <code>fsync</code>. Kopia stacji i kursor muszą być zatwierdzane razem.</td><td><code>201</code> dla mieszkańca oznacza zapis w kolejce gospodarza. USB <code>ack</code> oznacza zapis skutku zdarzenia w kopii laptopa. Żadne z nich nie dowodzi przyjęcia na stanowisku.</td></tr>
+          <tr><td>Komputer stanowiska</td><td>Przyjęcie zgłoszenia, klucz odbioru i intencja RECEIVED są jedną transakcją SQLite. Surowa ramka lub wiadomość wraz z czasem odbioru trafia do zaszyfrowanego dziennika na nośniku i przechodzi <code>fsync</code> przed HACK lub RECEIVED. Migawki bazy powstają później; przy starcie dziennik jest odtwarzany (<a href="stanowisko-osp.md#komputer-i-aplikacja-stanowiska">przyjęcie</a>).</td><td>RECEIVED oznacza trwałe przyjęcie na bieżącym nośniku stanowiska. Nie gwarantuje zachowania danych po utracie tego nośnika (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
+          <tr><td>Kopie stanowiska</td><td>Automatyczna kopia na zaszyfrowanym dysku komputera co 5 min; przy przekazaniu zmiany kopia na drugi nośnik. Stan po kopii odtwarza się z dziennika papierowego i ponowień stacji według decyzji o odzyskaniu (<a href="stanowisko-osp.md#komputer-i-aplikacja-stanowiska">nośnik i kopie</a>).</td><td>Wiek kopii jest widoczny przy przekazaniu zmiany; kopia nie zastępuje bieżącego nośnika jako granicy RECEIVED.</td></tr>
+        </tbody>
+      </table>
+      <p class="explain"><strong>HACK ma dwa znaczenia.</strong> Przekaźnik potwierdza przejęcie ramki do własnej trwałej kolejki. Root czeka na rozstrzygnięcie komputera: świeżą uwierzytelnioną część koperty potwierdza przez KISS <code>0x00</code> (z nauką drogi), pozostałe rozstrzygnięte przypadki przez <code>0x02</code> (bez nauki). Koperta bez uwierzytelnienia znanej stacji może dostać <code>0x02</code> bez zapisu. Błąd przejściowy zapisu poprawnej koperty nie dostaje HACK; stacja ją ponawia. <a href="wici-link.md#implementacja">Zasady KISS i HACK</a>.</p>
+    </section>
+
+    <section id="odtwarzanie" aria-labelledby="h-odtwarzanie">
+      <h2 id="h-odtwarzanie">Przerwania, odtwarzanie i usuwanie</h2>
+      <table>
+        <thead><tr><th>Zdarzenie</th><th>Wymagany skutek i obecny stan</th></tr></thead>
+        <tbody>
+          <tr><td>Zerwanie USB lub restart laptopa</td><td>Po ponownym <code>hello</code> laptop wykonuje <code>sync</code>; luka w 256 zdarzeniach prowadzi do migawki. Niedokończony transfer nie jest wynikiem operacji. Stacja działa bez laptopa, a pełny rejestr odmawia nowych zgłoszeń (<a href="usb-protocol.md#synchronizacja">USB v2</a>).</td></tr>
+          <tr><td>Zanik zasilania stacji</td><td>Odtwarzany jest ostatni zatwierdzony stan FRAM. Przygotowanie i import większe niż pojedyncza transakcja mają własne bariery publikacji; przerwany import nie uruchamia częściowo odtworzonej stacji (<a href="oprogramowanie.md#zapisy-większe-niż-transakcja">zapisy większe</a>).</td></tr>
+          <tr><td>Restart komputera stanowiska</td><td>Wczytywana jest ostatnia poprawna zaszyfrowana migawka, potem dziennik przyjęć. Ucięty ostatni rekord, za który nie wysłano HACK ani RECEIVED, jest pomijany; uszkodzenie między poprawnymi rekordami blokuje start (<a href="stanowisko-osp.md#komputer-i-aplikacja-stanowiska">odtwarzanie dziennika</a>).</td></tr>
+          <tr><td>Utrata nośnika stanowiska</td><td>Po odtworzeniu kopii stare klucze nie mogą od razu nadawać. Nowa tożsamość zapasowa i przełączenie stacji mają przywrócić także otwarte zgłoszenia z RECEIVED; obecny kod nie domyka tej ścieżki (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>, <a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>).</td></tr>
+          <tr><td>Zamknięcie lub zniszczenie danych</td><td>ZAMKNIJ ZDARZENIE kończy ponawianie intencji, zapisuje archiwum i usuwa treść według procedury; kopie są usuwane po potwierdzeniu odbioru archiwum. ZNISZCZ DANE jest osobną czynnością. Kod nadal pozostawia część intencji po zamknięciu i nie domyka procedury starych kluczy (<a href="system-wici-decyzje.html#wici-inv-021">WICI-INV-021</a>, <a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>).</td></tr>
+        </tbody>
+      </table>
+      <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. Do zatwierdzenia pozostają także granice nośników innych niż WICI-Link (<a href="system-wici-decyzje.html#wici-dec-008">WICI-DEC-008</a>) i liczbowe parametry profilu (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.20 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>
