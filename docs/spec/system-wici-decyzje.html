@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.13</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.14</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -18,7 +18,8 @@
         <li><a href="system-wici-model.html">2. Model systemu</a></li>
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
-        <li><a href="system-wici-plan.html">5–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
+        <li><a href="system-wici-plan.html">6–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html" aria-current="page">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -26,7 +27,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.13</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.14</span> · 4 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -122,6 +123,13 @@
             <div><dt>Źródło i luka</dt><dd><a href="oprogramowanie.md#strona-mieszkańca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-012">
+          <h4>WICI-INV-012</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Stacja zatwierdza przyjęcie SA1, a potem osobno zapisuje okno licznika koperty. Deduplikacja SA1 chroni przed drugim skutkiem po zaniku między zapisami.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="../../firmware/src/wici_destination.cpp">Kod stacji</a>, <a href="wici-link.md">opis WICI-Link</a> i <a href="transport.md">transport</a>; ten ostatni wymaga jednej transakcji. Reguła atomowości i próba zaniku wymagają uzgodnienia przed zatwierdzeniem <a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdziału 5</a>.</dd></div>
+          </dl>
+        </article>
       </div>
       <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
       <h3 id="zroda-do-przegladu">Źródła do przeglądu</h3>
@@ -156,6 +164,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.14</td><td>Oznaczono rozbieżność decyzji po stanie 6, dodano przełączenie tożsamości do maszyny stanów, naszkicowano bezpieczeństwo i kopertę WICI oraz wpisano lukę atomowości przyjęcia.</td></tr>
           <tr><td>0.13</td><td>Podzielono dokument na części i poprawiono układ stron bez zmiany treści technicznej.</td></tr>
           <tr><td>0.12</td><td>Naszkicowano protokół SA1: format, przykłady bajtowe, zmiany stanu i ponawianie; wskazano niezgodności i decyzje do zatwierdzenia.</td></tr>
           <tr><td>0.11</td><td>Doprecyzowano operacje, stany transmisji i przechowywanie danych w szkicu rozdziału 3.</td></tr>
@@ -169,7 +178,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.13 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.14 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
