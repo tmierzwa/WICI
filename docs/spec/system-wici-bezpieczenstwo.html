@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zagrożenia, tożsamości, uprawnienia i koperta WICI — szkic specyfikacji.">
-  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.14</title>
+  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.15</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -19,7 +19,8 @@
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html" aria-current="page">5. Bezpieczeństwo</a></li>
-        <li><a href="system-wici-plan.html">6–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
+        <li><a href="system-wici-plan.html">7–9. Dalszy zakres</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -27,7 +28,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Bezpieczeństwo i koperta</h1>
-      <p><span class="status">Projekt 0.14</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.15</span> · 4 listopada 2026 r.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#zagrozenia">Zagrożenia</a>
@@ -47,9 +48,9 @@
         <table class="operations">
           <thead><tr><th>Kto działa</th><th>Co może zrobić</th><th>Co ogranicza skutek</th><th>Ryzyko szczątkowe</th></tr></thead>
           <tbody>
-            <tr><td>Podsłuchujący bez kluczy</td><td>Odczytuje jawne pola i powtarza nagrane ramki; może nadawać zakłócenia.</td><td>MAC sieci, tag pary i koperta odrzucają podrobione lub powtórzone dane; cel prowadzi trwałe okno liczników. Przekaźnik ogranicza ponowne potwierdzenia.</td><td>Kolizje i celowe zagłuszanie pozostają możliwe. Po zawinięciu numeru ramki nagrany HACK z pasującym krótkim echem może raz dać fałszywy sukces skoku; SA1 ponawia bez potwierdzenia aplikacyjnego.</td></tr>
-            <tr><td>Posiadacz klucza sieci</td><td>Tworzy ramki rozsyłane i BEACON-y z poprawnym MAC sieci, zajmuje kanał i obciąża sprawdzanie podpisów.</td><td>Nie tworzy tagu pary sąsiadów ani koperty celu. BEACON wymaga podpisu; jego sprawdzanie odbywa się poza torem potwierdzeń i jest ograniczone do jednego na sekundę.</td><td>Nadal może zalewać kanał. Nagrany, podpisany BEACON z podmienionym numerem ramki może raz odświeżyć martwego sąsiada po utracie jego wpisu.</td></tr>
-            <tr><td>Przejęta stacja</td><td>Nadaje pod własną tożsamością, zna klucz sieci i klucze swoich par; może porzucać ruch, deklarować fałszywą rangę albo zapełniać kolejki śmieciami.</td><td>Nie fałszuje kopert innych par. Lista zaufanych pozwala odsunąć jej zgłoszenia; tag pary ogranicza jej ruch do znanych sąsiadów, a kolejki mają limity.</td><td>Do usunięcia z listy jej własne zgłoszenia mogą wyglądać wiarygodnie. Fałszywa ranga może przyciągać ruch; śmieci dzielą gniazdo K1 rodzica z prawdziwymi stacjami za nim. Pełny łańcuch wymaga próby.</td></tr>
+            <tr><td>Podsłuchujący bez kluczy</td><td>Odczytuje jawne pola i powtarza nagrane ramki; może nadawać zakłócenia.</td><td>MAC sieci, tag pary i koperta odrzucają podrobione lub powtórzone dane; cel prowadzi trwałe okno liczników. Przekaźnik ogranicza ponowne potwierdzenia.</td><td>Kolizje i zagłuszanie pozostają możliwe. Po zawinięciu numeru ramki nagrany HACK z pasującym echem może raz dać fałszywy sukces skoku. Pierścień 224 przekazanych kopert może się zapełnić w ciągu godziny; starsza koperta może przejść ponownie, lecz cel nie przyjmie jej drugi raz.</td></tr>
+            <tr><td>Posiadacz klucza sieci</td><td>Tworzy ramki rozsyłane i BEACON-y z poprawnym MAC sieci, zajmuje kanał i obciąża sprawdzanie podpisów.</td><td>Nie tworzy tagu pary sąsiadów ani koperty celu. BEACON wymaga podpisu; jego sprawdzanie odbywa się poza torem potwierdzeń i jest ograniczone do jednego na sekundę.</td><td>Nadal może zalewać kanał. Nagrany, podpisany BEACON z podmienionym numerem ramki może raz odświeżyć martwego sąsiada po utracie jego wpisu. Starsza epoka może wrócić po 90 min bez ważnego BEACON-u od rodzica.</td></tr>
+            <tr><td>Przejęta stacja</td><td>Nadaje pod własną tożsamością, zna klucz sieci i klucze swoich par; może porzucać ruch, deklarować fałszywą rangę albo zapełniać kolejki śmieciami.</td><td>Nie fałszuje kopert innych par. Lista zaufanych pozwala odsunąć jej zgłoszenia na stanowisku; tag pary ogranicza jej ruch do znanych sąsiadów, a kolejki mają limity.</td><td>Sąsiedzi nadal przyjmują jej ramki z poprawnym tagiem pary, dopóki nowe klucze nie trafią do nich przez USB. Fałszywa ranga może przyciągać ruch; śmieci dzielą gniazdo K1 rodzica z prawdziwymi stacjami za nim. Koperta z przewidzianym cudzym licznikiem może zatrzymać prawdziwą kopertę na przekaźniku do godziny; SA1 ponawia ją z nowym licznikiem. Pełny łańcuch wymaga próby.</td></tr>
             <tr><td>Przejęte stanowisko lub utracony nośnik</td><td>Klucz odbiorcy pozwala podszyć się pod odpowiedzi i odczytać wcześniej nagrany ruch; starsza kopia bazy może cofnąć liczniki.</td><td>Tożsamość zapasowa i nowe karty umożliwiają zmianę klucza. Po odtworzeniu kopii stanowisko blokuje nadawanie kopert pod starą tożsamością do aktywacji nowej.</td><td>Brak poufności przyszłej: wcześniejsze szyfrogramy pozostają czytelne po poznaniu klucza prywatnego. Kopie i pozostałości na SSD wymagają ochrony poza protokołem; utrata przyjęć po kopii pozostaje pytaniem WICI-DEC-005.</td></tr>
             <tr><td>Utracony lub przejęty laptop schronienia</td><td>Uzyskuje dostęp do otwartej sesji i danych; z plikiem kont może zgadywać hasło do zaszyfrowanej kopii poza aplikacją.</td><td>Baza w pamięci procesu, szyfrowane migawki i konta ograniczają odczyt wyłączonego laptopa. Stacja zachowuje własną kolejkę bez laptopa.</td><td>Zalogowany laptop ujawnia dane. Limit prób panelu nie ogranicza zgadywania z zabranej pamięci USB. Strona mieszkańca i tryb kiosku są jeszcze opisem poziomów 2–3, bez implementacji po PR 181.</td></tr>
             <tr><td>Zalew i przeciążenie</td><td>Wypycha zgłoszenia z kanału lub zajmuje kolejki, również w długim łańcuchu.</td><td>Limity buforów, klas czasu nadawania i ogłoszeń ograniczają ruch przyjęty do przekazywania; próba „Wrogi węzeł” sprawdza działanie przy obciążeniu.</td><td>Nie ma gwarancji dostarczenia podczas zagłuszania. K1 jest poświadczona tagiem tylko na bieżącym skoku; przejęta stacja może obciążać wspólną pulę za swoim rodzicem.</td></tr>
@@ -69,12 +70,13 @@
           <tr><td>Nośnik komunikacji</td><td>Próbę dostarczenia bajtów i zdarzenie transmisji.</td><td>Przyjęcia SA1, trwałości danych u celu ani wykonania decyzji. Te skutki mają osobne potwierdzenia w <a href="system-wici-sa1.html#ponawianie-wiadomosci">rozdziale 4</a>.</td></tr>
         </tbody>
       </table>
-      <p>Format ramek, trasy, limity kanału i potwierdzenia skoku należą do <a href="system-wici-plan.html#siec">rozdziału 6</a>. Koperta chroni treść ponad tymi mechanizmami.</p>
+      <p class="explain">Tabela dotyczy numerowanej konfiguracji z kopertą. Stacja bez pola <code>network</code> używa Reticulum bez koperty WICI; stanowisko może równolegle uruchomić port <code>--reticulum-port</code> i oddaje Reticulum odpowiedź, której WICI-Link nie może nieść. Te ścieżki nie mają gwarancji z tabeli. Ich zakres pozostaje w <a href="system-wici-decyzje.html#wici-inv-010">WICI-INV-010</a> i <a href="system-wici-decyzje.html#wici-dec-008">WICI-DEC-008</a>.</p>
+      <p>Format ramek, trasy, limity kanału i potwierdzenia skoku należą do <a href="system-wici-siec.html#siec">rozdziału 6</a>. Koperta chroni treść ponad tymi mechanizmami.</p>
 
       <h3 id="tozsamosci-i-klucze">Tożsamości i cykl życia kluczy</h3>
       <p>Stacja generuje własną tożsamość wewnątrz urządzenia przed wydaniem karty. Stanowisko tworzy tożsamość główną i zapasową przy przygotowaniu offline. Karty wiążą klucze publiczne z numerami i siecią; odcisk karty stacji jest porównywany z ekranem. Klucze i karty wchodzą przez USB, nie przez radio. Przygotowanie odrzuca klucze X25519 i Ed25519 o małym rzędzie oraz zerowy wspólny sekret X25519. Role urządzeń opisuje <a href="system-wici-model.html#urzadzenia-i-role">rozdział 2</a>.</p>
       <p class="explain">Stan zastany: koperta bierze klucz X25519 z pierwszych 32 B tożsamości Reticulum, a karty mają pola powiązane z LXMF. Format samodzielnej tożsamości WICI i przejście od obecnych kart pozostają w <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>.</p>
-      <p>Stanowisko trzyma listę zaufanych stacji. Dodanie karty wymaga dwóch zalogowanych dyżurnych; usunięcie jednego. Wiadomości usuniętej stacji trafiają do kwarantanny z alarmem, a niewysłane STATUS, REPLY i BULLETIN do niej czekają. Zatwierdzenie pojedynczej wiadomości z kwarantanny nie przywraca zaufania do stacji.</p>
+      <p>Stanowisko trzyma listę zaufanych stacji. Dodanie karty wymaga dwóch zalogowanych dyżurnych; usunięcie jednego. Wiadomości usuniętej stacji trafiają do kwarantanny z alarmem, a niewysłane STATUS, REPLY i BULLETIN do niej czekają. RECEIVED bez treści nadal wychodzi. Zatwierdzenie pojedynczej wiadomości z kwarantanny nie przywraca zaufania do stacji.</p>
       <p>Przełączenie na tożsamość zapasową następuje lokalnie na stacji; wcześniejsza przestaje być aktywna. Odtworzenie starszej kopii bazy stanowiska blokuje nadawanie kopert pod starym kluczem, dopóki przygotowanie nie wprowadzi nowej tożsamości i kart. Paczka zapasowa jest jednorazowa. PRZENIEŚ STACJĘ przenosi tożsamość razem z granicami liczników i oknami powtórzeń; stacja źródłowa przestaje nadawać przed eksportem. Brak pewnej granicy blokuje ponowne użycie tożsamości. ZNISZCZ DANE usuwa tożsamość i konfigurację; przygotowanie nadaje potem nowe klucze i karty. Szczegóły przejść i usuwania danych należą do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>.</p>
 
       <h3 id="koperta-wici">Koperta WICI v1</h3>
@@ -92,7 +94,7 @@
       <p>Klucz kierunku A → B ma 32 B: <code>ss = X25519(sk_A, pk_B)</code>, następnie <code>HKDF-SHA-256(ikm=ss, salt=net_id ‖ 0x01, info="WICI env v1" ‖ id_A ‖ id_B ‖ pk_A ‖ pk_B, L=32)</code>. <code>net_id</code> i oba numery są u16 BE, a klucze publiczne mają po 32 B. Kierunek B → A zamienia kolejność identyfikatorów i kluczy w <code>info</code>, otrzymując inny klucz.</p>
       <p>ChaCha20-Poly1305 używa 12-bajtowego <code>nonce = src ‖ dst ‖ kind ‖ 0x000000 ‖ ctr</code> oraz danych uwierzytelnianych <code>AAD = kind ‖ src ‖ dst ‖ ctr</code>. Odbiorca udostępnia jawny tekst dopiero po sprawdzeniu znacznika. Rezerwacja <code>ctr</code> odbywa się blokami po 64 wartości: granica jest trwale zapisana przed użyciem licznika, a po restarcie reszta bloku przepada. Po wyczerpaniu u32 para potrzebuje nowych kluczy. Błąd zapisu granicy blokuje szyfrowanie.</p>
       <p>Odbiorca przechowuje największy przyjęty <code>ctr</code> i maskę okna 64 wartości. Przyjmuje nowy licznik lub nieużywany licznik z okna; starszy i już przyjęty pomija. Okno jest trwałe w FRAM stacji albo w bazie stanowiska. Koperta usuwa powtórkę pakietu; <a href="system-wici-sa1.html#przyjecie-na-stanowisku">SA1</a> rozpoznaje ponowienie tej samej wiadomości przy nowym liczniku koperty.</p>
-      <p class="explain">Opis <a href="transport.md#licznik-i-powtórzenia">transportu</a> wymaga jednej transakcji dla przyjęcia SA1 i okna. Kod stacji zapisuje SA1, a potem okno. Zanik między zapisami dopuszcza ponowne odszyfrowanie tej samej koperty; klucz odbioru SA1 zapobiega drugiemu skutkowi. Reguła atomowości wymaga uzgodnienia przed zatwierdzeniem wymagania.</p>
+      <p class="explain">Kandydatem jest kolejność: najpierw trwałe przyjęcie SA1, potem zapis okna. Tak działa kod stacji. <a href="wici-link.md#implementacja">Opis WICI-Link</a> uzasadnia dwa zapisy: odwrotna kolejność mogłaby zgubić wiadomość, a wspólna transakcja wiązałaby moduł łącza z magazynem stacji. Zanik między zapisami dopuszcza ponowne odszyfrowanie koperty; deduplikacja SA1 chroni przed drugim skutkiem. <a href="transport.md#licznik-i-powtórzenia">Opis transportu</a> wymaga jednak jednej transakcji. Wybór między tymi regułami pozostaje otwarty.</p>
       <p>Gdy koperta przekracza <code>max_payload</code> nośnika, nadawca dzieli treść na dwie połowy i szyfruje je osobno z tym samym <code>ctr</code>, lecz różnym <code>kind</code> i przez to różnym nonce. Przy limicie SA1 256 B dwie części po najwyżej 128 B wymagają <code>max_payload</code> co najmniej 153 B. Odbiorca zapisuje każdą część przed potwierdzeniem skoku; SA1 i okno licznika zatwierdza po złożeniu. Części mogą nadejść w dowolnej kolejności. Sprzeczna część jest odrzucana, a czekająca wygasa po ponad 120 s lub cofnięciu zegara. Potwierdzenie jednej części nie oznacza przyjęcia SA1.</p>
       <p>Dowód doręczenia (rodzaj 1) jest całą kopertą od stacji. Jego jawny tekst zawiera 1–16 liczników <code>ctr</code> wiadomości rozstrzygniętych przez stację, po 4 B każdy. Dowód ma własny licznik z tej samej przestrzeni co koperty SA1 stacji; odbiorca sprawdza go tym samym oknem. Sam dowód i jego skutek dla ponawiania pozostają powiązane z pytaniem <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a>.</p>
       <h4>Stały przykład bajtowy</h4>
@@ -108,7 +110,7 @@
         </table>
       </div>
       <p>Te 61 B sprawdzają <a href="../../tests/test_envelope_vectors.py">test wektora</a> i <a href="../../tests/test_envelope_cross_language.py">próba międzyjęzykowa</a>. Drugi wpis tego samego pliku podaje dwie części pod <code>ctr=8</code>.</p>
-      <p class="meta">Próby lokalne, 4 listopada 2026 r.: test wektora 2/2, pakiet międzyjęzykowy wraz z testami łącza 15/15. Próba na sprzęcie D21 pozostaje otwarta.</p>
+      <p class="meta">Próby lokalne na commicie <code>e6f4dbe</code>, 4 listopada 2026 r.: test wektora 2/2, pakiet międzyjęzykowy wraz z testami łącza 15/15. Próba na sprzęcie D21 pozostaje otwarta.</p>
       <table>
         <thead><tr><th>Odrzucenie</th><th>Skutek dla treści i ponowienia</th></tr></thead>
         <tbody>
@@ -127,7 +129,7 @@
         <tbody>
           <tr><td>Nośnik stanowiska</td><td>Zaszyfrowany dysk USB SSD przechowuje klucz odbiorcy, konta oraz zaszyfrowane migawki i dziennik przyjęć. Klucz danych jest opakowany hasłem stanowiska; kopie na dysku komputera wymagają jego pełnego szyfrowania. Usunięcie pliku z SSD nie gwarantuje wymazania pozostałości.</td></tr>
           <tr><td>Laptop schronienia, poziomy 2–3</td><td>Baza pracuje w pamięci, a na dysku i pamięci USB leżą zaszyfrowane migawki. Klucz danych chronią hasła kont; zabrany plik kont pozwala zgadywać je poza panelem. Otwarta sesja ujawnia dane.</td></tr>
-          <tr><td>FRAM stacji</td><td>Stacja przechowuje zgłoszenia, skrzynkę i klucze. Opis wymaga szyfrowania rekordów AEAD przed wydaniem, lecz nie przed pilotażem; obecny pilot nie ma jeszcze tej ochrony. Ochrona odczytu MCU także należy do docelowego obrazu.</td></tr>
+          <tr><td>FRAM stacji</td><td>Stacja przechowuje zgłoszenia, skrzynkę i klucze. Opis wymaga szyfrowania rekordów AEAD przed wydaniem, lecz nie przed pilotażem; obecny obraz pilotażu nie ma jeszcze tej ochrony. Ochrona odczytu MCU także należy do docelowego obrazu.</td></tr>
         </tbody>
       </table>
       <p>Usuwanie treści po zakończeniu zdarzenia i retencja należą do <a href="system-wici-plan.html#lokalne">rozdziału 7</a>. ZNISZCZ DANE jest odrębną czynnością przy groźbie przejęcia.</p>
@@ -148,14 +150,14 @@
       <h3 id="pytania-dec-004">Pytania do <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a></h3>
       <ul>
         <li>Koperta używa dziś klucza X25519 tożsamości Reticulum, a karta zawiera pola LXMF. Jaki samodzielny format tożsamości i kart WICI zastąpi te zależności? Decyzja ustali zgodność kart i migrację stacji.</li>
-        <li>Klucz sieci jest wspólny; po przejęciu stacji jej odcięcie od listy zaufanych nie wymienia klucza u innych. Jak przeprowadzić wymianę dla całej sieci bez radia, także przy 15 skokach?</li>
+        <li>Klucz sieci jest wspólny, a sąsiedzi trzymają klucze par z przygotowania. Usunięcie stacji z listy zaufanych działa tylko na stanowisku. Jak wymienić klucz sieci i klucze par jej sąsiadów bez radia, także przy 15 skokach?</li>
         <li>Statyczna para X25519 nie zapewnia poufności wcześniejszego ruchu po przejęciu klucza prywatnego. Czy pierwsza wersja normatywna wymaga poufności przyszłej? Odpowiedź zmieni uzgadnianie klucza i format.</li>
         <li>BEACON jest podpisany, lecz jego ranga jest deklaracją nadawcy. Czy potrzebuje poświadczenia rangi? Decyzja wpłynie na wybór dynamicznego rodzica po przejęciu stacji.</li>
         <li>Tag pary poświadcza K1 na bieżącym skoku; za rodzicem ruch dzieli jego gniazdo K1. Czy łańcuch do 15 skoków wymaga poświadczenia klasy dalej niż na pierwszym skoku? Decyzja ustali odporność kolejek na wrogi ruch.</li>
       </ul>
       <p class="meta">Źródła: <a href="transport.md">transport i koperta</a>, <a href="wici-link.md">WICI-Link i zagrożenia</a>, <a href="oprogramowanie.md">zaufanie, dane i przygotowanie</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="odbior.md">próba „Wrogi węzeł”</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">koncepcja</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../firmware/src/wici_destination.cpp">przyjęcie na stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">zmiana tożsamości</a> i <a href="../../tests/vectors/envelope.json">wektor bajtowy</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.14 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.15 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
