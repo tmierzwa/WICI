@@ -44,6 +44,8 @@ section { padding-top: 2rem; }
 .table-scroll { overflow-x: auto; margin: 1rem 0; }
 table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; font-size: .92rem; line-height: 1.42; }
 .table-scroll table { margin: 0; }
+.chapter-table { table-layout: fixed; min-width: 52rem; }
+.chapter-table th:first-child { width: 11rem; }
 th, td { border-bottom: 1px solid var(--line); padding: .7rem .75rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
 th { background: #e8f0ee; color: #143e3b; }
 tbody tr:nth-child(even) { background: #f7f9f9; }
@@ -75,5 +77,6 @@ figcaption { margin-top: .7rem; color: var(--muted); font-size: .91rem; }
   thead { display: table-header-group; }
   th { background: #eee; }
   .table-scroll { overflow: visible; }
+  .chapter-table { min-width: 0; }
   .operations { min-width: 0; }
 }
