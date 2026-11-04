@@ -22,7 +22,6 @@ h3 { margin: 2rem 0 .55rem; padding-bottom: .3rem; border-bottom: 1px solid var(
 h4 { margin: 1.3rem 0 .4rem; font-size: 1rem; }
 p, ul { margin: .7rem 0; }
 section { padding-top: 2rem; }
-section > p, section > ul, header > p:not(.meta) { max-width: 78ch; }
 .meta { color: var(--muted); font-size: .93rem; }
 .status { display: inline-block; padding: .18rem .55rem; border: 1px solid var(--line); border-radius: .2rem; font-weight: 700; font-size: .84rem; }
 .explain { margin: 1.2rem 0; padding: .8rem 1rem; border-left: .25rem solid var(--accent); background: #edf5f3; }
