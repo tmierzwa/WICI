@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Wiadomości, walidacja, stany i ponawianie SA1.">
+  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.13</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+      <strong>Specyfikacja WICI</strong>
+      <ol>
+        <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+        <li><a href="system-wici-sa1.html" aria-current="page">4. Protokół SA1</a></li>
+        <li><a href="system-wici-plan.html">5–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+      </ol>
+    </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Protokół aplikacyjny SA1</h1>
+      <p><span class="status">Projekt 0.13</span> · 4 listopada 2026 r.</p>
+    </header>
+      <nav class="section-nav" aria-label="Na tej stronie">
+        <a href="#typy-i-uklad">Typy i układ</a>
+        <a href="#przyklady-bajtowe">Przykłady bajtowe</a>
+        <a href="#wpis-zgloszenia-na-stacji">Wpis zgłoszenia na stacji</a>
+        <a href="#przyjecie-na-stanowisku">Przyjęcie na stanowisku</a>
+        <a href="#komunikat-ogolny-na-stacji">Komunikat ogólny na stacji</a>
+        <a href="#przypadki-sprawdzajace-stan">Przypadki sprawdzające stan</a>
+        <a href="#ponawianie-wiadomosci">Ponawianie wiadomości</a>
+        <a href="#pytania-do-wici-dec-005">Pytania do WICI-DEC-005</a>
+      </nav>
+    <section id="aplikacja" aria-labelledby="h-aplikacja">
+      <h2 id="h-aplikacja">4. Protokół aplikacyjny</h2>
+      <p>SA1 opisuje treść wymienianą między stacją a odbiorcą, niezależnie od nośnika. Znaczenie i zakres pól podaje <a href="system-wici-funkcje.html#dane-pola">rozdział 3</a>. Poniższe reguły są kandydatami do zatwierdzenia dla pełnego zakresu protokołu; wartości profilu rozstrzyga <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
+      <figure>
+        <svg viewBox="0 0 780 112" role="img" aria-labelledby="sa1-flow-title sa1-flow-desc">
+          <title id="sa1-flow-title">Droga zgłoszenia i potwierdzenia aplikacyjnego</title>
+          <desc id="sa1-flow-desc">Stacja nadaje REQUEST. Wynik nośnika nie kończy ponawiania. Odbiorca zapisuje zgłoszenie, po czym odsyła RECEIVED. Dopiero RECEIVED kończy ponawianie tej rewizji na stacji.</desc>
+          <rect x="5" y="12" width="150" height="68" rx="4" fill="#edf5f3" stroke="#135a54"/>
+          <text x="80" y="39" text-anchor="middle" font-size="15" fill="#172a33">Stacja</text>
+          <text x="80" y="62" text-anchor="middle" font-size="12" fill="#172a33">REQUEST / TEST</text>
+          <path d="M155 46h46" stroke="#135a54" stroke-width="2"/>
+          <path d="M201 46l-8 -5v10z" fill="#135a54"/>
+          <rect x="202" y="12" width="160" height="68" rx="4" fill="#edf2f2" stroke="#50616a"/>
+          <text x="282" y="39" text-anchor="middle" font-size="15" fill="#172a33">Nośnik</text>
+          <text x="282" y="62" text-anchor="middle" font-size="12" fill="#172a33">wynik transmisji</text>
+          <path d="M362 46h46" stroke="#135a54" stroke-width="2"/>
+          <path d="M408 46l-8 -5v10z" fill="#135a54"/>
+          <rect x="409" y="12" width="170" height="68" rx="4" fill="#edf5f3" stroke="#135a54"/>
+          <text x="494" y="39" text-anchor="middle" font-size="15" fill="#172a33">Odbiorca</text>
+          <text x="494" y="62" text-anchor="middle" font-size="12" fill="#172a33">trwały zapis</text>
+          <path d="M579 46h46" stroke="#135a54" stroke-width="2"/>
+          <path d="M625 46l-8 -5v10z" fill="#135a54"/>
+          <rect x="626" y="12" width="149" height="68" rx="4" fill="#edf5f3" stroke="#135a54"/>
+          <text x="700" y="39" text-anchor="middle" font-size="15" fill="#172a33">Stacja</text>
+          <text x="700" y="62" text-anchor="middle" font-size="12" fill="#172a33">RECEIVED</text>
+        </svg>
+        <figcaption>Wynik nośnika nie zastępuje RECEIVED. Stacja kończy ponawianie rewizji po potwierdzeniu z warstwy aplikacyjnej.</figcaption>
+      </figure>
+      <h3 id="typy-i-uklad">Typy i układ</h3>
+      <table>
+        <thead><tr><th>Typ</th><th>Kierunek</th><th>Tablica JSON</th></tr></thead>
+        <tbody>
+          <tr><td>REQUEST (0)</td><td>Stacja → odbiorca</td><td><code>[1,0,id,revision,category,people,location,text,urgency]</code></td></tr>
+          <tr><td>RECEIVED (1)</td><td>Odbiorca → stacja</td><td><code>[1,1,id,revision,1,1]</code></td></tr>
+          <tr><td>STATUS (2)</td><td>Odbiorca → stacja</td><td><code>[1,2,id,revision,event,state]</code></td></tr>
+          <tr><td>REPLY (3)</td><td>Odbiorca → stacja</td><td><code>[1,3,id,revision,event,text]</code></td></tr>
+          <tr><td>BULLETIN (4)</td><td>Odbiorca → stacja</td><td><code>[1,4,id,event,text]</code></td></tr>
+          <tr><td>TEST (5)</td><td>Stacja → odbiorca</td><td><code>[1,5,id,revision,category,people,location,text,urgency]</code></td></tr>
+        </tbody>
+      </table>
+      <p>Pierwsze pole oznacza wersję 1. Koder zapisuje jedną tablicę JSON w UTF-8, bez zbędnych spacji i bez zamiany znaków Unicode na <code>\u</code>. Limity tekstu są liczone w bajtach UTF-8. Tekst jest w NFC; U+0022, U+005C oraz kategorie Unicode Cc, Cf, Cs, Co, Cn, Zl i Zp są niedozwolone.</p>
+      <p>Obecny limit całej treści wynosi 256 B. Wynika z wcześniejszej ścieżki LXMF i jest kandydatem, a nie uzasadnionym jeszcze limitem SA1 niezależnego od nośnika (<a href="system-wici-decyzje.html#wici-dec-003">WICI-DEC-003</a> i <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Podział koperty na części należy do rozdziału 5.</p>
+      <table>
+        <thead><tr><th>Przypadek</th><th>Skutek na poziomie SA1</th></tr></thead>
+        <tbody>
+          <tr><td>Niepoprawny JSON, obiekt zamiast tablicy, zła liczba pól, wersja lub typ</td><td>Odrzucenie bez zmiany zgłoszenia lub skrzynki; bez RECEIVED.</td></tr>
+          <tr><td>Zły identyfikator, zakres liczby albo typ pola; tekst ponad limit lub poza NFC; znak zabroniony</td><td>Odrzucenie bez zmiany stanu. Uzasadnienie odmowy zostaje w diagnostyce odbiorcy.</td></tr>
+          <tr><td>Ten sam nadawca, <code>id</code> i <code>revision</code>, lecz inna treść</td><td>Konflikt: zachowana treść nie jest nadpisywana; bez nowego RECEIVED.</td></tr>
+          <tr><td>Nadawca spoza listy zaufanych na stanowisku</td><td>Kwarantanna bez RECEIVED; zatwierdzenie pojedynczej wiadomości może później uruchomić przyjęcie.</td></tr>
+          <tr><td>Wiadomość odbiorcy z nieaktywnej tożsamości albo dla <code>id</code> spoza rejestru stacji</td><td>Stacja pomija wiadomość bez zmiany rejestru i skrzynki.</td></tr>
+        </tbody>
+      </table>
+      <p class="explain">Kodery C++ i Python tworzą zapis bez spacji i <code>\u</code>, lecz oba dekodery przyjmują także tak zapisane dane i przy ponownym kodowaniu je normalizują. Reguła odrzucania niekanonicznego wejścia wymaga decyzji w <a href="system-wici-decyzje.html#wici-dec-003">WICI-DEC-003</a>; obecny kod jej nie egzekwuje.</p>
+      <h3 id="przyklady-bajtowe">Przykłady bajtowe</h3>
+      <p>Każdy zapis w kolumnach jest dokładnym ciągiem bajtów UTF-8; przykłady używają znaków ASCII, więc jeden widoczny znak zajmuje jeden bajt. Poprawne ciągi wygenerował koder referencyjny i odtworzył koder C++; oba dekodery odrzuciły ciągi w ostatniej kolumnie.</p>
+      <div class="table-scroll" role="region" aria-label="Przykłady bajtowe SA1" tabindex="0">
+        <table class="operations">
+          <thead><tr><th>Typ</th><th>Poprawne bajty (długość)</th><th>Odrzucane bajty i przyczyna</th></tr></thead>
+          <tbody>
+            <tr><td>REQUEST</td><td><code>[1,0,"0123456789abcdef0123456789abcdef",0,3,4,"Lipowa 2","Brak wody",1]</code> (71 B)</td><td><code>[1,0,"0123456789abcdef0123456789abcdef",0,3,0,"Lipowa 2","Brak wody",1]</code> — <code>people</code> = 0</td></tr>
+            <tr><td>RECEIVED</td><td><code>[1,1,"0123456789abcdef0123456789abcdef",0,1,1]</code> (46 B)</td><td><code>[1,1,"0123456789abcdef0123456789abcdef",0,2,1]</code> — niedozwolona wartość zdarzenia</td></tr>
+            <tr><td>STATUS</td><td><code>[1,2,"0123456789abcdef0123456789abcdef",0,2,2]</code> (46 B)</td><td><code>[1,2,"0123456789abcdef0123456789abcdef",0,2,1]</code> — <code>state</code> = 1</td></tr>
+            <tr><td>REPLY</td><td><code>[1,3,"0123456789abcdef0123456789abcdef",0,2,"Dostarczamy wode"]</code> (63 B)</td><td><code>[1,3,"0123456789abcdef0123456789abcdef",0,0,"Dostarczamy wode"]</code> — <code>event</code> = 0</td></tr>
+            <tr><td>BULLETIN</td><td><code>[1,4,"fedcba9876543210fedcba9876543210",2,"Punkt czynny"]</code> (57 B)</td><td><code>[1,4,"fedcba9876543210fedcba9876543210",0,"Punkt czynny"]</code> — <code>event</code> = 0</td></tr>
+            <tr><td>TEST</td><td><code>[1,5,"00112233445566778899aabbccddeeff",0,9,1,"Lipowa 2","test",0]</code> (66 B)</td><td><code>[1,5,"00112233445566778899aabbccddeeff",0,10,1,"Lipowa 2","test",0]</code> — <code>category</code> = 10</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="explain">Przykłady potwierdzają zgodność obu kodeków dla tych sześciu wiadomości, ale nie są jeszcze trwałym zestawem wektorów SA1. W <code>tests/vectors/</code> nie ma osobnego pliku SA1; jego dodanie pozostaje do decyzji przy zatwierdzaniu wymagań i testów.</p>
+      <h3 id="wpis-zgloszenia-na-stacji">Wpis zgłoszenia na stacji</h3>
+      <p>Wpis REQUEST lub TEST ma najnowszą rewizję <code>r_max</code>, najwyższą potwierdzoną <code>r_rcv</code> (początkowo −1), etap wysyłki, ostatnią decyzję oraz osobne liczniki <code>status_hi</code> i <code>reply_hi</code>. Znaczenie etapów opisuje <a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>.</p>
+      <table>
+        <thead><tr><th>Zdarzenie</th><th>Warunek</th><th>Zmiana wpisu</th></tr></thead>
+        <tbody>
+          <tr><td>Nowe zgłoszenie</td><td>Wolny wpis i miejsce w kolejce.</td><td><code>r_max</code> = 0, etap „zapisane”, intencja wysyłki; potwierdzenie lokalne po trwałym zapisie.</td></tr>
+          <tr><td>Przekazanie do nośnika i jego wynik</td><td>Intencja czeka na próbę.</td><td>Etap „wysyłanie” i trwały znacznik pierwszego przekazania. Wynik nośnika „dostarczone” ustawia taki etap bez <code>r_rcv</code>; porażka zostawia intencję do ponowienia.</td></tr>
+          <tr><td>RECEIVED</td><td>Aktywna tożsamość odbiorcy, znane <code>id</code>, <code>revision</code> ≤ <code>r_max</code>; wpis nieanulowany.</td><td><code>r_rcv</code> rośnie do większej wartości. Gdy potwierdzono <code>r_max</code>, etap „odebrane” kończy ponowienia tej rewizji. Potwierdzenie starszej rewizji nie kończy nowszej intencji.</td></tr>
+          <tr><td>STATUS</td><td>Jak dla RECEIVED oraz <code>event</code> &gt; <code>status_hi</code> i <code>state</code> 2–6.</td><td><code>status_hi</code> i decyzja przyjmują nowe wartości; wiadomość działa też jak RECEIVED swojej rewizji. Decyzja z największym <code>event</code> pozostaje widoczna niezależnie od rewizji.</td></tr>
+          <tr><td>REPLY</td><td>Jak dla RECEIVED oraz <code>event</code> &gt; <code>reply_hi</code>.</td><td><code>reply_hi</code> rośnie, tekst trafia do skrzynki; wiadomość działa też jak RECEIVED swojej rewizji. Licznik REPLY jest niezależny od STATUS.</td></tr>
+          <tr><td>Nowa rewizja</td><td>Wpis nieanulowany, wyższe <code>revision</code>.</td><td><code>r_max</code> i pełna treść zmieniają się; etap wraca do „zapisane”. Wcześniejsza decyzja zostaje, a intencja starszej rewizji kończy się po bieżącej próbie.</td></tr>
+          <tr><td>ANULUJ WYSYŁKĘ</td><td>Żadna rewizja nie była przekazana do nośnika.</td><td>Etap „anulowane”, koniec intencji. Późniejsze anulowanie daje ten sam wynik; po przekazaniu następuje odmowa <code>too_late</code>.</td></tr>
+          <tr><td>Spóźniona lub obca wiadomość</td><td><code>id</code> spoza rejestru, rewizja &gt; <code>r_max</code> albo <code>event</code> nie wyższy od odpowiedniego licznika.</td><td>Bez zmiany wpisu i skrzynki. Powtórzenie poprawnego RECEIVED może ponownie potwierdzić już przyjętą rewizję, bez drugiego zapisu.</td></tr>
+          <tr><td>Zamknięcie i zwolnienie wpisu</td><td>Brak aktywnej intencji; zgłoszenie odebrane z decyzją 6 dla <code>r_max</code>, zgłoszenie anulowane albo TEST odebrany. Zwolnienie następuje dopiero przy braku wolnego wpisu.</td><td>Zwalniany jest najdawniej zmieniony zamknięty wpis; jego <code>id</code> i rewizja trafiają do pamięci zwolnionych wpisów. Decyzja 6 dla starszej rewizji nie zamyka nowszej.</td></tr>
+        </tbody>
+      </table>
+      <h3 id="przyjecie-na-stanowisku">Przyjęcie na stanowisku</h3>
+      <table>
+        <thead><tr><th>Przypadek</th><th>Skutek</th></tr></thead>
+        <tbody>
+          <tr><td>Poprawne REQUEST lub TEST od zaufanej stacji</td><td>Stanowisko zapisuje nadawcę, <code>id</code>, <code>revision</code>, treść i intencję RECEIVED w jednej transakcji. RECEIVED wychodzi po trwałym zapisie; TEST pozostaje poza kolejką potrzeb.</td></tr>
+          <tr><td>Nieznana albo usunięta z listy stacja</td><td>Wiadomość trafia do kwarantanny bez RECEIVED. Zatwierdzenie pojedynczej wiadomości przez dyżurnego przenosi ją do przyjętych, lecz nie dodaje stacji do listy zaufanych.</td></tr>
+          <tr><td>Powtórzone REQUEST lub TEST z tym samym nadawcą, <code>id</code>, <code>revision</code> i skrótem treści</td><td>Bez drugiego przyjęcia; stanowisko ponawia ten sam RECEIVED i najnowszy STATUS. Skrót treści służy do wykrycia konfliktu, nie zastępuje pozostałych części klucza.</td></tr>
+          <tr><td>Ta sama trójka nadawca–<code>id</code>–<code>revision</code> z inną treścią albo REQUEST i TEST pod tym samym kluczem</td><td>Konflikt bez nadpisania wcześniejszego zapisu i bez nowego RECEIVED.</td></tr>
+          <tr><td>Błąd trwałego zapisu albo pełna kwarantanna</td><td>Bez RECEIVED; stacja zachowuje intencję i może ponowić wiadomość.</td></tr>
+          <tr><td>Decyzja dyżurnego</td><td>Nowe zdarzenie STATUS z rosnącym <code>event</code>; odpowiedź tworzy osobny REPLY. Stan 3 zachowuje na stanowisku źródło i czas potwierdzenia skierowania pomocy; stan 5 powstaje razem z REPLY.</td></tr>
+        </tbody>
+      </table>
+      <p>Kluczem odbioru jest nadawca, <code>id</code> i <code>revision</code>; zapisany skrót kanonicznej treści rozstrzyga, czy kolejna wiadomość jest powtórką, czy konfliktem. Kolejka stacji wysyła najpierw REQUEST z pilnością 2, potem pozostałe REQUEST według czasu zapisu, na końcu TEST. Stanowisko wysyła RECEIVED i STATUS przed REPLY i BULLETIN. Nowszy STATUS zastępuje niewysłany STATUS tej samej rewizji; REPLY dla jednego <code>id</code> idą kolejno po dowodzie poprzedniej.</p>
+      <h3 id="komunikat-ogolny-na-stacji">Komunikat ogólny na stacji</h3>
+      <p>BULLETIN ma własne <code>id</code> i <code>event</code>. Stacja przechowuje 64 ostatnie pary (<code>id</code>, <code>event</code>) oraz dolną granicę <code>bulletin_floor</code>. Pomija powtórzoną parę, zdarzenie nie wyższe od granicy oraz zdarzenie starsze od najwyższego przyjętego <code>event</code> o 86 400 lub więcej. Po zapełnieniu pamięci usuwa parę z najmniejszym <code>event</code> i podnosi do niego dolną granicę. Usunięcie komunikatu ze skrzynki nie przywraca możliwości przyjęcia jego powtórki. Poprawka komunikatu ma nowe <code>id</code>.</p>
+      <h3 id="przypadki-sprawdzajace-stan">Przypadki sprawdzające stan</h3>
+      <p>W tabeli X jest znanym zgłoszeniem z <code>r_max</code> = 1 i <code>r_rcv</code> = −1, a wiadomości pochodzą od aktywnej tożsamości odbiorcy. Każdy wiersz opisuje osobną próbę; <code>e</code> oznacza <code>event</code>, a <code>s</code> — <code>state</code>.</p>
+      <div class="table-scroll" role="region" aria-label="Przypadki sprawdzające stan SA1" tabindex="0">
+        <table class="operations">
+          <thead><tr><th>Sekwencja</th><th>Oczekiwany stan</th></tr></thead>
+          <tbody>
+            <tr><td><code>RECEIVED(X,0), RECEIVED(X,1)</code></td><td><code>r_rcv</code> = 1, etap „odebrane”, na ekranie stan 1.</td></tr>
+            <tr><td><code>STATUS(X,0,e10,s3), RECEIVED(X,1)</code></td><td>Decyzja 3 pozostaje widoczna; etap „odebrane”.</td></tr>
+            <tr><td><code>STATUS(X,1,e10,s2), STATUS(X,0,e9,s3)</code></td><td>Drugie zdarzenie pominięte; decyzja 2.</td></tr>
+            <tr><td><code>STATUS(X,1,e10,s6)</code> dwukrotnie</td><td>Drugie zdarzenie pominięte.</td></tr>
+            <tr><td><code>RECEIVED(X,2)</code></td><td>Pominięte: rewizja nie istnieje.</td></tr>
+            <tr><td><code>REPLY(X,1,e5), STATUS(X,1,e4,s5)</code></td><td>Oba przyjęte dzięki osobnym licznikom; decyzja 5 i odpowiedź w skrzynce.</td></tr>
+            <tr><td><code>STATUS(X,0,e10,s6)</code>, nowa rewizja 2</td><td>Decyzja 6 pozostaje, etap wraca do „zapisane”; wpis pozostaje otwarty.</td></tr>
+            <tr><td>X przekazany do nośnika, utrata dowodu i RECEIVED, próba anulowania, późny <code>RECEIVED(X,1)</code></td><td>Anulowanie niedostępne (<code>too_late</code>); późne potwierdzenie przyjęte, etap „odebrane”.</td></tr>
+            <tr><td>Nowe Z w ciszy radiowej, anulowanie, 255 dalszych wpisów, kolejne zgłoszenie</td><td>Z jest zamknięte i może zostać zwolnione.</td></tr>
+            <tr><td><code>STATUS(Y,0,e3,s3)</code>, Y nieznane</td><td>Wiadomość pominięta.</td></tr>
+            <tr><td><code>BULLETIN(B,e100)</code> dwukrotnie</td><td>Drugi komunikat pominięty.</td></tr>
+            <tr><td><code>BULLETIN(B1,e200000), BULLETIN(B2,e100000)</code></td><td>Drugi pominięty jako zbyt stary.</td></tr>
+            <tr><td><code>BULLETIN(B1,e1000)</code> … <code>BULLETIN(B65,e1064)</code>, usunięcie B1 ze skrzynki, ponownie B1</td><td>Powtórka pominięta: <code>e</code> ≤ <code>bulletin_floor</code> = 1000.</td></tr>
+            <tr><td>256 wpisów; X: decyzja 6 dla rewizji 1, nowa rewizja 2, RECEIVED dla 2; nowe zgłoszenie</td><td>X pozostaje; zwalniany jest inny zamknięty wpis albo brakuje miejsca.</td></tr>
+            <tr><td>256 wpisów; X jako jedyny zamknięty, nowe zgłoszenie, późny <code>STATUS(X,1,e11,s2)</code></td><td>X zostaje zwolniony; późny STATUS jest pominięty.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="ponawianie-wiadomosci">Ponawianie wiadomości</h3>
+      <table>
+        <thead><tr><th>Nadawca i wynik</th><th>Obecne działanie</th></tr></thead>
+        <tbody>
+          <tr><td>Stacja: pierwszy wynik nośnika „dostarczone”, bez RECEIVED</td><td>Czeka 10 min, następnie ponawia co losowe 30–60 min. Kolejny wynik „dostarczone” nie zastępuje RECEIVED.</td></tr>
+          <tr><td>Stacja: nieudana próba</td><td>Ponawia po 1, 2, 5, potem co 15 min; odstępy ±20%. Po 6 h od pierwszej próby przechodzi na 60 min ±20%. Zajęte łącze nie liczy się jako nieudana próba.</td></tr>
+          <tr><td>Stanowisko: nieudana próba odpowiedzi</td><td>Przechowuje intencję RECEIVED, STATUS, REPLY lub BULLETIN i ponawia po 1, 2, 5, potem co 15 min ±20%; po 6 h co 60 min ±20%.</td></tr>
+          <tr><td>Stanowisko: potwierdzenie tylko przez przekaźnik</td><td>Intencja zostaje otwarta. Po przekazaniu następna próba czeka co najmniej 35 min, a kolejne odstępy rosną dwukrotnie do 4 h. Nowy uwierzytelniony kontakt ze stacją może uruchomić wysyłkę od razu. Potwierdzenie od samej stacji zamyka intencję.</td></tr>
+        </tbody>
+      </table>
+      <p>Stacja nie uruchamia dwóch prób tej samej intencji równolegle. RECEIVED, STATUS lub REPLY kończy ponawianie danej rewizji; nowa rewizja zastępuje starszą. Intencje nie znikają samoczynnie po upływie czasu. Bez potwierdzenia stacja pokazuje alarm: dla pilności 2 po 15 min, dla 1 po godzinie, dla 0 po 6 h od zapisu; dla TEST po 30 min od pierwszego nadania. Przy pilności 2 brak STATUS przez 30 min po RECEIVED uruchamia osobny alarm.</p>
+      <p class="explain">Opis źródłowy nazywa pierwszy wynik „dostarczone” dowodem LXMF od odbiorcy. W aktualnej ścieżce WICI-Link stacja może dostać potwierdzenie tylko następnego skoku. Kod uruchamia ten sam czas oczekiwania w obu przypadkach. Znaczenie tego wyniku i wpływ na czas ponowienia wymaga rozstrzygnięcia w <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a>. Parametry zależne od profilu pozostają w <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
+      <h3 id="pytania-do-wici-dec-005">Pytania do <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a></h3>
+      <ul>
+        <li>RECEIVED wychodzi po trwałym przyjęciu i kończy ponawianie na stacji. Czy gwarantuje także możliwość odzyskania treści po awarii stanowiska? Od tego zależy znaczenie potwierdzenia dla gospodarza.</li>
+        <li>Stacja i stanowisko zachowują intencje bez automatycznego terminu końcowego. Czy ponawianie ma trwać bez końca, czy po określonym czasie wymagać interwencji? Decyzja ustali retencję i alarmy.</li>
+        <li>Po odtworzeniu starszej kopii stanowisko może utracić zgłoszenie, które dostało już RECEIVED; opis przewiduje odtworzenie z dziennika papierowego bez pełnej treści. Jaka procedura odzyska treść i decyzje?</li>
+        <li>REPLY i BULLETIN zamyka dziś dowód od stacji, także przy trwałym odrzuceniu. Czy potrzeba osobnego potwierdzenia aplikacyjnego? Decyzja ustali, kiedy panel może pokazać doręczenie.</li>
+        <li>Powtórne działanie dyżurnego tworzy nowe zdarzenie. Jak rozpoznać ponowienie po utracie odpowiedzi panelu? Decyzja ustali klucz idempotencji operacji.</li>
+        <li>Strona mieszkańca pozostaje planowaną funkcją; lokalny zapis ma poprzedzać odpowiedź HTTP. Jak rozpoznać ponowienie po jej utracie? Decyzja ustali, czy powstanie jeden wpis, czy dwa.</li>
+      </ul>
+      <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości SA1, cykl życia i ponawianie</a>, <a href="stanowisko-osp.md">przyjęcie i wysyłka stanowiska</a>, <a href="transport.md">szew nośnika</a>, <a href="../../firmware/src/sa1.cpp">kodek C++</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/reference/reference.py">kodek referencyjny</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">ponawianie</a> i <a href="../../tests/test_sa1_unicode.py">próby Unicode</a>.</p>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.13 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>

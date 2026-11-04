@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Plan rozdziałów 5–9 specyfikacji WICI.">
+  <title>Dalszy zakres specyfikacji — Specyfikacja WICI 0.13</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+      <strong>Specyfikacja WICI</strong>
+      <ol>
+        <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+        <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+        <li><a href="system-wici-plan.html" aria-current="page">5–9. Dalszy zakres</a></li>
+        <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+      </ol>
+    </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Dalszy zakres specyfikacji</h1>
+      <p><span class="status">Projekt 0.13</span> · 4 listopada 2026 r.</p>
+    </header>
+      <nav class="section-nav" aria-label="Na tej stronie">
+        <a href="#h-bezpieczenstwo">Bezpieczeństwo i koperta</a>
+        <a href="#h-siec">Sieć i radio</a>
+        <a href="#h-lokalne">Interfejsy i trwałość</a>
+        <a href="#h-eksploatacja">Wyrób i eksploatacja</a>
+        <a href="#h-zgodnosc">Wersje, zgodność i dowody</a>
+      </nav>
+    <section id="bezpieczenstwo" aria-labelledby="h-bezpieczenstwo">
+      <h2 id="h-bezpieczenstwo">5. Bezpieczeństwo i koperta</h2>
+      <p>Model bezpieczeństwa określi zagrożenia, tożsamości, uprawnienia, cykl życia kluczy i ochronę danych. Specyfikacja koperty poda jej format, algorytmy, zakres uwierzytelnienia, reguły świeżości i odrzucania. Wektory testowe pozwolą sprawdzić niezależną implementację.</p>
+    </section>
+
+    <section id="siec" aria-labelledby="h-siec">
+      <h2 id="h-siec">6. Sieć i radio</h2>
+      <p>Protokół sieciowy określi format i adresowanie ramek, sąsiadów, trasy, przekazywanie, potwierdzenia skoku, kolejki oraz zachowanie przy przeciążeniu i braku trasy. Profil radiowy poda parametry transmisji, zasady dostępu do kanału, limity nadawania, metodę pomiaru i warunki wykorzystania pasma.</p>
+      <p>Reguły obejmą błędy, restart i ponowny odbiór tej samej ramki.</p>
+    </section>
+
+    <section id="lokalne" aria-labelledby="h-lokalne">
+      <h2 id="h-lokalne">7. Interfejsy i trwałość</h2>
+      <p>Rozdział obejmie USB stacja–laptop, panel stanowiska odbiorczego, stronę dla telefonów w sieci Wi-Fi obiektu (poziom 3) i tryb kiosku. Kontrakty interfejsów określą wymieniane dane, synchronizację po przerwaniu połączenia, limity przepływu i uprawnienia. Wymagania trwałości wskażą moment potwierdzenia zapisu oraz zachowanie przy zaniku zasilania, pełnej pamięci, odtwarzaniu, migracji tożsamości i usuwaniu danych.</p>
+    </section>
+
+    <section id="eksploatacja" aria-labelledby="h-eksploatacja">
+      <h2 id="h-eksploatacja">8. Wyrób i eksploatacja</h2>
+      <h3 id="obsluga-i-zachowanie-w-pracy">Obsługa i zachowanie w pracy</h3>
+      <p>Wymagania eksploatacyjne określą przygotowanie, uruchomienie, obsadę stanowiska, zastępstwo, tryby pracy, diagnostykę i zakończenie pracy. Obejmą czytelność wskazań, działania wymagane od człowieka oraz zachowanie przy braku łączności i ograniczonej energii.</p>
+      <h3 id="bezpieczenstwo-urzadzenia-i-kompatybilnosc-elektromagnetyczna">Bezpieczeństwo urządzenia i kompatybilność elektromagnetyczna</h3>
+      <p>Wymagania wynikowe obejmą bezpieczne zasilanie, warunki środowiskowe, emisje i odporność elektromagnetyczną oraz ekspozycję na pole radiowe. Sposób realizacji i wyniki badań należą do dokumentacji ocenianej konfiguracji wyrobu.</p>
+    </section>
+
+    <section id="zgodnosc" aria-labelledby="h-zgodnosc">
+      <h2 id="h-zgodnosc">9. Wersje, zgodność i dowody</h2>
+      <h3 id="wersje-i-profile">Wersje i profile</h3>
+      <p>Rozdział określi wersje formatów i protokołów, profile, granice zasobów, zasady rozszerzeń i zgodność wsteczną.</p>
+      <h3 id="sprawdzanie-wymagan">Sprawdzanie wymagań</h3>
+      <p>Każde wymaganie zostanie powiązane z profilem, ocenianą konfiguracją i metodą sprawdzenia: testem, pomiarem albo przeglądem. Rejestr zgodności wskaże wynik i dowód dla danej wersji wyrobu.</p>
+      <p>Schematy formatów, rejestr kodów, wektory testowe i scenariusze awaryjne będą podstawą prób współdziałania niezależnych implementacji.</p>
+      <h3 id="dokumentacja-ocenianego-wyrobu">Dokumentacja ocenianego wyrobu</h3>
+      <p class="explain">Dla ocenianego wyrobu radiowego osobna dokumentacja techniczna powiąże wymagania specyfikacji z wersją sprzętu, firmware, anteną, zasilaniem, analizą ryzyka, zastosowanymi normami i wynikami badań, zgodnie z <a href="https://eur-lex.europa.eu/eli/dir/2014/53/oj/eng">art. 21 i załącznikiem V dyrektywy RED</a>. Zmiana konfiguracji wymaga ponownej oceny wpływu na te dowody. Przed oceną wyrobu trzeba sprawdzić aktualne wymagania prawne, w tym <a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng">rozporządzenie CRA</a>. Specyfikacja nie zastępuje dokumentacji technicznej wyrobu ani deklaracji zgodności UE.</p>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.13 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>
