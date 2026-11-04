@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.27</title>
+  <link rel="stylesheet" href="system-wici.css">
+  <style>
+    .evidence-table { min-width: 94rem; }
+    @media print { .evidence-table { min-width: 0; } }
+  </style>
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+    <strong>Specyfikacja WICI</strong>
+    <ol>
+      <li><a href="system-wici.html">Start</a></li>
+      <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+      <li><a href="system-wici-model.html">2. Model systemu</a></li>
+      <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+      <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+      <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
+      <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
+      <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
+      <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
+      <li><a href="system-wici-zgodnosc.html" aria-current="page">9. Wersje, zgodność i dowody</a></li>
+      <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+    </ol>
+  </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Wersje, zgodność i dowody</h1>
+      <p><span class="status">Projekt 0.27</span> · 4 listopada 2026 r.</p>
+      <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie pozostaje otwarta; pozytywny wynik jednej drogi nie obejmie pełnych 15 skoków (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</p>
+    </header>
+    <nav class="section-nav" aria-label="Na tej stronie">
+      <a href="#wersje">Wersje i profile</a>
+      <a href="#sprawdzanie">Sprawdzanie</a>
+      <a href="#wspoldzialanie">Współdziałanie</a>
+      <a href="#dokumentacja-wyrobu">Dokumentacja wyrobu</a>
+      <a href="#pytania-zgodnosci">Pytania</a>
+    </nav>
+
+    <section id="wersje" aria-labelledby="h-wersje">
+      <h2 id="h-wersje">9.1. Wersje i profile</h2>
+      <div class="table-scroll" role="region" aria-label="Wersje formatów" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Format</th><th>Numer i miejsce</th><th>Źródło w kodzie</th><th>Nieznana wersja</th></tr></thead>
+        <tbody>
+          <tr><td>SA1</td><td>1, pierwszy element tablicy JSON.</td><td><a href="../../firmware/src/sa1.cpp">Stacja</a>, <a href="../../software/reference/reference.py">model</a>.</td><td>Odrzucana; typ spoza 0–5 i nadmiarowe elementy także.</td></tr>
+          <tr><td>Koperta WICI</td><td>1, dwa najbardziej znaczące bity pierwszego bajtu.</td><td><a href="../../firmware/src/envelope.cpp">Stacja</a>, <a href="../../software/laptop/wici/envelope.py">stanowisko</a>.</td><td>Odrzucana; nieznany rodzaj koperty też. Dowód doręczenia ma osobną ścieżkę odbioru.</td></tr>
+          <tr><td>WICI-Link</td><td>3, dwa najbardziej znaczące bity pierwszego bajtu ramki.</td><td><a href="../../firmware/src/wici_link.h">Stacja</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">stanowisko</a>.</td><td>Odrzucana, w tym v2; bity zastrzeżone i typy poza DATA, HACK, BEACON również.</td></tr>
+          <tr><td>USB</td><td>2, pole JSON <code>usb</code>.</td><td><a href="../../firmware/src/usbproto.h">Kontrakt</a>, <a href="../../firmware/src/usbproto.cpp">obsługa</a>.</td><td>Odmowa <code>contract</code> i ponowne <code>hello</code>; nieznane pole lub typ polecenia są odrzucane.</td></tr>
+          <tr><td>Karta odbiorcy</td><td><code>v</code>: 2 dla karty numerowanej, 1 dla starszej.</td><td><a href="../../software/laptop/wici/stanowisko/nosnik.py">Tworzenie i odczyt</a>, <a href="../../software/laptop/wici/configdoc.py">walidacja pól</a>.</td><td>Nośnik odrzuca wartość inną niż 1 lub 2. Zgodność starszej karty z siecią numerowaną zależy od jej konfiguracji.</td></tr>
+          <tr><td>Konfiguracja stacji</td><td>Brak własnego numeru formatu w dokumencie.</td><td><a href="../../software/laptop/wici/configdoc.py">Walidacja</a>, <a href="../../firmware/src/config.cpp">stacja</a>.</td><td>Nieznane pola są odrzucane; brak reguły migracji między schematami (<a href="system-wici-decyzje.html#wici-inv-031">luka</a>).</td></tr>
+          <tr><td>Magazyn FRAM</td><td>2, rekord formatu i bajt wersji rekordu.</td><td><a href="../../firmware/src/journal.h">Numer</a>, <a href="../../firmware/src/store.cpp">otwarcie</a>.</td><td>Stacja zgłasza błąd formatu i nie otwiera magazynu; nie ma automatycznej migracji.</td></tr>
+          <tr><td>Kopia bazy stanowiska</td><td><code>v</code>: 1 w zaszyfrowanej treści pliku <code>kopia-*.wici</code>.</td><td><a href="../../software/laptop/wici/stanowisko/kopie.py">Zapis i odczyt</a>.</td><td>Odczyt odmawia przy innym <code>v</code>. Nagłówek kopii nie ma osobnego numeru schematu.</td></tr>
+          <tr><td>Pakiet migracji stacji</td><td>1, pierwszy bajt nagłówka; obraz FRAM ma rozmiar ustalony w kodzie.</td><td><a href="../../firmware/src/migration_crypto.cpp">Nagłówek</a>, <a href="../../firmware/src/migration_image.h">obraz</a>, <a href="../../software/laptop/wici/migration.py">klient</a>.</td><td>Pakiet z inną wersją jest odrzucany. Niezależne wersjonowanie układu obrazu pozostaje luką (<a href="system-wici-decyzje.html#wici-inv-031">WICI-INV-031</a>).</td></tr>
+        </tbody>
+      </table></div>
+      <p>Numer <strong>formatu</strong> zmienia się przy niezgodnej zmianie bajtów lub schematu danych. Wersja <strong>programu</strong>, zwracana przez stację w <code>hello.fw</code>, identyfikuje obraz wykonujący te formaty. Wersja <strong>specyfikacji</strong> oznacza wydanie dokumentu. Poprawka programu bez zmiany formatu może zmienić tylko wersję programu; korekta opisu bez zmiany kodu zmienia wersję dokumentu. Zasady wydawania i zgodności wstecznej są otwarte (<a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>).</p>
+      <p>W działającej sieci ramki WICI-Link v2 są dziś odrzucane przez v3. Węzły dzielą jeden klucz sieci, a konfigurację otrzymują przez USB. Zmiana formatu łącza w sieci do 15 skoków oznacza objazd i przygotowanie wszystkich węzłów; mechanizm współistnienia wersji nie jest zdefiniowany.</p>
+      <p>Pola wersji koperty i WICI-Link pozwalają rozpoznać przyszły format, lecz obecny kod go nie interpretuje. SA1 odrzuca nieznany typ i inną liczbę pól, USB odrzuca nieznane pola poleceń, a konfiguracja odrzuca pola poza schematem. Reguły przyszłych rozszerzeń wymagają osobnej decyzji; obecność bitów wersji nie stanowi obietnicy zgodności wstecznej.</p>
+      <h3 id="profile">Zakresy profili</h3>
+      <div class="table-scroll" role="region" aria-label="Zakresy profili" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Zakres</th><th>Reguła protokołu</th><th>Parametr profilu lub konfiguracji</th></tr></thead>
+        <tbody>
+          <tr><td>Pełny protokół</td><td>Do 15 skoków, zalew, przeciążenie i wrogi węzeł (<a href="system-wici-zasady.html#wici-zal-009">WICI-ZAL-009</a>, <a href="system-wici-siec.html#trasy">rozdział 6</a>).</td><td>Sposób sprawdzenia dłuższych łańcuchów jest otwarty (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</td></tr>
+          <tr><td>Pilotaż</td><td>Nie zawęża reguł protokołu.</td><td>Rozmieszczenie, profil radia, jeden wariant stacji i minimum prób (<a href="system-wici-siec.html#profil">radio</a>, <a href="system-wici-wyrob.html#konfiguracja">wyrób</a>, <a href="odbior.md#minimum-pilotażu">próby</a>).</td></tr>
+          <tr><td>Wydanie</td><td>Te same formaty i znaczenia wiadomości.</td><td>Oceniana konfiguracja, drugie wykonanie, energia i próby wyrobu (<a href="system-wici-wyrob.html#sprawdzenie">rozdział 8</a>).</td></tr>
+          <tr><td>Poziom 1</td><td>Stacja działa bez laptopa.</td><td>Stacja, antena i zasilanie w ocenianej konfiguracji (<a href="system-wici-model.html#urzadzenia-i-role">role</a>, <a href="system-wici-wyrob.html#energia">energia</a>).</td></tr>
+          <tr><td>Poziom 2</td><td>Nie zmienia SA1 ani ramki radiowej.</td><td>Laptop schronienia i interfejs USB po pilotażu (<a href="system-wici-interfejsy.html#granice">rozdział 7</a>).</td></tr>
+          <tr><td>Poziom 3</td><td>Nie zmienia SA1 ani ramki radiowej.</td><td>Strona mieszkańca, router i osobne zasilanie po pilotażu (<a href="system-wici-wyrob.html#konfiguracja">rozdział 8</a>).</td></tr>
+        </tbody>
+      </table></div>
+      <p>Wartości liczbowe należą do wskazanych źródeł i do <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>. Przebieg pilotażu nie dowodzi pełnego zakresu protokołu.</p>
+    </section>
+
+    <section id="sprawdzanie" aria-labelledby="h-sprawdzanie">
+      <h2 id="h-sprawdzanie">9.2. Sprawdzanie wymagań</h2>
+      <p>Kandydat na identyfikator: <code>WICI-REQ-&lt;obszar&gt;-&lt;numer&gt;</code>, na przykład <code>WICI-REQ-SA1-001</code>. Obszar odpowiada rozdziałowi, numer jest trwały po nadaniu. Rozdziały 1–8 nie otrzymują teraz numerów zdań; termin nadania i słowa normatywne zależą od <a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>.</p>
+      <figure class="wide-diagram">
+        <svg viewBox="0 0 780 98" role="img" aria-labelledby="dowod-title dowod-desc" xmlns="http://www.w3.org/2000/svg">
+          <title id="dowod-title">Ścieżka od wymagania do dowodu</title>
+          <desc id="dowod-desc">Obszar wymagania prowadzi do metody i próby, potem do wyniku przypisanego do ocenianej konfiguracji. Sam kod lub opis próby nie zastępuje wyniku.</desc>
+          <defs><marker id="dowod-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#135a54"/></marker></defs>
+          <rect x="5" y="18" width="160" height="55" rx="5" fill="#e8f0ee" stroke="#135a54"/><text x="85" y="51" text-anchor="middle" font-size="14" fill="#172a33">Wymaganie</text>
+          <rect x="210" y="18" width="160" height="55" rx="5" fill="#e8f0ee" stroke="#135a54"/><text x="290" y="51" text-anchor="middle" font-size="14" fill="#172a33">Metoda i próba</text>
+          <rect x="415" y="18" width="160" height="55" rx="5" fill="#e8f0ee" stroke="#135a54"/><text x="495" y="51" text-anchor="middle" font-size="14" fill="#172a33">Wynik</text>
+          <rect x="620" y="18" width="155" height="55" rx="5" fill="#e8f0ee" stroke="#135a54"/><text x="697" y="42" text-anchor="middle" font-size="13" fill="#172a33">Konfiguracja</text><text x="697" y="59" text-anchor="middle" font-size="13" fill="#172a33">wyrobu</text>
+          <path d="M165 45 H205 M370 45 H410 M575 45 H615" stroke="#135a54" stroke-width="2" marker-end="url(#dowod-arrow)"/>
+        </svg>
+        <figcaption>Test w repozytorium może sprawdzić format i logikę. Radio, energia i środowisko wymagają wyniku na ocenianym sprzęcie.</figcaption>
+      </figure>
+      <p>Stan rejestru ma trzy wartości: <em>dowód istnieje</em> oznacza wskazany artefakt w jego opisanym zakresie, <em>próba opisana bez wyniku</em> oznacza plan bez wyniku, a <em>brak próby</em> — brak planu dla danego przypadku. Żaden z tych stanów samodzielnie nie oznacza „spełnione”.</p>
+      <div class="table-scroll" role="region" aria-label="Rejestr sprawdzenia obszarów" tabindex="0"><table class="chapter-table evidence-table">
+        <thead><tr><th>Obszar</th><th>Rozdział</th><th>Rodzaj</th><th>Metoda</th><th>Próba</th><th>Etap</th><th>Stan</th><th>Dowód lub luka</th></tr></thead>
+        <tbody>
+          <tr><td>Przyjęcie i RECEIVED</td><td><a href="system-wici-sa1.html#przyjecie-na-stanowisku">4. SA1</a></td><td>Wyrób</td><td>Test</td><td>T2, T3</td><td>Przed terenem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Pełna wymiana na stole</a>; brak wyniku na v2.</td></tr>
+          <tr><td>Koperta i licznik</td><td><a href="system-wici-bezpieczenstwo.html#koperta-wici">5. Bezpieczeństwo</a></td><td>Wyrób</td><td>Test</td><td>T2</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="../../tests/vectors/envelope.json">Trwały wektor</a> i <a href="../../tests/test_envelope_vectors.py">test</a>; nie dowodzą radia ani trwałości na v2.</td></tr>
+          <tr><td>HACK i kolejki</td><td><a href="system-wici-siec.html#potwierdzenia">6. Sieć</a></td><td>Wyrób</td><td>Test</td><td>T3, T5</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan</a>; D21 nadal otwarta.</td></tr>
+          <tr><td>Odcięcie przejętej stacji</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">5. Bezpieczeństwo</a></td><td>Warunek wdrożenia</td><td>Test</td><td>T2, T8</td><td>Przed użyciem</td><td>Próba opisana bez wyniku</td><td>Instrukcja i lista sąsiadów nie obejmują całego odcięcia (<a href="system-wici-decyzje.html#wici-inv-024">WICI-INV-024</a>).</td></tr>
+          <tr><td>Praca na AA</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T6</a>; brak pomiaru na v2.</td></tr>
+          <tr><td>Radio i klimat</td><td><a href="system-wici-wyrob.html#bezpieczenstwo-wyrobu">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T4, T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="system-wici-decyzje.html#wici-inv-026">Progi klimatu wymagają korekty</a>; brak wyniku wyrobu.</td></tr>
+          <tr><td>Łańcuch 3–15 skoków</td><td><a href="system-wici-siec.html#trasy">6. Sieć</a></td><td>Wyrób</td><td>Test</td><td>T5</td><td>Pełny zakres</td><td>Brak próby</td><td><a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a> ustali sposób sprawdzenia.</td></tr>
+          <tr><td>Nasycenie i sen przekaźnika</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar i test</td><td>T6</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-decyzje.html#wici-inv-030">WICI-INV-030</a>: brak pomiaru i próby ramek.</td></tr>
+          <tr><td>Odtworzenie wykonania</td><td><a href="system-wici-wyrob.html#konfiguracja">8. Wyrób</a></td><td>Wyrób</td><td>Test i przegląd</td><td>T7</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T7</a>; brak raportu wykonawców.</td></tr>
+        </tbody>
+      </table></div>
+      <h3 id="klasy-prob">Klasy prób i granice dowodów</h3>
+      <p>Grupy T1–T8 pochodzą z <a href="../concept/08-plan-weryfikacji-i-decyzje.html">planu koncepcji</a>; szczegółowe wiersze są w <a href="odbior.md#próby">planie odbioru</a>. Starsze przypadki Reticulum, LXMF i rdzenia na MCU nie stają się próbami WICI-Link przez samą zmianę nazwy (<a href="system-wici-decyzje.html#wici-inv-032">WICI-INV-032</a>).</p>
+      <div class="table-scroll" role="region" aria-label="Grupy prób" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Grupa</th><th>Przedmiot w WICI</th><th>Granica obecnego planu</th></tr></thead>
+        <tbody>
+          <tr><td>T1</td><td>Obsługa lokalna i offline.</td><td>Laptop schronienia i strona należą do etapu po pilotażu.</td></tr>
+          <tr><td>T2</td><td>Zapis, statusy, zaufanie i odtwarzanie.</td><td>Wynik na pełnym zestawie jest otwarty.</td></tr>
+          <tr><td>T3</td><td>Integracja stacji i stanowiska przez WICI-Link.</td><td>Opis źródłowy dotyczy Reticulum/LXMF; próba WICI-Link wymaga własnego przebiegu.</td></tr>
+          <tr><td>T4</td><td>Radio i warunki nadawania.</td><td>Test programowy nie mierzy emisji ani odporności radia.</td></tr>
+          <tr><td>T5</td><td>Trasy, przekaźnik, obciążenie i wrogi węzeł.</td><td>D21 i „Wrogi węzeł” obejmują małą sieć; 3–15 skoków są otwarte.</td></tr>
+          <tr><td>T6</td><td>Energia, klimat i bezpieczeństwo stacji.</td><td>Progi klimatu w starszym planie wymagają korekty; nasycenie nie ma próby.</td></tr>
+          <tr><td>T7</td><td>Odtworzenie przez niezależnych wykonawców.</td><td>Brak raportu z wykonania.</td></tr>
+          <tr><td>T8</td><td>Obsługa, organizacja i kanał zastępczy.</td><td>Brak wyniku ćwiczenia pełnego zestawu.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Próby programowe i wektory potwierdzają tylko wskazane własności kodowania lub logiki; bez zapisanego wyniku nie przypisuje się im zaliczenia. Pomiary dwóch węzłów na sprzęcie nie dowodzą działania 15 skoków, energii ani środowiska ocenianej konfiguracji. D21 sprawdza jedną drogę przez przekaźnik; pełny zakres pozostaje w <a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>.</p>
+    </section>
+
+    <section id="wspoldzialanie" aria-labelledby="h-wspoldzialanie">
+      <h2 id="h-wspoldzialanie">9.3. Współdziałanie niezależnych implementacji</h2>
+      <div class="table-scroll" role="region" aria-label="Materiały dla niezależnego wykonawcy" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Materiał</th><th>Stan</th><th>Źródło lub luka</th></tr></thead>
+        <tbody>
+          <tr><td>Schematy formatów</td><td>Częściowo</td><td><a href="system-wici-sa1.html#typy-i-uklad">SA1</a>, <a href="system-wici-bezpieczenstwo.html#koperta-wici">koperta</a>, <a href="system-wici-siec.html#ramka">łącze</a>, <a href="system-wici-interfejsy.html#usb">USB</a>; formaty trwałe wymagają domknięcia.</td></tr>
+          <tr><td>Rejestr kodów</td><td>Częściowo</td><td>Wartości są rozproszone w kodzie i opisach; brak jednego rejestru (<a href="system-wici-decyzje.html#wici-inv-034">WICI-INV-034</a>).</td></tr>
+          <tr><td>Wektory testowe</td><td>Częściowo</td><td><a href="../../tests/vectors/envelope.json">Koperta</a> ma trwały plik i <a href="../../tests/test_envelope_vectors.py">test</a>; SA1 i WICI-Link mają przykłady w rozdziałach bez trwałych plików.</td></tr>
+          <tr><td>Scenariusze awaryjne</td><td>Częściowo</td><td>Rozstrzygnięcia i plan prób istnieją; brakuje wspólnego raportu z pełnego zestawu.</td></tr>
+        </tbody>
+      </table></div>
+      <p><a href="../../tests/vectors/lxmf.json">Wektory LXMF</a> i <a href="../../tests/vectors/reticulum.json">Reticulum</a> dotyczą ścieżki poza architekturą podstawową (<a href="system-wici-zasady.html#wici-zal-004">WICI-ZAL-004</a>). Nie są dowodem zgodności z SA1 ani WICI-Link. Trwałe wektory tych dwóch formatów pozostają luką (<a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>).</p>
+      <h3 id="rejestr-kodow">Kody do ujednolicenia</h3>
+      <div class="table-scroll" role="region" aria-label="Kody WICI" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Grupa</th><th>Obecne miejsce</th><th>Brakujący wspólny rejestr</th></tr></thead>
+        <tbody>
+          <tr><td>Typy SA1</td><td><a href="../../firmware/src/sa1.h">Stacja</a>, <a href="system-wici-sa1.html#typy-i-uklad">rozdział 4</a>.</td><td>Numery 0–5 i znaczenie pól.</td></tr>
+          <tr><td>Kategorie i stany</td><td><a href="system-wici-funkcje.html#dane-pola">Rozdział 3</a>, <a href="../../firmware/src/sa1.h">SA1</a>.</td><td>Znaczenie wartości i przejścia.</td></tr>
+          <tr><td>Typy i klasy ramek</td><td><a href="../../firmware/src/wici_link.h">WICI-Link</a>.</td><td>DATA, HACK, BEACON; klasy lokalnego nadawania.</td></tr>
+          <tr><td>Kody KISS</td><td><a href="../../software/laptop/wici/stanowisko/wici_link.py">Węzeł stanowiska</a>, <a href="system-wici-interfejsy.html#usb">rozdział 7</a>.</td><td>Znaczenie 0, 1 i 2 w obu kierunkach.</td></tr>
+          <tr><td>Błędy USB</td><td><a href="../../firmware/src/usbproto.cpp">Dyspozytor</a>, <a href="usb-protocol.md">kontrakt</a>.</td><td>Lista kodów i warunki odmowy.</td></tr>
+        </tbody>
+      </table></div>
+      <h3 id="scenariusze">Scenariusze awaryjne</h3>
+      <div class="table-scroll" role="region" aria-label="Scenariusze awaryjne" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Zdarzenie</th><th>Oczekiwany wynik</th><th>Stan próby</th></tr></thead>
+        <tbody>
+          <tr><td>Utrata nośnika</td><td>Po odtworzeniu kopii tożsamość zapasowa i przełączenie stacji przywracają otwarte zgłoszenia z RECEIVED. Stare klucze nie nadają przed przełączeniem (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td><td>Brak pełnej próby; kod nie domyka tej ścieżki.</td></tr>
+          <tr><td>Zmiana tożsamości</td><td>Nowy klucz i numer są przygotowane przez USB; stary nadawca nie jest przyjmowany jako nowy (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>).</td><td>Brak pełnej próby.</td></tr>
+          <tr><td>Wstrzymanie wysyłki do stacji</td><td>Wiadomości do niej pozostają zapisane bez nadawania; pierwsza uwierzytelniona wiadomość od zaufanej stacji albo działanie dyżurnego wznawia wysyłkę (<a href="system-wici-funkcje.html#wstrzymanie-wysylki">rozdział 3</a>).</td><td>Brak pełnej próby; operacji nie ma w panelu.</td></tr>
+          <tr><td>Odcięcie przejętej stacji</td><td>Stanowisko odrzuca jej zgłoszenia, a sąsiedzi po usunięciu kluczy odrzucają jej ruch jednoadresowy. Rozsyłanie pozostaje możliwe do wymiany klucza sieci (<a href="system-wici-funkcje.html#odciecie-stacji">rozdział 3</a>).</td><td>Brak pełnej próby; instrukcja pomija objazd sąsiadów (<a href="system-wici-decyzje.html#wici-inv-024">luka</a>).</td></tr>
+          <tr><td>Zalew</td><td>Ruch K1 utrzymuje miejsce w kolejce, limity K2 i BEACON chronią zasoby, a prawidłowe zgłoszenie dochodzi do RECEIVED (<a href="odbior.md#próby">„Wrogi węzeł”</a>).</td><td>Próba opisana bez wyniku.</td></tr>
+          <tr><td>Zanik przy zapisie</td><td>Brak pozornego potwierdzenia zapisu; po wznowieniu zachowane są wcześniej zatwierdzone rekordy (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td><td>Próba opisana bez wyniku na v2.</td></tr>
+          <tr><td>Nasycony przekaźnik</td><td>Czas pracy jest zmierzony; sen nie gubi ani nie przestawia ramek (<a href="system-wici-wyrob.html#rozstrzygniecia-wyrobu">rozdział 8</a>).</td><td>Brak próby (<a href="system-wici-decyzje.html#wici-inv-030">WICI-INV-030</a>).</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="dokumentacja-wyrobu" aria-labelledby="h-dokumentacja-wyrobu">
+      <h2 id="h-dokumentacja-wyrobu">9.4. Dokumentacja ocenianego wyrobu</h2>
+      <p class="explain">Dla ocenianego wyrobu radiowego osobna dokumentacja techniczna wiąże wymagania z wersją sprzętu, firmware, anteną, zasilaniem, analizą ryzyka, zastosowanymi normami i wynikami badań, zgodnie z <a href="https://eur-lex.europa.eu/eli/dir/2014/53/oj/eng">art. 21 i załącznikiem V dyrektywy RED</a>. Zmiana konfiguracji wymaga oceny wpływu na te dowody. Specyfikacja nie zastępuje dokumentacji technicznej ani deklaracji zgodności UE.</p>
+      <div class="table-scroll" role="region" aria-label="Powiązanie konfiguracji z dowodami" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Element konfiguracji</th><th>Co zapisać dla każdego wariantu</th><th>Powiązany dowód</th></tr></thead>
+        <tbody>
+          <tr><td>Sprzęt</td><td>Rewizja płytki, części, obudowa i BOM.</td><td>Rysunki, analiza zmian i próby konstrukcji.</td></tr>
+          <tr><td>Firmware</td><td>Wersja obrazu i skrót pliku.</td><td>Wyniki testów i przypisane formaty danych.</td></tr>
+          <tr><td>Antena</td><td>Model, zysk, przewód, złącza i montaż.</td><td>Radio, ekspozycja, EMC i oględziny.</td></tr>
+          <tr><td>Zasilanie</td><td>Typ ogniw lub źródła 12 V i połączenia.</td><td>Bezpieczeństwo, energia i EMC.</td></tr>
+          <tr><td>Ryzyko</td><td>Wersja analizy i oceniane zastosowanie.</td><td>Ryzyka oraz środki i ich sprawdzenie.</td></tr>
+          <tr><td>Normy</td><td>Wykaz zastosowanych wydań i zakresów.</td><td>Metody badań; do potwierdzenia przed oceną.</td></tr>
+          <tr><td>Wyniki</td><td>Raport, data, egzemplarz i konfiguracja próby.</td><td>Ślad od wymagania do wyniku i decyzji.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Właściwe akty i normy sprawdza się dla daty i konfiguracji oceny. Zakres rozporządzenia 2022/30, jego uchylenie przez 2026/339 oraz ewentualne zastosowanie CRA opisuje <a href="system-wici-wyrob.html#bezpieczenstwo-wyrobu">rozdział 8</a>; zastosowanie do wyrobu pozostaje do potwierdzenia przed oceną.</p>
+      <p>Stan mapy licencji opisują <a href="../../LICENSE.md">LICENSE.md</a>, katalog <a href="../../LICENSES/">LICENSES</a> i <a href="../../REUSE.toml">REUSE.toml</a>. Warunki wydania specyfikacji i licencji rozstrzyga <a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>.</p>
+    </section>
+
+    <section id="pytania-zgodnosci" aria-labelledby="h-pytania-zgodnosci">
+      <h2 id="h-pytania-zgodnosci">Pytania do właściciela</h2>
+      <ul>
+        <li>Jakie wyniki zamkną pierwszą wersję normatywną? Od odpowiedzi zależy zakres zatwierdzenia (<a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>).</li>
+        <li>Kiedy nadać identyfikatory wszystkim wymaganiom? Od terminu zależy sposób śledzenia zmian kodu i dowodów (<a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>, <a href="system-wici-decyzje.html#wici-dec-002">002</a>).</li>
+        <li>Czy trwałe wektory SA1 i WICI-Link są warunkiem pierwszej wersji normatywnej? Od odpowiedzi zależy zakres prób niezależnych implementacji (<a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>).</li>
+        <li>Czy jedna wersja formatu łącza wystarcza, gdy jej zmiana wymaga objazdu całej sieci? Od odpowiedzi zależą zasady zgodności i wydawania; mechanizmu współistnienia nie ustalono (<a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>).</li>
+      </ul>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.27 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>
