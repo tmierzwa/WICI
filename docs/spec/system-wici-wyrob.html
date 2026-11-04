@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wyrób, obsługa, zasilanie i próby eksploatacyjne systemu WICI.">
-  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.24</title>
+  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.25</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wyrób i eksploatacja</h1>
-      <p><span class="status">Projekt 0.24</span> · 4 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.25</span> · 4 listopada 2026 r.</p>
       <p>Rozdział opisuje zachowanie stacji i zestawu w użyciu oraz wyniki, które trzeba sprawdzić na ocenianej konfiguracji. Czynności krok po kroku pozostają w <a href="projekt.md">opisie zestawu</a> i instrukcjach obsługi.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -39,7 +39,7 @@
       <a href="#energia">Zasilanie</a>
       <a href="#stanowisko">Stanowisko i przeglądy</a>
       <a href="#bezpieczenstwo-wyrobu">Bezpieczeństwo wyrobu</a>
-      <a href="#sprawdzenie">Próby i pytania</a>
+      <a href="#sprawdzenie">Próby i rozstrzygnięcia</a>
     </nav>
 
     <section id="konfiguracja" aria-labelledby="h-konfiguracja">
@@ -109,12 +109,12 @@
       <div class="table-scroll" role="region" aria-label="Zasilanie i warunki pracy" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Właściwość</th><th>Kandydat na wynik</th><th>Etap i dowód</th></tr></thead>
         <tbody>
-          <tr><td>Praca z AA<br><small>Wyrób</small></td><td>Jako przekaźnik przy ruchu próby T5 stacja na czterech ogniwach litowych AA (Li-FeS2) działa ≥48 h w 20 °C i, przed wydaniem, ≥40 h w −10 °C. Wynik w −20 °C jest zapisywany bez progu. Od ostrzeżenia „WYMIEŃ OGNIWA W CIĄGU 1 H” do kontrolowanego wyłączenia pozostaje ≥1 h w 20 °C i −10 °C.</td><td>Pilotaż: jeden komplet w temperaturze pokojowej; wydanie: dwa komplety z różnych partii na każde wykonanie w każdej temperaturze. Próby niewykonane (<a href="odbior.md#próby">T5/T6</a>, <a href="odbior.md#minimum-pilotażu">profil pilotażu</a>).</td></tr>
+          <tr><td>Praca z AA<br><small>Wyrób</small></td><td>Na czterech ogniwach litowych AA (Li-FeS2) stacja jako przekaźnik działa przy ruchu T5 ≥48 h w 20 °C i ≥40 h w −10 °C. Czas pracy nasyconego przekaźnika, stale przekazującego ruch i nadającego na granicy długu ciszy, jest mierzony i zapisywany. Próg ustala się po pierwszym pomiarze na płytce v2, przed wydaniem. Wynik w −20 °C zapisuje się bez progu. Od ostrzeżenia „WYMIEŃ OGNIWA W CIĄGU 1 H” do kontrolowanego wyłączenia pozostaje ≥1 h w 20 °C i −10 °C.</td><td>Pilotaż: jeden komplet w temperaturze pokojowej; wydanie: dwa komplety z różnych partii na każde wykonanie w każdej temperaturze oraz próba nasycenia. Próby niewykonane (<a href="odbior.md#próby">T5/T6</a>, <a href="odbior.md#minimum-pilotażu">profil pilotażu</a>, <a href="system-wici-decyzje.html#wici-inv-030">luka próby</a>).</td></tr>
           <tr><td>Wejście 12 V<br><small>Wyrób</small></td><td>Zakres pracy 11,3–16 V; podłączenie, odłączenie i przejście na AA bez restartu. Odwrotna polaryzacja i podanie napięcia instalacji 24 V nie uszkadzają stacji ani nie ładują ogniw AA.</td><td>Tor v2 jest projektem. Progi, zaniki i prąd do ogniw sprawdza się na płytce przed terenem; <a href="elektronika.md#stany-zasilania-12-v">stany toru</a> i <a href="odbior.md#minimum-pilotażu">próba pilotażu</a>.</td></tr>
           <tr><td>Słaba energia<br><small>Wyrób</small></td><td>Wskazanie źródła i napięcia, ostrzeżenie o ogniwach oraz kontrolowane wyłączenie po zakończeniu zapisu. Stacja nie potwierdza zgłoszenia, którego nie zapisała.</td><td>Logika ekranu istnieje (<a href="../../firmware/src/ui.cpp">kod</a>); pomiar napięcia i wyłączenie w docelowym torze pozostają do wdrożenia i próby (<a href="odbior.md#minimum-pilotażu">warunki przed terenem</a>).</td></tr>
-          <tr><td>Czuwanie<br><small>Profil</small></td><td>Projektowany lekki sen MCU utrzymuje odbiór radia i przekazywanie ruchu. Po podłączeniu laptopa stacja się wybudza i nie zasypia do jego odłączenia. Cel modelowy to około 8 dni pracy na komplecie AA.</td><td>Tryb nie jest jeszcze wdrożony; wymaga pomiaru prądu i próby ramek na płytce v2 (<a href="projekt.md#zakres">model</a>, <a href="oprogramowanie.md#czuwanie">projekt trybu</a>, <a href="odbior.md#minimum-pilotażu">próba</a>).</td></tr>
-          <tr><td>Środowisko<br><small>Wyrób</small></td><td>Stacja pracuje w granicach temperatury i wilgotności dopuszczonych dla wszystkich elementów ocenianej konfiguracji. Antena, przewód i przepust wytrzymują miejsce montażu; uszkodzenie lub wilgoć wykrywa przegląd.</td><td>Próby klimatyczne, ESD, anteny i obudowy należą do wydania (<a href="elektronika.md#stacja-pilotażowa">części</a>, <a href="odbior.md#próby">próby</a>).</td></tr>
-          <tr><td>Obudowa pilotażowa<br><small>Profil</small></td><td>W pilotażu obudowa ma IP40 lub lepiej; granice ochrony docelowego wyrobu pozostają otwarte.</td><td>Kandydat według <a href="elektronika.md#stacja-pilotażowa">projektu v2</a>.</td></tr>
+          <tr><td>Czuwanie<br><small>Wyrób</small></td><td>Projektowany lekki sen MCU utrzymuje odbiór i przekazywanie. Nie gubi ramek ani nie zmienia ich kolejności, także przy nasyconym przekaźniku. Podłączony laptop wybudza stację i zapobiega ponownemu uśpieniu. Około 8 dni na AA to cel z modelu, nie granica wyrobu; czas czuwania mierzy się na płytce v2, a próg ustala po pomiarze. Do tego czasu plan odwiedzin opiera się na ≥48 h.</td><td>Tryb nie jest wdrożony. Potrzebne pomiar prądu i próba ramek przy nasyceniu (<a href="projekt.md#zakres">model</a>, <a href="oprogramowanie.md#czuwanie">projekt trybu</a>, <a href="system-wici-decyzje.html#wici-inv-030">luka próby</a>).</td></tr>
+          <tr><td>Środowisko<br><small>Wyrób</small></td><td>Stacja pracuje w pomieszczeniu w −10…+40 °C. Miejsce poza tym zakresem nie jest objęte ocenianą konfiguracją. Antena pracuje na zewnątrz. Wilgotność do 95% bez kondensacji oraz brak kondensacji po przeniesieniu z zimna do 20 °C to kandydaci do potwierdzenia kartami części; wartość 95% nie pochodzi ze źródeł projektu.</td><td>Próby klimatyczne dla −10 i +40 °C oraz oględziny anteny i przepustu przed wydaniem. Starszy plan zawiera inne progi (<a href="system-wici-decyzje.html#wici-inv-026">luka</a>).</td></tr>
+          <tr><td>Obudowa<br><small>Wyrób</small></td><td>Obudowa stacji ma IP40. Zewnętrzne złącza anteny mają IP67 lub uszczelnienie taśmą.</td><td>Oględziny obudowy i montażu anteny; <a href="elektronika.md#stacja-pilotażowa">projekt v2</a>.</td></tr>
           <tr><td>Przechowywanie<br><small>Warunek wdrożenia</small></td><td>Stacja czeka na użycie w suchym miejscu w 5–30 °C, z ogniwami poza stacją.</td><td><a href="projekt.md#przechowywanie-i-przeglądy">Opis zestawu</a>; kontrola miejsca przed umieszczeniem stacji.</td></tr>
         </tbody>
       </table></div>
@@ -144,23 +144,25 @@
     </section>
 
     <section id="sprawdzenie" aria-labelledby="h-sprawdzenie">
-      <h2 id="h-sprawdzenie">Próby i pytania otwarte</h2>
-      <div class="table-scroll" role="region" aria-label="Próby i pytania otwarte" tabindex="0"><table class="chapter-table">
+      <h2 id="h-sprawdzenie">Próby i rozstrzygnięcia</h2>
+      <div class="table-scroll" role="region" aria-label="Próby i rozstrzygnięcia" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Etap</th><th>Przedmiot próby</th><th>Stan</th></tr></thead>
         <tbody>
           <tr><td>Przed terenem pilotażu<br><small>Profil</small></td><td>Tor AA/12 V i zanik przy zapisie, gotowość radia i TEST, pełna wymiana na stole, obsługa z kartą, badania konfiguracji pilotażowej. D21 obejmuje 50/50 zgłoszeń z RECEIVED przez jeden przekaźnik w &lt;15 min.</td><td>Warunki i liczby w <a href="odbior.md#minimum-pilotażu">minimum pilotażu</a>; D21 i próby pełnego zestawu pozostają otwarte.</td></tr>
-          <tr><td>Przed wydaniem<br><small>Wyrób</small></td><td>Powtórzenie prób na każdym wykonaniu stacji; zimno, obudowa, ESD, antena, 1000 odcięć zasilania, ciągłość stanowiska i badania zmienionej konfiguracji radiowej.</td><td>Zakres w <a href="odbior.md#próby">planie odbioru</a>; wyniki jeszcze nie zamykają wymagań wydania.</td></tr>
+          <tr><td>Przed wydaniem<br><small>Wyrób</small></td><td>Na każdym wykonaniu: praca z AA przy ruchu T5 i nasyceniu, klimat w −10, 20 i +40 °C, obudowa, antena, ESD, 1000 odcięć zasilania, ciągłość stanowiska i zmieniona konfiguracja radiowa. Przy śnie: brak strat i zmiany kolejności ramek także pod nasyceniem. Wyniki w −20 i +45 °C zapisuje się bez progu.</td><td><a href="odbior.md#próby">Plan odbioru</a> wymaga aktualizacji; brak próby nasycenia i snu (<a href="system-wici-decyzje.html#wici-inv-026">klimat</a>, <a href="system-wici-decyzje.html#wici-inv-030">nasycenie</a>).</td></tr>
           <tr><td>Po pilotażu<br><small>Profil</small></td><td>Laptop i USB w pracy, strona mieszkańca, kiosk, języki i dostępność strony oraz 24 h zasilania poziomu 3.</td><td>Rozszerzenia nie są wdrożone (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</td></tr>
         </tbody>
       </table></div>
-      <h3 id="pytania-wyrobu">Pytania do właściciela projektu</h3>
+      <h3 id="rozstrzygniecia-wyrobu">Rozstrzygnięcia właściciela (2026-11-04)</h3>
       <ul>
-        <li>Jaki ruch przyjąć do pomiaru pracy na AA dla pełnego zakresu sieci, w tym 15 skoków i rozsyłania? Od odpowiedzi zależą budżet energii i próba wyrobu; ruch T5 sprawdza tylko sieć referencyjną (<a href="system-wici-zasady.html#wici-zal-009">pełny zakres</a>, <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>).</li>
-        <li>Jakie granice temperatury, wilgotności i ochrony obudowy przyjąć dla wyrobu? Od odpowiedzi zależą dobór części, obudowy i próby klimatyczne; IP40 i magazynowanie w 5–30 °C opisują profil pilotażu.</li>
-        <li>Czy około 8 dni czuwania na AA ma być granicą wyrobu, czy tylko celem z modelu? Od odpowiedzi zależą pomiar poboru i kryterium odbioru.</li>
+        <li>Czas pracy na ogniwach mierzy się w dwóch punktach. Przy ruchu próby T5 stacja jako przekaźnik działa ≥48 h w 20 °C i ≥40 h w −10 °C. Przy nasyconym przekaźniku, który stale ma ruch do przekazania i nadaje na granicy długu ciszy, czas pracy jest mierzony i zapisywany. Próg dla nasycenia ustala się po pierwszym pomiarze na płytce v2 i jest to warunek przed wydaniem.</li>
+        <li>Stacja pracuje w −10…+40 °C, w pomieszczeniu, w obudowie IP40. Antena pracuje na zewnątrz; jej złącza zewnętrzne mają IP67 lub uszczelnienie taśmą. Miejsce zimniejsze niż −10 °C lub cieplejsze niż +40 °C jest poza zakresem wyrobu. Przechowywanie w suchym miejscu w 5–30 °C pozostaje warunkiem wdrożenia.</li>
+        <li>Około 8 dni na ogniwach jest celem z modelu, nie granicą wyrobu. Czas czuwania mierzy się na płytce v2, a próg można ustalić po pomiarze. Do czasu pomiaru plan odwiedzin przekaźnika opiera się na ≥48 h. Jeśli stacja śpi między zdarzeniami, sen nie gubi ramek ani nie zmienia ich kolejności, także przy nasyconym przekaźniku.</li>
       </ul>
+      <p class="explain"><strong>Dlaczego próg nasycenia czeka na pomiar.</strong> Dług ciszy 12t ogranicza udział nadawania do około 1/13 czasu niezależnie od liczby skoków; próbę można wykonać na jednej stacji z generatorem ruchu. Sprawność przetwornicy i pobór MCU nie są zmierzone, a model ma małą marżę. Odrzucono próg 48 h przy nasyceniu oraz ruch modelowy dla 15 skoków jako podstawę progu.</p>
+      <p class="explain"><strong>Granice środowiskowe.</strong> Odrzucono −20…+45 °C z koncepcji z powodu braku zapasu ekranu w −20 °C i większych wymagań wobec płytki. IP54 wymagałoby uszczelnienia okna, USB i komory ogniw bez uzasadnienia dla suchego miejsca i skrzynki.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.24 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.25 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
