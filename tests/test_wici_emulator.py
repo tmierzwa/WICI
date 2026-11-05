@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: MIT
+"""Emulator WICI-Link (tests/native/wici_emulator): powtarzalność, zgodność wariantów z obecnym kodem i kalibracja.
+
+Krótkie przebiegi pod ASan i UBSan. Pełną macierz raportu uruchamia run.py matrix; nie jest częścią testów.
+"""
+
+from pathlib import Path
+import json
+import subprocess
+import sys
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tests" / "native" / "wici_emulator"))
+import run as emulator  # noqa: E402
+
+SHORT = ("hops=6", "reports=8", "spread=60", "hours=3", "p=900")
+DECISIONS = ("learn=1", "alternate=1", "leave=1800", "hold=7200", "flood=700")
+
+
+def setUpModule():
+    global BUILD, BINARIES
+    if not emulator.available():
+        raise unittest.SkipTest("C++ compiler or pinned Crypto sources unavailable (firmware/tools/stack_deps.py)")
+    BUILD = tempfile.TemporaryDirectory()
+    BINARIES = emulator.build(BUILD.name, sanitize=True)
+
+
+def tearDownModule():
+    BUILD.cleanup()
+
+
+def run(binary, *args):
+    done = subprocess.run([str(BINARIES[binary]), *args], check=True, capture_output=True, text=True)
+    return done.stdout
+
+
+class Emulator(unittest.TestCase):
+    def test_same_seed_gives_identical_run_and_another_seed_differs(self):
+        first = run("base", "koniec", "seed=7", *SHORT)
+        self.assertEqual(first, run("base", "koniec", "seed=7", *SHORT))
+        self.assertNotEqual(first, run("base", "koniec", "seed=8", *SHORT))
+        self.assertEqual(json.loads(first)["closed"], 8)
+
+    def test_decisions_run_repeatably_too(self):
+        first = run("variant", "koniec", "seed=7", *SHORT, *DECISIONS)
+        self.assertEqual(first, run("variant", "koniec", "seed=7", *SHORT, *DECISIONS))
+
+    def test_patched_copy_with_flags_off_is_the_current_code(self):
+        # Różnica w jednym bajcie wyniku znaczy, że variant.patch zmienia coś poza przełącznikami.
+        for scenario in ("koniec", "cala_siec", "zmiana_rodzica"):
+            self.assertEqual(run("base", scenario, "seed=3", *SHORT), run("variant", scenario, "seed=3", *SHORT), scenario)
+
+    def test_firmware_sources_are_untouched_by_the_variant(self):
+        # Rozstrzygnięcia żyją w łatce do czasu decyzji: firmware nie zna przełączników.
+        for source in (ROOT / "firmware" / "src").glob("wici_*"):
+            self.assertNotIn("wici_variant", source.read_text(encoding="utf-8"), source.name)
+
+    def test_flood_reach_matches_the_closed_form(self):
+        # Jedno rozsyłanie w pustym łańcuchu: p^hops, bez kolizji. Sprawdza model kanału i tor rozsyłania.
+        result = json.loads(run("base", "kalibracja", "hops=6", "p=800", "reports=40", "seed=2"))
+        self.assertEqual(result["expected_permille"], 262)
+        self.assertLess(abs(result["reached"] * 1000 / result["trials"] - result["expected_permille"]), 200)
+
+    def test_relay_that_acks_and_drops_is_left_only_under_the_decision(self):
+        args = ("seed=1", "hops=10", "reports=6", "spread=60", "hours=3", "p=950")
+        today = json.loads(run("base", "porzucanie_dziecko", *args))
+        decided = json.loads(run("variant", "porzucanie_dziecko", *args, *DECISIONS))
+        self.assertGreater(decided["closed"], today["closed"])
+        self.assertGreaterEqual(decided["leaves"], 1)
+
+
+if __name__ == "__main__":
+    unittest.main()
