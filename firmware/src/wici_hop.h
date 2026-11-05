@@ -67,7 +67,10 @@ public:
     // queue (receiveHack).
     void yield();
     const uint8_t* outgoing(size_t& length) const;
-    // The active transfer is K2 while a K1 frame waits in the queue.
+    // The active transfer is K2 while another K1 frame with a known route
+    // waits in the queue. A K1 frame without one goes out as a flood, which is
+    // K2 itself: counting it made such frames wait for each other at the 25%
+    // cap until they expired.
     bool contendedK2() const;
     // Call only after a real TX attempt. A frame without HACK (flood, silence
     // exception) is retired after a successful TX; unicast waits for a
@@ -114,6 +117,7 @@ private:
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};
     bool priority(const wici_link::Frame& frame) const;
+    bool k1Routed(uint8_t slot) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;

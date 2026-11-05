@@ -47,6 +47,12 @@ public:
     uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
     // Durable admission time of a pending item (monotonic station counter).
     uint32_t admittedS(uint8_t slot) const { return pending(slot) ? admittedS_[slot] : 0; }
+    // The stored bytes of a pending item, with no effect on the queue. Unlike
+    // read(), it also shows an item already recorded as forwarded.
+    const uint8_t* peek(uint8_t slot, size_t& length) const {
+        length = pending(slot) ? lengths_[slot] : 0;
+        return length ? frames_[slot] : nullptr;
+    }
     // Finishes a tombstone interrupted after the durable forwarded marker and
     // retires items held for MAX_HOLD_S. False only on a storage failure.
     bool settle(uint32_t nowS);

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "wici_airtime.h"
 #include "wici_hop.h"
 
 struct Memory : journal::Storage {
@@ -336,8 +337,8 @@ int main() {
     assert(contentionRelay.begin());
     wici_link::Frame waiting = traffic;
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
-    waiting.source = 1; waiting.sequence = 80;
-    waiting.payload[2] = 90; waiting.payload[4] = 50; waiting.payload[8] = 20;
+    waiting.source = 7; waiting.sequence = 80;  // its route leads back to its source, so it waits
+    waiting.payload[2] = 90; waiting.payload[4] = 7; waiting.payload[8] = 20;
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
@@ -348,6 +349,7 @@ int main() {
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(contentionRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
+    assert(contentionRelay.routes().learn(7, 7));
     assert(contentionRelay.prepare(140) && contentionRelay.contendedK2());
     out = contentionRelay.outgoing(outLength);
     assert(out && wici_link::decode(key, 100, out, outLength, parsed));
@@ -365,11 +367,42 @@ int main() {
     assert(lateContention.prepare(141) && !lateContention.contendedK2());
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
     waiting.source = 1; waiting.sequence = 83;
-    waiting.payload[2] = 90; waiting.payload[4] = 50; waiting.payload[8] = 23;
+    waiting.payload[2] = 90; waiting.payload[4] = 7; waiting.payload[8] = 23;
     n = wici_link::encode(key, waiting, wire, sizeof(wire));
     assert(lateContention.receiveData(wire, n, 141, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
+    assert(!lateContention.contendedK2());  // no route yet: it would go out as a flood, K2 itself
+    assert(lateContention.routes().learn(7, 7));
     assert(lateContention.contendedK2());  // K1 is known at admission, no deferred check
+
+    // Two K1 frames without a route, pool above 25%: as floods they are K2, and
+    // neither may hold the other back. Counted as waiting K1 they both stayed
+    // refused until the 30-min expiry and the relay went silent.
+    static Memory k1NoRouteMemory, k1NoRouteAirtime;
+    wici_hop::Relay k1NoRoute(k1NoRouteMemory, {100, 2, 1, 1, 0}, ifac, true, receivers);
+    assert(k1NoRoute.begin());
+    assert(k1NoRoute.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 142));
+    waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
+    waiting.payload[2] = 90;
+    const uint16_t k1NoRouteSource[2] = {1, 4};
+    for (uint8_t i = 0; i < 2; ++i) {
+        waiting.source = k1NoRouteSource[i]; waiting.sequence = static_cast<uint16_t>(84 + i);
+        waiting.payload[4] = static_cast<uint8_t>(50 + i); waiting.payload[8] = static_cast<uint8_t>(24 + i);
+        n = wici_link::encode(key, waiting, wire, sizeof(wire));
+        assert(k1NoRoute.receiveData(wire, n, 142, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    }
+    wici_airtime::Budget airtime(k1NoRouteAirtime);
+    assert(airtime.begin(100, 2));
+    while (airtime.allows(false, 200, 142, true)) assert(airtime.reserve(false, 200, 142));
+    assert(airtime.allows(false, 200, 142, false));
+    assert(k1NoRoute.prepare(142));
+    out = k1NoRoute.outgoing(outLength);
+    assert(out && wici_link::decode(key, 100, out, outLength, parsed));
+    assert(parsed.destination == wici_link::BROADCAST && parsed.payload[4] == 50);
+    assert(airtime.allows(false, 200, 142, k1NoRoute.contendedK2()));
+    // The second frame gets a route: now a real K1 waits and the 25% cap holds.
+    assert(k1NoRoute.routes().learn(51, 51));
+    assert(!airtime.allows(false, 200, 142, k1NoRoute.contendedK2()));
     // Review finding 2/6, L4/E8: the first retry of any admitted frame gets
     // its HACK even when a replayed copy just used the repeat allowance and
     // after the frame left the queue (the admission HACK may have been lost).
