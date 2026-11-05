@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.29</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.30</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.29</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.30</span> · 5 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -277,8 +277,8 @@
         <article class="record" id="wici-inv-033">
           <h4>WICI-INV-033</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd>Trwały plik wektorów istnieje dla koperty; przykłady SA1 i WICI-Link są tylko w rozdziałach. Wektory LXMF i Reticulum dotyczą ścieżki poza architekturą podstawową.</dd></div>
-            <div><dt>Luka</dt><dd><a href="../../tests/vectors/envelope.json">Koperta</a>, <a href="system-wici-sa1.html#przyklady-bajtowe">SA1</a>, <a href="system-wici-siec.html#ramka">WICI-Link</a>; brak trwałych wektorów dwóch ostatnich formatów, raportu z prób niezależnych implementacji oraz trwałego zapisu wyniku CI dla wektora koperty i licznika. Dzienniki przebiegu mogą wygasnąć.</dd></div>
+            <div><dt>Stan zastany</dt><dd>Trwały plik wektora koperty czyta tylko test kodu stanowiska; osobny test porównuje kod stacji z Pythonem na innych danych. Przykłady SA1 i WICI-Link są tylko w rozdziałach. Wektory LXMF i Reticulum dotyczą ścieżki poza architekturą podstawową.</dd></div>
+            <div><dt>Luka</dt><dd><a href="system-wici-zgodnosc.html#trwale-wektory">Warunek pierwszej wersji normatywnej</a>: trwałe pliki SA1, koperty i WICI-Link z przypadkami odrzucanymi oraz testy tych plików dla stacji i stanowiska. Brakuje plików SA1 i WICI-Link oraz testu pliku koperty w kodzie stacji; WICI-Link czeka na D21. Brakuje też trwałego raportu wyników CI i próby niezależnej implementacji, lecz ta ostatnia nie warunkuje zatwierdzenia.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-034">
@@ -286,6 +286,13 @@
           <dl>
             <div><dt>Stan zastany</dt><dd>Numery typów, stanów, kategorii, ramek, KISS i błędów USB są rozproszone między kodem a opisami.</dd></div>
             <div><dt>Luka</dt><dd><a href="system-wici-zgodnosc.html#rejestr-kodow">Wykaz miejsc</a> nie jest jeszcze jednym pełnym rejestrem wartości dla niezależnego wykonawcy.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-035">
+          <h4>WICI-INV-035</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd><a href="system-wici-zgodnosc.html#jedna-wersja-lacza">Zmiana formatu WICI-Link</a> wymaga przygotowania wszystkich węzłów przez USB poza kryzysem i TEST po każdym węźle. <a href="odbior.md#próby">Plan odbioru</a> nie zawiera próby takiej zmiany.</dd></div>
+            <div><dt>Luka</dt><dd>Brak procedury objazdu przy zmianie formatu łącza i klucza sieci: kolejności węzłów, postępowania, gdy w trakcie zacznie się kryzys, próby TEST po każdym węźle i powrotu po nieudanym przygotowaniu. Powiązana procedura odcięcia przejętej stacji: <a href="#wici-inv-024">WICI-INV-024</a>.</dd></div>
           </dl>
         </article>
       </div>
@@ -307,11 +314,11 @@
       <table class="id-table">
         <thead><tr><th>ID</th><th>Przedmiot</th></tr></thead>
         <tbody>
-          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td>Zatwierdzenie struktury, słownika i zakresu pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td>Struktura, słownik i zakres pierwszej wersji normatywnej pozostają otwarte. <a href="system-wici-zgodnosc.html#wersja-normatywna">Warunki zamknięcia, termin numeracji i trwałe wektory</a> rozstrzygnięto 5 listopada 2026 r.</td></tr>
           <tr id="wici-dec-002"><td>WICI-DEC-002</td><td>Rola zatwierdzająca, kryteria przeglądu i sposób egzekwowania wspólnej zmiany kodu i specyfikacji.</td></tr>
           <tr id="wici-dec-003"><td>WICI-DEC-003</td><td>Zakres wykorzystania dotychczasowych projektów SA1, koperty i WICI-Link.</td></tr>
           <tr id="wici-dec-006"><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe. <a href="system-wici-wyrob.html#rozstrzygniecia-wyrobu">Rozstrzygnięcia dotyczące wyrobu</a> ustalają temperaturę pracy, sposób pomiaru energii i status celu czuwania; ich liczby pozostają parametrami profilu. Czy dług ciszy 12t z <a href="system-wici-siec.html#profil">profilu radia</a> może się zmieniać między profilami, a udział nadawania przy pomiarze nasycenia należy wyznaczać z wybranej wartości? Obecny pomiar zakłada 1/13 czasu.</td></tr>
-          <tr id="wici-dec-007"><td>WICI-DEC-007</td><td>Wersjonowanie, warunki otwartości i licencja publikacji.</td></tr>
+          <tr id="wici-dec-007"><td>WICI-DEC-007</td><td><a href="system-wici-zgodnosc.html#jedna-wersja-lacza">Regułę jednej wersji formatu WICI-Link</a> rozstrzygnięto 5 listopada 2026 r. Wersjonowanie specyfikacji, warunki otwartości i licencja publikacji pozostają otwarte.</td></tr>
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td>Przełączanie dróg w dół w łańcuchach 3–15 skoków, koszt rozsyłania i sposób sprawdzenia pełnego zakresu. Wniosek z kodu, jeszcze bez próby: HACK sąsiada nie przesuwa rodzica stacji, nawet gdy ruch dalej nie przechodzi; kolejka może nie zapełnić się przed wygaśnięciem ramek po 30 min, więc rodzic zapasowy może pozostać niewykorzystany. Poświadczenie rangi nie chroni przed porzucaniem ruchu: przejęta stacja obok roota ma prawdziwie niską rangę. Potrzebna jest reakcja na brak postępu, np. długi brak RECEIVED; sposób pozostaje otwarty.</td></tr>
         </tbody>
@@ -328,6 +335,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.30</td><td>Zapisano rozstrzygnięcia o pierwszej wersji normatywnej, numeracji wymagań, trwałych wektorach i jednej wersji WICI-Link; dodano lukę procedury zmiany formatu.</td></tr>
           <tr><td>0.29</td><td>Uzupełniono rejestr o wyniki prób koperty i WICI-Link w kodzie, oddzielono je od prób na sprzęcie oraz wskazano właściwe wiersze planu dla USB i panelu.</td></tr>
           <tr><td>0.28</td><td>Skorygowano stany i zakres dowodów w rozdziale 9, rozdzielono próby koperty i licznika, dodano formaty trwałe oraz doprecyzowano profile i luki w inwentaryzacji.</td></tr>
           <tr><td>0.27</td><td>Dodano rozdział 9 o wersjach, profilach, metodach sprawdzenia, współdziałaniu implementacji i dokumentacji wyrobu; zapisano luki WICI-INV-031–034.</td></tr>
@@ -357,7 +365,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.29 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.30 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

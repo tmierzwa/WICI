@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
-  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.29</title>
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.30</title>
   <link rel="stylesheet" href="system-wici.css">
   <style>
     .evidence-table { min-width: 94rem; }
@@ -34,7 +34,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wersje, zgodność i dowody</h1>
-      <p><span class="status">Projekt 0.29</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.30</span> · 5 listopada 2026 r.</p>
       <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie pozostaje otwarta; pozytywny wynik jednej drogi nie obejmie pełnych 15 skoków (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -42,7 +42,7 @@
       <a href="#sprawdzanie">Sprawdzanie</a>
       <a href="#wspoldzialanie">Współdziałanie</a>
       <a href="#dokumentacja-wyrobu">Dokumentacja wyrobu</a>
-      <a href="#pytania-zgodnosci">Pytania</a>
+      <a href="#wersja-normatywna">Wersja normatywna</a>
     </nav>
 
     <section id="wersje" aria-labelledby="h-wersje">
@@ -64,9 +64,9 @@
           <tr><td>Pakiet migracji stacji</td><td>1, pierwszy bajt nagłówka; obraz FRAM ma rozmiar ustalony w kodzie.</td><td><a href="../../firmware/src/migration_crypto.cpp">Nagłówek</a>, <a href="../../firmware/src/migration_image.h">obraz</a>, <a href="../../software/laptop/wici/migration.py">klient</a>.</td><td>Pakiet z inną wersją jest odrzucany. Niezależne wersjonowanie układu obrazu pozostaje luką (<a href="system-wici-decyzje.html#wici-inv-031">WICI-INV-031</a>).</td></tr>
         </tbody>
       </table></div>
-      <p>Numer <strong>formatu</strong> zmienia się przy niezgodnej zmianie bajtów lub schematu danych. Wersja <strong>programu</strong>, zwracana przez stację w <code>hello.fw</code>, identyfikuje obraz wykonujący te formaty. Wersja <strong>specyfikacji</strong> oznacza wydanie dokumentu. Poprawka programu bez zmiany formatu może zmienić tylko wersję programu; korekta opisu bez zmiany kodu zmienia wersję dokumentu. Zasady wydawania i zgodności wstecznej są otwarte (<a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>).</p>
-      <p>W działającej sieci ramki WICI-Link v2 są dziś odrzucane przez v3. Węzły dzielą jeden klucz sieci, a konfigurację otrzymują przez USB. Zmiana formatu łącza w sieci do 15 skoków oznacza objazd i przygotowanie wszystkich węzłów; mechanizm współistnienia wersji nie jest zdefiniowany.</p>
-      <p>Pola wersji koperty i WICI-Link pozwalają rozpoznać przyszły format, lecz obecny kod go nie interpretuje. SA1 odrzuca nieznany typ i inną liczbę pól, USB odrzuca nieznane pola poleceń, a konfiguracja odrzuca pola poza schematem. Reguły przyszłych rozszerzeń wymagają osobnej decyzji; obecność bitów wersji nie stanowi obietnicy zgodności wstecznej.</p>
+      <p>Numer <strong>formatu</strong> zmienia się przy niezgodnej zmianie bajtów lub schematu danych. Wersja <strong>programu</strong>, zwracana przez stację w <code>hello.fw</code>, identyfikuje obraz wykonujący te formaty. Wersja <strong>specyfikacji</strong> oznacza wydanie dokumentu. Poprawka programu bez zmiany formatu może zmienić tylko wersję programu; korekta opisu bez zmiany kodu zmienia wersję dokumentu. Reguła jednej wersji WICI-Link jest <a href="#jedna-wersja-lacza">rozstrzygnięta</a>; pozostałe zasady wydawania są otwarte (<a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>).</p>
+      <p>W sieci działa jedna wersja WICI-Link; v3 odrzuca ramki v2. Zmiana formatu następuje poza kryzysem przez przygotowanie wszystkich węzłów przez USB, z próbą TEST po każdym węźle. Objazd może trwać dzień lub dłużej przy 15 skokach. Brakuje <a href="system-wici-decyzje.html#wici-inv-035">procedury objazdu</a>; pełne <a href="#jedna-wersja-lacza">rozstrzygnięcie</a> nie obejmuje SA1 ani koperty.</p>
+      <p>Pola wersji koperty i WICI-Link pozwalają rozpoznać przyszły format, lecz obecny kod go nie interpretuje. SA1 odrzuca nieznany typ i inną liczbę pól, USB odrzuca nieznane pola poleceń, a konfiguracja odrzuca pola poza schematem. Reguły przyszłych rozszerzeń SA1 i koperty pozostają otwarte; bity wersji nie obiecują zgodności wstecznej.</p>
       <h3 id="profile">Zakresy profili</h3>
       <div class="table-scroll" role="region" aria-label="Zakresy profili" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Zakres</th><th>Reguła protokołu</th><th>Parametr profilu lub konfiguracji</th></tr></thead>
@@ -84,7 +84,7 @@
 
     <section id="sprawdzanie" aria-labelledby="h-sprawdzanie">
       <h2 id="h-sprawdzanie">9.2. Sprawdzanie wymagań</h2>
-      <p>Kandydat na identyfikator: <code>WICI-REQ-&lt;obszar&gt;-&lt;numer&gt;</code>, na przykład <code>WICI-REQ-SA1-001</code>. Obszar odpowiada rozdziałowi, numer jest trwały po nadaniu. Rozdziały 1–8 nie otrzymują teraz numerów zdań; termin nadania i słowa normatywne zależą od <a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>.</p>
+      <p>Kandydat na identyfikator: <code>WICI-REQ-&lt;obszar&gt;-&lt;numer&gt;</code>, na przykład <code>WICI-REQ-SA1-001</code>. Obszar odpowiada rozdziałowi, numer jest trwały po nadaniu. Wymagania otrzymają identyfikatory i słowa normatywne po rozstrzygnięciu otwartych decyzji, przed zatwierdzeniem, rozdział po rozdziale. Pierwszy rozdział będzie wzorem formy; do tego czasu rejestr działa na poziomie obszarów (<a href="#numeracja-wymagan">rozstrzygnięcie</a>).</p>
       <figure class="wide-diagram">
         <svg viewBox="0 0 780 98" role="img" aria-labelledby="dowod-title dowod-desc" xmlns="http://www.w3.org/2000/svg">
           <title id="dowod-title">Ścieżka od wymagania do dowodu</title>
@@ -199,16 +199,22 @@
       <p>Stan mapy licencji opisują <a href="../../LICENSE.md">LICENSE.md</a>, katalog <a href="../../LICENSES/">LICENSES</a> i <a href="../../REUSE.toml">REUSE.toml</a>. Warunki wydania specyfikacji i licencji rozstrzyga <a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>.</p>
     </section>
 
-    <section id="pytania-zgodnosci" aria-labelledby="h-pytania-zgodnosci">
-      <h2 id="h-pytania-zgodnosci">Pytania do właściciela</h2>
-      <ul>
-        <li>Jakie wyniki zamkną pierwszą wersję normatywną? Od odpowiedzi zależy zakres zatwierdzenia (<a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>).</li>
-        <li>Kiedy nadać identyfikatory wszystkim wymaganiom? Od terminu zależy sposób śledzenia zmian kodu i dowodów (<a href="system-wici-decyzje.html#wici-dec-001">WICI-DEC-001</a>, <a href="system-wici-decyzje.html#wici-dec-002">002</a>).</li>
-        <li>Czy trwałe wektory SA1 i WICI-Link są warunkiem pierwszej wersji normatywnej? Od odpowiedzi zależy zakres prób niezależnych implementacji (<a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>).</li>
-        <li>Czy jedna wersja formatu łącza wystarcza, gdy jej zmiana wymaga objazdu całej sieci? Od odpowiedzi zależą zasady zgodności i wydawania; mechanizmu współistnienia nie ustalono (<a href="system-wici-decyzje.html#wici-dec-007">WICI-DEC-007</a>).</li>
-      </ul>
+    <section id="wersja-normatywna" aria-labelledby="h-wersja-normatywna">
+      <h2 id="h-wersja-normatywna">Rozstrzygnięcia o pierwszej wersji normatywnej</h2>
+      <h3 id="warunki-zamkniecia">Warunki zamknięcia</h3>
+      <p>Pierwszą wersję normatywną zamykają: rozstrzygnięte otwarte decyzje, ponumerowane wymagania ze słowami normatywnymi, opisany stan każdej luki z inwentaryzacji oraz rozstrzygnięta na docelowym sprzęcie próba D21. Sprawa dróg w łańcuchach 3–15 skoków (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>) musi być rozstrzygnięta w tekście, łącznie ze sposobem sprawdzenia; dowód może powstać później. Wymaganie może mieć stan „brak próby”, a znana luka kodu pozostaje oznaczona jako wymagająca wdrożenia. Wersja normatywna nie stwierdza, że kod lub wyrób ją spełnia.</p>
+      <p class="explain"><strong>Uzasadnienie.</strong> Wymaganie i dowód jego spełnienia mają różne terminy. D21 może jeszcze zmienić opis sieci. Sam dokument mógłby więc wymagać przeróbki zaraz po zatwierdzeniu; czekanie na pilotaż nie dałoby dokumentu odniesienia, a czekanie na pełną zgodność kodu odsunęłoby zatwierdzenie do końca wdrożeń. Jeśli D21 odsunie się o wiele miesięcy, rozstrzygnięcie wraca do przeglądu.</p>
+      <h3 id="numeracja-wymagan">Numeracja wymagań</h3>
+      <p>Identyfikatory nadaje się wszystkim wymaganiom po rozstrzygnięciu otwartych decyzji, przed zatwierdzeniem, rozdział po rozdziale z przeglądem. Pierwszy rozdział jest wzorem formy i jest przeglądany przed następnymi. Numeracja nie czeka na próbę D21 ani na pomiary na płytce v2; progi ustalane po pomiarze pozostają parametrami profilu. Do tego czasu rejestr działa na poziomie obszarów.</p>
+      <p class="explain"><strong>Uzasadnienie.</strong> Nadanie numerów teraz oznaczałoby przeróbki po otwartych decyzjach, a numerowanie po każdej decyzji utrzymywałoby dokument w dwóch stanach. Czekanie na D21 nie pomaga w nadaniu trwałych identyfikatorów.</p>
+      <h3 id="trwale-wektory">Trwałe wektory</h3>
+      <p>Warunkiem pierwszej wersji normatywnej są trwałe wektory trzech formatów radiowych: SA1, koperty i WICI-Link, także z przypadkami odrzucanymi. Testy sprawdzają nimi kod stacji i kod stanowiska. Plik WICI-Link powstaje po próbie D21; SA1 i koperta od niej nie zależą. Rozdziały odsyłają do tych plików. Wektory dają jedno źródło bajtów, lecz nie dowodzą współdziałania z niezależną implementacją; raport takiej próby pozostaje luką, nie warunkiem.</p>
+      <p class="explain"><strong>Uzasadnienie.</strong> Przykłady zapisane tylko w rozdziałach nie wykryją rozjazdu z kodem. FRAM i kopie są formatami wewnętrznymi, a USB dotyczy etapu po pilotażu; ich wektory można dodać później. Wymóg niezależnej implementacji uzależniłby zatwierdzenie od wykonawcy, którego jeszcze nie ma. Brakujące pliki i testy zapisano w <a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>.</p>
+      <h3 id="jedna-wersja-lacza">Jedna wersja formatu łącza</h3>
+      <p>W sieci działa jedna wersja WICI-Link. Zmiana formatu łącza następuje poza kryzysem, przez przygotowanie wszystkich węzłów przez USB, i można ją połączyć z wymianą klucza sieci. Protokół nie obsługuje dwóch wersji naraz i nie obiecuje zgodności wstecznej formatu łącza. Po przygotowaniu każdego węzła wykonuje się próbę TEST. Zmiany kolejek, ponowień i polityki dróg nie wymagają zmiany formatu, jeśli nie zmieniają bajtów w eterze.</p>
+      <p class="explain"><strong>Granica i koszt.</strong> Pole wersji ma dwa bity: v3 zajmuje wartość maksymalną, v2 jest wycofana, a 0 i 1 są wolne. Następny format użyje jednej z nich. Klucz łącza pochodzi z etykiety <code>WICI link v3</code>; po jej zmianie starszy węzeł odrzuci ramkę przy sprawdzaniu MAC i nie odróżni jej od zakłóceń. Niezgodność ujawni nieudany TEST. Podczas objazdu sieć jest podzielona, przy 15 skokach potencjalnie przez dzień lub dłużej; pilna poprawka formatu ma ten sam koszt. Dwie wersje naraz wymagałyby sprawdzenia dwóch kluczy łącza oraz kombinacji kolejek, HACK i tagów pary, pozostawiając starą wersję podatną na ataki i nadal wymagając objazdu. Zmiana przez radio otwiera nową drogę ataku i zużywa czas nadawania; węzeł tłumaczący ponosi koszt obu wersji. Procedura objazdu pozostaje <a href="system-wici-decyzje.html#wici-inv-035">luką</a>. Decyzja nie dotyczy SA1 ani koperty.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.29 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.30 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
