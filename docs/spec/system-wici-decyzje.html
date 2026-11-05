@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.31</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.32</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.31</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.32</span> · 5 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -68,7 +68,7 @@
         <article class="record" id="wici-inv-004">
           <h4>WICI-INV-004</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są otwarte.</dd></div>
+            <div><dt>Stan zastany</dt><dd>Pole ramki dopuszcza limit 1–15 skoków. W pilotażu planuje się najwyżej dwa; reguły dróg w dół dla dłuższych łańcuchów są rozstrzygnięte, lecz niewdrożone (<a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a>).</dd></div>
             <div><dt>Źródło i luka</dt><dd><a href="wici-link.md">Opis i pytanie 7</a>, <a href="../../tests/native/wici_network_check.cpp">test programowy</a>; brak próby sprzętowej przez przekaźnik.</dd></div>
           </dl>
         </article>
@@ -313,14 +313,14 @@
           <h4>WICI-INV-038</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/station.cpp">Stacja</a> nie zmienia rodzica po długim braku uwierzytelnionej odpowiedzi; <a href="../../firmware/src/wici_route.cpp">reconsider()</a> może od razu przywrócić rodzica z planu po HACK lub BEACON-ie.</dd></div>
-            <div><dt>Luka</dt><dd>Wykrywanie braku postępu tylko przy otwartej wiadomości i blokada opuszczonego rodzica według <a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a>. Czas 30 min i blokada 2 h są kandydatami profilu; blokada nie ma pomiaru. Brak próby zmiany rodzica po braku postępu.</dd></div>
+            <div><dt>Luka</dt><dd>Cel reakcji na brak postępu jest ponownie otwarty w <a href="system-wici-siec.html#brak-postepu">WICI-DEC-009</a>. Próg 30 min odrzucono po wstępnych wynikach emulatora; nowa wartość progu nie została wybrana. Blokada 2 h pozostaje kandydatem bez pomiaru w sieci. Brak próby na sprzęcie.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-039">
           <h4>WICI-INV-039</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd><a href="../../tests/native/wici_network_check.cpp">Próba w pamięci</a> obejmuje jeden przekaźnik, bez zegara i modelu kanału. <a href="../../software/simulator/README.md">Istniejący symulator</a> buduje inny obraz, z radiem S2-LP.</dd></div>
-            <div><dt>Luka</dt><dd>Brak <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">emulatora pełnego zakresu</a> na kodzie C++ WICI-Link, kalibracji pomiarami z D21 i krótkiego łańcucha fizycznego oraz wyników 3–15 skoków. Emulator powstaje przed zmianą kodu stacji. <a href="odbior.md#próby">Plan prób</a> nie obejmuje długiego łańcucha, braku postępu i budżetu rozsyłania; kryterium „żadna droga w dół poza planem sieci” w „Wrogim węźle” jest sprzeczne z WICI-DEC-009.</dd></div>
+            <div><dt>Luka</dt><dd>Emulator C++ i wstępne wyniki 3–15 skoków są w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>. Do wykonania pozostają scalenie, kalibracja pomiarami z D21 i krótkiego łańcucha fizycznego oraz próby w <a href="odbior.md#próby">planie odbioru</a>: długi łańcuch, brak postępu i budżet rozsyłania. Kryterium „żadna droga w dół poza planem sieci” w „Wrogim węźle” jest sprzeczne z WICI-DEC-009.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-040">
@@ -355,6 +355,7 @@
           <tr id="wici-dec-006"><td>WICI-DEC-006</td><td>Profile systemu, granice zasobów i wymagania liczbowe. <a href="system-wici-wyrob.html#rozstrzygniecia-wyrobu">Rozstrzygnięcia dotyczące wyrobu</a> ustalają temperaturę pracy, sposób pomiaru energii i status celu czuwania; ich liczby pozostają parametrami profilu. Czy dług ciszy 12t z <a href="system-wici-siec.html#profil">profilu radia</a> może się zmieniać między profilami, a udział nadawania przy pomiarze nasycenia należy wyznaczać z wybranej wartości? Obecny pomiar zakłada 1/13 czasu.</td></tr>
           <tr id="wici-dec-007"><td>WICI-DEC-007</td><td><a href="system-wici-zgodnosc.html#jedna-wersja-lacza">Regułę jednej wersji formatu WICI-Link</a> rozstrzygnięto 5 listopada 2026 r. Wersjonowanie specyfikacji, warunki otwartości i licencja publikacji pozostają otwarte.</td></tr>
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td>Czy szew nośnika i nośniki inne niż WICI-Link (np. Meshtastic, MeshCore, IP na stanowisku) należą do pierwszej wersji normatywnej.</td></tr>
+          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Cztery z pięciu spraw</a> rozstrzygnięto 5 listopada 2026 r.: zwykłą drogę w dół, stację na rodzicu zapasowym, limit rozsyłania i metodę sprawdzenia pełnego zakresu. <a href="system-wici-siec.html#brak-postepu">Reakcja na brak postępu</a> jest otwarta ponownie po wstępnych wynikach emulatora z niescalonego <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>. Kod, plan prób i opisy wymagają zmian (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-040">040</a>); D21 pozostaje otwarta.</td></tr>
         </tbody>
       </table>
       <h3 id="decyzje-rozstrzygniete">Decyzje rozstrzygnięte</h3>
@@ -363,13 +364,13 @@
         <tbody>
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
-          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, budżet rozsyłania i sprawdzenie 3–15 skoków. Kod, plan prób i opisy wymagają zmian (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-040">040</a>); emulator i dowód jeszcze nie istnieją. D21 pozostaje otwarta.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.32</td><td>Ponownie otwarto WICI-DEC-009 w sprawie braku postępu po wstępnych wynikach emulatora z PR 186; zapisano koszty pozostałych rozstrzygnięć i granice wyników bez kalibracji.</td></tr>
           <tr><td>0.31</td><td>Rozstrzygnięto WICI-DEC-009: naukę dróg, ponowienia rozsyłaniem, brak postępu, budżet stanowiska i sprawdzenie 3–15 skoków; zapisano luki kodu, prób i opisów WICI-INV-036–040.</td></tr>
           <tr><td>0.30</td><td>Zapisano rozstrzygnięcia o pierwszej wersji normatywnej, numeracji wymagań, trwałych wektorach i jednej wersji WICI-Link; dodano lukę procedury zmiany formatu.</td></tr>
           <tr><td>0.29</td><td>Uzupełniono rejestr o wyniki prób koperty i WICI-Link w kodzie, oddzielono je od prób na sprzęcie oraz wskazano właściwe wiersze planu dla USB i panelu.</td></tr>
@@ -401,7 +402,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.31 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.32 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
