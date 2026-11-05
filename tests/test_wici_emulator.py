@@ -70,6 +70,30 @@ class Emulator(unittest.TestCase):
         self.assertGreater(decided["closed"], today["closed"])
         self.assertGreaterEqual(decided["leaves"], 1)
 
+    def test_k1_frames_without_route_do_not_silence_a_relay_under_the_fix(self):
+        # Bez poprawki ramki z gniazd K1 bez drogi czekają przy limicie 25% na siebie nawzajem: przekaźnik milknie.
+        args = ("seed=2", "p=900", "skip=700", "hours=12", "learn=1", "alternate=1", "flood=700")
+        without = json.loads(run("variant", "koniec", *args))
+        fixed = json.loads(run("variant", "koniec", *args, "k1flood=1"))
+        self.assertGreater(without["longest_mute_s"], 300)
+        self.assertLess(fixed["longest_mute_s"], 60)
+
+    def test_count_threshold_leaves_a_dropping_parent(self):
+        args = ("seed=1", "hops=10", "reports=6", "spread=60", "hours=4", "p=950", *DECISIONS[:2], "hold=7200")
+        today = json.loads(run("base", "porzucanie_dziecko", "seed=1", "hops=10", "reports=6", "spread=60", "hours=4", "p=950"))
+        decided = json.loads(run("variant", "porzucanie_dziecko", *args, "leaven=2", "permessage=1"))
+        self.assertGreater(decided["closed"], today["closed"])
+        self.assertGreaterEqual(decided["child_left_s"], 600)
+
+    def test_relay_probe_helps_only_against_a_plain_dropper(self):
+        args = ("seed=1", "hops=8", "reports=6", "spread=60", "hours=8", "p=950", *DECISIONS[:2], "hold=7200", "leaven=2")
+        plain = json.loads(run("variant", "porzucanie_koniec", *args))
+        probing = json.loads(run("variant", "porzucanie_koniec", *args, "probe=1200"))
+        self.assertGreater(probing["closed"], plain["closed"])
+        self.assertGreater(probing["probes"], 0)
+        # Próbka nie liczy się jako zgłoszenie.
+        self.assertEqual(probing["reports"], 6)
+
 
 if __name__ == "__main__":
     unittest.main()

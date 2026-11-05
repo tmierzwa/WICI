@@ -8,10 +8,10 @@ Sprawdzenie czterech rozstrzygnięć o drogach w łańcuchach (WICI-DEC-009) pra
 
 | Rozstrzygnięcie | Wynik | Co dalej |
 |---|---|---|
-| Przekaźnik uczy się dróg w dół z ruchu w górę | potwierdzone w łańcuchu, z dwoma kosztami: wolniejsza droga w górę i gorszy wynik przy łączach zapasowych 70% i skuteczności 80% | do decyzji: czy koszt jest do przyjęcia |
+| Przekaźnik uczy się dróg w dół z ruchu w górę | potwierdzone, z kosztem: wolniejsza droga w górę. Gorszy wynik przy łączach zapasowych to [zapętlenie kolejki przekaźnika](#pytanie-c-łącza-zapasowe), nie uczenie | do decyzji: koszt i poprawka kolejki |
 | Próby na przemian i ramka rozsyłana zostaje rozsyłana | potwierdzone | bez zmian |
-| **Zmiana rodzica po około 30 min** | **wynik przeczy wartości 30 min**: próg działa fałszywie w zdrowej sieci przy każdym ziarnie | **otworzyć ponownie** |
-| **Zmiana rodzica jako wyjście z porzucania** | **działa tylko u stacji tuż pod porzucającą**, przy ruchu z dalszych stacji 12 z 50 zgłoszeń po 12 h, obecny kod 9 | **otworzyć ponownie albo przyjąć jawnie jako ograniczenie** |
+| **Zmiana rodzica po około 30 min** | próg działa fałszywie w zdrowej sieci przy każdym ziarnie, ale [nie pogarsza to RECEIVED](#pytanie-a-próg-zmiany-rodzica); ważniejsza okazała się reguła zerowania licznika | **do decyzji** |
+| **Zmiana rodzica jako wyjście z porzucania** | **działa tylko u stacji tuż pod porzucającą**, przy ruchu z dalszych stacji 12 z 50 zgłoszeń po 12 h, obecny kod 9; [próbka przekaźnika](#pytanie-b-próbka-przekaźnika) pomaga przy zwykłym porzucaniu, nie przy selektywnym | **przyjąć jawnie jako ograniczenie albo otworzyć ponownie** |
 | Blokada opuszczonego rodzica około 2 h | potwierdzona | bez zmian |
 | Budżet rozsyłania około 0,7 s na stację | limit 25% potwierdzony przy stacjach słyszących się wzajemnie; w łańcuchach zbyt ostrożny | do decyzji: czy skalować go inaczej |
 
@@ -52,7 +52,7 @@ Rozstrzygnięcia skracają najdłuższe RECEIVED 2–7 razy i tną rozsyłanie 3
 
 Żadna konfiguracja nie daje przy 15 skokach RECEIVED do 30 min, których próba T5 wymaga na referencyjnym A–B–stanowisko: najlepszy wynik to około 52 min. To nie jest wymóg dla 15 skoków, ale trzeba to nazwać przy pełnym zakresie.
 
-**Łącza zapasowe zmieniają obraz.** Przy łączach co dwa skoki o skuteczności 70% obecne rozsyłanie działa dobrze i przewaga nauki znika, a przy końcu łańcucha i 80% nauka jest gorsza: mediana RECEIVED 6412 [2333..7036] wobec 2724 [2290..3796] s, przyjęcie maks. 3654 wobec 1502 s. Rozrzut wskazuje na dwa tryby pracy. Przyczyny nie potwierdzono; hipoteza: rodzice skaczą między łączem z planu a słabym zapasowym, a „ostatnia wygrywa” prowadzi ruch przez słabe łącze.
+**Łącza zapasowe zmieniają obraz.** Przy łączach co dwa skoki o skuteczności 70% obecne rozsyłanie działa dobrze i przewaga nauki znika, a przy końcu łańcucha i 80% nauka jest gorsza: mediana RECEIVED 6412 [2333..7036] wobec 2724 [2290..3796] s, przyjęcie maks. 3654 wobec 1502 s. Rozrzut wskazuje na dwa tryby pracy. Hipotezę o „ostatnia wygrywa” [obalono](#pytanie-c-łącza-zapasowe): przyczyną jest milknący przekaźnik, a jednoliniowa poprawka usuwa ten wynik.
 
 ## 2. Zmiana rodzica i poprawa drogi w dół
 
@@ -103,7 +103,7 @@ Wyjście działa, gdy stacja tuż pod porzucającą ma własną otwartą wiadomo
 
 Pod nasyceniem z łączami zapasowymi (90%, 181 zgłoszeń w godzinę): 20 [13..35] zmian przy 30 min, 7 [1..8] przy 60 min, 0 [0..4] przy 90 min.
 
-Przyczyna leży w czasach, które już są w kodzie: stacja po HACK ponawia po 10 min, a potem co 30–60 min (`RESEND_MIN_S`, `RESEND_MAX_S`), a stanowisko po przekazaniu przekaźnikowi czeka 35 min (`CUSTODY_S`). Zdrowa stacja z jednym zgubionym RECEIVED milczy więc dłużej niż 30 min: najdłuższa cisza bez zmiany rodzica to 2834 [2086..3179] s, pod nasyceniem 5276 [3833..9068] s. **Próg 30 min jest krótszy od zwykłego odstępu ponowienia.** Fałszywa zmiana przy łączach zapasowych 70% kosztuje mało (najdłuższe RECEIVED o około 12% dłużej), przy 90–95%, ale przenosi stację na słabsze łącze na 2 h.
+Przyczyna leży w czasach, które już są w kodzie: stacja po HACK ponawia po 10 min, a potem co 30–60 min (`RESEND_MIN_S`, `RESEND_MAX_S`), a stanowisko po przekazaniu przekaźnikowi czeka 35 min (`CUSTODY_S`). Zdrowa stacja z jednym zgubionym RECEIVED milczy więc dłużej niż 30 min: najdłuższa cisza bez zmiany rodzica to 2834 [2086..3179] s, pod nasyceniem 5276 [3833..9068] s. **Próg 30 min jest krótszy od zwykłego odstępu ponowienia.** Porównanie z innymi progami i poprawką kolejki jest w [drugiej turze](#pytanie-a-próg-zmiany-rodzica). Fałszywa zmiana przy łączach zapasowych 70% kosztuje mało (najdłuższe RECEIVED o około 12% dłużej), przy 90–95%, ale przenosi stację na słabsze łącze na 2 h.
 
 Wyższy próg opóźnia wyjście z prawdziwego porzucania, przy zgłoszeniach od stacji tuż pod porzucającą:
 
@@ -140,7 +140,7 @@ Każda stacja zgłasza przez godzinę, potem brak nowych zgłoszeń, razem 9 h. 
 | 80–95% | 901 | obecny kod | 160–198 | do 578 |
 | 80–95% | 901 | rozstrzygnięcia | 277–336 | do 553 |
 
-**Zakleszczenia nie ma.** Dopóki są otwarte zgłoszenia, sieć robi postęp: w przebiegach z ziarnem 1 przy obciążeniu co najmniej 41 HACK na 10 min, a dłuższe przerwy (do 3088 s) wypadają po opróżnieniu kolejek, gdy czeka się na ponowienie 30–60 min. Przy 901 zgłoszeniach sieć po prostu ma za małą przepustowość: po 9 h stanowisko ma 352–448 przyjęć. Pula 60% czasu kanału odmawia tu tysięcy razy (`budget_refused`), bez blokady węzłów. To nie jest dowód braku zakleszczenia dla każdej topologii: sprawdzono łańcuch, bez rozgałęzień pod obciążeniem.
+**Zakleszczenia nie ma.** Dopóki są otwarte zgłoszenia, sieć robi postęp: w przebiegach z ziarnem 1 przy obciążeniu co najmniej 41 HACK na 10 min, a dłuższe przerwy (do 3088 s) wypadają po opróżnieniu kolejek, gdy czeka się na ponowienie 30–60 min. Przy 901 zgłoszeniach sieć po prostu ma za małą przepustowość: po 9 h stanowisko ma 352–448 przyjęć. Pula 60% czasu kanału odmawia tu tysięcy razy (`budget_refused`), bez blokady węzłów. To nie jest dowód braku zakleszczenia dla każdej topologii; drzewo z rozgałęzieniami sprawdzono w [drugiej turze](#najlepszy-zestaw-w-drzewie).
 
 ## 6. Fala BEACON-ów po wyłączeniu stanowiska
 
@@ -199,6 +199,147 @@ Napastnik przejmuje około połowy dróg u swoich sąsiadów, bo przekaźnik nie
 
 Wyjście po czasie działa także tu. Bez niego napastnik trzyma stację godzinami, a sama nauka dróg w tej próbie pogarsza wynik. Liczy się nadal, że atak trwa około 3,6 h, a nie minuty.
 
+## Druga tura: reakcja na brak postępu i łącza zapasowe
+
+Właściciel zlecił sprawdzenie trzech pytań, zanim zdecyduje. Rekomendacje na końcu tej części to ocena autora raportu, nie rozstrzygnięcie. Firmware jest bez zmian; wszystkie warianty żyją w `variant.patch` i w skrócie stacji emulatora. Razem 1901 przebiegów: parametry dobierano na ziarnach 1–5, sprawdzono na 101–110, a wybranych kandydatów bez dalszego strojenia na 201–210. To miało znaczenie: **ziarna 1–5 pokazały próg 60 min i „2 próby” lepiej, niż wypadły na nowych ziarnach**.
+
+**Wnioski.**
+
+- **Pytanie A.** Próg 60 lub 90 min nie jest lepszy od 30 min, bo ma długi ogon. Różnicę robi reguła zerowania: licznik „2 próby” zerowany tylko odpowiedzią na tę wiadomość wychodzi z porzucania w 3620 [3307..3793] s przy tylu fałszywych zmianach co 30 min, a RECEIVED mieści się przy nich w rozrzucie między ziarnami.
+- **Pytanie B.** Próbka przekaźnika podnosi wynik przy zwykłym porzucaniu z około 12 do 50 z 50, ale **węzeł, który przepuszcza próbki i porzuca resztę, unieważnia ją całkowicie**. Wymaga też nowego rodzaju wiadomości i kosztuje około 3,3 razy więcej czasu nadawania przy wyłączonym stanowisku.
+- **Pytanie C.** Hipoteza „ostatnia wygrywa” jest **obalona**. Przyczyną jest milknący przekaźnik: ramki z gniazd K1 bez znanej drogi czekają przy limicie 25% na siebie nawzajem do 30 min. Poprawka jednej linii bez zmiany bajtów usuwa dwumodalność i uczenie z ruchu nie jest podważone.
+
+### Pytanie C: łącza zapasowe
+
+Koniec łańcucha, łącza zapasowe 70%, nauka dróg, próby na przemian i budżet. Ziarna 1–5. „Najdłuższa cisza” to najdłuższy czas bez żadnego nadania u jednej stacji w chwili odmowy z dziennika czasu nadawania.
+
+| Skok | Konfiguracja | RECEIVED, mediana (s) | RECEIVED, maks. (s) | Najdłuższa cisza (s) | Odmowy dziennika |
+|---|---|---|---|---|---|
+| 80% | obecny kod | 2724 [2290..3796] | 6423 | 2 | 55 |
+| 80% | bez poprawki | **6412 [2333..7036]** | 8139 | 1363 [197..1776] | 10938 |
+| 80% | bez „ostatnia wygrywa” (nauka tylko brakującej drogi) | **5406 [4941..6482]** | 8034 | 1680 [1013..1762] | 8148 |
+| 80% | bez dziennika czasu nadawania (tylko próba przyczyny) | 2448 [2252..2817] | 4273 | 0 | 0 |
+| 80% | **z poprawką** | **2484 [2398..5419]** | 5887 | 598 [573..1275] | 4109 |
+| 90% | obecny kod | 1938 [1796..2630] | 5723 | 2 | 42 |
+| 90% | bez poprawki | 2307 [2203..5630] | 6599 | 809 [2..1065] | 3109 |
+| 90% | **z poprawką** | **2279 [1950..2356]** | 3280 | 2 | 165 |
+| 95% | obecny kod | 2579 [1645..2703] | 4887 | 2 | 28 |
+| 95% | bez poprawki | 2244 [1965..4726] | 4671 | 1075 [2..1621] | 3072 |
+| 95% | **z poprawką** | **2156 [2003..2190]** | 3777 | 2 | 182 |
+
+**Hipoteza nie wytrzymała.** Bez „ostatnia wygrywa” mediana nadal wynosi 5406 s, a cisza jest nawet dłuższa. Łącza 70% nie są też słabym wyborem: dają dwa skoki jedną ramką, więc skuteczność na skok jest podobna jak przy 80%.
+
+**Co pokazuje zapis przebiegu** (ziarno 2, 80%). Stacja 7 nie nadaje niczego przez około 25 min, od około 2100 s do 3600 s: ani DATA, ani HACK. Jej dziennik stoi na 1151 s z 2160 s puli, więc to nie wyczerpana pula 60%. Licznik odmów tej stacji rośnie w tym czasie z 83 do 1293, u sąsiedniej stacji 8 do 515, a u pozostałych do 3000 s wynosi 0–8. W jej kolejce (widać gniazda 0 i 2) są ramki `ACKREQ|DOWN` z następnym skokiem BROADCAST. Rozkład przyczyny:
+
+1. Przekaźnik bez drogi do stacji zamienia ramkę w dół na rozsyłanie. Po nauce dróg zdarza się to często, bo droga znika po trzech seriach bez HACK (`routes_.forget` w `Relay::timeout`).
+2. `Relay::prepare` traktuje taką ramkę jako K2 (`activePriority_ = k1 && next != BROADCAST`), choć leży w gnieździe K1.
+3. `contendedK2` widzi w innym gnieździe ramkę K1, więc przy puli powyżej 25% radio odmawia. Druga ramka bez drogi trafia na to samo: czekają na siebie nawzajem.
+4. Stacja nie daje też HACK, co pasuje do pełnej kolejki. Ramki wygasają po 30 min. Dzieci ponawiają i zmieniają rodziców, a to dopiero zużywa ich pule do 60%, stąd druga fala ciszy.
+
+Stąd dwa tryby: to, czy w danym ziarnie kolejka zapełni się samymi takimi ramkami przy puli ponad 25%, zależy od przypadku.
+
+**Poprawka bez zmiany bajtów:** ramka z gniazda K1 zachowuje pierwszeństwo K1 także bez znanej drogi (`k1flood=1`). Na ziarnach 101–110 przy 80%: mediana 2445 [2325..5117] s wobec 4773 [2246..5803] s bez poprawki i 2278 [2087..2560] s na obecnym kodzie; najdłużej 6206 s wobec 6889 s na obecnym kodzie. **Uczenie z ruchu nie jest podważone**, ale nie jest też za darmo:
+
+- Zgłoszenie dochodzi później: najdłużej 1605 s wobec 839 s przy 90% i 1175 s wobec 691 s przy 95%, czyli przy łączach zapasowych do 1,9 raza, więcej niż 1,2–1,5 raza z pierwszej tury. Kanał jest zajęty około 1,3–1,8 raza dłużej.
+- Przy 80% zostaje jeden prawdziwy limit: w części ziaren pośrednie przekaźniki dochodzą do puli 60% (cisza do 1182 s, mediana do 5117 s). To już obciążenie, nie zapętlenie.
+
+**Koszt i zastrzeżenia poprawki.** Zmienia regułę „rozsyłanie to K2” dla ramek, które przyszły jednoadresowo w gnieździe K1, więc trzeba ją wpisać do specyfikacji i kryterium próby wrogiego węzła. Sprawdzono, czy nie otwiera ataku: sąsiad podsuwający co 10–12 s ramki w dół do numeru bez drogi daje z poprawką medianę 2460 [2294..2629] s i ciszę 599 s, a bez niej 4733 [2270..8867] s i 1234 s. Poprawka tu pomaga, bo sama cisza jest celem ataku. **Mechanizm jest też w obecnym firmware:** ten sam atak na niezmieniony kod daje ciszę do 465 s i medianę 2684 s wobec 1867 s bez napastnika (ziarna 201–210); tego przebiegu nie rozbierano na zapisie. Inny wariant poprawki, w którym `contendedK2` liczy tylko ramki K1 ze znaną drogą, zachowałby regułę o K2, ale go nie sprawdzono.
+
+Liczby z rozdziałów 1–8 policzono bez poprawki. W łańcuchu bez łączy zapasowych prawie nie ma różnicy (koniec łańcucha, 90%: mediana 2178 s wobec 2207 s), a przy łączach zapasowych trzeba czytać ten rozdział.
+
+### Pytanie A: próg zmiany rodzica
+
+Próg w próbach: stacja liczy nadania z HACK bez uwierzytelnionej wiadomości od odbiorcy i **przed następnym nadaniem** zmienia rodzica, więc to nadanie idzie już nową drogą. Przy odstępach 10 min, potem 30–60 min, „2 próby” to 40–70 min od pierwszego HACK, „3 próby” 70–130 min, „4 próby” 100–190 min. Custody stanowiska po przekazaniu to 35 min, więc N=1 (10 min) nie wchodzi w grę. „4 próby” odpadły na ziarnach 1–5 (26/50 przy porzucaniu). Wszystkie warianty z poprawką kolejki, nauką, próbami na przemian, budżetem i blokadą 2 h. Porzucanie: stacja w połowie, 90%, 12 h.
+
+Ziarna 101–110:
+
+| Reguła | Fałszywe zmiany w zdrowej sieci, 80 / 90 / 95% | Pod nasyceniem, 90 / 80% | Porzucanie, stacja pod nią: mediana RECEIVED (s) | RECEIVED tam | RECEIVED, wszystkie poniżej |
+|---|---|---|---|---|---|
+| 30 min | 4 / 4 / 4 | 7 [0..15] / 34 [26..49] | 3746 [3419..**16493**] | 50 | 50 [45..50] |
+| 60 min | 0 / 0 / 0 | 0 [0..7] / 11 [8..12] | 11656 [5290..**40067**] | 50 [**12**..50] | 50 |
+| 2 próby, zeruje każda wiadomość | 0 / 0 / 0 | 1 [0..7] / 10 [8..13] | 9702 [3461..**36033**] | 50 [**12**..50] | 50 [44..50] |
+| 3 próby, zeruje każda wiadomość | 0 / 0 / 0 | 0 / 5 [0..6] | 9702 [833..**41351**] | 46 [**12**..50] | 47 [4..50] |
+| **2 próby, zeruje tylko odpowiedź na tę wiadomość** | 4 / 2 / 3 | 6 [0..12] / 22 [18..28] | **3685 [3317..3996]** | **50** | 50 [45..50] |
+
+Przyczyna ogona, z zapisu ziarna 4: jedno zgłoszenie przypadkiem przechodzi przez rodzica zapasowego, wraca jego RECEIVED i **zeruje liczniki wszystkich pozostałych wiadomości**. Stacja zostaje przy porzucającym rodzicu na godziny. Niski próg 30 min zdąża częściej przed takim przypadkiem, wyższe nie. Dlatego próg 60 min, który na ziarnach 1–5 dawał 5368 s, na nowych daje medianę 11656 s; 90 min (tylko ziarna 1–5) ma 6529 [6257..30006] s i ten sam ogon.
+
+Kandydaci na ziarnach 201–210, bez strojenia:
+
+| Reguła | Fałszywe zmiany w zdrowej sieci, 80 / 90 / 95% | Pod nasyceniem, 90 / 80% | Pierwsza zmiana u stacji pod porzucającą (s) | Mediana RECEIVED (s) | Wszystkie poniżej: RECEIVED, maks. (s) |
+|---|---|---|---|---|---|
+| 30 min | 4 / 3 / 5 | 9 [0..14] / 35 [27..47] | 1887 [1800..10180] | 3762 [3276..11673] | 50 [44..50], 7374 |
+| 2 próby, ta wiadomość | 4 / 3 / 2 | 6 [0..8] / 26 [18..34] | 2567 [2512..2727] | **3620 [3307..3793]** | 50 [44..50], 10136 |
+| 3 próby, ta wiadomość | **0 / 0 / 0** | **0 [0..4]** / 13 [11..22] | 4651 [4430..4958] | 6182 [5887..6351] | **36 [31..50]**, 16404 |
+
+**Wpływ na RECEIVED i czas dotarcia mieści się w rozrzucie między ziarnami** i to trzeba skorygować wobec pierwszej tury, która mówiła o wyniku przeczącym 30 min. Fałszywe zmiany są, ale RECEIVED maks. przy 90% to 3601, 3759 i 3662 s, pod nasyceniem 4183, 4939 i 4233 s, przy 80% 14530, 14894 i 16660 s, a przyjęcie zgłoszeń jest identyczne (829 s). Ceną jest 3–5 stacji z 15 na rodzicu zapasowym przez 2 h, co przy założonych 70% prawie nie boli. **Emulator nie widzi, co to znaczy na realnym łączu zapasowym**, które może być znacznie gorsze, ani strat seriami, które wydłużą ciszę i zwiększą liczbę fałszywych zmian, szczególnie przy liczeniu na jedną wiadomość. Bez łącza zapasowego zmiana niczego nie daje: rodzic z planu zostaje jako podłoga.
+
+Przy wyłączonym stanowisku 2 h ruch tylko z końca łańcucha daje poza planem przy powrocie 1, 2 i 2 stacje; wszystkie wiadomości domknięte po 660, 360 i 660 s. Wrogi węzeł z niską rangą: RECEIVED maks. 16940, 9765 i 11008 s; z fałszywym `src`: 10122, 10729 i 10942 s.
+
+### Pytanie B: próbka przekaźnika
+
+Przekaźnik, który przekazał ruch w górę i przez 20 min nie widział powrotu, wysyła własną uwierzytelnioną wiadomość najwyżej co 30 min i dalej działa jak stacja z otwartą wiadomością, z progiem „2 próby”. Dwa warianty sygnału: każda ramka w dół albo tylko uwierzytelniona wiadomość do tej stacji. Porzucanie przy ruchu **tylko z końca łańcucha**, 90%, 12 h, ziarna 1–5, licznik zerowany każdą wiadomością.
+
+| Co robi porzucający | Gdzie | Bez próbki | Próbka, powrót to ramka w dół | Próbka, powrót to własna wiadomość |
+|---|---|---|---|---|
+| porzuca wszystko | blisko roota | 17 [7..26] | **50** (mediana 6411 s, 15 zmian) | 50 (6590 s, 21 zmian) |
+| porzuca wszystko | w środku | 9 [5..13] | **50** (6324 s, 7 zmian) | 50 (6290 s, 7 zmian) |
+| porzuca wszystko | blisko końca | 11 [9..24] | **50** (8715 s, 3 zmiany) | 50 (8618 s, 3 zmiany) |
+| **przepuszcza własny ruch dziecka, porzuca resztę** | blisko roota | 21 [13..22] | **18 [3..30]**, 73 zmiany | 11 [10..14], 80 zmian |
+| to samo | w środku | 9 [1..19] | **9 [3..17]**, 34 zmiany | 7 [2..12], 36 zmian |
+| to samo | blisko końca | 33 [17..50] | 42 [24..50] | 32 [19..50] |
+| porzuca wszystko i podsuwa ramki w dół | w środku | 18 [5..21] | **9 [5..20]**, tylko 2 próbki | 50 [50..50], 37 próbek |
+
+Na ziarnach 201–210, z licznikiem na wiadomość: blisko roota 13 [2..22] → 50 [27..50], w środku 12 [6..18] → 50, blisko końca 16 [10..27] → 50; mediana w środku 6537 [5352..34151] s.
+
+**Ten wiersz unieważnia pomysł wobec przejętego węzła.** Taki węzeł nie musi czytać treści: wystarczy mu porównać `src` koperty z nadawcą ramki. Jego dziecko dostaje odpowiedzi, więc nie ma powodu odejść, a ruch z dalszych stacji ginie. Próbka nie poprawia wtedy niczego, a przy roocie i w środku łańcucha mnoży zmiany rodzica u zdrowych stacji do około 20 razy. Sygnał „ramka w dół” pada przy tym od jednej podrobionej ramki na 5 min, bo przekaźnik nie sprawdzi koperty; sygnał „własna wiadomość” jest odporny, ale nadaje więcej (do 325 próbek na 12 h). **Próbka działa tylko na awarię lub zwykłe porzucanie, nie na atak.**
+
+**Wyłączone stanowisko.** Ruch tylko z końca łańcucha.
+
+| Przerwa | Konfiguracja | Czas nadawania wszystkich w przerwie (s) | Zmiany rodzica | Poza planem przy powrocie / po 1 h / po 2 h | Wszystko domknięte po powrocie (s) |
+|---|---|---|---|---|---|
+| 2 h | bez próbki | 392 [342..435] | 1 | 2 / 1 / 0 | 1080 [240..1320] |
+| 2 h | próbka | **1309 [1212..1379]** | **11** | **12 / 11 / 2** | 1020 [420..2520] |
+| 4 h | bez próbki | 613 [567..661] | 3 | 1 / 1 / 0 | 300 [120..3240] |
+| 4 h | próbka | **2137 [2014..2216]** | **25** | 3 / 5 / 3 | 1380 [480..3000] |
+
+Cały łańcuch próbkuje naraz i zmienia rodziców kaskadowo, ale kanał to wytrzymuje: 1309 s na 15 stacji przez 2 h to około 1,2% czasu nadawania na stację. Powrót nie jest wyraźnie wolniejszy po 2 h; po 4 h mediana to 1380 s wobec 300 s, przy dużym rozrzucie. Kosztem jest godzina na rodzicach zapasowych po usunięciu awarii, której te stacje nie miały.
+
+**Obciążenie.** Przy 15 skokach i powodzi zgłoszeń (181 i 901 na godzinę) próbek jest 0, bo przekaźnik stale widzi ruch w dół. Przy 80% 2 [0..5] i do 3 zmian rodzica. Wrogi węzeł wywołujący próbki fałszywym ruchem w bezczynnej sieci: 116 [102..119] próbek na 8 h u stacji między nim a rootem, zajętość 7,0% wobec 5,2%, bez zmian rodzica i bez wpływu na RECEIVED. To koszt ograniczony limitem częstości.
+
+**Jakiej wiadomości użyć.** Żaden istniejący rodzaj nie pasuje:
+
+- `TEST` (rodzaj 5 w SA1) trafia na panel dyżurnego jako osobna pozycja do PRZECZYTANE (`panel.py`), a brak odpowiedzi po 30 min włącza na stacji alarm `brak_potwierdzenia` (`Station::alarm`). Zaśmieca panel i fałszywie alarmuje dokładnie wtedy, gdy łańcuch ma kłopot.
+- `TYPE_PROOF` idzie do stanowiska bez żadnej odpowiedzi, więc niczego nie sprawdza.
+
+Potrzebny byłby nowy rodzaj: wolna wartość typu koperty (2–15 zarezerwowane) albo typu SA1, plus odpowiedź stanowiska z pominięciem panelu i obsługa po stronie stacji. Układ bajtów istniejących ramek zostaje, ale to zmiana protokołu i dwóch programów, plus nowy stan w przekaźniku (w emulatorze `Net::noteTraffic`). **To koszt do doliczenia do decyzji.** Emulator używa wiadomości 40 B bez wpisu w panelu, czyli rodzaju, którego dziś nie ma.
+
+### Najlepszy zestaw w drzewie
+
+Poprawka kolejki, nauka, próby na przemian, budżet, blokada 2 h, „2 próby, ta wiadomość”. Dwa pnie po 15 skoków z czterema odgałęzieniami po 5 stacji, razem 50; dzieci jednego rodzica słyszą się wzajemnie. Godzina zgłoszeń, potem bez nowych, razem 8 h. Trzy ziarna. Przy 61 zgłoszeniach wszystko domknięte w każdej konfiguracji z zestawem (najdłużej 90–806 s), bez odmów dziennika. Przy 301 zgłoszeniach, czyli ponad przepustowością:
+
+| Skok, łącza zapasowe | Konfiguracja | RECEIVED | Maks. (s) | Najdłuższa cisza (s) | Najmniej HACK na 10 min pod obciążeniem |
+|---|---|---|---|---|---|
+| 80%, nie | obecny kod | 39 [38..39] | 31830 | 900 | 115 [98..172] |
+| 80%, nie | zestaw | 301 [299..301] | 27492 | 1124 | 97 [67..115] |
+| 80%, tak | obecny kod | 301 [267..301] | 30796 | 603 | 255 |
+| 80%, tak | zestaw bez poprawki | 301 | 24260 | 1596 | 216 |
+| 80%, tak | zestaw | 301 | 18838 | 740 | 184 |
+| 90%, nie | obecny kod | 181 [153..226] | 31932 | 598 | 185 |
+| 90%, nie | zestaw | 301 | 9547 | 595 | 417 |
+| 90%, tak | obecny kod | 301 | 14287 | 592 | 552 |
+| 90%, tak | zestaw bez poprawki | 301 | 10656 | 1344 | 290 |
+| 90%, tak | zestaw | 301 | 9481 | 578 | 428 |
+
+**Zakleszczenia w drzewie nie ma**: co najmniej 67 HACK na 10 min przy każdym obciążeniu i dojście do końca. To jeden kształt drzewa i trzy ziarna, więc nie dowód dla każdej topologii. Cisza do około 600 s to pula 60% przy przeciążeniu, a nie opisane wyżej zapętlenie. Zmian rodzica jest dużo (44–183), bo odpowiedź na pojedynczą wiadomość pod przeciążeniem przychodzi po godzinach.
+
+### Ocena autora raportu (nie rozstrzygnięcie)
+
+1. **Pytanie C: poprawić kolejkę K1**, niezależnie od reszty. Mechanizm jest w obecnym firmware i daje się wywołać z zewnątrz. Najpierw osobna zmiana i sprawdzenie wariantu z `contendedK2`.
+2. **Pytanie A: „2 próby, ta wiadomość”**. Daje najwęższe wyjście przy fałszywych zmianach na poziomie 30 min i nie ma ogona. Argument przeciw: liczy na jedną wiadomość, więc na realnych łączach ze stratami seriami może przenosić stacje częściej niż tu. Jeżeli pomiar łącza zapasowego wypadnie źle, „3 próby, ta wiadomość” ma w zdrowej sieci 0 zmian, ale wyjście około 1,7 raza dłuższe i tylko 36/50 przy ruchu z wielu stacji pod porzucającym. Wartość trzeba przeliczyć po próbie przy stole.
+3. **Pytanie B: nie wdrażać teraz.** Pomaga tylko przy zwykłym porzucaniu, a tam, gdzie porzucanie jest najbardziej prawdopodobne, czyli przy przejętej stacji, węzeł omija ją jednym porównaniem. Do tego nowy rodzaj wiadomości i godzina na zapasowych po każdej dłuższej przerwie stanowiska. Zostaje jawne ograniczenie: **stacja pod porzucającą bez własnego ruchu odcina dalszą część łańcucha na godziny** (około 12/50 po 12 h), a wyjściem są alarm `brak_potwierdzenia` i ludzie. Dla przejętego węzła, który działa selektywnie, **żaden ze sprawdzonych wariantów nie działa** i emulator nie znalazł takiego, który by działał.
+
+**Czego ta tura nie widzi:** strat seriami, zmian skuteczności w czasie i realnej jakości łącza zapasowego (założone 70%), efektu przechwycenia, kodu stacji i stanowiska poza skrótem. Stoper, licznik prób i próbka są częścią skrótu stacji, nie firmware. Liczby pochodzą z clang na macOS.
+
 ## Wrażliwość na założenia
 
 Słyszalny drugi sąsiad (mniej ukrytych nadajników) i nasłuch mylący się w 0% albo 10% przypadków, 90%, 50 zgłoszeń: zmiany mniejsze niż rozrzut między ziarnami, wnioski te same. Na przykład koniec łańcucha po rozstrzygnięciach: RECEIVED maks. 4298, 4549 i 4409 s przy 4530 s dla założeń podstawowych. Nie sprawdzono: strat seriami i efektu przechwycenia, na które model nie ma parametru z pomiaru.
@@ -209,7 +350,7 @@ Słyszalny drugi sąsiad (mniej ukrytych nadajników) i nasłuch mylący się w 
 - Awarii zasilania i restartów stacji w trakcie, choć stan FRAM jest prawdziwy.
 - Ciszy radiowej, dwóch tożsamości odbiorcy, rzeczywistej kolejki REPLY, STATUS i BULLETIN.
 - Dwuczęściowych zgłoszeń 222 B w macierzy; emulator je obsługuje, ale raport liczy 174 B.
-- Rozgałęzionych drzew pod obciążeniem; budżet rozsyłania liczono na szeregu równoległych łańcuchów.
+- Budżet rozsyłania liczono na szeregu równoległych łańcuchów, a drzewa pod obciążeniem na jednym kształcie.
 - Obieg stacji i stanowiska to skrót kodu produkcyjnego, nie ten kod.
 
 ## Powtórzenie
@@ -218,4 +359,10 @@ Słyszalny drugi sąsiad (mniej ukrytych nadajników) i nasłuch mylący się w 
 python3 tests/native/wici_emulator/run.py matrix /tmp/emu wyniki.jsonl
 ```
 
-685 przebiegów, kilka minut na wielu rdzeniach. Ten sam plik wykonywalny daje te same wyniki co do bajtu. Liczby tego raportu pochodzą z clang na macOS; zgodności z innym kompilatorem nie sprawdzano.
+685 przebiegów, kilka minut na wielu rdzeniach. Druga tura to 1901 przebiegów, około 20 min na 18 rdzeniach, i cztery pliki wyników:
+
+```bash
+python3 tests/native/wici_emulator/run.py pytania /tmp/emu pytania.jsonl
+```
+
+Zapis pojedynczego przebiegu (ramki, odbiory, zmiany rodzica, migawki dróg i dziennika) daje `trace=1` na stderr. Ten sam plik wykonywalny daje te same wyniki co do bajtu. Liczby tego raportu pochodzą z clang na macOS; zgodności z innym kompilatorem nie sprawdzano.

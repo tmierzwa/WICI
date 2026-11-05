@@ -32,7 +32,7 @@ index 006691a..128f4a3 100644
  
  }  // namespace wici_gateway
 diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
-index 2008ec4..5e21f89 100644
+index 2008ec4..d96e9a7 100644
 --- a/firmware/src/wici_hop.cpp
 +++ b/firmware/src/wici_hop.cpp
 @@ -2,6 +2,7 @@
@@ -69,8 +69,19 @@ index 2008ec4..5e21f89 100644
          // Never hand a frame back to the neighbor it came from.
          if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
          // A next hop that stopped answering is held; frames to others still go.
+@@ -194,7 +201,9 @@ bool Relay::prepare(uint32_t nowS) {
+         downTo_ = frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : 0;
+         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
+         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
+-        activePriority_ = k1 && next != wici_link::BROADCAST;
++        // WARIANT: ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1. Inaczej cztery takie ramki
++        // przy puli ponad 25% czekają na siebie nawzajem (contendedK2) aż do wygaśnięcia po 30 min.
++        activePriority_ = k1 && (next != wici_link::BROADCAST || wici_variant::flags.k1FloodKeepsPriority);
+         outgoingLength_ = n;
+         sent_ = false; active_ = true;
+         return true;
 diff --git a/firmware/src/wici_route.cpp b/firmware/src/wici_route.cpp
-index a0ec850..8d6060d 100644
+index a0ec850..7daf692 100644
 --- a/firmware/src/wici_route.cpp
 +++ b/firmware/src/wici_route.cpp
 @@ -2,6 +2,7 @@
@@ -90,18 +101,19 @@ index a0ec850..8d6060d 100644
      for (uint16_t i = 0; i < behindCount_; ++i)
          if (behind_[i].station == destination && behind_[i].via == via) return true;
      return false;
-@@ -147,7 +148,9 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
+@@ -147,7 +148,10 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
      for (size_t i = 0; i < ROUTES; ++i) {
          if (routes_[i].destination == destination) {
              if (routes_[i].via == via) return true;
 -            if (!replace && destination != via) return false;  // a claim does not move a working route
 +            // WARIANT: ostatnia wygrywa, ale droga sąsiada do samego siebie (tag pary) nie ustępuje deklaracji.
 +            if (!replace && destination != via &&
-+                (!wici_variant::flags.learnRoutes || routes_[i].via == routes_[i].destination)) return false;
++                (!wici_variant::flags.learnRoutes || wici_variant::flags.stickyRoutes ||
++                 routes_[i].via == routes_[i].destination)) return false;
              const Route old = routes_[i];
              routes_[i].via = via;
              if (!commit()) { routes_[i] = old; return false; }
-@@ -206,8 +209,26 @@ bool Table::fresh(const Neighbor& n, uint32_t nowS) const {
+@@ -206,8 +210,26 @@ bool Table::fresh(const Neighbor& n, uint32_t nowS) const {
      return n.epoch == epoch_ && nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S;
  }
  
@@ -153,7 +165,7 @@ index faaf705..fc0b7ca 100644
  };
  
  }  // namespace wici_route
-diff --git a/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
+diff --git a/b/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
 new file mode 100644
 index 0000000..49395e9
 --- /dev/null
@@ -165,12 +177,12 @@ index 0000000..49395e9
 +namespace wici_variant {
 +Flags flags;
 +}  // namespace wici_variant
-diff --git a/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
+diff --git a/b/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
 new file mode 100644
-index 0000000..715c17c
+index 0000000..9b93ea0
 --- /dev/null
 +++ b/firmware/src/wici_variant.h
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,14 @@
 +// SPDX-License-Identifier: MIT
 +// TYLKO EMULATOR: przełączniki rozstrzygnięć z 2026-11-05 (WICI-DEC-009). Ten plik nie należy do firmware;
 +// powstaje z tests/native/wici_emulator/variant.patch na kopii kodu. Wszystkie wyłączone to obecny kod.
@@ -180,6 +192,8 @@ index 0000000..715c17c
 +struct Flags {
 +    bool learnRoutes = false;  // drogi w dół z ruchu w górę, ostatnia wygrywa, bez planu
 +    bool floodStays = false;   // ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem
++    bool k1FloodKeepsPriority = false;  // ramka z gniazda K1 bez drogi nie liczy się jako K2 przy limicie 25%
++    bool stickyRoutes = false; // drogi z ruchu w górę bez „ostatnia wygrywa”: nauka tylko brakującej drogi
 +};
 +extern Flags flags;
 +}  // namespace wici_variant

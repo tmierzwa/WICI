@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Scenariusze emulatora WICI-Link. Wynik: jeden wiersz JSON na przebieg; opis założeń w README.md.
 // Użycie: wici_emulator <scenariusz> [seed=1] [p=900] [learn=0] [alternate=0] [leave=0] [hold=0]
-//         [flood=0] [n=0] [reports=50] [hops=15] [hours=0]
+//         [flood=0] [n=0] [reports=50] [hops=15] [hours=0]; pozostałe parametry opisuje README.md
 #include <stdlib.h>
 
 #include <algorithm>
@@ -17,7 +17,7 @@ struct Params {
     std::string scenario;
     uint64_t seed = 1;
     uint32_t p = 900, hops = 15, reports = 50, n = 0, hours = 0, spreadS = 300;
-    uint32_t sense = 1, miss = 20, skip = 0;
+    uint32_t sense = 1, miss = 20, skip = 0, trace = 0, hole = 0, selective = 0, fake = 0, fullrun = 0;
     Variant variant;
 };
 
@@ -30,18 +30,23 @@ void percentiles(std::vector<uint32_t>& values, uint32_t& p50, uint32_t& maximum
 
 void emit(const Params& params, const std::string& label, Net& net, const std::string& extra = "") {
     std::vector<uint32_t> arrive, close;
-    uint32_t closed = 0;
+    uint32_t closed = 0, probesClosed = 0;
     for (const auto& report : net.reports()) {
+        if (report->probe) continue;
         const auto at = net.arrivedMs.find(report->id);
         if (at != net.arrivedMs.end()) arrive.push_back((at->second - report->createdMs) / 1000);
         if (report->closed) { ++closed; close.push_back((report->closedMs - report->createdMs) / 1000); }
+    }
+    for (const auto& report : net.reports()) {
+        if (!report->probe) continue;
+        probesClosed += report->closed;
     }
     uint32_t arriveP50, arriveMax, closeP50, closeMax;
     percentiles(arrive, arriveP50, arriveMax);
     percentiles(close, closeP50, closeMax);
     NodeStats total;
     uint64_t maxAir = 0;
-    uint32_t maxSilent = 0, over30 = 0;
+    uint32_t maxSilent = 0, over30 = 0, probes = 0, longestMute = 0;
     for (size_t i = 0; i < net.size(); ++i) {
         const NodeStats& s = net.node(static_cast<int>(i)).stats;
         total.txUnicast += s.txUnicast; total.txFlood += s.txFlood; total.txHack += s.txHack; total.txBeacon += s.txBeacon;
@@ -51,6 +56,8 @@ void emit(const Params& params, const std::string& label, Net& net, const std::s
         maxAir = std::max(maxAir, s.airMs);
         maxSilent = std::max(maxSilent, s.maxSilentS);
         over30 += s.maxSilentS >= 1800;
+        probes += s.probes;
+        longestMute = std::max(longestMute, s.longestMuteS);
     }
     uint32_t offPlanned = 0;
     for (size_t i = 1; i < net.size(); ++i) {
@@ -65,7 +72,7 @@ void emit(const Params& params, const std::string& label, Net& net, const std::s
            "\"close_p50_s\":%u,\"close_max_s\":%u,",
            params.scenario.c_str(), label.c_str(), static_cast<unsigned long long>(params.seed), params.p, params.hops,
            net.size(), net.variant().learnRoutes, net.variant().alternate, net.variant().leaveAfterS, net.variant().holdS,
-           net.variant().floodMsPerStation, seconds, net.reports().size(), net.arrivedCount, closed,
+           net.variant().floodMsPerStation, seconds, net.realReports(), net.arrivedCount, closed,
            arriveP50, arriveMax, closeP50, closeMax);
     printf("\"unicast\":%u,\"flood\":%u,\"hack\":%u,\"beacon\":%u,\"busy_pm\":%u,\"max_air_pm\":%u,"
            "\"collisions\":%u,\"lost\":%u,\"hack_refused\":%u,\"budget_refused\":%u,\"tx_drops\":%u,\"deferrals\":%u,"
@@ -76,9 +83,11 @@ void emit(const Params& params, const std::string& label, Net& net, const std::s
            total.rxCollision, total.rxLost, total.hackRefused, total.refusedBudget, total.txDrops, total.deferrals,
            total.parentChanges, total.leaves, maxSilent, over30, net.longestStallMs / 1000);
     printf("\"laptop_floods\":%u,\"laptop_routed\":%u,\"laptop_refused\":%u,\"intents_open\":%zu,\"intents_done\":%u,"
-           "\"duplicates\":%u,\"settled\":%u,\"floods_deferred\":%u,\"off_planned\":%u%s}\n",
+           "\"duplicates\":%u,\"settled\":%u,\"floods_deferred\":%u,\"off_planned\":%u,"
+           "\"probes\":%u,\"probes_closed\":%u,\"longest_mute_s\":%u%s}\n",
            laptop.floods, laptop.routed, laptop.refused, laptop.openIntents(), laptop.deliveredIntents,
-           laptop.duplicates, laptop.rejected, laptop.floodsDeferred, offPlanned, extra.c_str());
+           laptop.duplicates, laptop.rejected, laptop.floodsDeferred, offPlanned, probes, probesClosed, longestMute,
+           extra.c_str());
     fflush(stdout);
 }
 
@@ -105,10 +114,7 @@ void schedule(Net& net, const std::vector<int>& stations, uint32_t count, uint32
         net.run(due);
         net.report(stations[i % stations.size()], size);
     }
-    net.runUntil(tMaxMs, [&] {
-        for (const auto& report : net.reports()) if (!report->closed) return false;
-        return true;
-    });
+    net.runUntil(tMaxMs, [&] { return net.allClosed(); });
 }
 
 Assumptions assumptionsFor(const Params& params) {
@@ -122,6 +128,7 @@ uint32_t hoursOr(const Params& params, uint32_t fallback) { return (params.hours
 // 1. Pięćdziesiąt zgłoszeń z końca łańcucha albo z całej sieci.
 void reports(const Params& params, bool fromEnd) {
     Net net(params.hops + 1, params.seed, assumptionsFor(params), params.variant);
+    net.trace = params.trace;
     chain(net, params, params.skip);
     net.start();
     net.run(10 * 60000);  // BEACON-y pierwszej serii i zbieganie rang
@@ -185,18 +192,147 @@ void parentChange(const Params& params) {
 // 3. Stacja daje HACK i porzuca ruch. `who`: czyje zgłoszenia idą przez nią.
 void blackHole(const Params& params, const std::string& who) {
     Net net(params.hops + 1, params.seed, assumptionsFor(params), params.variant);
+    net.trace = params.trace;
     chain(net, params, 700);
     net.start();
     net.run(10 * 60000);
-    const int hole = static_cast<int>(params.hops) / 2 + 1;
-    net.node(hole).dropper = true;
+    const int hole = params.hole ? static_cast<int>(params.hole) : static_cast<int>(params.hops) / 2 + 1;
+    if (params.selective == 1) net.node(hole).selective = true;
+    else if (params.selective == 0) net.node(hole).dropper = true;  // 2: uczciwy przekaźnik, tylko podsuwa ramki
+    if (params.fake) net.node(hole).fakeDownTo = net.node(hole + 1).id;
+    net.node(hole).fakeNoRoute = params.fake == 2;
+    const uint32_t started = net.now();
     std::vector<int> stations;
     if (who == "dziecko") stations.push_back(hole + 1);
     else if (who == "koniec") stations.push_back(static_cast<int>(params.hops));
     else for (uint32_t i = hole + 1; i <= params.hops; ++i) stations.push_back(static_cast<int>(i));
     schedule(net, stations, params.reports, params.spreadS, net.now() + hoursOr(params, 8));
     std::string extra = ",\"child_parent\":" + std::to_string(net.node(hole + 1).shelter->routes().parent());
+    const uint32_t childLeave = net.node(hole + 1).stats.firstLeaveMs;
+    extra += ",\"child_left_s\":" + std::to_string(childLeave ? (childLeave - started) / 1000 : 0);
+    extra += ",\"hole\":" + std::to_string(hole);
     emit(params, "porzucanie_" + who, net, extra);
+}
+
+// 3a. Stanowisko wyłączone na `hours` (domyślnie 2 h), a ruch tylko z końca łańcucha. Sprawdza, czy próbki i progi
+// przenoszą cały łańcuch na zapasowych rodziców i jak szybko sieć wraca.
+void outage(const Params& params) {
+    Net net(params.hops + 1, params.seed, assumptionsFor(params), params.variant);
+    chain(net, params, params.skip ? params.skip : 700);
+    net.start();
+    net.run(10 * 60000);
+    const int far = static_cast<int>(params.hops);
+    schedule(net, {far}, 5, 60, net.now() + 3600000);
+    const uint32_t off = net.now();
+    net.laptop().setOpen(false);
+    const auto airNow = [&] {
+        uint64_t total = 0;
+        for (size_t i = 0; i < net.size(); ++i) total += net.node(static_cast<int>(i)).stats.airMs;
+        return total;
+    };
+    const auto statTotal = [&](uint32_t NodeStats::*field) {
+        uint32_t total = 0;
+        for (size_t i = 0; i < net.size(); ++i) total += net.node(static_cast<int>(i)).stats.*field;
+        return total;
+    };
+    const auto offPlanned = [&] {
+        uint32_t total = 0;
+        for (size_t i = 1; i < net.size(); ++i) total += net.node(static_cast<int>(i)).shelter->routes().parent() != net.node(static_cast<int>(i)).planned;
+        return total;
+    };
+    const uint64_t airBefore = airNow();
+    const uint32_t leavesBefore = statTotal(&NodeStats::leaves), probesBefore = statTotal(&NodeStats::probes);
+    size_t firstReport = net.reports().size();
+    for (uint32_t i = 0; i < 5; ++i) {
+        net.run(net.now() + 300000);
+        net.report(far);
+    }
+    net.run(off + hoursOr(params, 2));
+    const uint32_t leavesOff = statTotal(&NodeStats::leaves) - leavesBefore, probesOff = statTotal(&NodeStats::probes) - probesBefore;
+    const uint32_t airOff = static_cast<uint32_t>((airNow() - airBefore) / 1000), offAtReturn = offPlanned();
+    uint64_t maxAirOff = 0;
+    for (size_t i = 1; i < net.size(); ++i) maxAirOff = std::max<uint64_t>(maxAirOff, net.node(static_cast<int>(i)).stats.airMs);
+    net.epochSeed = 2;
+    net.restartRoot(2);
+    const uint32_t returned = net.now();
+    uint32_t offAfterHour = 0, offAfter2h = 0, allClosedS = 0;
+    for (uint32_t minute = 1; minute <= 360; ++minute) {
+        net.run(returned + minute * 60000);
+        if (minute == 60) offAfterHour = offPlanned();
+        if (minute == 121) offAfter2h = offPlanned();
+        if (!allClosedS && net.allClosed()) allClosedS = minute * 60;
+    }
+    uint32_t oldClosedMax = 0;
+    for (size_t i = firstReport; i < net.reports().size(); ++i) {
+        const Report& report = *net.reports()[i];
+        if (!report.probe && report.closed && report.closedMs > returned) oldClosedMax = std::max(oldClosedMax, (report.closedMs - returned) / 1000);
+    }
+    std::string extra = ",\"leaves_off\":" + std::to_string(leavesOff) + ",\"probes_off\":" + std::to_string(probesOff);
+    extra += ",\"air_off_s\":" + std::to_string(airOff) + ",\"off_planned_return\":" + std::to_string(offAtReturn);
+    extra += ",\"off_planned_1h\":" + std::to_string(offAfterHour) + ",\"off_planned_2h\":" + std::to_string(offAfter2h);
+    extra += ",\"closed_after_return_s\":" + std::to_string(allClosedS) + ",\"last_closed_after_return_s\":" + std::to_string(oldClosedMax);
+    emit(params, "przerwa", net, extra);
+}
+
+// 5a. Drzewo: dwa pnie do 15 skoków z odgałęzieniami, razem 50 stacji; dzieci jednego rodzica słyszą się wzajemnie.
+// Każda stacja zgłasza przez godzinę, potem brak nowych. Sprawdza zakleszczenie poza łańcuchem.
+void tree(const Params& params) {
+    struct Place { int parent, grand; };
+    std::vector<Place> places(1, Place{-1, -1});
+    const auto add = [&](int parent) {
+        const int grand = places[static_cast<size_t>(parent)].parent;
+        places.push_back(Place{parent, grand});
+        return static_cast<int>(places.size()) - 1;
+    };
+    std::vector<int> trunk[2];
+    for (int t = 0; t < 2; ++t) {
+        int last = 0;
+        for (int depth = 1; depth <= 15; ++depth) {
+            last = add(last);
+            trunk[t].push_back(last);
+        }
+    }
+    for (int t = 0; t < 2; ++t) {
+        for (int fork : {4, 9}) {  // odgałęzienia na głębokości 5 i 10, po 5 stacji
+            int last = trunk[t][static_cast<size_t>(fork)];
+            for (int depth = 0; depth < 5; ++depth) last = add(last);
+        }
+    }
+    Net net(places.size(), params.seed, assumptionsFor(params), params.variant);
+    for (size_t i = 1; i < places.size(); ++i) {
+        const Place& place = places[i];
+        net.link(static_cast<int>(i), place.parent, params.p);
+        if (params.skip && place.grand >= 0) net.link(static_cast<int>(i), place.grand, params.skip);
+        net.setParents(static_cast<int>(i), place.parent, params.skip && place.grand >= 0 ? place.grand : -1);
+        for (size_t j = 1; j < i; ++j)
+            if (places[j].parent == place.parent) net.interfere(static_cast<int>(i), static_cast<int>(j));
+    }
+    if (!net.variant().learnRoutes) {
+        // Plan roota jak w łańcuchu: stacja za pierwszą stacją swojego pnia.
+        for (size_t i = 1; i < places.size(); ++i) {
+            int top = static_cast<int>(i);
+            while (places[static_cast<size_t>(top)].parent != 0) top = places[static_cast<size_t>(top)].parent;
+            if (top != static_cast<int>(i)) net.rootPlan(net.node(static_cast<int>(i)).id, net.node(top).id);
+        }
+    }
+    net.start();
+    net.run(10 * 60000);
+    net.trackStall = true;
+    const uint32_t load = net.now() + 3600000;
+    uint32_t next = net.now();
+    size_t station = 1;
+    while (net.now() < load) {
+        net.run(next);
+        net.report(static_cast<int>(station));
+        station = station % (places.size() - 1) + 1;
+        next += params.spreadS * 1000 / static_cast<uint32_t>(places.size() - 1);
+    }
+    net.runUntil(net.now() + hoursOr(params, 8), [&] { return net.allClosed(); });
+    uint32_t minHacks = 0xFFFFFFFFu;
+    for (size_t bucket = 1; bucket < net.hacksPerBucket.size() && bucket * 600000 < load; ++bucket)
+        minHacks = std::min(minHacks, net.hacksPerBucket[bucket]);
+    std::string extra = ",\"min_hacks_per_10min_loaded\":" + std::to_string(minHacks == 0xFFFFFFFFu ? 0 : minHacks);
+    emit(params, "drzewo", net, extra);
 }
 
 // 5. Nasycenie: każda stacja zgłasza co `spreadS` przez godzinę, potem cisza i sprawdzenie, czy sieć się opróżnia.
@@ -215,10 +351,7 @@ void saturation(const Params& params) {
         station = station % static_cast<int>(params.hops) + 1;
         next += params.spreadS * 1000 / params.hops;
     }
-    net.runUntil(net.now() + hoursOr(params, 8), [&] {
-        for (const auto& report : net.reports()) if (!report->closed) return false;
-        return true;
-    });
+    net.runUntil(net.now() + hoursOr(params, 8), [&] { return net.allClosed(); });
     std::string extra = ",\"closed_per_10min\":[";
     for (size_t i = 0; i < net.closedPerBucket.size(); ++i) extra += (i ? "," : "") + std::to_string(net.closedPerBucket[i]);
     extra += "],\"hacks_per_10min\":[";
@@ -354,7 +487,9 @@ void hostile(const Params& params, bool withBeacon) {
         net.run(net.now() + 5 * 60000);
         net.setLinkPermille(8, 7, 0);
     }
-    schedule(net, stations, params.reports, params.spreadS, net.now() + hoursOr(params, 6));
+    const uint32_t endMs = net.now() + hoursOr(params, 6);
+    schedule(net, stations, params.reports, params.spreadS, endMs);
+    if (params.fullrun) net.run(endMs);  // próba bezczynnej sieci: napastnik wywołuje próbki do końca czasu
     std::string extra = routesAlong(net, net.node(15).id, 15);
     uint32_t atAttacker = 0;
     for (int neighbour : {6, 7, 8}) {
@@ -423,21 +558,37 @@ int main(int argc, char** argv) {
         else if (name == "sense") params.sense = value;
         else if (name == "miss") params.miss = value;
         else if (name == "skip") params.skip = value;
+        else if (name == "trace") params.trace = value;
+        else if (name == "hole") params.hole = value;
+        else if (name == "selective") params.selective = value;
+        else if (name == "fake") params.fake = value;
+        else if (name == "fullrun") params.fullrun = value;
+        else if (name == "leaven") params.variant.leaveCount = value;
+        else if (name == "permessage") params.variant.perMessage = value;
+        else if (name == "probe") params.variant.probeS = value;
+        else if (name == "probeevery") params.variant.probeEveryS = value;
+        else if (name == "probemode") params.variant.probeMode = value;
         else if (name == "learn") params.variant.learnRoutes = value;
         else if (name == "alternate") params.variant.alternate = value;
         else if (name == "leave") params.variant.leaveAfterS = value;
         else if (name == "hold") params.variant.holdS = value;
         else if (name == "flood") params.variant.floodMsPerStation = value;
+        else if (name == "sticky") params.variant.stickyRoutes = value;
+        else if (name == "k1flood") params.variant.k1Flood = value;
+        else if (name == "nopool") params.variant.noPool = value;
         else return 2;
     }
 #ifndef WICI_EMU_VARIANT
-    if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS) {
+    if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS || params.variant.leaveCount ||
+        params.variant.k1Flood || params.variant.stickyRoutes) {
         fprintf(stderr, "ten plik wykonywalny to obecny kod bez wariantów\n");
         return 2;
     }
 #else
     wici_variant::flags.learnRoutes = params.variant.learnRoutes;
     wici_variant::flags.floodStays = params.variant.alternate;
+    wici_variant::flags.stickyRoutes = params.variant.stickyRoutes;
+    wici_variant::flags.k1FloodKeepsPriority = params.variant.k1Flood;
 #endif
     const std::string& s = params.scenario;
     if (s == "koniec") reports(params, true);
@@ -447,6 +598,8 @@ int main(int argc, char** argv) {
     else if (s == "porzucanie_koniec") blackHole(params, "koniec");
     else if (s == "porzucanie_wszyscy") blackHole(params, "wszyscy");
     else if (s == "nasycenie") saturation(params);
+    else if (s == "przerwa") outage(params);
+    else if (s == "drzewo") tree(params);
     else if (s == "fala_beacon") beaconWave(params);
     else if (s == "budzet_slysza_sie") floodBudget(params, true);
     else if (s == "budzet_lancuchy") floodBudget(params, false);

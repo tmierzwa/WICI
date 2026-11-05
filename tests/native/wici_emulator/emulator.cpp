@@ -50,8 +50,11 @@ bool onAdmit(uint16_t, uint16_t, uint16_t, const uint8_t* content, size_t length
     Node& node = *static_cast<Node*>(context);
     node.lastReceiverMsgS = node.net->nowS();
     node.leaveTimerS = 0;  // odbiorca odpowiada; stoper rusza od nowa przy kolejnej otwartej wiadomości
+    node.upWaitS = 0;
     if (length < 4) return true;
     const uint32_t id = get32(content);
+    for (Report* report : node.reports)
+        if (!node.net->variant().perMessage || report->id == id) report->hacked = 0;
     if (id & 0x80000000u) node.net->downArrivedMs.emplace(id, node.net->now());
     else node.net->reportClosed(id, node.net->now());
     return true;
@@ -64,6 +67,7 @@ void finishFlight(Node& node, Node::Flight& flight, bool delivered) {
     const uint32_t nowS = node.net->nowS();
     if (delivered) {
         const bool first = !report->delivered;
+        ++report->hacked;
         const uint32_t random = node.rng.next();
         report->nextTryS = nowS + (first ? 600 : 1800 + random % 1801);
         if (first) {
@@ -96,7 +100,7 @@ bool Node::Check::start(void (*run)(void*), void* context) {
 
 bool Radio::accepts(wici_link::TxClass traffic, size_t radioLength) {
     if (silent || state_ != State::IDLE) return false;
-    if (traffic == wici_link::TxClass::OWN) return true;
+    if (traffic == wici_link::TxClass::OWN || net_.variant().noPool) return true;
     return budget_.allows(traffic == wici_link::TxClass::BEACON, lora::frameAirMs(radioLength), net_.nowS(),
                           traffic == wici_link::TxClass::CONTENDED_K2);
 }
@@ -109,9 +113,11 @@ bool Radio::sendData(const uint8_t* wire, size_t length, wici_link::TxClass traf
     uint8_t radio[wici_link::MAX_FRAME];
     const size_t radioLength = auth_.seal(wire, length, radio, sizeof(radio));
     if (!radioLength) return false;
-    if (traffic != wici_link::TxClass::OWN &&
+    if (traffic != wici_link::TxClass::OWN && !net_.variant().noPool &&
         !budget_.reserve(beacon, lora::frameAirMs(radioLength), net_.nowS(), traffic == wici_link::TxClass::CONTENDED_K2)) {
         ++self.stats.refusedBudget;
+        const uint32_t mute = (net_.now() - self.lastTxMs) / 1000;
+        if (mute > self.stats.longestMuteS) self.stats.longestMuteS = mute;
         return false;
     }
     memcpy(frame_, radio, radioLength);
@@ -355,6 +361,28 @@ void Net::restartRoot(uint16_t epoch) {
     }
 }
 
+void Net::leave(Node& n, uint32_t nowSeconds) {
+#ifdef WICI_EMU_VARIANT
+    n.shelter->routes().leaveParent(nowSeconds, variant_.holdS);
+#endif
+    ++n.stats.leaves;
+    if (!n.stats.firstLeaveMs) n.stats.firstLeaveMs = now_;
+    if (trace) fprintf(stderr, "%u LEAVE %d\n", now_, n.index);
+    n.leaveTimerS = nowSeconds;
+    for (Report* report : n.reports) report->hacked = 0;
+}
+
+bool Net::allClosed() const {
+    for (const auto& report : reports_) if (!report->probe && !report->closed) return false;
+    return true;
+}
+
+size_t Net::realReports() const {
+    size_t count = 0;
+    for (const auto& report : reports_) count += !report->probe;
+    return count;
+}
+
 Report* Net::report(int station, size_t size) {
     auto report = std::make_unique<Report>();
     report->id = nextReportId_++;
@@ -362,6 +390,7 @@ Report* Net::report(int station, size_t size) {
     report->nextTryS = nowS();
     report->station = node(station).id;
     report->size = size;
+    if (trace) fprintf(stderr, "%u NEW %u %d\n", now_, report->id, station);
     Report* raw = report.get();
     reports_.push_back(std::move(report));
     node(station).reports.push_back(raw);
@@ -369,7 +398,11 @@ Report* Net::report(int station, size_t size) {
 }
 
 void Net::reportArrived(uint32_t reportId, uint32_t now) {
-    if (arrivedMs.emplace(reportId, now).second) ++arrivedCount;
+    if (reportId && reportId <= reports_.size() && reports_[reportId - 1]->probe) return;
+    if (arrivedMs.emplace(reportId, now).second) {
+        ++arrivedCount;
+        if (trace) fprintf(stderr, "%u ARR %u\n", now, reportId);
+    }
 }
 
 void Net::reportClosed(uint32_t reportId, uint32_t now) {
@@ -378,6 +411,7 @@ void Net::reportClosed(uint32_t reportId, uint32_t now) {
     if (report.closed) return;
     report.closed = true;
     report.closedMs = now;
+    if (trace) fprintf(stderr, "%u CLS %u\n", now, reportId);
     const size_t bucket = now / 600000;
     if (closedPerBucket.size() <= bucket) closedPerBucket.resize(bucket + 1);
     ++closedPerBucket[bucket];
@@ -403,6 +437,7 @@ void Net::stepAir() {
         Node& sender = node(air.from);
         const uint32_t airMs = air.endMs - air.startMs;
         sender.stats.airMs += airMs;
+        sender.lastTxMs = now_;
         if (air.isHack) {
             ++sender.stats.txHack;
             ++hacksOnAir;
@@ -437,6 +472,7 @@ void Net::stepAir() {
             ++rx.audible;
             rx.lastActivityMs = now_;
         }
+        if (trace) traceAir(air, 'T', -1);
         onAir_.push_back(std::move(air));
     }
     // Końce.
@@ -462,11 +498,54 @@ void Net::endAir(Air& air) {
         rx.lastActivityMs = now_;
         if (rx.locked != air.id) continue;
         rx.locked = 0;
-        if (rx.corrupted) { ++nodes_[r]->stats.rxCollision; continue; }
-        if (!row[r].permille || !rng_.chance(row[r].permille)) { ++nodes_[r]->stats.rxLost; continue; }
+        if (rx.corrupted) { ++nodes_[r]->stats.rxCollision; if (trace) traceAir(air, 'C', static_cast<int>(r)); continue; }
+        if (!row[r].permille || !rng_.chance(row[r].permille)) { ++nodes_[r]->stats.rxLost; if (trace) traceAir(air, 'L', static_cast<int>(r)); continue; }
         ++nodes_[r]->stats.rxOk;
+        if (trace) traceAir(air, 'O', static_cast<int>(r));
         deliver(*nodes_[r], air.bytes.data(), air.bytes.size(), now_);
     }
+}
+
+// Zapis przebiegu: jeden wiersz na zdarzenie, do rozbioru poza emulatorem. Pola: czas, zdarzenie (T nadanie, O odbiór,
+// L strata, C kolizja), nadawca, odbiornik, rodzaj (D dane, H HACK, B BEACON), adresat łącza, kierunek (U, D),
+// `src` i `dst` koperty, licznik koperty, liczba skoków.
+void Net::traceAir(const Air& air, char event, int receiver) {
+    const uint8_t* wire = air.bytes.data();
+    const wici_link::Type type = frameType(wire);
+    if (type == wici_link::Type::BEACON) {
+        if (event == 'T') fprintf(stderr, "%u T %d - B\n", now_, air.from);
+        return;
+    }
+    const uint16_t to = get16(wire + 5);
+    // Odbiór ma znaczenie u adresata; rozsyłanie ma wielu adresatów, więc liczy się każdy.
+    if (receiver >= 0 && to != wici_link::BROADCAST && to != node(receiver).id) return;
+    if (type == wici_link::Type::HACK) {
+        fprintf(stderr, "%u %c %d %d H %d\n", now_, event, air.from, receiver, indexOf(to));
+        return;
+    }
+    fprintf(stderr, "%u %c %d %d D %d %c %u %u %u %u\n", now_, event, air.from, receiver,
+            to == wici_link::BROADCAST ? -1 : indexOf(to), wire[0] & wici_link::DOWN ? 'D' : 'U',
+            get16(wire + 12), get16(wire + 14), get32(wire + 16), wire[7] >> 4);
+}
+
+void Net::traceSnapshot() {
+    const uint16_t station = traceStation ? traceStation : node(static_cast<int>(nodes_.size()) - 1).id;
+    fprintf(stderr, "%u S parents", now_);
+    for (size_t i = 1; i < nodes_.size(); ++i) {
+        const Node& n = *nodes_[i];
+        fprintf(stderr, " %d", n.shelter ? indexOf(n.shelter->routes().parent()) : -1);
+    }
+    fprintf(stderr, " down");
+    for (size_t i = 0; i < nodes_.size(); ++i) {
+        const Node& n = *nodes_[i];
+        const uint16_t via = n.root ? n.root->down(station) : n.shelter ? n.shelter->routes().down(station) : 0;
+        fprintf(stderr, " %d", via == wici_link::BROADCAST ? -1 : indexOf(via));
+    }
+    fprintf(stderr, " pool");
+    for (size_t i = 1; i < nodes_.size(); ++i) fprintf(stderr, " %u", nodes_[i]->budget->poolUsed() / 1000);
+    fprintf(stderr, " refused");
+    for (size_t i = 1; i < nodes_.size(); ++i) fprintf(stderr, " %u", nodes_[i]->stats.refusedBudget);
+    fprintf(stderr, "\n");
 }
 
 void Net::deliver(Node& node, const uint8_t* bytes, size_t length, uint32_t now) {
@@ -474,6 +553,18 @@ void Net::deliver(Node& node, const uint8_t* bytes, size_t length, uint32_t now)
     uint8_t bare[wici_link::MAX_FRAME];
     size_t bareLength = 0;
     if (!node.auth.open(bytes, length, bare, sizeof(bare), bareLength)) return;
+    if (variant_.probeS) noteTraffic(node, bare, bareLength);
+    if (node.selective) {
+        wici_link::Frame frame;
+        if (wici_link::decode(linkKey_, NETWORK, bare, bareLength, frame) && frame.type == wici_link::Type::DATA &&
+            frame.destination == node.id && (frame.flags & wici_link::ACKREQ) && !(frame.flags & wici_link::DOWN) &&
+            get16(frame.payload + 1) != frame.source) {
+            uint8_t hack[wici_link::MAX_FRAME];
+            const size_t n = wici_link::encodeHack(linkKey_, frame, wici_link::macEcho(bare, bareLength), hack, sizeof(hack));
+            if (n) node.radio->sendHack(hack, n, now);
+            return;
+        }
+    }
     if (node.dropper) {
         wici_link::Frame frame;
         if (!wici_link::decode(linkKey_, NETWORK, bare, bareLength, frame) || frame.type != wici_link::Type::DATA ||
@@ -538,6 +629,52 @@ void Net::pollHostile(Node& n) {
     if (length) n.radio->sendData(wire, length, wici_link::TxClass::OWN);
 }
 
+// Próbka przekaźnika: sygnał z ruchu, który przekaźnik i tak widzi. Stan żyje poza kodem stacji, jak stoper zmiany
+// rodzica; w firmware wymagałby osobnego rekordu w Relay::receiveData.
+void Net::noteTraffic(Node& n, const uint8_t* bare, size_t length) {
+    wici_link::Frame frame;
+    if (n.isRoot || !wici_link::decode(linkKey_, NETWORK, bare, length, frame) || frame.type != wici_link::Type::DATA ||
+        (frame.destination != n.id && frame.destination != wici_link::BROADCAST)) return;
+    if (frame.flags & wici_link::DOWN) {
+        if (variant_.probeMode == 1) n.upWaitS = 0;
+    } else if (get16(frame.payload + 3) != n.id && !n.upWaitS) {
+        n.upWaitS = nowS();
+    }
+}
+
+void Net::pollProbe(Node& n) {
+    const uint32_t nowSeconds = nowS();
+    if (!n.upWaitS || nowSeconds - n.upWaitS < variant_.probeS) return;
+    if (n.lastProbeS && nowSeconds - n.lastProbeS < variant_.probeEveryS) return;
+    for (const Report* report : n.reports) if (!report->closed) return;  // własna otwarta wiadomość już jest próbką
+    n.lastProbeS = nowSeconds;
+    ++n.stats.probes;
+    report(n.index, 40)->probe = true;
+    if (trace) fprintf(stderr, "%u PROBE %d\n", now_, n.index);
+}
+
+// Wrogi węzeł podsuwa dziecku ramkę w dół z ważnym tagiem pary. Dziecko nie sprawdzi koperty i uzna ją za powrót.
+void Net::pollFakeDown(Node& n) {
+    if (now_ < n.nextFakeMs || !n.radio->idle() || !n.radio->accepts(wici_link::TxClass::OWN, 100)) return;
+    n.nextFakeMs = now_ + (n.fakeNoRoute ? 10000 + n.rng.below(2000) : 300000 + n.rng.below(30000));
+    wici_link::Frame frame;
+    frame.type = wici_link::Type::DATA;
+    frame.flags = wici_link::ACKREQ | wici_link::DOWN;
+    frame.network = NETWORK;
+    frame.source = n.id;
+    frame.destination = n.fakeDownTo;
+    frame.ttl = static_cast<uint8_t>(ttl);
+    frame.sequence = n.forgeSeq++;
+    frame.length = 60;
+    frame.payload[0] = 0x40;
+    fram_record::put16(frame.payload + 1, RECEIVER_MAIN);
+    fram_record::put16(frame.payload + 3, n.fakeNoRoute ? 999 : node(static_cast<int>(nodes_.size()) - 1).id);
+    put32(frame.payload + 5, n.forgeCounter++);
+    uint8_t wire[wici_link::MAX_FRAME];
+    const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
+    if (length) n.radio->sendData(wire, length, wici_link::TxClass::OWN);
+}
+
 void Net::pollBeacon(Node& n) {
     // Harmonogram BEACON-ów jak w main.cpp (pętla stacji, po wici_beacon).
     if (n.shelter) {
@@ -583,14 +720,9 @@ void Net::pollApp(Node& n) {
     } else {
         const uint32_t silent = nowSeconds - n.leaveTimerS;
         if (silent > n.stats.maxSilentS) n.stats.maxSilentS = silent;
-        if (variant_.leaveAfterS && silent >= variant_.leaveAfterS) {
-#ifdef WICI_EMU_VARIANT
-            n.shelter->routes().leaveParent(nowSeconds, variant_.holdS);
-#endif
-            ++n.stats.leaves;
-            n.leaveTimerS = nowSeconds;
-        }
+        if (variant_.leaveAfterS && silent >= variant_.leaveAfterS) leave(n, nowSeconds);
     }
+    if (variant_.probeS) pollProbe(n);
     for (;;) {
         unsigned inFlight = 0;
         for (const Node::Flight& flight : n.flights) inFlight += flight.report != nullptr;
@@ -604,6 +736,8 @@ void Net::pollApp(Node& n) {
             if (!best || report->createdMs < best->createdMs) best = report;
         }
         if (!best) return;
+        // Próg w próbach: to nadanie idzie już przez innego rodzica, bo poprzednie dostały HACK i nic nie wróciło.
+        if (variant_.leaveCount && best->hacked >= variant_.leaveCount) leave(n, nowSeconds);
         ++best->attempts;
         if (!best->firstSentS) best->firstSentS = nowSeconds;
         best->nextTryS = nowSeconds + 60;
@@ -629,12 +763,14 @@ void Net::pollNode(Node& n) {
     if (n.dead) return;
     n.check.poll(now_);
     if (n.radio->blocked(now_)) return;  // pętla stoi w nadawaniu
+    if (n.fakeDownTo) pollFakeDown(n);
     if (n.dropper) { pollHostile(n); return; }
     if (n.shelter) {
         n.shelter->poll(now_, nowS());
         const uint16_t parent = n.shelter->routes().parent();
         if (parent != n.lastParent) {
             ++n.stats.parentChanges;
+            if (trace) fprintf(stderr, "%u P %d %d %d\n", now_, n.index, indexOf(n.lastParent), indexOf(parent));
             n.lastParent = parent;
         }
         if (now_ % 100 < assumptions_.pollMs) pollApp(n);
@@ -651,6 +787,7 @@ void Net::step() {
         if ((now_ + static_cast<uint32_t>(n.index)) % assumptions_.pollMs == 0) pollNode(n);
     }
     if (now_ % 5 == 0) laptop_->tick(now_);
+    if (trace && now_ % 30000 == 0) traceSnapshot();
 }
 
 void Net::run(uint32_t untilMs) {

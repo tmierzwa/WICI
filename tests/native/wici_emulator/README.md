@@ -45,6 +45,20 @@ Pierwsze polecenie pobiera przypięte biblioteki (emulator potrzebuje tylko Cryp
 | `leave=1800 hold=7200` | otwarta wiadomość po HACK bez wiadomości od odbiorcy: zmiana rodzica, a opuszczony nie wraca przez blokadę | `wici_route`, skrót stacji |
 | `flood=700` | budżet rozsyłania stanowiska na stację | skrót stanowiska |
 
+Próby z drugiej tury raportu, też tylko tu:
+
+| Parametr | Co robi | Gdzie działa |
+|---|---|---|
+| `k1flood=1` | ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1 przy limicie 25% (poprawka bez zmiany bajtów) | `wici_hop` |
+| `sticky=1` | nauka tylko brakującej drogi zamiast „ostatnia wygrywa” (próba przyczyny) | `wici_route` |
+| `nopool=1` | bez dziennika czasu nadawania (tylko próba przyczyny, nie do firmware) | `Radio` |
+| `leaven=N`, `permessage=1` | zmiana rodzica przed nadaniem, gdy N nadań dostało HACK i nic nie wróciło; `permessage`: licznik zeruje tylko odpowiedź na tę wiadomość | skrót stacji |
+| `probe=S`, `probeevery=S`, `probemode=1\|2` | próbka przekaźnika po S sekundach bez powrotu; tryb 1: powrót to każda ramka w dół, tryb 2: tylko własna uwierzytelniona wiadomość | skrót stacji, `Net::noteTraffic` |
+| `hole=I`, `selective=1\|2`, `fake=1\|2` | gdzie stoi porzucający; 1: przepuszcza własny ruch dziecka i porzuca resztę, 2: uczciwy; `fake`: podsuwa ramki w dół (1 do końca łańcucha, 2 co 10 s do numeru bez drogi) | `Net::deliver`, `Net::pollFakeDown` |
+| `trace=1` | zapis przebiegu na stderr | `Net::traceAir` |
+
+Dodatkowe scenariusze: `przerwa` (stanowisko wyłączone, ruch tylko z końca łańcucha) i `drzewo` (50 stacji, dwa pnie po 15 skoków z odgałęzieniami).
+
 Pozostałe parametry: `seed`, `p` (skuteczność łącza w promilach), `hops`, `reports`, `spread`, `hours`, `n`, `skip` (łącza co dwa skoki i rodzic zapasowy, w promilach), `sense` (2: stacja słyszy też drugiego sąsiada, choć go nie odbierze), `miss`.
 
 ## Założenia modelu kanału

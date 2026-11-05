@@ -5,6 +5,7 @@ Dwa pliki wykonywalne: `base` z niezmienionego firmware/src (obecny kod) i `vari
 variant.patch (rozstrzygnięcia z 2026-11-05 za przełącznikami). Firmware w repozytorium pozostaje bez zmian.
 Użycie: python3 tests/native/wici_emulator/run.py build <katalog>
         python3 tests/native/wici_emulator/run.py matrix <katalog> <wyniki.jsonl>
+        python3 tests/native/wici_emulator/run.py pytania <katalog> <wyniki.jsonl>   (druga tura raportu)
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -157,13 +158,151 @@ def matrix():
     return runs
 
 
-def run_matrix(binaries, out, seeds=SEEDS, workers=None):
+# Druga tura raportu: reakcja na brak postępu. „Zestaw” to rozstrzygnięcia bez progu, z poprawką kolejki K1.
+ZESTAW = ("learn=1", "alternate=1", "hold=7200", "flood=700", "k1flood=1")
+CONFIRM_SEEDS = tuple(range(101, 111))
+FINAL_SEEDS = tuple(range(201, 211))
+PROGI = (("bez_progu", ()), ("30min", ("leave=1800",)), ("60min", ("leave=3600",)), ("90min", ("leave=5400",)),
+         ("2proby", ("leaven=2",)), ("3proby", ("leaven=3",)), ("4proby", ("leaven=4",)))
+
+
+def _config(name, *flags):
+    return (name, "variant", (*ZESTAW, *flags))
+
+
+def matrix_pytania_a():
+    """Pytanie A: próg zmiany rodzica w czasie i w próbach, z tymi samymi ziarnami."""
+    runs = []
+    for name, flags in PROGI:
+        config = _config(name, *flags)
+        for scenario in ("koniec", "cala_siec"):
+            for p in HOPS_P:
+                runs.append((f"A:{scenario}", config, (f"p={p}", "skip=700", "hours=12")))
+        for p in (800, 900):
+            runs.append(("A:nasycenie", config, (f"p={p}", "spread=300", "skip=700", "hours=8")))
+        for scenario in ("porzucanie_dziecko", "porzucanie_wszyscy"):
+            runs.append((f"A:{scenario}", config, ("p=900", "hours=12")))
+        for hours in (2, 4):
+            runs.append(("A:przerwa", config, ("p=900", f"hours={hours}")))
+    return runs
+
+
+def matrix_pytania_c():
+    """Pytanie C: przyczyna przy łączach zapasowych. Bez puli i bez „ostatnia wygrywa” to próby przyczyny, nie propozycje."""
+    runs = []
+    decisions = ("learn=1", "alternate=1", "flood=700")
+    for p in HOPS_P:
+        params = (f"p={p}", "skip=700", "hours=12")
+        runs.append(("C:koniec", OBECNY, params))
+        runs.append(("C:koniec", ("zestaw_bez_poprawki", "variant", decisions), params))
+        runs.append(("C:koniec", ("poprawka_k1", "variant", (*decisions, "k1flood=1")), params))
+        runs.append(("C:koniec", ("bez_puli", "variant", (*decisions, "nopool=1")), params))
+        runs.append(("C:koniec", ("bez_ostatnia_wygrywa", "variant", (*decisions, "sticky=1")), params))
+    for p in HOPS_P:
+        runs.append(("C:bez_zapasowych@koniec", ("poprawka_k1", "variant", (*decisions, "k1flood=1")), (f"p={p}", "hours=12")))
+    # Czy poprawka nie otwiera ataku: sąsiad podsuwa ramki w dół do numeru bez drogi.
+    for name, flags in (("zestaw_bez_poprawki", decisions), ("poprawka_k1", (*decisions, "k1flood=1"))):
+        runs.append(("C:atak_k1@porzucanie_koniec", (name, "variant", flags), ("p=900", "hours=8", "selective=2", "fake=2")))
+    return runs
+
+
+def matrix_pytania_b():
+    """Pytanie B: próbka przekaźnika. Próg 2 próby, próbka po 20 min, najwyżej co 30 min."""
+    probe = ("leaven=2", "probe=1200")
+    variants = (("bez_probki", ("leaven=2",)), ("probka_ramka_w_dol", probe), ("probka_tylko_wlasna", (*probe, "probemode=2")))
+    runs = []
+    for hole in (2, 8, 13):
+        for name, flags in variants:
+            params = ("p=900", "hours=12", f"hole={hole}")
+            runs.append(("B:porzucanie_koniec", _config(name, *flags), params))
+            runs.append(("B:selektywny@porzucanie_koniec", _config(name, *flags), (*params, "selective=1")))
+    for name, flags in variants:
+        runs.append(("B:falszywy_powrot@porzucanie_koniec", _config(name, *flags), ("p=900", "hours=12", "hole=8", "fake=1")))
+        for hours in (2, 4):
+            runs.append(("B:przerwa", _config(name, *flags), ("p=900", f"hours={hours}")))
+    for name, flags in variants[:2]:
+        for scenario, params in (("koniec", ("p=900", "skip=700", "hours=12")), ("koniec", ("p=800", "skip=700", "hours=12")),
+                                 ("nasycenie", ("p=900", "spread=300", "skip=700", "hours=8")),
+                                 ("nasycenie", ("p=900", "spread=60", "skip=700", "hours=8"))):
+            runs.append((f"B:{scenario}", _config(name, *flags), params))
+        runs.append(("B:wrogi_src", _config(name, *flags), ("p=900", "hours=8")))
+        runs.append(("B:bezczynna@wrogi_src", _config(name, *flags), ("p=900", "hours=8", "reports=1", "fullrun=1")))
+    return runs
+
+
+def matrix_zestaw():
+    """Najlepszy zestaw na nowych ziarnach (CONFIRM_SEEDS) i drzewo. Ziarna 1-5 posłużyły do wyboru progu."""
+    runs = []
+    candidates = (("zestaw_30min", ("leave=1800",)), ("zestaw_60min", ("leave=3600",)), ("zestaw_2proby", ("leaven=2",)),
+                  ("zestaw_3proby", ("leaven=3",)), ("zestaw_2proby_ta_wiadomosc", ("leaven=2", "permessage=1")))
+    for scenario, params in (("koniec", ("p=800", "skip=700", "hours=12")), ("koniec", ("p=900", "skip=700", "hours=12")),
+                             ("koniec", ("p=950", "skip=700", "hours=12")), ("cala_siec", ("p=800", "skip=700", "hours=12")),
+                             ("cala_siec", ("p=900", "skip=700", "hours=12")), ("cala_siec", ("p=950", "skip=700", "hours=12")),
+                             ("nasycenie", ("p=900", "spread=300", "skip=700", "hours=8")),
+                             ("nasycenie", ("p=800", "spread=300", "skip=700", "hours=8")),
+                             ("porzucanie_dziecko", ("p=900", "hours=12")), ("porzucanie_wszyscy", ("p=900", "hours=12"))):
+        runs.append((f"Z:{scenario}", OBECNY, params))
+        for name, flags in candidates:
+            runs.append((f"Z:{scenario}", _config(name, *flags), params))
+    runs.append(("Z:zestaw_bez_poprawki@koniec", ("zestaw_2proby_bez_poprawki", "variant",
+                                                  ("learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2")),
+                 ("p=800", "skip=700", "hours=12")))
+    for params in (("p=900", "hours=12", "hole=8"), ("p=900", "hours=12", "hole=2")):
+        runs.append(("Z:porzucanie_koniec", _config("zestaw_2proby", "leaven=2"), params))
+        runs.append(("Z:porzucanie_koniec", _config("zestaw_2proby_probka", "leaven=2", "probe=1200"), params))
+    return runs
+
+
+def matrix_potwierdzenie():
+    """Trzecie ziarna (FINAL_SEEDS): kandydaci wybrani na CONFIRM_SEEDS, bez dalszego strojenia."""
+    runs = []
+    candidates = (("zestaw_30min", ("leave=1800",)), ("zestaw_2proby_ta_wiadomosc", ("leaven=2", "permessage=1")),
+                  ("zestaw_3proby_ta_wiadomosc", ("leaven=3", "permessage=1")))
+    for scenario, params in (("koniec", ("p=800", "skip=700", "hours=12")), ("koniec", ("p=900", "skip=700", "hours=12")),
+                             ("cala_siec", ("p=800", "skip=700", "hours=12")), ("cala_siec", ("p=900", "skip=700", "hours=12")),
+                             ("cala_siec", ("p=950", "skip=700", "hours=12")),
+                             ("nasycenie", ("p=900", "spread=300", "skip=700", "hours=8")),
+                             ("nasycenie", ("p=800", "spread=300", "skip=700", "hours=8")),
+                             ("porzucanie_dziecko", ("p=900", "hours=12")), ("porzucanie_wszyscy", ("p=900", "hours=12")),
+                             ("przerwa", ("p=900", "hours=2"))):
+        for name, flags in candidates:
+            runs.append((f"P:{scenario}", _config(name, *flags), params))
+    # Próbka z tym samym licznikiem, przy końcu łańcucha.
+    for hole in (2, 8, 13):
+        params = ("p=900", "hours=12", f"hole={hole}")
+        runs.append(("P:porzucanie_koniec", _config("2proby_ta_wiadomosc", "leaven=2", "permessage=1"), params))
+        runs.append(("P:porzucanie_koniec", _config("2proby_ta_wiadomosc_probka", "leaven=2", "permessage=1", "probe=1200"), params))
+    for scenario in ("wrogi_src", "wrogi_beacon"):
+        for name, flags in candidates:
+            runs.append((f"P:{scenario}", _config(name, *flags), ("p=900", "hours=8")))
+    # Ten sam atak na firmware bez zmian: czy cisza przekaźnika istnieje też w obecnym kodzie.
+    runs.append(("P:atak_k1@porzucanie_koniec", OBECNY, ("p=900", "hours=8", "selective=2", "fake=2")))
+    runs.append(("P:spokoj@porzucanie_koniec", OBECNY, ("p=900", "hours=8", "selective=2")))
+    return runs
+
+
+def matrix_drzewo():
+    """Drzewo 50 stacji, 15 skoków, trzy obciążenia. Ten sam kształt bez i z poprawką."""
+    runs = []
+    for p in (800, 900):
+        for skip in (0, 700):
+            for spread in (3000, 600):
+                params = (f"p={p}", f"skip={skip}", f"spread={spread}", "hours=8")
+                runs.append(("D:drzewo", OBECNY, params))
+                runs.append(("D:drzewo", ("zestaw_bez_poprawki", "variant",
+                                          ("learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2")), params))
+                runs.append(("D:drzewo", _config("zestaw_2proby", "leaven=2"), params))
+                runs.append(("D:drzewo", _config("zestaw_2proby_ta_wiadomosc", "leaven=2", "permessage=1"), params))
+    return runs
+
+
+def run_matrix(binaries, out, seeds=SEEDS, workers=None, runs=None):
     """Uruchamia macierz i zapisuje jeden wiersz JSON na przebieg, w stałej kolejności."""
-    jobs = [(scenario, config, params, seed) for scenario, config, params in matrix() for seed in seeds]
+    jobs = [(scenario, config, params, seed) for scenario, config, params in (runs or matrix()) for seed in seeds]
 
     def one(job):
         scenario, (name, binary, flags), params, seed = job
-        program = scenario.split("@")[0]
+        program = scenario.split(":")[-1].split("@")[-1] if ":" in scenario else scenario.split("@")[0]
         done = subprocess.run([str(binaries[binary]), program, f"seed={seed}", *params, *flags],
                               capture_output=True, text=True)
         if done.returncode:
@@ -201,6 +340,12 @@ if __name__ == "__main__":
         print(build(sys.argv[2]))
     elif len(sys.argv) >= 4 and sys.argv[1] == "matrix":
         run_matrix(build(sys.argv[2]), sys.argv[3])
+    elif len(sys.argv) >= 4 and sys.argv[1] == "pytania":
+        binaries = build(sys.argv[2])
+        run_matrix(binaries, sys.argv[3], runs=[*matrix_pytania_c(), *matrix_pytania_a(), *matrix_pytania_b()])
+        run_matrix(binaries, sys.argv[3] + ".drzewo", seeds=SEEDS[:3], runs=matrix_drzewo())
+        run_matrix(binaries, sys.argv[3] + ".nowe_ziarna", seeds=CONFIRM_SEEDS, runs=matrix_zestaw())
+        run_matrix(binaries, sys.argv[3] + ".potwierdzenie", seeds=FINAL_SEEDS, runs=matrix_potwierdzenie())
     elif len(sys.argv) >= 3 and sys.argv[1] == "summary":
         print("\n".join(summary(sys.argv[2])))
     else:

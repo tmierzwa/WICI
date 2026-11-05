@@ -95,6 +95,14 @@ struct Variant {
     uint32_t leaveAfterS = 0;     // bez wiadomości od odbiorcy tyle sekund: zmiana rodzica (około 1800)
     uint32_t holdS = 0;           // opuszczony rodzic nie wraca przez tyle sekund (około 7200)
     uint32_t floodMsPerStation = 0;  // budżet rozsyłania stanowiska: odstęp na stację (około 700)
+    uint32_t leaveCount = 0;      // próg w próbach: tyle nadań z HACK bez wiadomości od odbiorcy, następne już przez innego rodzica
+    bool perMessage = false;      // próg w próbach: licznik zeruje tylko odpowiedź na tę wiadomość, nie każda od odbiorcy
+    uint32_t probeS = 0;          // próbka przekaźnika: tyle sekund bez powrotu dla przekazanego ruchu i własna wiadomość
+    uint32_t probeEveryS = 1800;  // próbka przekaźnika: najkrótszy odstęp między próbkami jednej stacji
+    uint32_t probeMode = 1;       // 1: powrót to każda ramka w dół; 2: powrót to tylko uwierzytelniona wiadomość do tej stacji
+    bool k1Flood = false;         // poprawka bez zmiany bajtów: ramka z gniazda K1 bez drogi zachowuje pierwszeństwo K1
+    bool stickyRoutes = false;    // próba: nauka tylko brakującej drogi zamiast „ostatnia wygrywa”
+    bool noPool = false;          // próba przyczyny: bez puli czasu nadawania (nie rozstrzygnięcie, nie do firmware)
 };
 
 struct NodeStats {
@@ -106,6 +114,9 @@ struct NodeStats {
     uint32_t parentChanges = 0;
     uint32_t leaves = 0;
     uint32_t maxSilentS = 0;   // najdłużej otwarta wiadomość po HACK bez wiadomości od odbiorcy
+    uint32_t firstLeaveMs = 0; // pierwsza zmiana rodzica przez stoper albo próg w próbach
+    uint32_t probes = 0;       // wysłane próbki
+    uint32_t longestMuteS = 0; // najdłużej bez żadnego nadania w chwili odmowy z dziennika czasu nadawania
 };
 
 class Net;
@@ -170,6 +181,8 @@ struct Report {
     uint32_t id = 0;
     uint32_t createdMs = 0, firstHackMs = 0, closedMs = 0;
     uint32_t nextTryS = 0, attempts = 0, firstSentS = 0;
+    uint32_t hacked = 0;  // nadania z HACK od ostatniej wiadomości od odbiorcy (próg w próbach)
+    bool probe = false;   // próbka przekaźnika, nie zgłoszenie: poza wynikami i bez wpisu w panelu
     bool delivered = false, closed = false;
     uint16_t station = 0;
     size_t size = 174;
@@ -184,6 +197,10 @@ struct Node {
     bool dropper = false;     // daje HACK i porzuca ruch (przejęta albo uszkodzona stacja)
     bool forger = false;      // dodatkowo podaje w górę ramki z cudzym `src` koperty
     bool lowRank = false;     // ogłasza fałszywie niską rangę
+    bool selective = false;   // przepuszcza własny ruch bezpośredniego dziecka i ruch w dół, porzuca resztę po HACK
+    uint16_t fakeDownTo = 0;  // podsuwa temu dziecku ramki w dół, żeby widziało powrót
+    bool fakeNoRoute = false; // ramki w dół co 10 s do numeru bez drogi: gniazda K1 sąsiada zapełniają się rozsyłaniem
+    uint32_t nextFakeMs = 0;
     uint32_t nextForgeMs = 0;
     std::vector<uint16_t> forgeRelays;   // komu podaje podrobione ramki
     uint16_t forgeSeq = 1;
@@ -231,6 +248,9 @@ struct Node {
     struct Flight { Report* report = nullptr; uint32_t handle = 0, sentS = 0; } flights[2];
     uint32_t lastReceiverMsgS = 0;  // ostatnia uwierzytelniona wiadomość od odbiorcy
     uint32_t leaveTimerS = 0;       // wariant: początek czasu bez odpowiedzi przy otwartej wiadomości
+    uint32_t upWaitS = 0;           // próbka: przekazany ruch w górę czeka na powrót od tej chwili
+    uint32_t lastProbeS = 0;
+    uint32_t lastTxMs = 0;
     NodeStats stats;
 };
 
@@ -364,6 +384,10 @@ public:
     }
 
     Report* report(int station, size_t size = 174);
+    void leave(Node& n, uint32_t nowSeconds);
+    bool allClosed() const;
+    size_t realReports() const;
+    uint32_t realArrived() const;
     uint32_t now() const { return now_; }
     uint32_t nowS() const { return now_ / 1000 + START_S; }
     size_t size() const { return nodes_.size(); }
@@ -401,6 +425,8 @@ public:
 
     uint16_t ttl = 15;
     uint32_t epochSeed = 1;
+    bool trace = false;                          // zapis przebiegu na stderr: ramki, odbiory, zmiany rodzica, migawki dróg
+    uint16_t traceStation = 0;                   // czyje drogi pokazują migawki (0: ostatnia stacja łańcucha)
     std::map<uint32_t, uint32_t> downArrivedMs;  // wiadomość w dół -> pierwsze przyjęcie na stacji
     void restartRoot(uint16_t epoch);            // nowa epoka po powrocie stanowiska
     void forgeVictims(int attacker, std::vector<uint16_t> victims);
@@ -413,8 +439,13 @@ private:
     void pollApp(Node& node);
     void pollBeacon(Node& node);
     void pollHostile(Node& node);
+    void pollProbe(Node& node);
+    void pollFakeDown(Node& node);
+    void noteTraffic(Node& node, const uint8_t* bare, size_t length);
     void deliver(Node& node, const uint8_t* bytes, size_t length, uint32_t now);
     void buildKeys(Node& node);
+    void traceAir(const Air& air, char event, int receiver);
+    void traceSnapshot();
 
     Assumptions assumptions_;
     Variant variant_;
