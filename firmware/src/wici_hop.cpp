@@ -207,10 +207,18 @@ const uint8_t* Relay::outgoing(size_t& length) const {
     return active_ ? outgoing_ : nullptr;
 }
 
+bool Relay::k1Routed(uint8_t slot) const {
+    size_t length = 0;
+    const uint8_t* wire = queue_.peek(slot, length);
+    wici_link::Frame frame;
+    if (!queue_.k1Neighbor(slot) || !wire || !wici_link::decode(key_, config_.network, wire, length, frame)) return false;
+    return !(frame.flags & wici_link::DOWN) || routes_.down(get16(frame.payload + 3)) != wici_link::BROADCAST;
+}
+
 bool Relay::contendedK2() const {
     if (!active_ || activePriority_) return false;
     for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
-        if (slot != slot_ && queue_.k1Neighbor(slot)) return true;
+        if (slot != slot_ && k1Routed(slot)) return true;
     return false;
 }
 
