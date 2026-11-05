@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
-  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.30</title>
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.31</title>
   <link rel="stylesheet" href="system-wici.css">
   <style>
     .evidence-table { min-width: 94rem; }
@@ -34,8 +34,8 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wersje, zgodność i dowody</h1>
-      <p><span class="status">Projekt 0.30</span> · 5 listopada 2026 r.</p>
-      <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie pozostaje otwarta; pozytywny wynik jednej drogi nie obejmie pełnych 15 skoków (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>).</p>
+      <p><span class="status">Projekt 0.31</span> · 5 listopada 2026 r.</p>
+      <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie pozostaje otwarta; wynik jednej drogi posłuży do kalibracji <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">emulatora</a>, lecz nie potwierdzi 15 skoków.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#wersje">Wersje i profile</a>
@@ -79,7 +79,7 @@
           <tr><td>Poziom 3</td><td>SA1 i WICI-Link jak na poziomie 1.</td><td>Strona mieszkańca, router i osobne zasilanie po pilotażu (<a href="system-wici-wyrob.html#konfiguracja">rozdział 8</a>).</td></tr>
         </tbody>
       </table></div>
-      <p>Wartości liczbowe należą do wskazanych źródeł i do <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>. <a href="odbior.md#minimum-pilotażu">Minimum pilotażu</a> nie dowodzi pełnego zakresu; sposób sprawdzenia długich łańcuchów pozostaje w <a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>.</p>
+      <p>Wartości liczbowe należą do wskazanych źródeł i do <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>. <a href="odbior.md#minimum-pilotażu">Minimum pilotażu</a> nie dowodzi pełnego zakresu; <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">metoda sprawdzenia</a> długich łańcuchów jest ustalona, bez wyniku.</p>
     </section>
 
     <section id="sprawdzanie" aria-labelledby="h-sprawdzanie">
@@ -118,7 +118,7 @@
           <tr><td>Obsługa według karty</td><td><a href="system-wici-funkcje.html#operacje">3. Funkcje</a></td><td>Wyrób</td><td>Próba z ludźmi</td><td>T1, T8</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">„Obsługa według karty”</a>; próba niewykonana.</td></tr>
           <tr><td>Praca na AA</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T6</a>; brak pomiaru na v2.</td></tr>
           <tr><td>Radio i klimat</td><td><a href="system-wici-wyrob.html#bezpieczenstwo-wyrobu">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T4, T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="system-wici-decyzje.html#wici-inv-026">Progi klimatu wymagają korekty</a>; brak wyniku wyrobu.</td></tr>
-          <tr><td>Łańcuch 3–15 skoków</td><td><a href="system-wici-siec.html#trasy">6. Sieć</a></td><td>Wyrób</td><td>Test</td><td>T5</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a> ustali sposób sprawdzenia.</td></tr>
+          <tr><td>Łańcuch 3–15 skoków</td><td><a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">6. Sieć</a></td><td>Wyrób</td><td>Emulator i próba fizyczna</td><td>T5</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala emulator kodu C++ kalibrowany D21 i krótkim łańcuchem fizycznym. Emulator, procedura i wynik nie istnieją (<a href="system-wici-decyzje.html#wici-inv-039">WICI-INV-039</a>). Rejestr oddzieli głębokość sprawdzoną fizycznie od symulowanej.</td></tr>
           <tr><td>Nasycenie i sen przekaźnika</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar i test</td><td>T6</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-decyzje.html#wici-inv-030">WICI-INV-030</a>: brak pomiaru i próby ramek.</td></tr>
           <tr><td>Odtworzenie wykonania</td><td><a href="system-wici-wyrob.html#konfiguracja">8. Wyrób</a></td><td>Wyrób</td><td>Test i przegląd</td><td>T7</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T7</a>; brak raportu wykonawców.</td></tr>
         </tbody>
@@ -132,13 +132,13 @@
           <tr><td>T2</td><td>Zapis, statusy, zaufanie i odtwarzanie.</td><td>Wynik na pełnym zestawie jest otwarty.</td></tr>
           <tr><td>T3</td><td>Proponowana integracja stacji i stanowiska przez WICI-Link; koncepcja nazywa T3 „integracją stosu na MCU”.</td><td>Starsze wiersze „Stos na MCU”, „Węzeł stanowiska” i „Interfejs LoRa stacji” dotyczą Reticulum/LXMF. „Pełna wymiana na stole” i „Wrogi węzeł” opisują już WICI-Link.</td></tr>
           <tr><td>T4</td><td>Radio i warunki nadawania.</td><td>Test programowy nie mierzy emisji ani odporności radia.</td></tr>
-          <tr><td>T5</td><td>Trasy, przekaźnik, obciążenie, wrogi węzeł i teren.</td><td>D21 i „Wrogi węzeł” obejmują małą sieć; 3–15 skoków oraz teren są otwarte.</td></tr>
+          <tr><td>T5</td><td>Trasy, przekaźnik, obciążenie, wrogi węzeł i teren.</td><td>D21 i „Wrogi węzeł” obejmują małą sieć. Dla 3–15 skoków ustalono metodę emulatora i krótkiego łańcucha, bez próby ani wyniku; teren pozostaje otwarty.</td></tr>
           <tr><td>T6</td><td>Energia, klimat i bezpieczeństwo stacji.</td><td>Progi klimatu w starszym planie wymagają korekty; nasycenie nie ma próby.</td></tr>
           <tr><td>T7</td><td>Odtworzenie przez niezależnych wykonawców i dostępność dostawców.</td><td>Brak raportu z wykonania i oceny dostawców.</td></tr>
           <tr><td>T8</td><td>Obsługa, organizacja i kanał zastępczy.</td><td>Brak wyniku ćwiczenia pełnego zestawu.</td></tr>
         </tbody>
       </table></div>
-      <p>Próby programowe i wektory potwierdzają tylko wskazane własności kodowania lub logiki; bez zapisanego wyniku nie przypisuje się im zaliczenia. Pomiary dwóch węzłów na sprzęcie nie dowodzą działania 15 skoków, energii ani środowiska ocenianej konfiguracji. D21 sprawdza jedną drogę przez przekaźnik; pełny zakres pozostaje w <a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>.</p>
+      <p>Próby programowe i wektory potwierdzają tylko wskazane własności kodowania lub logiki; bez zapisanego wyniku nie przypisuje się im zaliczenia. Pomiary dwóch węzłów na sprzęcie nie dowodzą działania 15 skoków, energii ani środowiska ocenianej konfiguracji. D21 sprawdza jedną drogę przez przekaźnik; <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">metoda pełnego zakresu</a> wymaga emulatora i pomiarów kalibracyjnych.</p>
     </section>
 
     <section id="wspoldzialanie" aria-labelledby="h-wspoldzialanie">
@@ -214,7 +214,7 @@
       <p>W sieci działa jedna wersja WICI-Link. Zmiana formatu łącza następuje poza kryzysem, przez przygotowanie wszystkich węzłów przez USB, i można ją połączyć z wymianą klucza sieci. Protokół nie obsługuje dwóch wersji naraz i nie obiecuje zgodności wstecznej formatu łącza. Po przygotowaniu każdego węzła wykonuje się próbę TEST. Zmiany kolejek, ponowień i polityki dróg nie wymagają zmiany formatu, jeśli nie zmieniają bajtów w eterze.</p>
       <p class="explain"><strong>Granica i koszt.</strong> Pole wersji ma dwa bity: v3 zajmuje wartość maksymalną, v2 jest wycofana, a 0 i 1 są wolne. Następny format użyje jednej z nich. Klucz łącza pochodzi z etykiety <code>WICI link v3</code>; po jej zmianie starszy węzeł odrzuci ramkę przy sprawdzaniu MAC i nie odróżni jej od zakłóceń. Niezgodność ujawni nieudany TEST. Podczas objazdu sieć jest podzielona, przy 15 skokach potencjalnie przez dzień lub dłużej; pilna poprawka formatu ma ten sam koszt. Dwie wersje naraz wymagałyby sprawdzenia dwóch kluczy łącza oraz kombinacji kolejek, HACK i tagów pary, pozostawiając starą wersję podatną na ataki i nadal wymagając objazdu. Zmiana przez radio otwiera nową drogę ataku i zużywa czas nadawania; węzeł tłumaczący ponosi koszt obu wersji. Procedura objazdu pozostaje <a href="system-wici-decyzje.html#wici-inv-035">luką</a>. Decyzja nie dotyczy SA1 ani koperty.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.30 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.31 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
