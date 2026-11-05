@@ -1,5 +1,5 @@
 {
-  "description": "WICI envelope v1 (docs/spec/transport.md): X25519, HKDF-SHA-256, ChaCha20-Poly1305 (RFC 8439). Hex strings.",
+  "description": "Trwałe wektory koperty WICI v1 (docs/spec/transport.md, „Koperta WICI”): X25519, HKDF-SHA-256, ChaCha20-Poly1305 (RFC 8439). Klucze i bajty zapisano szesnastkowo. Plik jest zapisem, a nie wynikiem kodu: tests/test_envelope_vectors.py sprawdza nim wzory ze specyfikacji, kod stanowiska (software/laptop/wici/envelope.py) i kod stacji (firmware/src/envelope.cpp). Wspólny zestaw bajtów nie dowodzi współdziałania z niezależną implementacją.",
   "net_id": 100,
   "sender": 20,
   "recipient": 2,
@@ -8,8 +8,11 @@
   "recipient_x25519_private": "4142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f60",
   "recipient_x25519_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
   "key_sender_to_recipient": "d3d43b93a6cbdf026da0e8c35ef725490e36b25fc162a9530f94ccffb3ad1485",
+  "key_recipient_to_sender": "91614b8a0617e1677e27cb55315384a13a1bc10de80aad5840ba3ad6bdeb7860",
   "envelopes": [
     {
+      "note": "Całość z licznikiem 7.",
+      "message_type": 0,
       "counter": 7,
       "max_payload": 255,
       "plaintext": "5749434920534131207465737420766563746f723a2077686f6c6520656e76656c6f7065",
@@ -18,6 +21,8 @@
       ]
     },
     {
+      "note": "Dwie części po 100 B z licznikiem 8.",
+      "message_type": 0,
       "counter": 8,
       "max_payload": 153,
       "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7",
@@ -25,6 +30,483 @@
         "50001400020000000876246f6b3ccec085b448e1929f537720c73e50a87e4d72e0c4f9cf109332f5b4bbeb9532b6cd89219d5efb4bf64485713f5f5b9518d0de6ff5f84d286740d98f703f5b515f8c46fb0cc98b7de0ec25df56e94c96fd79225c85ec115b601238b23e1a6734072d170e351e28b11afb7a413fb1ccf5",
         "600014000200000008415d4580e0f0f3d35eed828f3fae133efaa681960b82bb27abed55b582d5776811f178ff9a9d7d413e1b5d6ec7ff71f311f79c7f5996eef370d93878595ca79e31fb11b4e51b23b3e9de41a3fa8ecae3416e28f66b93305b7dc4505d20c57b7ae939dcd117ecfe8613e986257aeeae1f474b3189"
       ]
+    },
+    {
+      "note": "Pusty jawny tekst i licznik 0: najmniejsza koperta, 25 B.",
+      "message_type": 0,
+      "counter": 0,
+      "max_payload": 153,
+      "plaintext": "",
+      "wire": [
+        "4000140002000000006452ce7d1b155ef623fd1e92275884f3"
+      ]
+    },
+    {
+      "note": "Treść SA1 w całości.",
+      "message_type": 0,
+      "counter": 9,
+      "max_payload": 228,
+      "plaintext": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+      "wire": [
+        "4000140002000000092859e14bff24cb070de89621284cb44a799721eace594a68e1e56c7d5747006132eba6c2ca3a217ebc561a88f2d00e47b32a4645a6369bcbdf7b510b6429"
+      ]
+    },
+    {
+      "note": "128 B przy max_payload 153: koperta dokładnie w limicie, jeszcze całość.",
+      "message_type": 0,
+      "counter": 10,
+      "max_payload": 153,
+      "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+      "wire": [
+        "40001400020000000abee8c3fc5561e671cd8dd29f537f6da404bd425bc779308cc8f63601090a70a145c74ba4f8073da7183911f21830528b41c1050a6852f63ad326394b99736d276b57f05d92a375562a1a780478e762dbb0d055b9aabf0d432e96bab57472b3240a66dcfb952fcac3a56d5bebc867426ca1015e0ebc9c1631fa4dbd11b18d3a2bd72c889bccc8f6ac512d190da97b300f"
+      ]
+    },
+    {
+      "note": "129 B przy max_payload 153: o bajt za dużo na całość, pierwsza część ma 65 B.",
+      "message_type": 0,
+      "counter": 11,
+      "max_payload": 153,
+      "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f80",
+      "wire": [
+        "50001400020000000bdb6a29c50d8aa7769d3b2c8dc4800ab5bf7dac2776507cd56ea94367ec226da912a260b7151dfdb237b16514ba158614accfd2904162de32e07dba4e62be6fd609fba4b995c96c520101f3924c192fad3c",
+        "60001400020000000b2c1d1e77afe61c4fefa3a6d84441bf2bdb63e2c5115bb7a3420e757ae75a3b1a3c215255d1b3ee5022f49948e4a0b38ecf401dd012a27e83d52b3e8f54bd153f84d6fe149c77faf451a899dcc9d8ca31"
+      ]
+    },
+    {
+      "note": "256 B w całości: największa koperta, 281 B.",
+      "message_type": 0,
+      "counter": 12,
+      "max_payload": 281,
+      "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      "wire": [
+        "40001400020000000cf742e9b96f8b09544a8dcd340f0fe2403e373b15061409b7820b21781f721923316b2d645a98c2a01bf4922f93770fd1ae115034235899b4f34bbf2991ca548a25e463772b26bbdbb3f744f32b11d9cb068b116b94f2879aebb43d92ed5f1165cadbf168ea9a5021047d987fb1e102ab8a008eef71ea91efaca39daaf5011772596ed91d5d784880124e99421f792b9f96d0e8b2de60109bdc2372678d3d49d584dc52531593c04bce0ebc5d86616aa909a7caf7ae1da8bad1e08fc3b13e47e497d5580aee0bfc8fd187df9b1c631c89317c2ffabb6ba6a2e08e4749f9addcd7e4b8ad00bb0c027e99774a09e1792635bd1e3d79332c78766436a0a83c67e5c296ecb465ce3a0b6937b625bea355f7d1"
+      ]
+    },
+    {
+      "note": "255 B w dwóch częściach: pierwsza ma 128 B, druga 127 B.",
+      "message_type": 0,
+      "counter": 13,
+      "max_payload": 153,
+      "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfe",
+      "wire": [
+        "50001400020000000da3f4c63a4803bba3d0202284e153d9374ce118f93dc365114b7c21953d8ae68c86f9de9f6ec3d35f2dac1d083eed285cedfb2ad69a8ca0cdb9e436b77c30a50256bc5618e8927eeeca8d93036b18794bc1826f3953c2c102bda6fee0001f9dacad4578591408c84a30ac9967b4702086ec5cbf0645e09de5922ee20cc0a92d94f6dd80f13f595ff932e845445fd25b44",
+        "60001400020000000d2999dddfcf4bd5842ff32613ae27c276e1e65c792458b1d3047fbe5e3a740eb789385016fc7d1e9b45dd2fe1a7b5788ded89a7a51d423f4bd54328229322685373ce236daeedeaca6e9d3fdb6e881f197c968b4192d7d43ab523677608e424cd0c3cd8e3e28534cd32e31ccfc057c97e1d4ea1ba56a5b4370956df4a1a5205606a2dc7a78ba4eceed5372cea42d697"
+      ]
+    },
+    {
+      "note": "256 B w dwóch częściach po 128 B, największy licznik.",
+      "message_type": 0,
+      "counter": 4294967295,
+      "max_payload": 153,
+      "plaintext": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      "wire": [
+        "5000140002ffffffff9de65ecdd91f83cea4bac323870a85044ef6f7ed9cfe9b7d3b8c55b9f028bb8a2356806f5a77f6c3c49eab974f1d293976093c7361dc438889bf2bae5f24d4e6dcffc84d46cc0c4954f1c996cd7b509dcacc4b3b0d67d37febc8887f31f8baf0c116c12ff925b29dcc2e9aba9fefae10ec74496d7acc8f8a4dd54594f306f6bb40fdecfc801adf0dfe7d35e0611c6aea",
+        "6000140002fffffffff1f77c5554581c2986134d6e761d5832ab8b00d1eeeecc66a7432670038506aa3b997dbc05413807c53a558d868c81eaac1e0afedef10aae84f925ca7a222f2fdccbd3e0842c8f74b57c47be3989bcd830d32b0efd94251d92bf1f5111332e232c4a153c15e188b3e76917b89d5bc3637cce3f2515e031f978ed370feeb3cdb6e5d308960e53676b74c61899c37af99e"
+      ]
+    },
+    {
+      "note": "Dowód doręczenia z jednym licznikiem: najmniejszy, 29 B.",
+      "message_type": 1,
+      "counter": 14,
+      "max_payload": 153,
+      "plaintext": "00000007",
+      "wire": [
+        "41001400020000000e261779bebfd29d6047c09869b668fbb89bd8bbc1"
+      ]
+    },
+    {
+      "note": "Dowód doręczenia z 16 licznikami: największy, 89 B.",
+      "message_type": 1,
+      "counter": 15,
+      "max_payload": 153,
+      "plaintext": "000000000000000100000002000000030000000400000005000000060000000700000008000000090000000a0000000b0000000c0000000d0000000e0000000f",
+      "wire": [
+        "41001400020000000ff6c1d6b0e5e365d034b0e8fc406365f348a3f299894ce068f823e2ce729501e8755fcd62d543d9456cd8f1b1d7ea325c5bed6487376c5f2157cdb6e3689497de3978cb396b93f14153e999f649ba8dc7"
+      ]
     }
-  ]
+  ],
+  "rejected": {
+    "description": "Oba kody odrzucają te bajty. path: sa1 to zwykły odbiór koperty, proof to ścieżka odbiorcy, która przyjmuje też rodzaj 1; stacja nie otwiera dowodów, więc na niej każda z tych kopert jest odrzucana jak na ścieżce sa1. authentic: true znaczy, że znacznik jest poprawny dla key_sender_to_recipient i kopertę odrzuca sam format, a nie MAC. error_python to treść EnvelopeError z envelope.py; stacja zwraca samo odrzucenie.",
+    "cases": [
+      {
+        "name": "reserved_type_2",
+        "reason": "rodzaj 2 jest zarezerwowany",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "420014000200000007c44309e1facf28250c5c6f06e56f42c8d7f7466a1b",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "reserved_type_3",
+        "reason": "rodzaj 3 jest zarezerwowany",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4300140002000000079b9265e15c30ec00f0d5ce141b8559c3d37022a1dd",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "reserved_type_15",
+        "reason": "rodzaj 15 jest zarezerwowany",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4f0014000200000007aae9ca455b3d1912200b6b813f6c5e636623c0af06",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "reserved_type_2_part_1",
+        "reason": "rodzaj 2 w części 1/2",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "520014000200000007d5d5e75d06136610690e34baa40715959c3d8f43e0",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "proof_on_sa1_path",
+        "reason": "dowód doręczenia (rodzaj 1) na ścieżce SA1",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4100140002000000079379c50783288a37f32ab2c2087b1cd2b78783d5",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "version_0",
+        "reason": "wersja 0",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "000014000200000007aa3125b2773f3fabd9bb6503e2ee22c1ea73c296e2",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "version_2",
+        "reason": "wersja 2",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "8000140002000000078b571c0da48363ee9ce2b9a083028c94a1a6451f30",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "version_3",
+        "reason": "wersja 3",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "c000140002000000071b930fe40d341fbca8f34d49cc0c0a5a10aed495b2",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "part_3",
+        "reason": "część 3 nie istnieje",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "70001400020000000789de35042ef898e128156e706506a1ec46cd352c21",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "src_0",
+        "reason": "src = 0x0000",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4000000002000000074334a0e37bc608cdf142211b7e2b4a4e43dbdf871e",
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "src_ffff",
+        "reason": "src = 0xFFFF",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "40ffff000200000007ab884ec9c443780facfea9f3c18ffe3d7cd726e1b3",
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "dst_0",
+        "reason": "dst = 0x0000",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "40001400000000000741f6fce4d9bed88e8665f1608a849dfe25d8c01c22",
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "dst_ffff",
+        "reason": "dst = 0xFFFF",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "400014ffff000000073a02cd0625373f72645c90b74c412ec973507dd12e",
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "src_equals_dst",
+        "reason": "src = dst",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4000140014000000078f2d63ec7b88cd63d1d416db5de9fa7c2be6fa0072",
+        "error_python": "sender and recipient must differ"
+      },
+      {
+        "name": "first_part_129",
+        "reason": "część 1/2 ma 129 B jawnego tekstu",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "500014000200000007ba7ecc3df3e80e7cf5c60b1b1ce0c3e75a8c7d15bf65e7c56e04a0e351534f411006cdb6532c671353f8fe9d8d83b773472257f1f97d8e2c4df58f3f2b1978147e8b5f52ec3a734bd8f24cca61468b4090f23fbfa3ba146421c6833a207d20361bfc6c50c8358b4fa258e8e42f170fb637be8233d3bc7ed2efeead9b081469b64975884404f1565da2d67e7341944e2f47",
+        "error_python": "fragment exceeds 128 bytes"
+      },
+      {
+        "name": "second_part_129",
+        "reason": "część 2/2 ma 129 B jawnego tekstu",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "600014000200000007fc4445d823962d1c9896bffb909b66a552a83e54210167d56ef5cf73cc3af24bc213e7c96d4fb6705eb4bad4c19152f81cdee4d9fbf4dd48ef8e092050bf4ccb188b40102a504a5e6a8e3e0d6707847c09a3238a1cfbef464fea182cf85a6c45c7fce652eb156fdf7eae488632c73cccb56edaf96566175fdd1d5b6de3c1c3ae3315f524c1f9895f0c37749857cf8a35b8",
+        "error_python": "fragment exceeds 128 bytes"
+      },
+      {
+        "name": "whole_257",
+        "reason": "całość ma 257 B jawnego tekstu: koperta 282 B",
+        "path": "sa1",
+        "authentic": true,
+        "wire": "4000140002000000079e073e0e97c5c80c0169876be419a38b2b2f8fc7c32e53946d9ccce69c01334ca74c54b7d4b4c7b7520a1f695597342953dc0b5b13b1b47248b6af4cfb57cb008327b5f1b4350799417587e63d6d1f01d4ea433d51a1cb1d6eb5a03b24d32305ad86029f64275d241128c93d70f15754642f00fb13499552dc2aa8b3acaf86ba82c7ebca0692daa1e6907b1691bc7cb7655e7a66ee65d934c8296ef59bd6d393d79ba0c29791abe9fe167d4ab14bb613291212787b9e49d85a88ec55c352471986a4f1ce259e77ccb7eb7259c1ddc97a514161e132ff8a1c19563b36bb368a0acfe49b54b6735939ec7c2476e8f5ac878e814303b3d39d3f9db950d8baa61ca34565dc0d006134262f3ea7e3c25a878b1e",
+        "error_python": "invalid key or envelope length"
+      },
+      {
+        "name": "empty",
+        "reason": "pusty ciąg bajtów",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "",
+        "error_python": "invalid key or envelope length"
+      },
+      {
+        "name": "short_24",
+        "reason": "24 B: mniej niż nagłówek i znacznik",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "40001400020000000740f012bf18e270b82a33cd8c6b613a",
+        "error_python": "invalid key or envelope length"
+      },
+      {
+        "name": "bad_tag",
+        "reason": "zły MAC: zmieniony ostatni bit znacznika",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "400014000200000007c536123fcabc40f012bf18e270b82a33cd8c6b613b",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "bad_ciphertext",
+        "reason": "zły MAC: zmieniony bit szyfrogramu",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "400014000200000007c436123fcabc40f012bf18e270b82a33cd8c6b613a",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "bad_header_counter",
+        "reason": "zły MAC: nagłówek z innym licznikiem",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "400014000200000006c536123fcabc40f012bf18e270b82a33cd8c6b613a",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "bad_header_src",
+        "reason": "zły MAC: nagłówek z innym nadawcą",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "400015000200000007c536123fcabc40f012bf18e270b82a33cd8c6b613a",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "bad_header_part",
+        "reason": "zły MAC: część zmieniona z 0 na 1",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "500014000200000007c536123fcabc40f012bf18e270b82a33cd8c6b613a",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "truncated_tag",
+        "reason": "zły MAC: koperta krótsza o bajt",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "400014000200000007c536123fcabc40f012bf18e270b82a33cd8c6b61",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "wrong_direction_key",
+        "reason": "zły MAC: zapieczętowana kluczem przeciwnego kierunku",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "4000140002000000074ad3852a24858666f3b66fb2fe7b0cbf03983a4f1b",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "reversed_direction_frame",
+        "reason": "zły MAC: koperta przeciwnego kierunku, otwierana kluczem tego kierunku",
+        "path": "sa1",
+        "authentic": false,
+        "wire": "4000020014000000070952f42788e60308eaa9d2e266b345f7e2d5bae2ce",
+        "error_python": "envelope authentication failed"
+      },
+      {
+        "name": "proof_empty",
+        "reason": "dowód bez liczników",
+        "path": "proof",
+        "authentic": true,
+        "wire": "4100140002000000070800fdb8e65f1193b98f7e32590d3e70",
+        "error_python": "invalid proof envelope"
+      },
+      {
+        "name": "proof_3_bytes",
+        "reason": "dowód z niepełnym licznikiem",
+        "path": "proof",
+        "authentic": true,
+        "wire": "4100140002000000079379c5e0a62183d22911a5d7a566a057d31065",
+        "error_python": "invalid proof envelope"
+      },
+      {
+        "name": "proof_17_counters",
+        "reason": "dowód z 17 licznikami",
+        "path": "proof",
+        "authentic": true,
+        "wire": "4100140002000000079379c5074c00f62fd4b8b012114ac0a44503ca8c9ab428f1c57a8d3a7e949342bb5a1686a13c5624f0b9541844505548ae21cb0d05ee43410dd7d5d40c32d226872ac2ddc7a1c2f9b9aa7616daa87ea602226e7f",
+        "error_python": "invalid proof envelope"
+      },
+      {
+        "name": "proof_part_1",
+        "reason": "dowód jako część 1/2",
+        "path": "proof",
+        "authentic": true,
+        "wire": "510014000200000007b6751a7eade3963f749a4bcba0391681171d0083",
+        "error_python": "invalid proof envelope"
+      },
+      {
+        "name": "proof_path_reserved_type_2",
+        "reason": "rodzaj 2 także na ścieżce dowodu",
+        "path": "proof",
+        "authentic": true,
+        "wire": "4200140002000000079f7225d0d33d3c6d91ee2c73d339ffcf2231b5b7",
+        "error_python": "unsupported envelope kind"
+      },
+      {
+        "name": "proof_bad_tag",
+        "reason": "dowód ze złym MAC",
+        "path": "proof",
+        "authentic": false,
+        "wire": "4100140002000000079379c50783288a37f32ab2c2087b1cd2b78783d4",
+        "error_python": "envelope authentication failed"
+      }
+    ]
+  },
+  "rejected_keys": {
+    "description": "Oba kody odmawiają wyprowadzenia klucza kierunku.",
+    "cases": [
+      {
+        "name": "peer_zero",
+        "reason": "klucz drugiej strony o małym rzędzie: zero, wspólny sekret 0",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "0000000000000000000000000000000000000000000000000000000000000000",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 2,
+        "own_id": 20,
+        "error_python": "weak peer X25519 key"
+      },
+      {
+        "name": "peer_order_8",
+        "reason": "klucz drugiej strony o małym rzędzie: punkt rzędu 8, wspólny sekret 0",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "e0eb7a7c3b41b8ae1656e3faf19fc46ada098deb9c32b1fd866205165f49b800",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 2,
+        "own_id": 20,
+        "error_python": "weak peer X25519 key"
+      },
+      {
+        "name": "net_id_0",
+        "reason": "net_id = 0x0000",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 0,
+        "sender": 20,
+        "recipient": 2,
+        "own_id": 20,
+        "error_python": "net_id must be in 1..65534"
+      },
+      {
+        "name": "net_id_ffff",
+        "reason": "net_id = 0xFFFF",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 65535,
+        "sender": 20,
+        "recipient": 2,
+        "own_id": 20,
+        "error_python": "net_id must be in 1..65534"
+      },
+      {
+        "name": "sender_0",
+        "reason": "numer nadawcy 0x0000",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 0,
+        "recipient": 2,
+        "own_id": 0,
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "sender_ffff",
+        "reason": "numer nadawcy 0xFFFF",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 65535,
+        "recipient": 2,
+        "own_id": 65535,
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "recipient_0",
+        "reason": "numer odbiorcy 0x0000",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 0,
+        "own_id": 20,
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "recipient_ffff",
+        "reason": "numer odbiorcy 0xFFFF",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 65535,
+        "own_id": 20,
+        "error_python": "station number must be in 1..65534"
+      },
+      {
+        "name": "same_endpoint",
+        "reason": "nadawca i odbiorca to ta sama stacja",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 20,
+        "own_id": 20,
+        "error_python": "own_id must be one endpoint of a directed pair"
+      },
+      {
+        "name": "own_id_outside_pair",
+        "reason": "własny numer spoza pary",
+        "private": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peer_public": "64b101b1d0be5a8704bd078f9895001fc03e8e9f9522f188dd128d9846d48466",
+        "net_id": 100,
+        "sender": 20,
+        "recipient": 2,
+        "own_id": 22,
+        "error_python": "own_id must be one endpoint of a directed pair"
+      }
+    ]
+  }
 }

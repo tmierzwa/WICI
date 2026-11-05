@@ -29,6 +29,8 @@ LXMF `title` = `SA1`, `content` = UTF-8 JSON, `fields` = pusty słownik, bez za�
 
 JSON zawiera jedną tablicę. Swobodne obiekty są odrzucane. Kodowanie: bez zbędnych spacji, znaki Unicode bez zamiany na `\u`. Teksty SA1 nie mogą zawierać znaków U+0022 (`"`) i U+005C (`\`). Formularz, panel i ekran zamieniają je na „ ” i `/`, więc tekst nigdy nie wymaga sekwencji ucieczki. Teksty nie mogą też zawierać znaków z kategorii Unicode Cc, Cf, Cs, Co, Cn, Zl i Zp (m.in. znaków C1, znaków zmiany kierunku pisma, niewidocznych znaków formatujących, surogatów, znaków prywatnych i nieprzypisanych, separatorów wiersza i akapitu). Wymagana jest normalizacja NFC; tekst w innej postaci jest odrzucany. Zwykłe polskie i ukraińskie litery są dozwolone. Limity tekstu są liczone w bajtach UTF-8. Narzut LXMF i Reticulum jest dodatkowy.
 
+Trwałe wektory w `tests/vectors/sa1.json` podają poprawne bajty wszystkich sześciu typów i przypadki odrzucane z przyczyną. `tests/test_sa1_vectors.py` sprawdza nimi kod stacji i kod stanowiska. Osobna część pliku zapisuje stan kodu dla zapisu niekanonicznego, który oba dekodery dziś przyjmują; nie jest to wymaganie.
+
 | Typ | Tablica |
 |---|---|
 | REQUEST = 0 | `[1,0,id,revision,category,people,location,text,urgency]` |
