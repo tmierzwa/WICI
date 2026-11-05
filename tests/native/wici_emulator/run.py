@@ -6,6 +6,7 @@ variant.patch (rozstrzygnięcia z 2026-11-05 za przełącznikami). Firmware w re
 Użycie: python3 tests/native/wici_emulator/run.py build <katalog>
         python3 tests/native/wici_emulator/run.py matrix <katalog> <wyniki.jsonl>
         python3 tests/native/wici_emulator/run.py pytania <katalog> <wyniki.jsonl>   (druga tura raportu)
+        python3 tests/native/wici_emulator/run.py k1 <katalog> <wyniki.jsonl>        (wybór poprawki kolejki K1)
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -296,6 +297,43 @@ def matrix_drzewo():
     return runs
 
 
+# Wybór poprawki kolejki K1. Trzy kody na tych samych ziarnach, w obu obrazach: bez nauki dróg (poprawka wejdzie
+# wcześniej) i z zestawem przyjętym przez właściciela. Pierwszy kod bez przełączników to obecny (test zgodności).
+OBRAZY = (("bez_nauki", ()), ("z_nauka", ("learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2", "permessage=1")))
+KOD_K1 = (("obecny", ()), ("wariant1", ("k1flood=1",)), ("wariant2", ("k1routed=1",)))
+K1_SEEDS = (1, 2, 3, 4, 5)
+K1_NEW_SEEDS = tuple(range(301, 311))
+ATTACK_SEEDS = (1, 2, 3, 4, 5, 301, 302, 303, 304, 305)
+
+
+def _k1_configs():
+    for picture, base in OBRAZY:
+        for code, flags in KOD_K1:
+            yield (f"{picture}:{code}", "variant", (*base, *flags))
+
+
+def matrix_k1():
+    """Działanie obu poprawek: łącza zapasowe 70%, koniec łańcucha, cała sieć, nasycenie, drzewo."""
+    cases = [("K:koniec", (f"p={p}", "skip=700", "hours=12")) for p in HOPS_P]
+    cases += [("K:cala_siec", (f"p={p}", "skip=700", "hours=12")) for p in HOPS_P]
+    cases += [("K:bez_zapasowych@koniec", (f"p={p}", "hours=12")) for p in (800, 900)]
+    cases += [("K:nasycenie", (f"p={p}", "spread=300", "skip=700", "hours=8")) for p in (800, 900)]
+    cases += [("K:drzewo", (f"p={p}", "skip=700", f"spread={spread}", "hours=8")) for p in (800, 900) for spread in (3000, 600)]
+    return [(name, config, params) for name, params in cases for config in _k1_configs()]
+
+
+def matrix_k1_atak():
+    """Sąsiad podsuwa ramki K1 do numerów bez drogi: łańcuch 15 skoków i 100 stacji słyszących się nawzajem."""
+    cases = []
+    for every in (0, 10, 2):
+        chain_params = ("p=900", "skip=700", "hours=4", "reports=50", "spread=9000", f"fakeevery={every}")
+        cases.append(("A:atak_k1", chain_params))
+        cases.append(("A:koniec@atak_k1", (*chain_params, "fromend=1")))
+        cases.append(("A:brzeg@atak_k1", (*chain_params, "hole=3")))
+        cases.append(("A:slysza_sie@atak_k1", ("p=900", "n=100", "hours=2", "reports=20", "spread=4500", f"fakeevery={every}")))
+    return [(name, config, params) for name, params in cases for config in _k1_configs()]
+
+
 def run_matrix(binaries, out, seeds=SEEDS, workers=None, runs=None):
     """Uruchamia macierz i zapisuje jeden wiersz JSON na przebieg, w stałej kolejności."""
     jobs = [(scenario, config, params, seed) for scenario, config, params in (runs or matrix()) for seed in seeds]
@@ -346,6 +384,10 @@ if __name__ == "__main__":
         run_matrix(binaries, sys.argv[3] + ".drzewo", seeds=SEEDS[:3], runs=matrix_drzewo())
         run_matrix(binaries, sys.argv[3] + ".nowe_ziarna", seeds=CONFIRM_SEEDS, runs=matrix_zestaw())
         run_matrix(binaries, sys.argv[3] + ".potwierdzenie", seeds=FINAL_SEEDS, runs=matrix_potwierdzenie())
+    elif len(sys.argv) >= 4 and sys.argv[1] == "k1":
+        binaries = build(sys.argv[2])
+        run_matrix(binaries, sys.argv[3], seeds=K1_SEEDS + K1_NEW_SEEDS, runs=matrix_k1())
+        run_matrix(binaries, sys.argv[3] + ".atak", seeds=ATTACK_SEEDS, runs=matrix_k1_atak())
     elif len(sys.argv) >= 3 and sys.argv[1] == "summary":
         print("\n".join(summary(sys.argv[2])))
     else:

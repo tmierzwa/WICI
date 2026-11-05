@@ -101,6 +101,7 @@ struct Variant {
     uint32_t probeEveryS = 1800;  // próbka przekaźnika: najkrótszy odstęp między próbkami jednej stacji
     uint32_t probeMode = 1;       // 1: powrót to każda ramka w dół; 2: powrót to tylko uwierzytelniona wiadomość do tej stacji
     bool k1Flood = false;         // poprawka bez zmiany bajtów: ramka z gniazda K1 bez drogi zachowuje pierwszeństwo K1
+    bool k1Routed = false;        // poprawka bez zmiany bajtów: przy limicie 25% liczą się tylko ramki K1 ze znaną drogą
     bool stickyRoutes = false;    // próba: nauka tylko brakującej drogi zamiast „ostatnia wygrywa”
     bool noPool = false;          // próba przyczyny: bez puli czasu nadawania (nie rozstrzygnięcie, nie do firmware)
 };
@@ -117,6 +118,12 @@ struct NodeStats {
     uint32_t firstLeaveMs = 0; // pierwsza zmiana rodzica przez stoper albo próg w próbach
     uint32_t probes = 0;       // wysłane próbki
     uint32_t longestMuteS = 0; // najdłużej bez żadnego nadania w chwili odmowy z dziennika czasu nadawania
+    // Pomiary ataku na rozsyłanie (k1stats=1).
+    uint32_t floodOverCap = 0; // rozsyłania przy puli ponad 25%, gdy czekała inna ramka K1 ze znaną drogą
+    uint64_t floodOverCapMs = 0;
+    uint32_t unicastRefused = 0; // ramki jednoadresowe odrzucone przez dziennik czasu nadawania
+    uint32_t over25S = 0, full60S = 0; // sekundy z pulą ponad 25% i wyczerpaną pulą 60%
+    uint32_t floodWindow = 0, floodsInWindow = 0, maxFloods120S = 0;
 };
 
 class Net;
@@ -199,6 +206,8 @@ struct Node {
     bool lowRank = false;     // ogłasza fałszywie niską rangę
     bool selective = false;   // przepuszcza własny ruch bezpośredniego dziecka i ruch w dół, porzuca resztę po HACK
     uint16_t fakeDownTo = 0;  // podsuwa temu dziecku ramki w dół, żeby widziało powrót
+    std::vector<uint16_t> fakeTargets; // próba rozsyłania: kolejni sąsiedzi dostają ramki do numerów bez drogi
+    uint32_t fakeEveryMs = 0;
     bool fakeNoRoute = false; // ramki w dół co 10 s do numeru bez drogi: gniazda K1 sąsiada zapełniają się rozsyłaniem
     uint32_t nextFakeMs = 0;
     uint32_t nextForgeMs = 0;
@@ -425,6 +434,7 @@ public:
 
     uint16_t ttl = 15;
     uint32_t epochSeed = 1;
+    bool k1Stats = false;                        // pomiary ataku na rozsyłanie
     bool trace = false;                          // zapis przebiegu na stderr: ramki, odbiory, zmiany rodzica, migawki dróg
     uint16_t traceStation = 0;                   // czyje drogi pokazują migawki (0: ostatnia stacja łańcucha)
     std::map<uint32_t, uint32_t> downArrivedMs;  // wiadomość w dół -> pierwsze przyjęcie na stacji

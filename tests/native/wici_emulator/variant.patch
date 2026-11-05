@@ -32,7 +32,7 @@ index 006691a..128f4a3 100644
  
  }  // namespace wici_gateway
 diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
-index 2008ec4..d96e9a7 100644
+index 2008ec4..99a1738 100644
 --- a/firmware/src/wici_hop.cpp
 +++ b/firmware/src/wici_hop.cpp
 @@ -2,6 +2,7 @@
@@ -80,6 +80,80 @@ index 2008ec4..d96e9a7 100644
          outgoingLength_ = n;
          sent_ = false; active_ = true;
          return true;
+@@ -207,8 +216,24 @@ const uint8_t* Relay::outgoing(size_t& length) const {
+     return active_ ? outgoing_ : nullptr;
+ }
+ 
++bool Relay::k1Routed(uint8_t slot) const {
++    size_t length = 0;
++    const uint8_t* wire = queue_.stored(slot, length);
++    wici_link::Frame frame;
++    if (!queue_.k1Neighbor(slot) || !wire || !wici_link::decode(key_, config_.network, wire, length, frame)) return false;
++    return !(frame.flags & wici_link::DOWN) || routes_.down(get16(frame.payload + 3)) != wici_link::BROADCAST;
++}
++
++bool Relay::routedK1Waiting() const {
++    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
++        if ((!active_ || slot != slot_) && k1Routed(slot)) return true;
++    return false;
++}
++
+ bool Relay::contendedK2() const {
+     if (!active_ || activePriority_) return false;
++    // WARIANT: ramka K1 bez znanej drogi wyjdzie rozsyłaniem, czyli jako K2; nie ma pierwszeństwa, na które trzeba czekać.
++    if (wici_variant::flags.k1RoutedOnly) return routedK1Waiting();
+     for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
+         if (slot != slot_ && queue_.k1Neighbor(slot)) return true;
+     return false;
+diff --git a/firmware/src/wici_hop.h b/firmware/src/wici_hop.h
+index 0b81de2..789c26b 100644
+--- a/firmware/src/wici_hop.h
++++ b/firmware/src/wici_hop.h
+@@ -69,6 +69,8 @@ public:
+     const uint8_t* outgoing(size_t& length) const;
+     // The active transfer is K2 while a K1 frame waits in the queue.
+     bool contendedK2() const;
++    // WARIANT: czeka inna ramka K1 ze znaną drogą (też pomiar w emulatorze).
++    bool routedK1Waiting() const;
+     // Call only after a real TX attempt. A frame without HACK (flood, silence
+     // exception) is retired after a successful TX; unicast waits for a
+     // matching authenticated HACK. After a failed TX the item stays queued.
+@@ -114,6 +116,7 @@ private:
+     bool allowFlood_ = false;
+     uint16_t receivers_[2] = {};
+     bool priority(const wici_link::Frame& frame) const;
++    bool k1Routed(uint8_t slot) const;  // WARIANT
+     uint8_t key_[32] = {};
+     bool keyReady_ = false;
+     wici_relay::Queue queue_;
+diff --git a/firmware/src/wici_radio.h b/firmware/src/wici_radio.h
+index f8b223f..c739b27 100644
+--- a/firmware/src/wici_radio.h
++++ b/firmware/src/wici_radio.h
+@@ -97,6 +97,7 @@ public:
+     // Delivery proofs lost to a full list; the receiver resends those messages.
+     uint16_t proofsDropped() const { return proofsDropped_; }
+     wici_route::Table& routes() { return relay_.routes(); }
++    bool routedK1Waiting() const { return relay_.routedK1Waiting(); }  // WARIANT: pomiar w emulatorze
+ 
+ private:
+     uint32_t backoff() const;
+diff --git a/firmware/src/wici_relay.h b/firmware/src/wici_relay.h
+index 0fc65f1..9168308 100644
+--- a/firmware/src/wici_relay.h
++++ b/firmware/src/wici_relay.h
+@@ -47,6 +47,11 @@ public:
+     uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
+     // Durable admission time of a pending item (monotonic station counter).
+     uint32_t admittedS(uint8_t slot) const { return pending(slot) ? admittedS_[slot] : 0; }
++    // WARIANT: bajty czekającej ramki, bez skutków ubocznych.
++    const uint8_t* stored(uint8_t slot, size_t& length) const {
++        length = pending(slot) ? lengths_[slot] : 0;
++        return length ? frames_[slot] : nullptr;
++    }
+     // Finishes a tombstone interrupted after the durable forwarded marker and
+     // retires items held for MAX_HOLD_S. False only on a storage failure.
+     bool settle(uint32_t nowS);
 diff --git a/firmware/src/wici_route.cpp b/firmware/src/wici_route.cpp
 index a0ec850..7daf692 100644
 --- a/firmware/src/wici_route.cpp
@@ -165,7 +239,7 @@ index faaf705..fc0b7ca 100644
  };
  
  }  // namespace wici_route
-diff --git a/b/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
+diff --git a/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
 new file mode 100644
 index 0000000..49395e9
 --- /dev/null
@@ -177,12 +251,12 @@ index 0000000..49395e9
 +namespace wici_variant {
 +Flags flags;
 +}  // namespace wici_variant
-diff --git a/b/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
+diff --git a/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
 new file mode 100644
-index 0000000..9b93ea0
+index 0000000..89a443b
 --- /dev/null
 +++ b/firmware/src/wici_variant.h
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,15 @@
 +// SPDX-License-Identifier: MIT
 +// TYLKO EMULATOR: przełączniki rozstrzygnięć z 2026-11-05 (WICI-DEC-009). Ten plik nie należy do firmware;
 +// powstaje z tests/native/wici_emulator/variant.patch na kopii kodu. Wszystkie wyłączone to obecny kod.
@@ -193,6 +267,7 @@ index 0000000..9b93ea0
 +    bool learnRoutes = false;  // drogi w dół z ruchu w górę, ostatnia wygrywa, bez planu
 +    bool floodStays = false;   // ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem
 +    bool k1FloodKeepsPriority = false;  // ramka z gniazda K1 bez drogi nie liczy się jako K2 przy limicie 25%
++    bool k1RoutedOnly = false;  // przy limicie 25% liczą się tylko czekające ramki K1 ze znaną drogą
 +    bool stickyRoutes = false; // drogi z ruchu w górę bez „ostatnia wygrywa”: nauka tylko brakującej drogi
 +};
 +extern Flags flags;

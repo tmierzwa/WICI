@@ -340,6 +340,69 @@ Poprawka kolejki, nauka, próby na przemian, budżet, blokada 2 h, „2 próby, 
 
 **Czego ta tura nie widzi:** strat seriami, zmian skuteczności w czasie i realnej jakości łącza zapasowego (założone 70%), efektu przechwycenia, kodu stacji i stanowiska poza skrótem. Stoper, licznik prób i próbka są częścią skrótu stacji, nie firmware. Liczby pochodzą z clang na macOS.
 
+### Wybór poprawki kolejki K1
+
+Właściciel zdecydował, że poprawka kolejki K1 wejdzie przed próbą przy stole, jako osobna zmiana, przed nauką dróg. Porównano dwa warianty bez zmiany bajtów w eterze:
+
+- **Wariant pierwszy (`k1flood=1`):** ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1. Zmienia regułę „rozsyłanie to K2”.
+- **Wariant drugi (`k1routed=1`):** `contendedK2` liczy tylko czekające ramki K1 ze znaną drogą. Ramka K1 bez drogi wychodzi jako K2 jak dotąd, ale nie blokuje innych ramek przy limicie 25%. Reguła „rozsyłanie to K2” zostaje.
+
+**Wniosek: wariant drugi działa porównywalnie z pierwszym i pod atakiem nie jest gorszy.** Ziarna 1–5 i nowe 301–310, 1260 przebiegów działania i 720 przebiegów ataku. Obraz „bez nauki” to obecne drogi, „z nauką” to zestaw przyjęty przez właściciela (drogi z ruchu, intencje na przemian, budżet rozsyłania, 2 próby zerowane odpowiedzią na tę wiadomość).
+
+**Łącza zapasowe 70%, ruch z końca łańcucha, z nauką dróg.** Mediana po ziarnach i zakres; „wysokie ziarna” to ziarna z medianą domknięcia powyżej 3000 s, czyli drugi garb rozkładu.
+
+| Skok | Kod | Mediana domknięcia (s) | Wysokie ziarna z 15 | Najdłuższa cisza przekaźnika (s) | Odmowy dziennika |
+|---|---|---|---|---|---|
+| 80% | obecny | 5196 [2273..6696] | 11 | 1781 | 7287 [166..16779] |
+| 80% | wariant pierwszy | 2455 [2287..5471] | 1 | 1275 | 4343 [139..10089] |
+| 80% | wariant drugi | 2515 [2285..4770] | 3 | 1061 | 3883 [375..6921] |
+| 90% | obecny | 2374 [1990..6158] | 7 | 1652 | 4585 [163..10464] |
+| 90% | wariant pierwszy | 2243 [1950..2356] | 0 | 725 | 166 [129..2348] |
+| 90% | wariant drugi | 2179 [1990..2278] | 0 | 510 | 170 [133..1132] |
+| 95% | obecny | 2587 [1722..6378] | 7 | 1786 | 1977 [128..12642] |
+| 95% | wariant pierwszy | 2044 [1722..2190] | 0 | 2 | 163 [128..230] |
+| 95% | wariant drugi | 2035 [1720..2290] | 0 | 708 | 171 [128..1166] |
+
+Przy 90% i 95% oba warianty usuwają dwumodalność. Przy 80% oba zostawiają pojedyncze wysokie ziarna (1 i 3 z 15); przy tej liczbie ziaren to różnica w granicach przypadku, ale nie dowód równości. Żaden nie usuwa ciszy do zera przy 80%, bo łańcuch dochodzi tam do puli 60% z samego ruchu.
+
+**Pozostałe próby** (mediana w grupie ziaren 1–5 i w grupie 301–310):
+
+- **Z nauką dróg, cała sieć:** bez różnic między kodami w RECEIVED; cisza przekaźnika przy obu wariantach 9 s lub mniej, przy obecnym do 1539 s.
+- **Z nauką dróg, nasycenie 80%:** najdłuższe domknięcie 17 000–17 800 s przy obecnym, 15 000–15 200 s przy pierwszym, 12 700–13 100 s przy drugim. Przy 90%: 6621–7995, 4675–6208, 5009–5792 s.
+- **Z nauką dróg, drzewo:** 50 stacji, 15 skoków. Wszystkie zgłoszenia domknięte w każdym przebiegu. Przy ponad przepustowości najdłuższa cisza spada z 1395–1769 s do 575–767 s przy obu wariantach.
+- **Bez nauki dróg:** wariant drugi nie pogarsza niczego ponad rozrzut między ziarnami; łańcuch bez łączy zapasowych i cała sieć dają te same przedziały. W drzewie przy skoku 80% i ponad przepustowości, gdzie 8 h nie wystarcza na domknięcie, na 15 ziarnach wyglądał nieco gorzej (najgorsze ziarno 232 z 301 wobec 267 obecnego). Sprawdzono to na 30 dalszych ziarnach (401–430): średnio 291,9 domkniętych wobec 291,6 obecnego i 290,9 pierwszego, różnice między kodami w jednym ziarnie od −40 do +50, więc to rozrzut, nie skutek poprawki. Tu dwumodalności nie ma w obecnym kodzie, bo plan zna drogi. Przed nauką dróg poprawka daje więc niewiele (mniej odmów pod atakiem niżej). Jest potrzebna dla nauki dróg, a wcześniej nie szkodzi.
+
+**Atak: sąsiad z poprawnym tagiem pary podsuwa ramki K1 w dół do numerów bez drogi.** Napastnik jest zwykłą stacją na łańcuchu, poza tym przekazuje uczciwie, i rotuje cele między sąsiadami. Łańcuch 15 skoków z łączami zapasowymi 70%, skok 90%, 4 h, 50 zgłoszeń; ramka co 2 s, ruch z końca łańcucha. Napastnik przestrzega długu ciszy, więc 2 s to blisko górnej granicy; węzeł ignorujący dług nie był sprawdzany.
+
+| Obraz | Kod | Domknięte z 50 | Rozsyłań łącznie | Kanał zajęty | Rozsyłania ponad 25% przy czekającej K1 ze znaną drogą | Odmowy ramek jednoadresowych | Stacji z wyczerpaną pulą |
+|---|---|---|---|---|---|---|---|
+| bez nauki | obecny | 49 [48..50] | 36 188 | 45% | 0 | 457 | 3 |
+| bez nauki | wariant pierwszy | 49 [48..50] | 36 227 | 46% | 52 [32..64] | 592 | 4 |
+| bez nauki | wariant drugi | 49 [48..50] | 36 635 | 46% | 0 | 331 | 2 |
+| z nauką | obecny | **18 [16..22]** | 13 976 | 42% | 0 | **10 024** | 5 |
+| z nauką | wariant pierwszy | 50 | 36 189 | 45% | 27 [17..74] | 400 | 2 |
+| z nauką | wariant drugi | 50 | 35 894 | 45% | 0 | 376 | 2 |
+
+- **Czy `k1flood=1` rozsyła ponad limit 25% kosztem cudzego K1:** tak, ale niewiele. We wszystkich próbach ataku najwyżej 97 ramek, około 15 s nadawania na 4 h. Odmów ramek jednoadresowych ma w medianie więcej niż wariant drugi w każdej próbie z ramką co 2 s (35–592 wobec 13–378). Wariant drugi z definicji nie rozsyła ponad limit, gdy czeka K1 ze znaną drogą.
+- **Obecny kod z nauką dróg** pod tym atakiem domyka tylko 18 z 50 zgłoszeń. Sama nauka dróg bez poprawki jest więc podatna, a każdy wariant to usuwa.
+- **Wyczerpanie puli 60% nie zależy od wariantu.** Gdy żadna K1 ze znaną drogą nie czeka, rozsyłanie może dojść do 60% w każdym kodzie. Przy ramce co 2 s dochodzi do tej granicy w obu wariantach najwyżej 5 stacji, każda łącznie do 1780 s z 4 h; w obecnym kodzie z nauką dróg 6 stacji i do 3710 s.
+- **Ramka co 10 s** nie wyczerpuje puli u nikogo i wszystkie kody domykają 50 z 50, przy kanale zajętym około 20% wobec 3–6% bez ataku.
+
+**Limity pierścienia i puli.**
+
+| Sieć | Ramka napastnika | Rozsyłań (bez ataku) | Kanał zajęty (bez ataku) | Najwięcej rozsyłań stacji na 120 s | Wyczerpana pula | Domknięte, mediana (s) |
+|---|---|---|---|---|---|---|
+| 15 skoków, 4 h | co 10 s | 15 000 (300) | 19% (3%) | 13 | nikt | 50 z 50, 28–34 |
+| 15 skoków, 4 h | co 2 s | 34 000–39 000 (300) | 42–45% (3%) | 37 | 1–2 stacje | 46–50 z 50, 40–165 |
+| 100 słyszących się, 2 h | co 10 s | 31 000 (1980) | 66% (7%) | 14 | nikt | 20 z 20, 58–69 |
+| 100 słyszących się, 2 h | co 2 s | 32 000 (1980) | 68% (7%) | 16 | nikt | 20 z 20, 109–121 |
+
+Tabela to ruch z całej sieci, mediany dla wszystkich kodów i obu obrazów. Pierścień rozsyłania (256 pozycji na 120 s) **nigdy nie jest granicą**: najwięcej 40 rozsyłań na 120 s we wszystkich próbach, bo wcześniej hamuje dług ciszy. W łańcuchu ogranicza obciążenie pula 60%. Przy 100 stacjach pula też nie działa, bo każda stacja nadaje za mało, żeby ją osiągnąć: **jeden sąsiad zajmuje około dwóch trzecich kanału całej sieci, a hamuje go tylko dostęp do kanału**. Zgłoszenia dochodzą: mediana domknięcia rośnie z 3 do 121 s bez nauki dróg i z 9 do 109 s z nauką. Ta słabość istnieje w obecnym kodzie i jest taka sama w obu wariantach; poprawka K1 jej nie zmienia. Budżet rozsyłania stanowiska (`flood=700`) nie dotyczy tej ścieżki, bo rozsyłają stacje. Nie jest to część tego wyboru, ale wymaga decyzji przed siecią tej gęstości.
+
+**Wybór:** wariant drugi spełnia warunek właściciela. Usuwa dwumodalność i ciszę przy łączach zapasowych tak samo jak pierwszy (przy 80% oba częściowo), pod atakiem daje wynik nie gorszy, nie rozsyła ponad limit i zachowuje regułę „rozsyłanie to K2”. Pod atakiem z ramką co 2 s, gdy napastnik stoi blisko roota, bez nauki dróg oba warianty dają minimalnie mniej domkniętych od obecnego kodu (46–47 wobec 48 z 50, w granicach rozrzutu). Poprawka idzie osobną zmianą w firmware; przełączniki w `variant.patch` zostają do czasu jej scalenia.
+
+**Czego ta próba nie widzi:** poza ograniczeniami całego raportu (straty seriami, przechwycenie, założone 70%) tylko jeden napastnik i tylko jeden kształt celów; 100 stacji to skrajny przypadek, w którym każda słyszy każdą bez strat zależnych od odległości.
+
 ## Wrażliwość na założenia
 
 Słyszalny drugi sąsiad (mniej ukrytych nadajników) i nasłuch mylący się w 0% albo 10% przypadków, 90%, 50 zgłoszeń: zmiany mniejsze niż rozrzut między ziarnami, wnioski te same. Na przykład koniec łańcucha po rozstrzygnięciach: RECEIVED maks. 4298, 4549 i 4409 s przy 4530 s dla założeń podstawowych. Nie sprawdzono: strat seriami i efektu przechwycenia, na które model nie ma parametru z pomiaru.
@@ -363,6 +426,12 @@ python3 tests/native/wici_emulator/run.py matrix /tmp/emu wyniki.jsonl
 
 ```bash
 python3 tests/native/wici_emulator/run.py pytania /tmp/emu pytania.jsonl
+```
+
+Wybór poprawki kolejki K1 to 1980 przebiegów, około 10 min, i dwa pliki wyników:
+
+```bash
+python3 tests/native/wici_emulator/run.py k1 /tmp/emu k1.jsonl
 ```
 
 Zapis pojedynczego przebiegu (ramki, odbiory, zmiany rodzica, migawki dróg i dziennika) daje `trace=1` na stderr. Ten sam plik wykonywalny daje te same wyniki co do bajtu. Liczby tego raportu pochodzą z clang na macOS; zgodności z innym kompilatorem nie sprawdzano.

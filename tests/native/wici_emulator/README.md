@@ -50,6 +50,7 @@ Próby z drugiej tury raportu, też tylko tu:
 | Parametr | Co robi | Gdzie działa |
 |---|---|---|
 | `k1flood=1` | ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1 przy limicie 25% (poprawka bez zmiany bajtów) | `wici_hop` |
+| `k1routed=1` | przy limicie 25% liczą się tylko czekające ramki K1 ze znaną drogą; ramka K1 bez drogi zostaje K2 (poprawka bez zmiany bajtów) | `wici_hop` |
 | `sticky=1` | nauka tylko brakującej drogi zamiast „ostatnia wygrywa” (próba przyczyny) | `wici_route` |
 | `nopool=1` | bez dziennika czasu nadawania (tylko próba przyczyny, nie do firmware) | `Radio` |
 | `leaven=N`, `permessage=1` | zmiana rodzica przed nadaniem, gdy N nadań dostało HACK i nic nie wróciło; `permessage`: licznik zeruje tylko odpowiedź na tę wiadomość | skrót stacji |
@@ -57,7 +58,7 @@ Próby z drugiej tury raportu, też tylko tu:
 | `hole=I`, `selective=1\|2`, `fake=1\|2` | gdzie stoi porzucający; 1: przepuszcza własny ruch dziecka i porzuca resztę, 2: uczciwy; `fake`: podsuwa ramki w dół (1 do końca łańcucha, 2 co 10 s do numeru bez drogi) | `Net::deliver`, `Net::pollFakeDown` |
 | `trace=1` | zapis przebiegu na stderr | `Net::traceAir` |
 
-Dodatkowe scenariusze: `przerwa` (stanowisko wyłączone, ruch tylko z końca łańcucha) i `drzewo` (50 stacji, dwa pnie po 15 skoków z odgałęzieniami).
+Dodatkowe scenariusze: `przerwa` (stanowisko wyłączone, ruch tylko z końca łańcucha) i `drzewo` (50 stacji, dwa pnie po 15 skoków z odgałęzieniami) oraz `atak_k1` (sąsiad podsuwa ramki K1 do numerów bez drogi co `fakeevery` sekund; z `n` wszyscy się słyszą, `fromend=1` to ruch tylko z końca łańcucha).
 
 Pozostałe parametry: `seed`, `p` (skuteczność łącza w promilach), `hops`, `reports`, `spread`, `hours`, `n`, `skip` (łącza co dwa skoki i rodzic zapasowy, w promilach), `sense` (2: stacja słyszy też drugiego sąsiada, choć go nie odbierze), `miss`.
 

@@ -18,6 +18,7 @@ struct Params {
     uint64_t seed = 1;
     uint32_t p = 900, hops = 15, reports = 50, n = 0, hours = 0, spreadS = 300;
     uint32_t sense = 1, miss = 20, skip = 0, trace = 0, hole = 0, selective = 0, fake = 0, fullrun = 0;
+    uint32_t fakeEveryS = 0, fromEnd = 0, k1Stats = 0;
     Variant variant;
 };
 
@@ -59,6 +60,22 @@ void emit(const Params& params, const std::string& label, Net& net, const std::s
         probes += s.probes;
         longestMute = std::max(longestMute, s.longestMuteS);
     }
+    std::string attack;
+    if (net.k1Stats) {
+        uint32_t overCap = 0, unicastRefused = 0, over25 = 0, full60 = 0, stationsFull = 0, floods120 = 0;
+        uint64_t overCapMs = 0;
+        for (size_t i = 0; i < net.size(); ++i) {
+            const NodeStats& s = net.node(static_cast<int>(i)).stats;
+            overCap += s.floodOverCap; overCapMs += s.floodOverCapMs; unicastRefused += s.unicastRefused;
+            over25 = std::max(over25, s.over25S); full60 = std::max(full60, s.full60S);
+            stationsFull += s.full60S > 0;
+            floods120 = std::max(floods120, s.maxFloods120S);
+        }
+        attack = ",\"flood_over_cap\":" + std::to_string(overCap) + ",\"flood_over_cap_s\":" + std::to_string(overCapMs / 1000) +
+                 ",\"unicast_refused\":" + std::to_string(unicastRefused) + ",\"max_over25_s\":" + std::to_string(over25) +
+                 ",\"max_full60_s\":" + std::to_string(full60) + ",\"stations_full60\":" + std::to_string(stationsFull) +
+                 ",\"max_floods_120s\":" + std::to_string(floods120);
+    }
     uint32_t offPlanned = 0;
     for (size_t i = 1; i < net.size(); ++i) {
         const Node& n = net.node(static_cast<int>(i));
@@ -84,10 +101,10 @@ void emit(const Params& params, const std::string& label, Net& net, const std::s
            total.parentChanges, total.leaves, maxSilent, over30, net.longestStallMs / 1000);
     printf("\"laptop_floods\":%u,\"laptop_routed\":%u,\"laptop_refused\":%u,\"intents_open\":%zu,\"intents_done\":%u,"
            "\"duplicates\":%u,\"settled\":%u,\"floods_deferred\":%u,\"off_planned\":%u,"
-           "\"probes\":%u,\"probes_closed\":%u,\"longest_mute_s\":%u%s}\n",
+           "\"probes\":%u,\"probes_closed\":%u,\"longest_mute_s\":%u%s%s}\n",
            laptop.floods, laptop.routed, laptop.refused, laptop.openIntents(), laptop.deliveredIntents,
            laptop.duplicates, laptop.rejected, laptop.floodsDeferred, offPlanned, probes, probesClosed, longestMute,
-           extra.c_str());
+           attack.c_str(), extra.c_str());
     fflush(stdout);
 }
 
@@ -501,6 +518,45 @@ void hostile(const Params& params, bool withBeacon) {
     emit(params, withBeacon ? "wrogi_beacon" : "wrogi_src", net, extra);
 }
 
+// 8a. Sąsiad z poprawnym tagiem pary podsuwa ramki K1 w dół do numerów bez drogi, a poza tym przekazuje uczciwie.
+// Bez `n`: łańcuch z napastnikiem w miejscu `hole`, celem są sąsiedzi. Z `n`: wszyscy się słyszą, celem osiem stacji.
+// `fakeevery=0` to ta sama sieć bez ataku, jako punkt odniesienia.
+void floodAttack(const Params& params) {
+    const bool clique = params.n != 0;
+    const int stations = clique ? static_cast<int>(params.n) : static_cast<int>(params.hops);
+    Net net(static_cast<size_t>(stations) + 1, params.seed, assumptionsFor(params), params.variant);
+    net.k1Stats = true;
+    if (clique) {
+        for (int a = 0; a <= stations; ++a)
+            for (int b = a + 1; b <= stations; ++b) net.link(a, b, params.p);
+        for (int s = 1; s <= stations; ++s) net.setParents(s, s <= 49 ? 0 : (s - 1) % 49 + 1, -1);
+    } else {
+        chain(net, params, params.skip);
+    }
+    net.start();
+    net.run(10 * 60000);
+    const int attacker = clique ? 1 : params.hole ? static_cast<int>(params.hole) : stations / 2 + 1;
+    Node& evil = net.node(attacker);
+    evil.fakeEveryMs = params.fakeEveryS * 1000;
+    if (params.fakeEveryS) {
+        if (clique) {
+            for (int s = 2; s <= 9; ++s) evil.fakeTargets.push_back(net.node(s).id);
+        } else {
+            const int reach = params.skip ? 2 : 1;
+            for (int s = attacker - reach; s <= attacker + reach; ++s)
+                if (s >= 1 && s <= stations && s != attacker) evil.fakeTargets.push_back(net.node(s).id);
+        }
+    }
+    std::vector<int> senders;
+    if (params.fromEnd) senders.push_back(stations);
+    else if (clique) for (int s = stations; s > stations - 10; --s) senders.push_back(s);
+    else for (int s = 1; s <= stations; ++s) if (s != attacker) senders.push_back(s);
+    const uint32_t endMs = net.now() + hoursOr(params, 4);
+    schedule(net, senders, params.reports, params.spreadS, endMs);
+    net.run(endMs);  // ten sam czas w każdym przebiegu: obciążenie jest porównywalne
+    emit(params, "atak_k1", net);
+}
+
 // Kalibracja: pojedyncze rozsyłanie w pustym łańcuchu ma dotrzeć z prawdopodobieństwem p^hops, bo nie ma kolizji
 // (jedna ramka naraz) ani ponowień. Porównanie z tym wzorem sprawdza model kanału i tor rozsyłania.
 void calibrate(const Params& params) {
@@ -575,12 +631,15 @@ int main(int argc, char** argv) {
         else if (name == "flood") params.variant.floodMsPerStation = value;
         else if (name == "sticky") params.variant.stickyRoutes = value;
         else if (name == "k1flood") params.variant.k1Flood = value;
+        else if (name == "k1routed") params.variant.k1Routed = value;
+        else if (name == "fakeevery") params.fakeEveryS = value;
+        else if (name == "fromend") params.fromEnd = value;
         else if (name == "nopool") params.variant.noPool = value;
         else return 2;
     }
 #ifndef WICI_EMU_VARIANT
     if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS || params.variant.leaveCount ||
-        params.variant.k1Flood || params.variant.stickyRoutes) {
+        params.variant.k1Flood || params.variant.k1Routed || params.variant.stickyRoutes) {
         fprintf(stderr, "ten plik wykonywalny to obecny kod bez wariantów\n");
         return 2;
     }
@@ -589,6 +648,7 @@ int main(int argc, char** argv) {
     wici_variant::flags.floodStays = params.variant.alternate;
     wici_variant::flags.stickyRoutes = params.variant.stickyRoutes;
     wici_variant::flags.k1FloodKeepsPriority = params.variant.k1Flood;
+    wici_variant::flags.k1RoutedOnly = params.variant.k1Routed;
 #endif
     const std::string& s = params.scenario;
     if (s == "koniec") reports(params, true);
@@ -605,6 +665,7 @@ int main(int argc, char** argv) {
     else if (s == "budzet_lancuchy") floodBudget(params, false);
     else if (s == "wrogi_src") hostile(params, false);
     else if (s == "wrogi_beacon") hostile(params, true);
+    else if (s == "atak_k1") floodAttack(params);
     else if (s == "kalibracja") calibrate(params);
     else return 2;
     return 0;

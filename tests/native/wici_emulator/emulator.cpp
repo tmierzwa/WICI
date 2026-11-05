@@ -113,12 +113,30 @@ bool Radio::sendData(const uint8_t* wire, size_t length, wici_link::TxClass traf
     uint8_t radio[wici_link::MAX_FRAME];
     const size_t radioLength = auth_.seal(wire, length, radio, sizeof(radio));
     if (!radioLength) return false;
+    const bool flood = !beacon && traffic != wici_link::TxClass::OWN && get16(wire + 5) == wici_link::BROADCAST;
+#ifdef WICI_EMU_VARIANT
+    const bool overCap = net_.k1Stats && flood && self.shelter && self.shelter->routedK1Waiting() &&
+                         !budget_.allows(false, lora::frameAirMs(radioLength), net_.nowS(), true);
+#else
+    const bool overCap = false;
+#endif
     if (traffic != wici_link::TxClass::OWN && !net_.variant().noPool &&
         !budget_.reserve(beacon, lora::frameAirMs(radioLength), net_.nowS(), traffic == wici_link::TxClass::CONTENDED_K2)) {
         ++self.stats.refusedBudget;
+        if (!beacon && !flood) ++self.stats.unicastRefused;
         const uint32_t mute = (net_.now() - self.lastTxMs) / 1000;
         if (mute > self.stats.longestMuteS) self.stats.longestMuteS = mute;
         return false;
+    }
+    if (overCap) {
+        ++self.stats.floodOverCap;
+        self.stats.floodOverCapMs += lora::frameAirMs(radioLength);
+    }
+    if (flood) {
+        const uint32_t window = net_.nowS() / 120;
+        if (window != self.stats.floodWindow) self.stats.floodsInWindow = 0;
+        self.stats.floodWindow = window;
+        self.stats.maxFloods120S = std::max(self.stats.maxFloods120S, ++self.stats.floodsInWindow);
     }
     memcpy(frame_, radio, radioLength);
     length_ = radioLength;
@@ -656,19 +674,21 @@ void Net::pollProbe(Node& n) {
 // Wrogi węzeł podsuwa dziecku ramkę w dół z ważnym tagiem pary. Dziecko nie sprawdzi koperty i uzna ją za powrót.
 void Net::pollFakeDown(Node& n) {
     if (now_ < n.nextFakeMs || !n.radio->idle() || !n.radio->accepts(wici_link::TxClass::OWN, 100)) return;
-    n.nextFakeMs = now_ + (n.fakeNoRoute ? 10000 + n.rng.below(2000) : 300000 + n.rng.below(30000));
+    const bool rotate = !n.fakeTargets.empty();
+    n.nextFakeMs = now_ + (rotate ? n.fakeEveryMs + n.rng.below(n.fakeEveryMs / 5 + 1)
+                                  : n.fakeNoRoute ? 10000 + n.rng.below(2000) : 300000 + n.rng.below(30000));
     wici_link::Frame frame;
     frame.type = wici_link::Type::DATA;
     frame.flags = wici_link::ACKREQ | wici_link::DOWN;
     frame.network = NETWORK;
     frame.source = n.id;
-    frame.destination = n.fakeDownTo;
+    frame.destination = rotate ? n.fakeTargets[n.forgeCounter % n.fakeTargets.size()] : n.fakeDownTo;
     frame.ttl = static_cast<uint8_t>(ttl);
     frame.sequence = n.forgeSeq++;
     frame.length = 60;
     frame.payload[0] = 0x40;
     fram_record::put16(frame.payload + 1, RECEIVER_MAIN);
-    fram_record::put16(frame.payload + 3, n.fakeNoRoute ? 999 : node(static_cast<int>(nodes_.size()) - 1).id);
+    fram_record::put16(frame.payload + 3, rotate ? 900 + n.forgeCounter % 50 : n.fakeNoRoute ? 999 : node(static_cast<int>(nodes_.size()) - 1).id);
     put32(frame.payload + 5, n.forgeCounter++);
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
@@ -763,7 +783,7 @@ void Net::pollNode(Node& n) {
     if (n.dead) return;
     n.check.poll(now_);
     if (n.radio->blocked(now_)) return;  // pętla stoi w nadawaniu
-    if (n.fakeDownTo) pollFakeDown(n);
+    if (n.fakeDownTo || !n.fakeTargets.empty()) pollFakeDown(n);
     if (n.dropper) { pollHostile(n); return; }
     if (n.shelter) {
         n.shelter->poll(now_, nowS());
@@ -788,6 +808,13 @@ void Net::step() {
     }
     if (now_ % 5 == 0) laptop_->tick(now_);
     if (trace && now_ % 30000 == 0) traceSnapshot();
+    if (k1Stats && now_ % 10000 == 0) {
+        for (auto& holder : nodes_) {
+            Node& n = *holder;
+            if (!n.budget->allows(false, 200, nowS(), true)) n.stats.over25S += 10;
+            if (!n.budget->allows(false, 200, nowS(), false)) n.stats.full60S += 10;
+        }
+    }
 }
 
 void Net::run(uint32_t untilMs) {

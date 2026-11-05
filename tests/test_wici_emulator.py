@@ -57,6 +57,13 @@ class Emulator(unittest.TestCase):
         for source in (ROOT / "firmware" / "src").glob("wici_*"):
             self.assertNotIn("wici_variant", source.read_text(encoding="utf-8"), source.name)
 
+    def test_routed_k1_variant_never_floods_over_the_contended_cap(self):
+        attack = ("atak_k1", "seed=1", "p=900", "skip=700", "hours=2", "reports=10", "spread=3600", "fakeevery=2")
+        routed = json.loads(run("variant", *attack, "k1routed=1"))
+        self.assertEqual(routed["flood_over_cap"], 0)
+        self.assertGreater(routed["flood"], 1000)
+        self.assertEqual(run("variant", *attack, "k1routed=1"), run("variant", *attack, "k1routed=1"))
+
     def test_flood_reach_matches_the_closed_form(self):
         # Jedno rozsyłanie w pustym łańcuchu: p^hops, bez kolizji. Sprawdza model kanału i tor rozsyłania.
         result = json.loads(run("base", "kalibracja", "hops=6", "p=800", "reports=40", "seed=2"))
