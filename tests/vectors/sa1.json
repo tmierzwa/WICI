@@ -752,6 +752,22 @@
         "error_python": "JSONDecodeError"
       },
       {
+        "name": "nul_after_array",
+        "reason": "bajt 0x00 za poprawną tablicą",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\u0000",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d00",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "nul_then_bytes",
+        "reason": "bajt 0x00 i dowolne bajty za poprawną tablicą",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\u0000dowolne bajty",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d00646f776f6c6e652062616a7479",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
         "name": "text_format_zwsp",
         "reason": "znak Cf U+200B",
         "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a​b\"]",
