@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.33</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.34</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.33</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -334,7 +334,16 @@
           <h4>WICI-INV-041</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>W <a href="../../firmware/src/wici_hop.cpp">Relay::prepare</a> <code>activePriority_</code> jest ustawiane dla K1 tylko przy znanym następnym skoku. Ramka z gniazda K1 bez drogi jest rozsyłana jako K2; <code>contendedK2</code> wykrywa inne gniazdo K1, a <a href="../../firmware/src/wici_airtime.cpp">budżet czasu</a> przy puli powyżej 25% odmawia takiej ramce. Dwie takie ramki mogą czekać na siebie do 30 min. Emulator wywołał mechanizm także przez sąsiada podsuwającego K1 do numeru bez drogi: cisza do 465 s w obecnym obrazie; tego przebiegu nie rozebrano na zapisie.</dd></div>
-            <div><dt>Luka</dt><dd>Właściciel zdecydował o poprawce przed D21, jako osobnej zmianie bez zmiany bajtów w eterze. Wariant jest jeszcze sprawdzany; reguła docelowa zostanie tu uzupełniona po wyborze.</dd></div>
+            <div><dt>Reguła docelowa</dt><dd>Przy puli powyżej 25% limit K2 obowiązuje, gdy czeka K1 ze znaną drogą. Ramka K1 bez drogi wychodzi rozsyłaniem jako K2 i nie blokuje innych. Reguła „rozsyłanie to K2” i bajty w eterze pozostają bez zmian.</dd></div>
+            <div><dt>Wybór</dt><dd>Odrzucono zachowanie pierwszeństwa K1 dla ramki bez drogi: działa porównywalnie, lecz zmienia regułę K2 i pod atakiem rozsyła ponad limit 25%, gdy czeka K1 ze znaną drogą. Przed nauką dróg wybrana poprawka daje niewiele i nie szkodzi ponad rozrzut. Z nauką jest potrzebna: pod atakiem sąsiada z tagiem pary, który podsuwa ramkę co 2 s, przy 15 skokach, skoku 90% i łączach zapasowych 70%, po 4 h dociera 18 [16..22] z 50 zgłoszeń bez poprawki, a z nią 50 (<a href="https://github.com/tmierzwa/WICI/pull/186">PR 186, <code>4cbdd37</code></a>).</dd></div>
+            <div><dt>Luka</dt><dd>Poprawka jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/187">PR 187</a>. Do scalenia obecny kod zachowuje się po staremu. Ramka K1 z drogą prowadzącą do nadawcy nadal liczy się jako czekająca. Właściciel zdecydował o osobnej poprawce przed D21, bez zmiany bajtów w eterze.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-042">
+          <h4>WICI-INV-042</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>W modelu emulatora z jednym napastnikiem i bez strat zależnych od odległości sąsiad z poprawnym tagiem pary podsuwa K1 w dół do numerów bez drogi, a przekaźnik je rozsyła. Budżet rozsyłania stanowiska nie obejmuje tej ścieżki; pierścień też nie był granicą (najwyżej 40 rozsyłań na 120 s). Przy 15 skokach pula 60% ogranicza ruch: kanał zajęty 42–45% wobec 3%, domknięte 46–50 z 50 zgłoszeń. Przy 100 stacjach słyszących się wzajemnie żadna stacja nie osiąga puli: kanał zajęty 66–68% wobec 7%, a mediana domknięcia rośnie z kilku sekund do 109–121 s (<a href="https://github.com/tmierzwa/WICI/pull/186">PR 186, <code>4cbdd37</code></a>).</dd></div>
+            <div><dt>Luka</dt><dd>Słabość występuje w obecnym kodzie i obu wariantach poprawki K1. Odcina ją tylko usunięcie stacji u sąsiadów przez USB (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Nie sprawdzono węzła ignorującego dług ciszy. Ryzyko wymaga oceny właściciela; sposób ograniczenia pozostaje bez wyboru.</dd></div>
           </dl>
         </article>
       </div>
@@ -370,13 +379,14 @@
         <tbody>
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
-          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); wiersz <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
+          <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.34</td><td>Wybrano wariant poprawki kolejki K1 i zapisano ryzyko zalewu przez sąsiada; uzupełniono uzasadnienie blokady rodzica w WICI-DEC-009.</td></tr>
           <tr><td>0.33</td><td>Rozstrzygnięto brak postępu w WICI-DEC-009 na podstawie drugiej tury emulatora; zapisano koszty łączy zapasowych, ograniczenia ochrony i lukę kolejki K1 WICI-INV-041.</td></tr>
           <tr><td>0.32</td><td>Ponownie otwarto WICI-DEC-009 w sprawie braku postępu po wstępnych wynikach emulatora z PR 186; zapisano koszty pozostałych rozstrzygnięć i granice wyników bez kalibracji.</td></tr>
           <tr><td>0.31</td><td>Rozstrzygnięto WICI-DEC-009: naukę dróg, ponowienia rozsyłaniem, brak postępu, budżet stanowiska i sprawdzenie 3–15 skoków; zapisano luki kodu, prób i opisów WICI-INV-036–040.</td></tr>
@@ -410,7 +420,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.33 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
