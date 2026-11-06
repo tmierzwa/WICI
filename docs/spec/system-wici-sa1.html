@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wiadomości, walidacja, stany i ponawianie SA1.">
-  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.34</title>
+  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.35</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Protokół aplikacyjny SA1</h1>
-      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.35</span> · 6 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#typy-i-uklad">Typy i układ</a>
@@ -83,11 +83,14 @@
         </tbody>
       </table>
       <p>Pierwsze pole oznacza wersję 1. Koder zapisuje jedną tablicę JSON w UTF-8, bez zbędnych spacji i bez zamiany znaków Unicode na <code>\u</code>. Limity tekstu są liczone w bajtach UTF-8. Tekst jest w NFC; U+0022, U+005C oraz kategorie Unicode Cc, Cf, Cs, Co, Cn, Zl i Zp są niedozwolone.</p>
+      <p>Bajt <code>0x00</code> w treści wejściowej SA1 jest błędem formatu, również po zamykającym nawiasie tablicy JSON. Stacja i stanowisko odrzucają całą treść (<a href="system-wici-decyzje.html#wici-inv-043">WICI-INV-043</a>).</p>
+      <p class="explain"><strong>Uzasadnienie.</strong> Obcięcie na zerze pozwoliłoby dopisać bajty niewidoczne dla odbiorcy i nadać jednej wiadomości wiele postaci bajtowych. Pozostawienie zachowania nieokreślonego utrzymałoby znaną różnicę między dekoderami i uniemożliwiło objęcie jej wektorami.</p>
       <p>Obecny limit całej treści wynosi 256 B. Wynika z wcześniejszej ścieżki LXMF i jest kandydatem, a nie uzasadnionym jeszcze limitem SA1 niezależnego od nośnika (<a href="system-wici-decyzje.html#wici-dec-003">WICI-DEC-003</a> i <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Podział koperty na części należy do rozdziału 5.</p>
       <table>
         <thead><tr><th>Przypadek</th><th>Skutek na poziomie SA1</th></tr></thead>
         <tbody>
           <tr><td>Niepoprawny JSON, obiekt zamiast tablicy, zła liczba pól, wersja lub typ</td><td>Odrzucenie bez zmiany zgłoszenia lub skrzynki; bez RECEIVED.</td></tr>
+          <tr><td>Bajt <code>0x00</code> w treści wejściowej, także po tablicy</td><td>Odrzucenie całej treści przez oba dekodery.</td></tr>
           <tr><td>Zły identyfikator, zakres liczby albo typ pola; tekst ponad limit lub poza NFC; znak zabroniony</td><td>Odrzucenie bez zmiany stanu. Uzasadnienie odmowy zostaje w diagnostyce odbiorcy.</td></tr>
           <tr><td>Ten sam nadawca, <code>id</code> i <code>revision</code>, lecz inna treść</td><td>Konflikt: zachowana treść nie jest nadpisywana; bez nowego RECEIVED.</td></tr>
           <tr><td>Nadawca spoza listy zaufanych na stanowisku</td><td>Kwarantanna bez RECEIVED; zatwierdzenie pojedynczej wiadomości może później uruchomić przyjęcie.</td></tr>
@@ -198,7 +201,7 @@
       </ol>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości SA1, cykl życia i ponawianie</a>, <a href="stanowisko-osp.md">przyjęcie i wysyłka stanowiska</a>, <a href="transport.md">szew nośnika</a>, <a href="../../firmware/src/sa1.cpp">kodek C++</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/reference/reference.py">kodek referencyjny</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">ponawianie</a> i <a href="../../tests/test_sa1_unicode.py">próby Unicode</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.35 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

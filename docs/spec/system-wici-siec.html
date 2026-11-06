@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.34</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.35</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.35</span> · 6 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -209,6 +209,18 @@
         </tbody>
       </table>
       <p class="explain">Pierwsze zdanie <a href="transport.md#warunek-przyjęcia">warunku D21</a> mówi o dwóch RAK4631 i prototypie; <a href="../../hardware/xiao-wici/README.md">procedura sprzętowa</a> przypisuje RAK4631 role podsłuchu i wrogiego węzła. Rozbieżność opisu zestawu wymaga uporządkowania przed próbą.</p>
+      <h4 id="warunek-d21-v1">Warunek D21 i granica płytki v2</h4>
+      <p>Wybór protokołu rozstrzyga prototyp na płytce v1: ESP32-S3 DevKit, zewnętrzny Wio SX1262 i prawdziwy FRAM. Płytka v2 nie warunkuje wyboru protokołu. Kryteria W10 i próby „Wrogi węzeł” pozostają takie jak w tabeli powyżej.</p>
+      <div class="table-scroll" role="region" aria-label="Podział prób między płytkę v1 i v2" tabindex="0"><table class="chapter-table">
+        <thead><tr><th>Etap</th><th>Sprawdzenie</th></tr></thead>
+        <tbody>
+          <tr><td>Wybór protokołu, v1</td><td>W10 i wrogi węzeł; zimny start i zanik zasilania; przeniesienie stacji i rozsyłanie awaryjne; zapas RAM. Część poboru zależną od protokołu sprawdza prąd modułu Wio na osobnej linii 3,3 V podczas nasłuchu, CAD i nadawania oraz czas wybudzenia procesora z dziennika. Oba wyniki porównuje się z budżetem W23.</td></tr>
+          <tr><td>Przyjęcie płytki v2</td><td>Pełny budżet energii, w tym 8 dni czuwania, oraz krótka powtórka zaniku zasilania przy innym przebiegu spadku napięcia. To nie są warunki wyboru protokołu.</td></tr>
+        </tbody>
+      </table></div>
+      <p>Próba przeniesienia obejmuje transfer stacji z prototypu nr 1 na prototyp nr 2 przez USB, także z przerwanym USB. Podsłuch zalicza próbę, gdy pierwsza ramka po przeniesieniu ma licznik powyżej zarezerwowanej granicy i nie powtarza się żaden <code>nonce</code>. Próba rozsyłania awaryjnego wyłącza drogę do roota; podsłuch potwierdza, że każdy węzeł przekazuje ramkę najwyżej raz i czas K2 mieści się w limicie. Zakres 15 skoków sprawdza emulator. Próba zaniku zasilania obejmuje także stację na prototypie, w tym restart po potwierdzeniu pierwszej części. Procedura tych prób pozostaje do uzupełnienia (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</p>
+      <p>Progi są bezwzględne. Niezaliczenie któregokolwiek kryterium WICI-Link uruchamia próby Reticulum według tych samych progów. Jeśli Reticulum także nie zaliczy próby z wrogim węzłem, żaden stos nie przechodzi i potrzebna jest nowa decyzja właściciela. Przeniesienie i rozsyłanie sprawdza się przed wyborem protokołu, nie dopiero przy odbiorze wyrobu.</p>
+      <p class="explain"><strong>Uzasadnienie i ryzyko.</strong> v1 i v2 mają ten sam procesor i radio oraz prawdziwy FRAM; wynik logiki protokołu, RAM i zachowania FRAM przy zaniku można uzyskać na v1. Pobór całego DevKita obejmuje mostek USB, diodę i LDO, więc nie mierzy energii stacji. Czekanie na v2 opóźniłoby wybór protokołu i wymagałoby projektowania v2 przed tym wyborem. v2 może nie osiągnąć budżetu z przyczyn sprzętowych; zmiana protokołu tego nie naprawi. Rozbieżności wcześniejszych opisów zapisano w <a href="system-wici-decyzje.html#wici-inv-044">WICI-INV-044</a>.</p>
       <p><strong>Plan pilotażu.</strong> Procedurę D21 i jej pełne kryteria podaje <a href="transport.md#warunek-przyjęcia">warunek przyjęcia</a>. D21 sprawdzi także, czy 10 min po „przekazane” powoduje zbędne kopie przy szczycie W10 (model: 8,5–11,7 min bez kopii); jeśli tak, kandydatem profilu jest 15 min (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Wynik jednej drogi przez przekaźnik posłuży do kalibracji <a href="#sprawdzenie-pelnego-zakresu">emulatora</a>, nie będzie dowodem 3–15 skoków. Dotkniętą część D21 trzeba powtórzyć po zmianie kodu dróg (<a href="system-wici-decyzje.html#wici-inv-040">WICI-INV-040</a>).</p>
       <p class="meta">Próby lokalne na commicie <code>e6f4dbe</code>, 4 listopada 2026 r.: wektory koperty 2/2, pakiet międzyjęzykowy z WICI-Link 15/15, tor radia na hoście 86/86. D21 na sprzęcie docelowym pozostaje otwarta.</p>
 
@@ -222,7 +234,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.35 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

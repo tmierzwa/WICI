@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.34</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.35</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.35</span> · 6 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -344,6 +344,28 @@
           <dl>
             <div><dt>Stan zastany</dt><dd>W modelu emulatora z jednym napastnikiem i bez strat zależnych od odległości sąsiad z poprawnym tagiem pary podsuwa K1 w dół do numerów bez drogi, a przekaźnik je rozsyła. Budżet rozsyłania stanowiska nie obejmuje tej ścieżki; pierścień też nie był granicą (najwyżej 40 rozsyłań na 120 s). Przy 15 skokach pula 60% ogranicza ruch: kanał zajęty 42–45% wobec 3%, domknięte 46–50 z 50 zgłoszeń. Przy 100 stacjach słyszących się wzajemnie żadna stacja nie osiąga puli: kanał zajęty 66–68% wobec 7%, a mediana domknięcia rośnie z kilku sekund do 109–121 s (<a href="https://github.com/tmierzwa/WICI/pull/186">PR 186, <code>4cbdd37</code></a>).</dd></div>
             <div><dt>Luka</dt><dd>Słabość występuje w obecnym kodzie i obu wariantach poprawki K1. Odcina ją tylko usunięcie stacji u sąsiadów przez USB (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Nie sprawdzono węzła ignorującego dług ciszy. Ryzyko wymaga oceny właściciela; sposób ograniczenia pozostaje bez wyboru.</dd></div>
+            <div><dt>Kandydat w sprawdzaniu</dt><dd>Właściciel wybrał sprawdzenie reguły w emulatorze, bez jej zatwierdzenia: przekaźnik rozsyła ramkę w dół bez drogi tylko po otrzymaniu jej od rodzica planowego lub zapasowego. Kopii od innych sąsiadów nie przekazuje ani nie oznacza jako widzianych, by późniejsza kopia od rodzica mogła przejść. Rozsyłanie awaryjne w górę pozostaje poza tą regułą. Nie ma jeszcze wyniku. Przyjęcie ryzyka bez zmiany odłożono do wyniku emulatora; jeśli reguła pogorszy doręczenie, sprawa wraca do właściciela.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-043">
+          <h4>WICI-INV-043</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/sa1.cpp"><code>sa1::decode</code></a> kopiuje wejście do napisu C: przyjmuje tablicę SA1 zakończoną <code>0x00</code> oraz tablicę z <code>0x00</code> i dalszymi bajtami. <a href="../../software/reference/reference.py"><code>reference.py</code></a> oba przypadki odrzuca. To była jedyna różnica werdyktu przy 300 tys. losowych zmian bajtów. Radio, USB i własny koder stacji nie dokładają zera do poprawnej treści.</dd></div>
+            <div><dt>Rozstrzygnięcie i luka</dt><dd><a href="system-wici-sa1.html#typy-i-uklad">Bajt <code>0x00</code> jest błędem formatu</a> w obu kodach; stacja ma odrzucać go tak jak stanowisko. Poprawka jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/185">PR 185</a>. Do jego scalenia kod stacji nadal przyjmuje takie wejście.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-044">
+          <h4>WICI-INV-044</h4>
+          <dl>
+            <div><dt>Rozbieżność</dt><dd><a href="transport.md#warunek-przyjęcia">Warunek w <code>transport.md</code></a> przypisuje płytce v2 energię, zapas RAM i zanik zasilania oraz mówi o tych samych kryteriach WICI-Link i Reticulum. <a href="system-wici-wyrob.html#energia">Rozdział 8</a> nazywa 8 dni czuwania celem, a nie granicą wyrobu. <a href="../../hardware/xiao-wici/README.md">Procedura sprzętowa</a> również przypisuje v2 energię, RAM i zanik.</dd></div>
+            <div><dt>Rozstrzygnięcie i luka</dt><dd><a href="system-wici-siec.html#warunek-d21-v1">Wybór protokołu</a> odbywa się na v1 z prawdziwym FRAM; v2 warunkuje pełny budżet energii, w tym 8 dni czuwania, i krótką powtórkę zaniku. Progi są bezwzględne; Reticulum bada się po niezaliczeniu WICI-Link. Starsze zdania wymagają uzgodnienia, ale pozostają w źródłach. D21 jest otwarta.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-045">
+          <h4>WICI-INV-045</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd><a href="../../hardware/xiao-wici/README.md">Procedura D21</a> odcina zasilanie tylko przekaźnikowi. Brakuje próby przeniesienia stacji między dwoma prototypami v1 z przerwanym USB, próby rozsyłania awaryjnego po utracie drogi do roota i odcięć zasilania stacji, w tym po potwierdzeniu pierwszej części.</dd></div>
+            <div><dt>Luka próby</dt><dd><a href="system-wici-siec.html#warunek-d21-v1">Kryteria są rozstrzygnięte</a>, procedura i wyniki pozostają otwarte. Przed próbą potrzeba toru przewodowego, sposobu odcinania zasilania w dokładnych chwilach i pomiaru prądu na osobnej linii Wio. Nowe próby pozostają warunkiem wyboru protokołu, bez nadanych numerów.</dd></div>
           </dl>
         </article>
       </div>
@@ -380,12 +402,14 @@
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
+          <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Reguła zalewu czeka na wynik emulatora; D21 pozostaje otwarta. Luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.35</td><td>Rozstrzygnięto odrzucanie <code>0x00</code> w SA1, sprzęt i kryteria D21; zapisano kandydata przeciw zalewowi bez potwierdzenia wynikiem.</td></tr>
           <tr><td>0.34</td><td>Wybrano wariant poprawki kolejki K1 i zapisano ryzyko zalewu przez sąsiada; uzupełniono uzasadnienie blokady rodzica w WICI-DEC-009.</td></tr>
           <tr><td>0.33</td><td>Rozstrzygnięto brak postępu w WICI-DEC-009 na podstawie drugiej tury emulatora; zapisano koszty łączy zapasowych, ograniczenia ochrony i lukę kolejki K1 WICI-INV-041.</td></tr>
           <tr><td>0.32</td><td>Ponownie otwarto WICI-DEC-009 w sprawie braku postępu po wstępnych wynikach emulatora z PR 186; zapisano koszty pozostałych rozstrzygnięć i granice wyników bez kalibracji.</td></tr>
@@ -420,7 +444,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.35 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
