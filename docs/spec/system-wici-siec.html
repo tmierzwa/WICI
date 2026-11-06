@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.33</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.34</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.33</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -168,7 +168,7 @@
       <p>Przekaźnik uczy się drogi w dół z ramek w górę, bez planu sieci. Ostatnia przyjęta ramka w górę wyznacza drogę do stacji, której numer podaje. Droga sąsiada do samego siebie, potwierdzona tagiem pary, nie jest zastępowana numerem deklarowanym w ramce innego sąsiada. Root uczy się drogi do nadawcy tylko po uwierzytelnieniu koperty. Pierwsza próba wiadomości idzie znaną drogą z HACK, a kolejne na przemian rozsyłaniem i drogą. Ramka rozsyłana pozostaje rozsyłana; jednoadresowo może iść tylko na ostatnim skoku do uwierzytelnionego sąsiada, który jest jej celem. Bez znanej drogi węzeł rozsyła. Bajty w eterze się nie zmieniają.</p>
       <p class="explain"><strong>Uzasadnienie i ryzyko.</strong> Lista stacji u przekaźników wymagałaby przy nowej stacji wpisu na całej drodze, przy 15 skokach u 14 przekaźników; wariant „tylko u roota” działał w granicach pilotażu. Samo rozsyłanie w modelu bez kolizji daje przy 15 skokach odpowiednio 51%, 25% lub 5,5% skuteczności próby dla skuteczności skoku 95%, 90% lub 80%; obciąża też całą sieć. Trasa w ramce dodałaby do 30 B i wymagałaby od roota znajomości bieżącej ścieżki, a lista dróg zapasowych z klasami zwiększyłaby stan. Przejęta stacja może zadeklarować cudzy numer i przyciągnąć drogi u swoich przodków, a potem porzucać ruch mimo HACK. Pierwsza próba przepada, ponowienie rozsyłaniem ją omija; pod atakiem ruch do tych stacji idzie głównie rozsyłaniem. Po odcięciu stacji przez sąsiadów trzy nieudane próby usuwają jej drogi.</p>
       <p class="explain"><strong>Wstępny wynik i koszt.</strong> W czystym łańcuchu najdłuższy czas do RECEIVED był 2–7 razy krótszy, a ramek rozsyłanych było 3–6 razy mniej. Zgłoszenia docierały jednak do stanowiska 1,2–1,5 raza później: HACK i RECEIVED zajmowały kanał 2–3,5 raza dłużej. Przy skoku 90% i ruchu z końca łańcucha limit 15 min mieścił się w 2 z 5 ziaren, wobec 5 z 5 w obecnym kodzie. Przy łączach zapasowych zgłoszenie może dotrzeć do 1,9 raza później (najdłużej 1605 s wobec 839 s przy skoku 90%), a kanał jest zajęty około 1,3–1,8 raza dłużej.</p>
-      <p class="explain"><strong>Kolejka przy łączach zapasowych.</strong> W pierwszej turze przy łączach 70% i skoku 80% mediana RECEIVED wyniosła 6412 s wobec 2724 s na obecnym kodzie, z dwumodalnym rozkładem. Hipotezę „ostatnia ramka wygrywa” obalono: po jej wyłączeniu mediana nadal wynosiła 5406 s. Przyczyną jest kolejka przekaźnika: ramka z gniazda K1 bez znanej drogi jest rozsyłana jako K2, a przy puli powyżej 25% dwie takie ramki mogą czekać na siebie do 30 min. Po próbnej poprawce dwumodalność znika; na nowych ziarnach mediana wynosi 2445 s wobec 4773 s bez poprawki i 2278 s na obecnym kodzie. Uczenie dróg z ruchu nie jest podważone. Docelowy wariant poprawki pozostaje <a href="system-wici-decyzje.html#wici-inv-041">luką</a>.</p>
+      <p class="explain"><strong>Kolejka przy łączach zapasowych.</strong> W pierwszej turze przy łączach 70% i skoku 80% mediana RECEIVED wyniosła 6412 s wobec 2724 s na obecnym kodzie, z dwumodalnym rozkładem. Hipotezę „ostatnia ramka wygrywa” obalono: po jej wyłączeniu mediana nadal wynosiła 5406 s. Przyczyną jest kolejka przekaźnika: ramka z gniazda K1 bez znanej drogi jest rozsyłana jako K2, a przy puli powyżej 25% dwie takie ramki mogą czekać na siebie do 30 min. Po próbnej poprawce dwumodalność znika; na nowych ziarnach mediana wynosi 2445 s wobec 4773 s bez poprawki i 2278 s na obecnym kodzie. Uczenie dróg z ruchu nie jest podważone. <a href="system-wici-decyzje.html#wici-inv-041">Wybrany wariant poprawki</a> liczy przy limicie 25% tylko czekające K1 ze znaną drogą. Przy skoku 80% nie usuwa całej ciszy: 3 z 15 ziaren miały medianę domknięcia ponad 3000 s, a cisza trwała do 1061 s, gdy łańcuch dochodził do puli 60% z własnego ruchu.</p>
       <h4>Stacja na rodzicu zapasowym</h4>
       <p>Zmiana rodzica nie ma osobnej procedury dla drogi w dół. Pierwsza ramka w górę przez nowego rodzica poprawia drogę u węzłów na nowej ścieżce, a do tego czasu działa rozsyłanie przy ponowieniu.</p>
       <h4 id="brak-postepu">Brak postępu w górę</h4>
@@ -183,6 +183,7 @@
         </tbody>
       </table></div>
       <p class="explain"><strong>Koszt wybranej reguły.</strong> Fałszywe zmiany są na poziomie progu 30 min: 2–4 stacje z 15 pozostają na rodzicu zapasowym przez 2 h. Wpływ na RECEIVED mieści się w rozrzucie między ziarnami przy założonym łączu 70%. Rzeczywista jakość łącza zapasowego i straty seriami są nieznane; mogą zwiększyć liczbę fałszywych zmian. W drugiej turze próg 60 min dawał medianę wyjścia 11656 s i ogon do 40067 s. Blokada zapobiega powrotowi do porzucającego rodzica, lecz po powrocie stanowiska zatrzymuje też zdrowych rodziców na czas blokady.</p>
+      <p class="explain"><strong>Uzasadnienie i powrót.</strong> HACK sąsiada nie dowodzi postępu, a przy małym ruchu kolejka może nie zapełnić się przed wygaśnięciem ramki. Bez blokady BEACON rodzica z planu może cofnąć zmianę w 24–36 min. W emulatorze z blokadą dotarło 49 z 50 zgłoszeń, bez niej 28 z 50. Stacja tuż pod porzucającą wychodzi, gdy ma własny ruch (50 z 50). Po wyłączeniu stanowiska na 2 h, przy ruchu tylko z końca łańcucha, po jego powrocie 1–2 stacje były poza planem, a wszystkie wiadomości domknięto po 360–660 s.</p>
       <p class="explain"><strong>Granice ochrony.</strong> Przekaźnik bez własnej wiadomości nie ma sygnału braku postępu. Stacja bez własnego ruchu tuż pod porzucającą odcina dalszą część łańcucha na godziny: przy ruchu tylko z końca dociera około 12 z 50 zgłoszeń po 12 h. Pozostają alarm braku potwierdzenia i człowiek. Żaden sprawdzony wariant nie zatrzymał węzła, który przepuszcza ruch własnego dziecka, a resztę porzuca; pozostają alarm, człowiek i <a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">odcięcie u sąsiadów przez USB</a>.</p>
       <p class="explain"><strong>Odrzucone warianty.</strong> Próg w minutach ma długi ogon przy 60 i 90 min, a 30 min również ma wyraźny ogon. Licznik zerowany każdą odpowiedzią może zostać wyzerowany jedną przypadkową odpowiedzią i utrzymać stację przy porzucającym rodzicu na godziny. Uwierzytelniona próbka przekaźnika pomaga przy zwykłym porzucaniu, lecz węzeł wybiórczy ją omija; wymaga nowego rodzaju wiadomości, bo TEST trafia na panel i włącza alarm stacji, i zwiększa czas nadawania około 3,3 raza przy wyłączonym stanowisku. Może wrócić do oceny, jeśli teren pokaże częste zwykłe awarie bez przejęcia. Pozostałe odrzucenia: sam alarm, wstrzymanie HACK przez przekaźnik i sygnał postępu od roota.</p>
       <h4>Limit rozsyłania</h4>
@@ -221,7 +222,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.33 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

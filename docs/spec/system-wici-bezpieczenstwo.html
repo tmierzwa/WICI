@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zagrożenia, tożsamości, uprawnienia i koperta WICI — szkic specyfikacji.">
-  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.33</title>
+  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.34</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Bezpieczeństwo i koperta</h1>
-      <p><span class="status">Projekt 0.33</span> · 5 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.34</span> · 6 listopada 2026 r.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#zagrozenia">Zagrożenia</a>
@@ -55,7 +55,7 @@
             <tr><td>Przejęta stacja</td><td>Nadaje pod własną tożsamością, zna klucz sieci i klucze swoich par; może porzucać ruch, deklarować fałszywą rangę albo zapełniać kolejki śmieciami.</td><td>Nie fałszuje kopert innych par. Usunięcie jej z zaufanych i kluczy u sąsiadów przez USB odcina jej ramki jednoadresowe, HACK i BEACON-y; kolejki mają limity (<a href="#rozstrzygniecia-dec-004">WICI-DEC-004</a>).</td><td>Do objazdu sąsiadów ich klucze nadal pozwalają na ruch tej stacji. Może zadeklarować cudze numery i przyciągnąć drogi do innych stacji, a potem porzucać ruch mimo HACK. Pierwsza próba przepada, ponowienie rozsyłaniem omija tę drogę; po odcięciu trzy nieudane próby usuwają jej drogi (<a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a>). Fałszywa lub prawdziwie niska ranga nadal może przyciągnąć gałąź. Węzeł wybiórczy może przepuszczać ruch własnego dziecka i porzucać dalszy; wykrywanie braku postępu tego nie naprawia. Pozostają alarm, człowiek i odcięcie przez USB u sąsiadów (<a href="system-wici-siec.html#brak-postepu">WICI-DEC-009</a>). Koperta z przewidzianym cudzym licznikiem może zatrzymać prawdziwą kopertę na przekaźniku do godziny; SA1 ponawia ją z nowym licznikiem.</td></tr>
             <tr><td>Przejęte stanowisko lub utracony nośnik</td><td>Klucz odbiorcy pozwala podszyć się pod odpowiedzi i odczytać wcześniej nagrany ruch; starsza kopia bazy może cofnąć liczniki.</td><td>Tożsamość zapasowa i nowe karty umożliwiają zmianę klucza. Po odtworzeniu kopii stanowisko blokuje nadawanie kopert pod starą tożsamością do aktywacji nowej.</td><td>Kradzież klucza w trakcie zdarzenia odsłania wcześniejszy ruch tej pary. Po zdarzeniu trzeba zniszczyć stare klucze prywatne także w kopiach na dysku komputera; procedury jeszcze brak (<a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>). Pozostałości na SSD wymagają ochrony poza protokołem; odzyskanie przyjęć po utracie nośnika wymaga ponowienia niezamkniętych wpisów (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
             <tr><td>Utracony lub przejęty laptop schronienia</td><td>Uzyskuje dostęp do otwartej sesji i danych; z plikiem kont może zgadywać hasło do zaszyfrowanej kopii poza aplikacją.</td><td>Baza w pamięci procesu, szyfrowane migawki i konta ograniczają odczyt wyłączonego laptopa. Stacja zachowuje własną kolejkę bez laptopa.</td><td>Zalogowany laptop ujawnia dane. Limit prób panelu nie ogranicza zgadywania z zabranej pamięci USB. Strona mieszkańca i tryb kiosku są jeszcze opisem poziomów 2–3, bez implementacji po PR 181.</td></tr>
-            <tr><td>Zalew i przeciążenie</td><td>Wypycha zgłoszenia z kanału lub zajmuje kolejki, również w długim łańcuchu.</td><td>Limity buforów, klas czasu nadawania i BEACON-ów ograniczają ruch przyjęty do przekazywania. Projektowany budżet rozsyłania stanowiska ogranicza jego ponowienia (<a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a>).</td><td>Nie ma gwarancji dostarczenia podczas zagłuszania. K1 dzieli gniazdo według sąsiada na każdym skoku, a źródło jest poświadczone tylko na bieżącym skoku. Budżet stanowiska nie zatrzymuje przejętej stacji z kluczem sieci; pod atakiem przyciągającym drogi dostarczenie do 50 stacji może trwać około pół godziny. Węzeł wybiórczy może podtrzymywać ruch własnego dziecka, a porzucać resztę gałęzi mimo HACK; zostają alarm, człowiek i odcięcie przez USB u sąsiadów (<a href="system-wici-siec.html#brak-postepu">WICI-DEC-009</a>). Próba „Wrogi węzeł” obejmuje jeden skok, nie łańcuch.</td></tr>
+            <tr><td>Zalew i przeciążenie</td><td>Wypycha zgłoszenia z kanału lub zajmuje kolejki, również w długim łańcuchu.</td><td>Limity buforów, klas czasu nadawania i BEACON-ów ograniczają ruch przyjęty do przekazywania. Projektowany budżet rozsyłania stanowiska ogranicza jego ponowienia (<a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a>).</td><td>Nie ma gwarancji dostarczenia podczas zagłuszania. K1 dzieli gniazdo według sąsiada na każdym skoku, a źródło jest poświadczone tylko na bieżącym skoku. Budżet stanowiska nie zatrzymuje przejętej stacji z kluczem sieci; pod atakiem przyciągającym drogi dostarczenie do 50 stacji może trwać około pół godziny. Sąsiad z poprawnym tagiem pary może też podsuwać K1 do numerów bez drogi: przekaźnik je rozsyła poza budżetem stanowiska. W modelu emulatora z jednym napastnikiem i bez strat zależnych od odległości kanał był zajęty przez 42–45% czasu przy 15 skokach (wobec 3%) oraz 66–68% przy 100 stacjach słyszących się wzajemnie (wobec 7%). Poprawka K1 nie usuwa tej słabości (<a href="system-wici-decyzje.html#wici-inv-042">WICI-INV-042</a>); ryzyko wymaga oceny właściciela. Węzeł wybiórczy może podtrzymywać ruch własnego dziecka, a porzucać resztę gałęzi mimo HACK; zostają alarm, człowiek i odcięcie przez USB u sąsiadów (<a href="system-wici-siec.html#brak-postepu">WICI-DEC-009</a>). Próba „Wrogi węzeł” obejmuje jeden skok, nie łańcuch.</td></tr>
           </tbody>
         </table>
       </div>
@@ -160,7 +160,7 @@
       </ol>
       <p class="meta">Źródła: <a href="transport.md">transport i koperta</a>, <a href="wici-link.md">WICI-Link i zagrożenia</a>, <a href="oprogramowanie.md">zaufanie, dane i przygotowanie</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="odbior.md">próba „Wrogi węzeł”</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">koncepcja</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../firmware/src/wici_destination.cpp">przyjęcie na stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">zmiana tożsamości</a> i <a href="../../tests/vectors/envelope.json">wektor bajtowy</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.33 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.34 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
