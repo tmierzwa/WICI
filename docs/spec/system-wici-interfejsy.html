@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interfejsy lokalne, granice zapisu i odtwarzanie stanu w systemie WICI.">
-  <title>Interfejsy i trwałość — Specyfikacja WICI 0.35</title>
+  <title>Interfejsy i trwałość — Specyfikacja WICI 0.36</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Interfejsy i trwałość</h1>
-      <p><span class="status">Projekt 0.35</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
       <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -42,7 +42,7 @@
     </nav>
     <section id="granice" aria-labelledby="h-granice">
       <h2 id="h-granice">7. Granice interfejsów</h2>
-      <p class="explain"><strong>Status zakresu.</strong> Firmware stacji obsługuje <a href="../../firmware/src/usbproto.cpp">USB v2</a>, a komputer stanowiska obsługuje KISS i <a href="../../software/laptop/wici/stanowisko/panel.py">lokalny panel dyżurnego</a>. Aplikacja laptopa schronienia na poziomach 2–3, strona mieszkańca i kiosk należą do etapu po pilotażu. Opis tych trzech elementów jest kontraktem projektowym, nie potwierdzeniem wdrożenia (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</p>
+      <p class="explain"><strong>Status zakresu.</strong> Firmware stacji obsługuje <a href="../../firmware/src/usbproto.cpp">USB v2</a>, a komputer stanowiska obsługuje KISS i <a href="../../software/laptop/wici/stanowisko/panel.py">lokalny panel dyżurnego</a>. Pełny kontrakt USB po stronie stacji i panel dyżurnego należą do części normatywnej. Aplikacja laptopa schronienia na poziomach 2–3, panel gospodarza, strona mieszkańca i kiosk są informacyjne, bez mocy wymagań. Opis tych elementów nie potwierdza wdrożenia (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</p>
       <table>
         <thead><tr><th>Granica</th><th>Przenoszone dane i uprawnienia</th><th>Stan</th></tr></thead>
         <tbody>
@@ -52,6 +52,16 @@
           <tr><td>Mieszkaniec ↔ laptop schronienia</td><td>Strona w LAN obiektu, a bez połączenia telefonów kiosk na laptopie. Panel gospodarza jest lokalny. Zgłoszenie mieszkańca trafia najpierw do kolejki gospodarza, bez wysłania SA1. <a href="oprogramowanie.md#api-lokalnej-strony-poziomy-23">Projekt API lokalnego</a>.</td><td>Po pilotażu; strona i kiosk niewdrożone.</td></tr>
         </tbody>
       </table>
+      <h3 id="szew-nosnika">Szew nośnika</h3>
+      <p>Szew określa cztery właściwości protokołu, bez narzucania interfejsu programistycznego:</p>
+      <ol>
+        <li>Znaczenie SA1 i format koperty WICI są niezależne od nośnika.</li>
+        <li>Nośnik daje aplikacji tylko próbę dostarczenia bajtów; jego wynik nie potwierdza przyjęcia SA1.</li>
+        <li>Nośnik przenosi co najmniej <code>MIN_PAYLOAD</code> z <a href="../../firmware/src/envelope.h">formatu koperty</a> (153 B), tak aby dwie części pomieściły każdą wiadomość SA1.</li>
+        <li>Wiadomość dochodząca kilkoma drogami jest przyjmowana raz.</li>
+      </ol>
+      <p class="explain">WICI-Link jest jedynym nośnikiem normatywnym. <code>station::Services</code> i <code>bearers.Bearers</code> są interfejsami kodu, nie kontraktem specyfikacji. Reticulum, Meshtastic, MeshCore i IP wymagałyby osobnego opisu wymiany danych, tożsamości i potwierdzeń. Obecny automatyczny powrót z WICI-Link na Reticulum jest <a href="system-wici-decyzje.html#wici-inv-048">luką przejściową</a>.</p>
+      <p class="explain">Włączenie pozostałych nośników do części normatywnej wymagałoby opisania tożsamości i potwierdzeń dla ścieżek bez kodu lub przeznaczonych do usunięcia. Pominięcie szwu zostawiłoby bez zapisu niezależność SA1 i koperty od nośnika.</p>
     </section>
 
     <section id="usb" aria-labelledby="h-usb">
@@ -94,6 +104,7 @@
 
     <section id="lokalne" aria-labelledby="h-lokalne">
       <h2 id="h-lokalne">Panele i strona mieszkańca</h2>
+      <p class="explain">Panel dyżurnego należy do części normatywnej. Panel gospodarza, strona mieszkańca i kiosk są informacyjne, bez mocy wymagań.</p>
       <table>
         <thead><tr><th>Interfejs</th><th>Dostęp i granica potwierdzenia</th></tr></thead>
         <tbody>
@@ -132,9 +143,9 @@
           <tr><td>Zamknięcie lub zniszczenie danych</td><td>ZAMKNIJ ZDARZENIE kończy ponawianie intencji, zapisuje archiwum i usuwa treść według procedury; kopie są usuwane po potwierdzeniu odbioru archiwum. ZNISZCZ DANE jest osobną czynnością. <a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Kod archiwum i czyszczenia</a>, <a href="../../software/laptop/wici/stanowisko/panel.py">usunięcie kopii</a>. Kod nadal pozostawia część intencji po zamknięciu i nie domyka procedury starych kluczy (<a href="system-wici-decyzje.html#wici-inv-021">WICI-INV-021</a>, <a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>).</td></tr>
         </tbody>
       </table>
-      <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. Do zatwierdzenia pozostają także granice nośników innych niż WICI-Link (<a href="system-wici-decyzje.html#wici-dec-008">WICI-DEC-008</a>) i liczbowe parametry profilu (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
+      <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.35 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
