@@ -403,6 +403,67 @@ Tabela to ruch z całej sieci, mediany dla wszystkich kodów i obu obrazów. Pie
 
 **Czego ta próba nie widzi:** poza ograniczeniami całego raportu (straty seriami, przechwycenie, założone 70%) tylko jeden napastnik i tylko jeden kształt celów; 100 stacji to skrajny przypadek, w którym każda słyszy każdą bez strat zależnych od odległości.
 
+### Rozsyłanie w dół tylko od rodzica
+
+Właściciel wybrał do sprawdzenia regułę przeciw zalewowi przez sąsiada z tagiem pary: przekaźnik rozsyła ramkę w dół bez drogi tylko wtedy, gdy przyszła od rodzica planowego albo zapasowego. Kopii od innych sąsiadów nie przekazuje i nie oznacza jako widzianych. Odbiorca nadal przyjmuje kopię od każdego sąsiada, bo reguła dotyczy tylko przekazywania. Rozsyłania w górę tor przekaźnika i tak nie przyjmuje.
+
+Reguła to `floodparent=1` na kodzie z poprawką K1 (`k1routed=1`). Dodatkowo `floodparent=2` dopuszcza bieżącego rodzica, także dynamicznego, a `floodparent=3` to kontrola pułapki. 1180 przebiegów, ziarna 1–5 i 301–305, dla martwego rodzica w łańcuchu dalsze 401–430. Tabele podają medianę; „bez nauki” to obecne drogi, „z nauką” to zestaw przyjęty przez właściciela.
+
+**Wniosek: reguła wyraźnie zmniejsza zalew i nie psuje doręczenia, dopóki kopia od rodzica może dojść. Psuje je, gdy jedyna droga obejścia prowadzi przez sąsiada spoza rodziców planowego i zapasowego: 24 z 24 spada do 4 z 24. Dopuszczenie bieżącego rodzica przywraca doręczenie w tej próbie i nie osłabia reguły w próbach ataku.**
+
+**Atak: ramka co 2 s do numerów bez drogi.**
+
+| Sieć i obraz | Kanał zajęty, bez reguły → z regułą | Doręczone w dół | Domknięte zgłoszenia | Mediana domknięcia (s) | Najdłuższe domknięcie (s) |
+|---|---|---|---|---|---|
+| 15 skoków, napastnik w środku, bez nauki | 45,5% → 25,1% | 57 → 60 z 60 | 48 → 50 z 50 | 132 → 43 | 9720 → 4835 |
+| to samo, z nauką | 45,1% → 24,9% | 60 → 60 z 60 | 50 → 50 z 50 | 48 → 36 | 1587 → 619 |
+| 15 skoków, napastnik przy roocie, bez nauki | 42,7% → 32,1% | 57 → 60 z 60 | 46 → 50 z 50 | 697 → 101 | 10 219 → 5742 |
+| to samo, z nauką | 42,9% → 31,8% | 60 → 60 z 60 | 50 → 50 z 50 | 112 → 81 | 4384 → 968 |
+| 100 stacji, bez nauki | 68,5% → 26,3% | 92 → 100 ze 100 | 1 → 20 z 20 | 246 → 8 | 246 → 1590 |
+| to samo, z nauką | 67,5% → 28,8% | 60 → 100 ze 100 | 1 → 20 z 20 | 55 → 4452 | 55 → 6442 |
+| 100 stacji, ramki rozsyłane wprost, bez nauki | 68,3% → 30,7% | 90 → 100 ze 100 | 1 → 20 z 20 | 527 → 10 | 527 → 1589 |
+| to samo, z nauką | 67,7% → 34,9% | 54 → 100 ze 100 | 1 → 20 z 20 | 901 → 4450 | 901 → 6434 |
+
+Mediana i najdłuższe domknięcie przy 100 stacjach bez reguły dotyczą tylko jednego domkniętego zgłoszenia, więc nie są porównywalne. 4450 s z nauką to skutek budżetu rozsyłania stanowiska przy 100 wiadomościach w dół: tyle samo jest bez ataku i bez reguły (4523 s).
+
+- **Reguła nie zatrzymuje napastnika wobec jego własnych dzieci.** Bez ataku 15 skoków zajmuje 5% kanału, a z atakiem i regułą nadal 25–32%. Przy ramce co 10 s: 21% → 10%.
+- **Cisza przekaźnika** spada: przy 15 skokach i napastniku przy roocie z 422–423 s do 2 s. Przy 100 stacjach i ramkach rozsyłanych wprost reguła ma ciszę 516–596 s (najwyżej 719 s), a bez reguły 0 s. Prawdopodobnie przy mniej zajętym kanale część stacji dochodzi do puli; przyczyny nie rozbierano na zapisie przebiegu.
+
+**Bez ataku** reguła nie zmienia wyniku w łańcuchu: 60 z 60 w dół i 50 z 50 zgłoszeń przy skoku 90% i 80%, ta sama zajętość w granicach rozrzutu. Przy 100 stacjach bez nauki dróg kanał spada z 39% do 19%, a z nauką z 26% do 22%, doręczenie bez zmian.
+
+**Przypadki, które mogą regułę zepsuć.** Doręczone w dół, mediana i zakres po ziarnach.
+
+| Próba | Obraz | Bez reguły | Rodzic planowy lub zapasowy | Także bieżący rodzic |
+|---|---|---|---|---|
+| Martwy rodzic, łańcuch z zapasowymi, 30 ziaren, razem z 840 | bez nauki | 518 | 527 | nie liczono |
+| to samo | z nauką | 626 | 639 | nie liczono |
+| Martwy rodzic, 100 stacji | oba | 2 z 2 | 2 z 2 | 2 z 2 |
+| **Martwy rodzic, jedyne obejście przez sąsiedni łańcuch, bez ruchu w górę** | bez nauki | 23 [17..24] z 24 | **4 [4..4]** | 24 [18..24] |
+| to samo | z nauką | 24 [18..24] z 24 | **4 [4..4]** | 24 [17..24] |
+| **Martwy rodzic, to samo obejście, ruch w górę** | bez nauki | 11 [8..20] z 24 | **4 [4..4]** | 9 [4..19] |
+| to samo | z nauką | 15 [9..23] z 24 | **7 [5..8]** | 14 [8..23] |
+| Zmiana rodzica z blokadą 2 h, łańcuch, raz | oba | 32 z 32 | 32 z 32 | 32 z 32 |
+| Zmiana rodzica z blokadą 2 h, łańcuch, dwa razy | oba | 32 z 32 | 32 z 32 | 32 z 32 |
+| Zmiana rodzica, obejście przez sąsiedni łańcuch | bez nauki | 21 z 24 | 21 z 24 | 20 z 24 |
+| to samo | z nauką | 24 z 24 | 24 z 24 | 24 z 24 |
+
+- **Martwy rodzic w łańcuchu:** na pierwszych 10 ziarnach reguła wyglądała gorzej (19 wobec 16 z 28), ale na 30 dalszych różnica znika. Rozrzut między ziarnami przewyższa różnicę: domknięte zgłoszenia 967 wobec 983 bez nauki, 1075 wobec 1145 z nauką, z 1500.
+- **Obejście:** dwa łańcuchy po 12 skoków bez rodziców zapasowych, stacja 6 pierwszego martwa, jedno łącze ze stacji 7 do stacji 5 drugiego. Reguła ścisła odrzuca kopię z tego łącza, więc 4 z 24 to tylko sama stacja 7. Bieżący rodzic zmienia się po BEACON-ach także bez ruchu w górę, dlatego drugi tryb działa w obu próbach. Domknięte zgłoszenia z ruchem w górę: 9 → 0 → 7 bez nauki, 9 → 7 → 11 z nauką.
+- **Sieć z rodzicem zapasowym nie ma tego problemu.** Konfiguracja, która daje każdej stacji działającego rodzica zapasowego, nie dochodzi do tej próby, ale awaria dwóch sąsiednich stacji już do niej doprowadza; tego nie mierzono.
+
+**Pułapka z oznaczaniem jako widziane: nie ma przebiegu, w którym prawdziwa kopia ginie z tego powodu.**
+
+Miara to kopia od rodzica uznana za widzianą, choć ta stacja jej nie przekazała. W 320 przebiegach reguły ścisłej i 320 z bieżącym rodzicem wynosi 0. Kontrola działa: gdy odrzucona kopia jest oznaczana (tryb 3), ta sama miara daje 65 102 kopie w 51 ze 100 przebiegów, a w próbie z 15 skokami najdłuższe doręczenie rośnie do 8851 s. W 30 dalszych ziarnach martwego rodzica jest jeden taki przypadek z regułą i jeden w głównej macierzy bez niej. Poza trybem 3 znacznik zapisuje tylko sam przekaźnik tuż przed nadaniem, więc tu nadanie się nie odbyło; odrzucona kopia nie mogła tego spowodować.
+
+**Inna strata, której reguła dokłada:** kopia od rodzica, która trafia na pełną kolejkę K2, nie jest ponawiana, a kopie od innych sąsiadów już jej nie zastąpią. Przy 100 stacjach bez nauki kopii nieprzekazanych po usłyszeniu od rodzica jest 11 709 z 82 498 wobec 3834 ze 136 176 bez reguły. Doręczenie zostaje 100 ze 100, bo tam każdy słyszy wszystkich. Przy 15 skokach to 238 wobec 204 z około 9000 i bez skutku dla doręczenia.
+
+**Ocena autora raportu, nie rozstrzygnięcie:** reguła jest warta wdrożenia, ale z dopuszczeniem bieżącego rodzica. Ścisła wersja traci obejście przez rodzica dynamicznego, które protokół przewiduje, a próby ataku nie pokazują żadnej przewagi nad wersją z bieżącym rodzicem. Argument przeciw: napastnik, który podsunie niską rangę i zostanie czyimś bieżącym rodzicem, dostaje też prawo rozsyłania wobec tej stacji. Rozsyłać może on i tak wobec swoich dzieci, a tej kombinacji nie mierzono.
+
+**Czego ta próba nie widzi:**
+- Reguła odmawia ramce jednoadresowej bez HACK, więc sąsiad po trzech próbach wstrzymuje tę stację. Skutku dla sąsiada ze starą drogą nie mierzono osobno.
+- Jeden napastnik, jeden kształt obejścia, jedna głębokość. Straty seriami i przechwycenie są poza modelem, jak w całym raporcie, a łącze obejścia ma założone 70%.
+- Wynik dotyczy `k1routed=1` w `variant.patch`, czyli tej samej zmiany co w [#187](https://github.com/tmierzwa/WICI/pull/187), która nie jest jeszcze scalona.
+
 ## Wrażliwość na założenia
 
 Słyszalny drugi sąsiad (mniej ukrytych nadajników) i nasłuch mylący się w 0% albo 10% przypadków, 90%, 50 zgłoszeń: zmiany mniejsze niż rozrzut między ziarnami, wnioski te same. Na przykład koniec łańcucha po rozstrzygnięciach: RECEIVED maks. 4298, 4549 i 4409 s przy 4530 s dla założeń podstawowych. Nie sprawdzono: strat seriami i efektu przechwycenia, na które model nie ma parametru z pomiaru.
@@ -432,6 +493,12 @@ Wybór poprawki kolejki K1 to 1980 przebiegów, około 10 min, i dwa pliki wynik
 
 ```bash
 python3 tests/native/wici_emulator/run.py k1 /tmp/emu k1.jsonl
+```
+
+Rozsyłanie tylko od rodzica to 1180 przebiegów i dwa pliki wyników:
+
+```bash
+python3 tests/native/wici_emulator/run.py regula_rodzica /tmp/emu regula.jsonl
 ```
 
 Zapis pojedynczego przebiegu (ramki, odbiory, zmiany rodzica, migawki dróg i dziennika) daje `trace=1` na stderr. Ten sam plik wykonywalny daje te same wyniki co do bajtu. Liczby tego raportu pochodzą z clang na macOS; zgodności z innym kompilatorem nie sprawdzano.

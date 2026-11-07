@@ -64,6 +64,12 @@ class Emulator(unittest.TestCase):
         self.assertGreater(routed["flood"], 1000)
         self.assertEqual(run("variant", *attack, "k1routed=1"), run("variant", *attack, "k1routed=1"))
 
+    def test_refused_flood_copy_is_not_marked_seen(self):
+        # Kopia spoza rodziców nie może zablokować prawdziwej kopii od rodzica; tryb 3 pokazuje, że miara to wykrywa.
+        case = ("regula_rodzica", "seed=1", "p=900", "n=60", "hours=1", "reports=5", "spread=600", "downrounds=1", "k1routed=1")
+        self.assertEqual(json.loads(run("variant", *case, "floodparent=1"))["parent_seen_unsent"], 0)
+        self.assertGreater(json.loads(run("variant", *case, "floodparent=3"))["parent_seen_unsent"], 0)
+
     def test_flood_reach_matches_the_closed_form(self):
         # Jedno rozsyłanie w pustym łańcuchu: p^hops, bez kolizji. Sprawdza model kanału i tor rozsyłania.
         result = json.loads(run("base", "kalibracja", "hops=6", "p=800", "reports=40", "seed=2"))

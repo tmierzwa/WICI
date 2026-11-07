@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <map>
 #include <string>
 
 #include "emulator.h"
@@ -19,6 +20,7 @@ struct Params {
     uint32_t p = 900, hops = 15, reports = 50, n = 0, hours = 0, spreadS = 300;
     uint32_t sense = 1, miss = 20, skip = 0, trace = 0, hole = 0, selective = 0, fake = 0, fullrun = 0;
     uint32_t fakeEveryS = 0, fromEnd = 0, k1Stats = 0;
+    uint32_t two = 0, bridge = 0, dead = 0, moved = 0, leaves = 1, downRounds = 0, downEveryS = 600, fakeBroadcast = 0;
     Variant variant;
 };
 
@@ -557,6 +559,137 @@ void floodAttack(const Params& params) {
     emit(params, "atak_k1", net);
 }
 
+// 8b. Reguła „rozsyłanie w dół tylko od rodzica”. Kształty: łańcuch, `n` słyszących się albo `two=1`: dwa łańcuchy
+// z łączami poprzecznymi i bez rodziców zapasowych, jedyny kształt, w którym kopia od sąsiada jest drogą obejścia.
+// `dead`: stacja gaśnie na początku ruchu. `moved`, `leaves`: stacja zmienia rodzica po 30 min, z blokadą `hold`.
+// `downrounds`: tyle serii wiadomości w dół co `downevery` sekund do stacji za awarią albo do wszystkich.
+Net* currentNet = nullptr;
+
+void floodRule(const Params& params) {
+    const bool clique = params.n != 0, two = params.two != 0;
+    const int depth = static_cast<int>(params.hops);
+    const int stations = clique ? static_cast<int>(params.n) : two ? 2 * depth : depth;
+    Net net(static_cast<size_t>(stations) + 1, params.seed, assumptionsFor(params), params.variant);
+    net.k1Stats = true;
+    currentNet = &net;
+#ifdef WICI_EMU_VARIANT
+    wici_variant::flags.floodCopy = [](unsigned kind, unsigned short own, const unsigned char* header) { currentNet->noteCopy(kind, own, header); };
+#endif
+    if (clique) {
+        for (int a = 0; a <= stations; ++a)
+            for (int b = a + 1; b <= stations; ++b) net.link(a, b, params.p);
+        for (int s = 1; s <= stations; ++s) net.setParents(s, s <= 49 ? 0 : (s - 1) % 49 + 1, -1);
+        if (!net.variant().learnRoutes)
+            for (int s = 50; s <= stations; ++s) net.rootPlan(net.node(s).id, net.node((s - 1) % 49 + 1).id);
+    } else if (two) {
+        for (int column = 0; column < 2; ++column) {
+            const int first = column * depth;
+            for (int d = 1; d <= depth; ++d) {
+                const int s = first + d, parent = d == 1 ? 0 : s - 1;
+                net.link(s, parent, params.p);
+                net.setParents(s, parent, -1);
+                if (d > 1 && !net.variant().learnRoutes) net.rootPlan(net.node(s).id, net.node(first + 1).id);
+            }
+        }
+        // Jedno łącze obejścia: przy wielu odbiorca słyszy kopię wprost od sąsiedniego łańcucha i przekaźnik nie jest potrzebny.
+        // Do stacji dwa skoki bliżej roota, bo rodzic dynamiczny musi mieć niższą rangę (Table::usable).
+        if (params.bridge) net.link(static_cast<int>(params.bridge), depth + static_cast<int>(params.bridge) - 2, 700);
+        else for (int d = 1; d <= depth; ++d) net.link(d, depth + d, 700);
+    } else {
+        chain(net, params, params.skip);
+    }
+    net.start();
+    net.run(10 * 60000);
+    const int attacker = clique ? 1 : params.hole ? static_cast<int>(params.hole) : depth / 2 + 1;
+    if (params.fakeEveryS) {
+        Node& evil = net.node(attacker);
+        evil.fakeEveryMs = params.fakeEveryS * 1000;
+        evil.fakeBroadcast = params.fakeBroadcast != 0;
+        if (clique) {
+            for (int s = 2; s <= 9; ++s) evil.fakeTargets.push_back(net.node(s).id);
+            // Dzieci napastnika: tu reguła z założenia przepuszcza.
+            for (int s = 50; s <= stations; s += 49) evil.fakeTargets.push_back(net.node(s).id);
+        } else {
+            const int reach = params.skip ? 2 : 1;
+            for (int s = attacker - reach; s <= attacker + reach; ++s)
+                if (s >= 1 && s <= depth && s != attacker) evil.fakeTargets.push_back(net.node(s).id);
+        }
+    }
+    const uint32_t started = net.now(), endMs = started + hoursOr(params, 4);
+    if (params.dead) net.node(static_cast<int>(params.dead)).dead = true;
+    const auto alive = [&](int s) { return s != static_cast<int>(params.dead); };
+    std::vector<int> targets, senders;
+    const int fault = params.dead ? static_cast<int>(params.dead) : static_cast<int>(params.moved);
+    if (fault && !clique) {
+        const int last = fault <= depth ? depth : 2 * depth;
+        for (int s = fault; s <= last; ++s) if (alive(s)) targets.push_back(s);
+    } else if (fault) {
+        // W sieci słyszącej się: stacja i jej dzieci.
+        for (int s = fault; s <= stations; s += 49) if (alive(s)) targets.push_back(s);
+    } else {
+        for (int s = 1; s <= stations; ++s) targets.push_back(s);
+    }
+    if (params.fromEnd) senders.push_back(targets.empty() ? stations : targets.back());
+    else for (int s = 1; s <= stations; ++s) if (alive(s) && !(params.fakeEveryS && s == attacker)) senders.push_back(s);
+    struct Event { uint32_t atMs; int kind, station; };
+    std::vector<Event> events;
+    for (uint32_t i = 0; i < params.reports; ++i)
+        events.push_back({started + static_cast<uint32_t>(static_cast<uint64_t>(i) * params.spreadS * 1000 / std::max(params.reports, 1u)), 0,
+                          senders[i % senders.size()]});
+    for (uint32_t round = 0; round < params.downRounds; ++round)
+        for (size_t i = 0; i < targets.size(); ++i)
+            events.push_back({started + round * params.downEveryS * 1000 + static_cast<uint32_t>(i) * 1000, 1, targets[i]});
+    if (params.moved)
+        for (uint32_t i = 0; i < params.leaves; ++i) events.push_back({started + 1800000 + i * 60000, 2, static_cast<int>(params.moved)});
+    std::stable_sort(events.begin(), events.end(), [](const Event& a, const Event& b) { return a.atMs < b.atMs; });
+    uint32_t downId = 0x80000000u;
+    std::map<uint32_t, uint32_t> downSent;
+    for (const Event& event : events) {
+        net.run(event.atMs);
+        if (event.kind == 0) net.report(event.station);
+        else if (event.kind == 1) {
+            downSent[++downId] = net.now();
+            net.laptop().enqueue(net.node(event.station).id, downId, 50);
+        } else net.leave(net.node(event.station), net.nowS());
+    }
+    net.run(endMs);
+    std::vector<uint32_t> times;
+    for (const auto& sent : downSent) {
+        const auto at = net.downArrivedMs.find(sent.first);
+        if (at != net.downArrivedMs.end()) times.push_back((at->second - sent.second) / 1000);
+    }
+    uint32_t p50, maximum;
+    percentiles(times, p50, maximum);
+    uint32_t forwarded = 0, heard = 0, lost = 0;
+    for (const auto& copy : net.refusedCopies) {
+        const bool sent = net.forwardedCopies.count(copy) != 0, fromParent = net.parentCopies.count(copy) != 0;
+        forwarded += sent;
+        heard += fromParent;
+        lost += fromParent && !sent;
+    }
+    // Ta sama miara bez warunku odrzucenia: kopia od rodzica usłyszana przez przekaźnik, ale nieprzekazana. Punkt
+    // odniesienia, bo kopia może przepaść też z obciążenia (pełna kolejka, wygaśnięcie).
+    uint32_t parentCopies = 0, parentUnsent = 0;
+    for (const auto& copy : net.parentCopies) {
+        const uint16_t recipient = static_cast<uint16_t>(copy.second[3]) << 8 | copy.second[4];
+        if (recipient == copy.first || (recipient >= 900 && recipient < 950)) continue;
+        ++parentCopies;
+        parentUnsent += net.forwardedCopies.count(copy) == 0;
+    }
+    // Właściwa pułapka: kopia od rodzica uznana za widzianą, choć ta stacja jej nie przekazała.
+    uint32_t trapped = 0, parentFull = 0;
+    for (const auto& copy : net.seenCopies) trapped += net.forwardedCopies.count(copy) == 0;
+    for (const auto& copy : net.fullCopies) parentFull += net.forwardedCopies.count(copy) == 0;
+    std::string extra = ",\"parent_seen_unsent\":" + std::to_string(trapped) + ",\"parent_full_unsent\":" + std::to_string(parentFull) +
+                        ",\"parent_copies\":" + std::to_string(parentCopies) + ",\"parent_unsent\":" + std::to_string(parentUnsent) +
+                        ",\"down_total\":" + std::to_string(downSent.size()) + ",\"down_arrived\":" + std::to_string(times.size()) +
+                        ",\"down_p50_s\":" + std::to_string(p50) + ",\"down_max_s\":" + std::to_string(maximum) +
+                        ",\"refused_real\":" + std::to_string(net.refusedCopies.size()) +
+                        ",\"refused_then_forwarded\":" + std::to_string(forwarded) +
+                        ",\"refused_parent_heard\":" + std::to_string(heard) + ",\"refused_parent_lost\":" + std::to_string(lost);
+    emit(params, "regula_rodzica", net, extra);
+}
+
 // Kalibracja: pojedyncze rozsyłanie w pustym łańcuchu ma dotrzeć z prawdopodobieństwem p^hops, bo nie ma kolizji
 // (jedna ramka naraz) ani ponowień. Porównanie z tym wzorem sprawdza model kanału i tor rozsyłania.
 void calibrate(const Params& params) {
@@ -632,6 +765,15 @@ int main(int argc, char** argv) {
         else if (name == "sticky") params.variant.stickyRoutes = value;
         else if (name == "k1flood") params.variant.k1Flood = value;
         else if (name == "k1routed") params.variant.k1Routed = value;
+        else if (name == "floodparent") params.variant.floodFromParent = value;
+        else if (name == "two") params.two = value;
+        else if (name == "bridge") params.bridge = value;
+        else if (name == "dead") params.dead = value;
+        else if (name == "moved") params.moved = value;
+        else if (name == "leaves") params.leaves = value;
+        else if (name == "downrounds") params.downRounds = value;
+        else if (name == "downevery") params.downEveryS = value;
+        else if (name == "fakebroadcast") params.fakeBroadcast = value;
         else if (name == "fakeevery") params.fakeEveryS = value;
         else if (name == "fromend") params.fromEnd = value;
         else if (name == "nopool") params.variant.noPool = value;
@@ -639,7 +781,7 @@ int main(int argc, char** argv) {
     }
 #ifndef WICI_EMU_VARIANT
     if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS || params.variant.leaveCount ||
-        params.variant.k1Flood || params.variant.k1Routed || params.variant.stickyRoutes) {
+        params.variant.k1Flood || params.variant.k1Routed || params.variant.stickyRoutes || params.variant.floodFromParent) {
         fprintf(stderr, "ten plik wykonywalny to obecny kod bez wariantów\n");
         return 2;
     }
@@ -649,6 +791,7 @@ int main(int argc, char** argv) {
     wici_variant::flags.stickyRoutes = params.variant.stickyRoutes;
     wici_variant::flags.k1FloodKeepsPriority = params.variant.k1Flood;
     wici_variant::flags.k1RoutedOnly = params.variant.k1Routed;
+    wici_variant::flags.floodFromParent = params.variant.floodFromParent;
 #endif
     const std::string& s = params.scenario;
     if (s == "koniec") reports(params, true);
@@ -666,6 +809,7 @@ int main(int argc, char** argv) {
     else if (s == "wrogi_src") hostile(params, false);
     else if (s == "wrogi_beacon") hostile(params, true);
     else if (s == "atak_k1") floodAttack(params);
+    else if (s == "regula_rodzica") floodRule(params);
     else if (s == "kalibracja") calibrate(params);
     else return 2;
     return 0;

@@ -128,6 +128,11 @@ bool Radio::sendData(const uint8_t* wire, size_t length, wici_link::TxClass traf
         if (mute > self.stats.longestMuteS) self.stats.longestMuteS = mute;
         return false;
     }
+    if (net_.k1Stats && !beacon && traffic != wici_link::TxClass::OWN) {
+        std::array<uint8_t, 9> header;
+        memcpy(header.data(), wire + wici_link::HEADER, header.size());
+        net_.forwardedCopies.insert({self.id, header});
+    }
     if (overCap) {
         ++self.stats.floodOverCap;
         self.stats.floodOverCapMs += lora::frameAirMs(radioLength);
@@ -572,6 +577,15 @@ void Net::deliver(Node& node, const uint8_t* bytes, size_t length, uint32_t now)
     size_t bareLength = 0;
     if (!node.auth.open(bytes, length, bare, sizeof(bare), bareLength)) return;
     if (variant_.probeS) noteTraffic(node, bare, bareLength);
+    if (k1Stats) {
+        wici_link::Frame heard;
+        if (wici_link::decode(linkKey_, NETWORK, bare, bareLength, heard) && heard.type == wici_link::Type::DATA &&
+            (heard.flags & wici_link::DOWN) && (heard.source == node.planned || heard.source == node.backup)) {
+            std::array<uint8_t, 9> header;
+            memcpy(header.data(), heard.payload, header.size());
+            parentCopies.insert({node.id, header});
+        }
+    }
     if (node.selective) {
         wici_link::Frame frame;
         if (wici_link::decode(linkKey_, NETWORK, bare, bareLength, frame) && frame.type == wici_link::Type::DATA &&
@@ -682,7 +696,8 @@ void Net::pollFakeDown(Node& n) {
     frame.flags = wici_link::ACKREQ | wici_link::DOWN;
     frame.network = NETWORK;
     frame.source = n.id;
-    frame.destination = rotate ? n.fakeTargets[n.forgeCounter % n.fakeTargets.size()] : n.fakeDownTo;
+    frame.destination = n.fakeBroadcast ? wici_link::BROADCAST : rotate ? n.fakeTargets[n.forgeCounter % n.fakeTargets.size()] : n.fakeDownTo;
+    if (n.fakeBroadcast) frame.flags = wici_link::DOWN;
     frame.ttl = static_cast<uint8_t>(ttl);
     frame.sequence = n.forgeSeq++;
     frame.length = 60;
@@ -693,6 +708,14 @@ void Net::pollFakeDown(Node& n) {
     uint8_t wire[wici_link::MAX_FRAME];
     const size_t length = wici_link::encode(linkKey_, frame, wire, sizeof(wire));
     if (length) n.radio->sendData(wire, length, wici_link::TxClass::OWN);
+}
+
+void Net::noteCopy(unsigned kind, uint16_t own, const uint8_t* header) {
+    const uint16_t recipient = get16(header + 3);
+    if (recipient >= 900 && recipient < 950) return;  // numery napastnika: tu odrzucenie jest celem reguły
+    std::array<uint8_t, 9> key;
+    memcpy(key.data(), header, key.size());
+    (kind == 0 ? refusedCopies : kind == 1 ? seenCopies : fullCopies).insert({own, key});
 }
 
 void Net::pollBeacon(Node& n) {

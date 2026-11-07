@@ -7,6 +7,7 @@ Użycie: python3 tests/native/wici_emulator/run.py build <katalog>
         python3 tests/native/wici_emulator/run.py matrix <katalog> <wyniki.jsonl>
         python3 tests/native/wici_emulator/run.py pytania <katalog> <wyniki.jsonl>   (druga tura raportu)
         python3 tests/native/wici_emulator/run.py k1 <katalog> <wyniki.jsonl>        (wybór poprawki kolejki K1)
+        python3 tests/native/wici_emulator/run.py regula_rodzica <katalog> <wyniki.jsonl>
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -334,6 +335,47 @@ def matrix_k1_atak():
     return [(name, config, params) for name, params in cases for config in _k1_configs()]
 
 
+# Reguła „rozsyłanie w dół tylko od rodzica” na kodzie z poprawką K1. Tryb 1 to reguła właściciela, 2 dodaje bieżącego
+# rodzica, 3 to kontrola pułapki (odrzucona kopia oznaczona jako widziana), tylko w próbach pułapki.
+RODZIC_OBRAZY = (("bez_nauki", ("k1routed=1", "hold=7200")),
+                 ("z_nauka", ("k1routed=1", "learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2", "permessage=1")))
+RODZIC_SEEDS = (1, 2, 3, 4, 5, 301, 302, 303, 304, 305)
+
+
+def matrix_regula_rodzica():
+    chain = ("p=900", "skip=700", "hours=4", "reports=50", "spread=9000", "downrounds=4", "downevery=1800")
+    clique = ("p=900", "n=100", "hours=2", "reports=20", "spread=4500", "downrounds=1")
+    # Dwa łańcuchy po 12 skoków: droga przez łącze obejścia ma 13 skoków i mieści się w limicie 15.
+    two = ("p=900", "two=1", "hops=12", "bridge=7", "hours=4", "downrounds=4", "downevery=1800", "spread=9000")
+    cases = [(f"R:15_skokow_atak{e}", (*chain, f"fakeevery={e}")) for e in (0, 10, 2)]
+    cases += [("R:15_skokow_atak2_przy_roocie", (*chain, "fakeevery=2", "hole=3")),
+              ("R:15_skokow_p80", ("p=800", *chain[1:])),
+              ("R:100_stacji_atak2_rozsylane", (*clique, "fakeevery=2", "fakebroadcast=1"))]
+    cases += [(f"R:100_stacji_atak{e}", (*clique, f"fakeevery={e}")) for e in (0, 10, 2)]
+    cases += [("R:martwy_rodzic_lancuch", (*chain, "dead=8", "fromend=1")),
+              ("R:martwy_rodzic_100", (*clique, "dead=2")),
+              ("R:martwy_rodzic_obejscie_ruch_w_gore", (*two, "dead=6", "reports=50", "fromend=1")),
+              ("R:martwy_rodzic_obejscie_bez_ruchu", (*two, "dead=6", "reports=0")),
+              ("R:zmiana_rodzica_lancuch", (*chain, "moved=8", "leaves=1")),
+              ("R:zmiana_rodzica_dwa_razy", (*chain, "moved=8", "leaves=2")),
+              ("R:zmiana_rodzica_obejscie", (*two, "moved=7", "leaves=1", "reports=50", "fromend=1"))]
+    trap = {"R:15_skokow_atak0", "R:15_skokow_atak2", "R:100_stacji_atak0", "R:martwy_rodzic_obejscie_ruch_w_gore",
+            "R:zmiana_rodzica_lancuch"}
+    runs = []
+    for name, params in cases:
+        for picture, base in RODZIC_OBRAZY:
+            for mode in (0, 1, 2, 3) if name in trap else (0, 1, 2):
+                runs.append((f"{name}@regula_rodzica", (f"{picture}:tryb{mode}", "variant", (*base, f"floodparent={mode}")), params))
+    return runs
+
+
+def matrix_regula_martwy():
+    """Dalsze ziarna tam, gdzie reguła wyglądała gorzej: martwy rodzic w łańcuchu z rodzicami zapasowymi."""
+    params = ("p=900", "skip=700", "hours=4", "reports=50", "spread=9000", "downrounds=4", "downevery=1800", "dead=8", "fromend=1")
+    return [("M:martwy_rodzic_lancuch@regula_rodzica", (f"{picture}:tryb{mode}", "variant", (*base, f"floodparent={mode}")), params)
+            for picture, base in RODZIC_OBRAZY for mode in (0, 1)]
+
+
 def run_matrix(binaries, out, seeds=SEEDS, workers=None, runs=None):
     """Uruchamia macierz i zapisuje jeden wiersz JSON na przebieg, w stałej kolejności."""
     jobs = [(scenario, config, params, seed) for scenario, config, params in (runs or matrix()) for seed in seeds]
@@ -388,6 +430,10 @@ if __name__ == "__main__":
         binaries = build(sys.argv[2])
         run_matrix(binaries, sys.argv[3], seeds=K1_SEEDS + K1_NEW_SEEDS, runs=matrix_k1())
         run_matrix(binaries, sys.argv[3] + ".atak", seeds=ATTACK_SEEDS, runs=matrix_k1_atak())
+    elif len(sys.argv) >= 4 and sys.argv[1] == "regula_rodzica":
+        binaries = build(sys.argv[2])
+        run_matrix(binaries, sys.argv[3], seeds=RODZIC_SEEDS, runs=matrix_regula_rodzica())
+        run_matrix(binaries, sys.argv[3] + ".martwy", seeds=tuple(range(401, 431)), runs=matrix_regula_martwy())
     elif len(sys.argv) >= 3 and sys.argv[1] == "summary":
         print("\n".join(summary(sys.argv[2])))
     else:
