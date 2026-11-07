@@ -1,0 +1,323 @@
+diff --git a/firmware/src/wici_gateway.cpp b/firmware/src/wici_gateway.cpp
+index 3f214a0..d865939 100644
+--- a/firmware/src/wici_gateway.cpp
++++ b/firmware/src/wici_gateway.cpp
+@@ -176,7 +176,7 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
+         if (!routes_.downFailed(downRecipient_, downNext_)) return Event::REJECTED;
+     }
+     const uint16_t recipient = get16(frame.payload + 3);
+-    const uint16_t next = routes_.down(recipient);
++    const uint16_t next = floodNext_ ? wici_link::BROADCAST : routes_.down(recipient);
+     if (!next) return Event::REJECTED;
+     // A retry to the same next hop goes again unchanged, as on every hop
+     // (rule 3): only the same bytes get the owed HACK there when the HACK was
+diff --git a/firmware/src/wici_gateway.h b/firmware/src/wici_gateway.h
+index 006691a..128f4a3 100644
+--- a/firmware/src/wici_gateway.h
++++ b/firmware/src/wici_gateway.h
+@@ -48,6 +48,7 @@ public:
+     // actually transmitted. Scheduler admission can precede TX by airtime debt.
+     void onTxDone(bool success, uint32_t nowMs);
+     uint16_t down(uint16_t station) const { return routes_.down(station); }
++    void setFloodNext(bool flood) { floodNext_ = flood; }  // WARIANT: ta próba idzie rozsyłaniem
+     void setUsbOpen(bool open);
+     // Called with the radio's receive-end timestamp, after the pairwise tag
+     // check. A failed KISS enqueue cannot create a pending HACK authorization.
+@@ -90,6 +91,7 @@ private:
+     // may still go out (RAM only: after a restart the marker blocks it).
+     uint8_t unsentFlood_[9] = {};
+     bool unsentFloodValid_ = false;
++    bool floodNext_ = false;  // WARIANT
+ };
+ 
+ }  // namespace wici_gateway
+diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
+index 2008ec4..ede1e75 100644
+--- a/firmware/src/wici_hop.cpp
++++ b/firmware/src/wici_hop.cpp
+@@ -2,6 +2,7 @@
+ #include "wici_hop.h"
+ #include "envelope.h"
+ #include "fram_record.h"
++#include "wici_variant.h"
+ 
+ namespace wici_hop {
+ namespace {
+@@ -63,8 +64,17 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
+     if (broadcast && !allowFlood_) return Receipt::IGNORED;
+     if (broadcast && (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ))
+         return Receipt::REJECTED;
+-    if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
++    // WARIANT: kopia nie od rodzica nie jest przekazywana ani oznaczana jako widziana (poza kontrolą pułapki).
++    if (floodRefused(frame)) {
++        if (wici_variant::flags.floodCopy) wici_variant::flags.floodCopy(0, config_.own, frame.payload);
++        if (wici_variant::flags.floodFromParent == 3 && !flood_.remember(frame.payload, nowS)) return Receipt::REJECTED;
+         return Receipt::IGNORED;
++    }
++    const bool fromParent = frame.source == config_.planned || frame.source == config_.backup;  // WARIANT: pomiar
++    if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE) {
++        if (fromParent && wici_variant::flags.floodCopy) wici_variant::flags.floodCopy(1, config_.own, frame.payload);
++        return Receipt::IGNORED;
++    }
+     // A neighbour that already holds its K1 slot competes for K2 space.
+     uint8_t slot = wici_relay::SLOTS;
+     const bool k1 = priority(frame);
+@@ -72,8 +82,10 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
+                                         wici_relay::Admission::FULL;
+     if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot);
+     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
+-        stored != wici_relay::Admission::FORWARDED)
++        stored != wici_relay::Admission::FORWARDED) {
++        if (fromParent && broadcast && wici_variant::flags.floodCopy) wici_variant::flags.floodCopy(2, config_.own, frame.payload);
+         return Receipt::REJECTED;
++    }
+     const uint8_t bit = static_cast<uint8_t>(slot < wici_relay::SLOTS ? 1u << slot : 0);
+     if (stored == wici_relay::Admission::STORED && !(frame.flags & wici_link::DOWN)) {
+         // Its down-route hint is learned once, after the HACK (learnPending).
+@@ -109,7 +121,10 @@ bool Relay::learnPending(uint32_t nowS) {
+     while (learn_) {
+         uint8_t slot = wici_relay::SLOTS;
+         for (uint8_t i = 0; i < wici_relay::SLOTS; ++i)
+-            if ((learn_ & (1u << i)) && (slot == wici_relay::SLOTS || queue_.admittedS(i) > queue_.admittedS(slot)))
++            if ((learn_ & (1u << i)) && (slot == wici_relay::SLOTS ||
++                                         (wici_variant::flags.learnRoutes  // ostatnia wygrywa: najpierw najstarsza
++                                              ? queue_.admittedS(i) < queue_.admittedS(slot)
++                                              : queue_.admittedS(i) > queue_.admittedS(slot))))
+                 slot = i;
+         learn_ &= static_cast<uint8_t>(~(1u << slot));
+         size_t length = 0;
+@@ -137,8 +152,12 @@ bool Relay::prepare(uint32_t nowS) {
+         if (k1 != (order < wici_relay::SLOTS) ||
+             !queue_.read(slot, nowS, wire, sizeof(wire), length) ||
+             !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
+-        const uint16_t next = frame.flags & wici_link::DOWN ?
+-                              routes_.down(get16(frame.payload + 3)) : routes_.parent();
++        uint16_t next = frame.flags & wici_link::DOWN ?
++                        routes_.down(get16(frame.payload + 3)) : routes_.parent();
++        // WARIANT: ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem do uwierzytelnionego sąsiada.
++        if (wici_variant::flags.floodStays && frame.destination == wici_link::BROADCAST &&
++            next != get16(frame.payload + 3)) next = wici_link::BROADCAST;
++        if (next == wici_link::BROADCAST && floodRefused(frame)) continue;  // WARIANT: droga zniknęła po przyjęciu
+         // Never hand a frame back to the neighbor it came from.
+         if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
+         // A next hop that stopped answering is held; frames to others still go.
+@@ -194,7 +213,9 @@ bool Relay::prepare(uint32_t nowS) {
+         downTo_ = frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : 0;
+         nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
+         noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
+-        activePriority_ = k1 && next != wici_link::BROADCAST;
++        // WARIANT: ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1. Inaczej cztery takie ramki
++        // przy puli ponad 25% czekają na siebie nawzajem (contendedK2) aż do wygaśnięcia po 30 min.
++        activePriority_ = k1 && (next != wici_link::BROADCAST || wici_variant::flags.k1FloodKeepsPriority);
+         outgoingLength_ = n;
+         sent_ = false; active_ = true;
+         return true;
+@@ -207,8 +228,35 @@ const uint8_t* Relay::outgoing(size_t& length) const {
+     return active_ ? outgoing_ : nullptr;
+ }
+ 
++bool Relay::floodRefused(const wici_link::Frame& frame) const {
++    const unsigned mode = wici_variant::flags.floodFromParent;
++    if (!mode || !(frame.flags & wici_link::DOWN) || frame.source == config_.planned || frame.source == config_.backup ||
++        (mode == 2 && frame.source == routes_.parent())) return false;
++    const uint16_t recipient = get16(frame.payload + 3);
++    uint16_t next = routes_.down(recipient);
++    if (wici_variant::flags.floodStays && frame.destination == wici_link::BROADCAST && next != recipient)
++        next = wici_link::BROADCAST;
++    return next == wici_link::BROADCAST;
++}
++
++bool Relay::k1Routed(uint8_t slot) const {
++    size_t length = 0;
++    const uint8_t* wire = queue_.stored(slot, length);
++    wici_link::Frame frame;
++    if (!queue_.k1Neighbor(slot) || !wire || !wici_link::decode(key_, config_.network, wire, length, frame)) return false;
++    return !(frame.flags & wici_link::DOWN) || routes_.down(get16(frame.payload + 3)) != wici_link::BROADCAST;
++}
++
++bool Relay::routedK1Waiting() const {
++    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
++        if ((!active_ || slot != slot_) && k1Routed(slot)) return true;
++    return false;
++}
++
+ bool Relay::contendedK2() const {
+     if (!active_ || activePriority_) return false;
++    // WARIANT: ramka K1 bez znanej drogi wyjdzie rozsyłaniem, czyli jako K2; nie ma pierwszeństwa, na które trzeba czekać.
++    if (wici_variant::flags.k1RoutedOnly) return routedK1Waiting();
+     for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
+         if (slot != slot_ && queue_.k1Neighbor(slot)) return true;
+     return false;
+diff --git a/firmware/src/wici_hop.h b/firmware/src/wici_hop.h
+index 0b81de2..3b2891d 100644
+--- a/firmware/src/wici_hop.h
++++ b/firmware/src/wici_hop.h
+@@ -69,6 +69,8 @@ public:
+     const uint8_t* outgoing(size_t& length) const;
+     // The active transfer is K2 while a K1 frame waits in the queue.
+     bool contendedK2() const;
++    // WARIANT: czeka inna ramka K1 ze znaną drogą (też pomiar w emulatorze).
++    bool routedK1Waiting() const;
+     // Call only after a real TX attempt. A frame without HACK (flood, silence
+     // exception) is retired after a successful TX; unicast waits for a
+     // matching authenticated HACK. After a failed TX the item stays queued.
+@@ -114,6 +116,8 @@ private:
+     bool allowFlood_ = false;
+     uint16_t receivers_[2] = {};
+     bool priority(const wici_link::Frame& frame) const;
++    bool k1Routed(uint8_t slot) const;  // WARIANT
++    bool floodRefused(const wici_link::Frame& frame) const;  // WARIANT
+     uint8_t key_[32] = {};
+     bool keyReady_ = false;
+     wici_relay::Queue queue_;
+diff --git a/firmware/src/wici_radio.h b/firmware/src/wici_radio.h
+index f8b223f..c739b27 100644
+--- a/firmware/src/wici_radio.h
++++ b/firmware/src/wici_radio.h
+@@ -97,6 +97,7 @@ public:
+     // Delivery proofs lost to a full list; the receiver resends those messages.
+     uint16_t proofsDropped() const { return proofsDropped_; }
+     wici_route::Table& routes() { return relay_.routes(); }
++    bool routedK1Waiting() const { return relay_.routedK1Waiting(); }  // WARIANT: pomiar w emulatorze
+ 
+ private:
+     uint32_t backoff() const;
+diff --git a/firmware/src/wici_relay.h b/firmware/src/wici_relay.h
+index 0fc65f1..9168308 100644
+--- a/firmware/src/wici_relay.h
++++ b/firmware/src/wici_relay.h
+@@ -47,6 +47,11 @@ public:
+     uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
+     // Durable admission time of a pending item (monotonic station counter).
+     uint32_t admittedS(uint8_t slot) const { return pending(slot) ? admittedS_[slot] : 0; }
++    // WARIANT: bajty czekającej ramki, bez skutków ubocznych.
++    const uint8_t* stored(uint8_t slot, size_t& length) const {
++        length = pending(slot) ? lengths_[slot] : 0;
++        return length ? frames_[slot] : nullptr;
++    }
+     // Finishes a tombstone interrupted after the durable forwarded marker and
+     // retires items held for MAX_HOLD_S. False only on a storage failure.
+     bool settle(uint32_t nowS);
+diff --git a/firmware/src/wici_route.cpp b/firmware/src/wici_route.cpp
+index a0ec850..7daf692 100644
+--- a/firmware/src/wici_route.cpp
++++ b/firmware/src/wici_route.cpp
+@@ -2,6 +2,7 @@
+ #include "wici_route.h"
+ 
+ #include "fram_record.h"
++#include "wici_variant.h"
+ 
+ namespace wici_route {
+ namespace {
+@@ -133,7 +134,7 @@ bool Table::commit() {
+ }
+ 
+ bool Table::planned(uint16_t destination, uint16_t via) const {
+-    if (destination == via) return true;
++    if (destination == via || wici_variant::flags.learnRoutes) return true;
+     for (uint16_t i = 0; i < behindCount_; ++i)
+         if (behind_[i].station == destination && behind_[i].via == via) return true;
+     return false;
+@@ -147,7 +148,10 @@ bool Table::learn(uint16_t destination, uint16_t via, bool replace) {
+     for (size_t i = 0; i < ROUTES; ++i) {
+         if (routes_[i].destination == destination) {
+             if (routes_[i].via == via) return true;
+-            if (!replace && destination != via) return false;  // a claim does not move a working route
++            // WARIANT: ostatnia wygrywa, ale droga sąsiada do samego siebie (tag pary) nie ustępuje deklaracji.
++            if (!replace && destination != via &&
++                (!wici_variant::flags.learnRoutes || wici_variant::flags.stickyRoutes ||
++                 routes_[i].via == routes_[i].destination)) return false;
+             const Route old = routes_[i];
+             routes_[i].via = via;
+             if (!commit()) { routes_[i] = old; return false; }
+@@ -206,8 +210,26 @@ bool Table::fresh(const Neighbor& n, uint32_t nowS) const {
+     return n.epoch == epoch_ && nowS >= n.lastSeenS && nowS - n.lastSeenS <= BEACON_STALE_S;
+ }
+ 
++bool Table::leftHeld(uint16_t id, uint32_t nowS) const {
++    for (const Left& left : left_)
++        if (left.id == id && nowS < left.untilS) return true;
++    return false;
++}
++
++void Table::leaveParent(uint32_t nowS, uint32_t holdS) {
++    if (!ready_ || config_.own == config_.root) return;
++    Left* slot = &left_[0];
++    for (Left& left : left_) {
++        if (left.id == parent_) { slot = &left; break; }
++        if (left.untilS < slot->untilS) slot = &left;
++    }
++    *slot = Left{parent_, nowS + holdS};
++    failures_ = 0;
++    setParent(rotation(static_cast<uint8_t>(step(parent_) + 1), nowS), nowS);
++}
++
+ bool Table::usable(uint16_t id, uint32_t nowS) const {
+-    if (!id) return false;
++    if (!id || leftHeld(id, nowS)) return false;
+     const Neighbor* n = find(id);
+     // The planned and backup parents need no BEACON; a fresh one that names
+     // this station as its parent excludes them (a loop) until it goes stale.
+diff --git a/firmware/src/wici_route.h b/firmware/src/wici_route.h
+index faaf705..fc0b7ca 100644
+--- a/firmware/src/wici_route.h
++++ b/firmware/src/wici_route.h
+@@ -89,6 +89,9 @@ public:
+     // Loop signal from the data plane (new upward DATA from the current
+     // parent): rotate the parent at once, as at the failure threshold.
+     void loop(uint32_t nowS);
++    // WARIANT: stacja z otwartą wiadomością po HACK nie słyszy odbiorcy: dalej po kręgu, a opuszczony rodzic
++    // nie wraca przez holdS, także po HACK albo BEACON-ie.
++    void leaveParent(uint32_t nowS, uint32_t holdS);
+     // Never 0 on a station (the planned parent is the floor); 0 on the root.
+     uint16_t parent() const { return parent_; }
+     // The parent's rank plus the link cost to it, from the parent's BEACON
+@@ -137,6 +140,9 @@ private:
+     uint16_t nextRoute_ = 0;
+     uint32_t epochHeardS_ = 0;  // new epoch adopted or current parent's last BEACON
+     bool ready_ = false, epochKnown_ = false;
++    struct Left { uint16_t id = 0; uint32_t untilS = 0; };
++    Left left_[4] = {};  // WARIANT: opuszczeni rodzice (RAM)
++    bool leftHeld(uint16_t id, uint32_t nowS) const;
+ };
+ 
+ }  // namespace wici_route
+diff --git a/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
+new file mode 100644
+index 0000000..49395e9
+--- /dev/null
++++ b/firmware/src/wici_variant.cpp
+@@ -0,0 +1,6 @@
++// SPDX-License-Identifier: MIT
++#include "wici_variant.h"
++
++namespace wici_variant {
++Flags flags;
++}  // namespace wici_variant
+diff --git a/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
+new file mode 100644
+index 0000000..8b33085
+--- /dev/null
++++ b/firmware/src/wici_variant.h
+@@ -0,0 +1,20 @@
++// SPDX-License-Identifier: MIT
++// TYLKO EMULATOR: przełączniki rozstrzygnięć z 2026-11-05 (WICI-DEC-009). Ten plik nie należy do firmware;
++// powstaje z tests/native/wici_emulator/variant.patch na kopii kodu. Wszystkie wyłączone to obecny kod.
++#pragma once
++
++namespace wici_variant {
++struct Flags {
++    bool learnRoutes = false;  // drogi w dół z ruchu w górę, ostatnia wygrywa, bez planu
++    bool floodStays = false;   // ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem
++    bool k1FloodKeepsPriority = false;  // ramka z gniazda K1 bez drogi nie liczy się jako K2 przy limicie 25%
++    bool k1RoutedOnly = false;  // przy limicie 25% liczą się tylko czekające ramki K1 ze znaną drogą
++    // Rozsyłanie ramki DOWN tylko od rodzica. 1: planowy albo zapasowy; 2: także bieżący rodzic;
++    // 3: kontrola pułapki: jak 1, ale odrzucona kopia zostaje oznaczona jako widziana.
++    unsigned floodFromParent = 0;
++    // Pomiar w emulatorze. Rodzaj: 0 kopia odrzucona przez regułę; od rodzica: 1 uznana za już widzianą, 2 pełna kolejka.
++    void (*floodCopy)(unsigned kind, unsigned short own, const unsigned char* envelopeHeader) = nullptr;
++    bool stickyRoutes = false; // drogi z ruchu w górę bez „ostatnia wygrywa”: nauka tylko brakującej drogi
++};
++extern Flags flags;
++}  // namespace wici_variant
