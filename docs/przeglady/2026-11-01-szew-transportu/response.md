@@ -1,6 +1,6 @@
 # Transport seam review response
 
-Status: follow-up to `docs/transport-seam-review.md`, 2026-11-01, with the DATA signature decision of 2026-11-02 (below). D21 is not accepted; the bench trial on RAK4631 and the prototype decides it.
+Status: follow-up to `docs/przeglady/2026-11-01-szew-transportu/review.md`, 2026-11-01, with the DATA signature decision of 2026-11-02 (below). D21 is not accepted; the bench trial on RAK4631 and the prototype decides it.
 
 ## Findings
 
