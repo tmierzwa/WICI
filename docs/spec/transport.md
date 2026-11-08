@@ -178,7 +178,7 @@ v3 nie ma podpisu pochodzenia na DATA, D21 wariant D). Dwa miejsca są
 zarezerwowane dla K1, a jeden sąsiad może zająć najwyżej jedno miejsce K1.
 Drogi w dół root uczy się według planu sieci (`behind`, tylko w dokumencie roota),
 a przekaźnik tylko do swoich sąsiadów; do dalszych stacji ramka w dół idzie rozsyłaniem. Przy
-czekającym K1 ze znaną drogą limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
+czekającym K1, które może teraz wyjść jednoadresowo, limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
 Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
