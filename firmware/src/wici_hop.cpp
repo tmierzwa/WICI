@@ -137,25 +137,14 @@ bool Relay::prepare(uint32_t nowS) {
         if (k1 != (order < wici_relay::SLOTS) ||
             !queue_.read(slot, nowS, wire, sizeof(wire), length) ||
             !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
-        const uint16_t next = frame.flags & wici_link::DOWN ?
-                              routes_.down(get16(frame.payload + 3)) : routes_.parent();
-        // Never hand a frame back to the neighbor it came from.
-        if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
-        // A next hop that stopped answering is held; frames to others still go.
-        if (next != wici_link::BROADCAST && held(next, nowS)) continue;
-        // The last allowed hop must end at the root (up) or at the envelope
-        // destination (down): a relay there refuses it. The frame waits for a
-        // next hop that ends there (e.g. the planned parent back after a
-        // detour to the backup); the 30-min expiry bounds the wait.
-        if (next != wici_link::BROADCAST && frame.hops + 1 >= frame.ttl &&
-            next != (frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : config_.root)) continue;
+        const uint16_t next = nextHop(wire, nowS);
+        if (!next) continue;
         Attempt& last = prepared_[slot];
         // The same item for the same next hop is the same frame: it keeps its
         // seq, so a radio refusal burns none.
         const bool again = last.valid && last.generation == queue_.generation(slot) && last.next == next;
         wici_flood::Lookup flood = wici_flood::Lookup::NONE;
         if (next == wici_link::BROADCAST) {
-            if (!allowFlood_) continue;
             flood = flood_.lookup(frame.payload, nowS);
             if (flood == wici_flood::Lookup::IO_ERROR) return false;
             // A marker this relay wrote for a flood the radio then refused
@@ -207,10 +196,33 @@ const uint8_t* Relay::outgoing(size_t& length) const {
     return active_ ? outgoing_ : nullptr;
 }
 
-bool Relay::contendedK2() const {
+uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
+    // Stored items were authenticated at admission: the header and the
+    // envelope recipient are read from the bytes without a second MAC check.
+    const bool down = wire[0] & wici_link::DOWN;
+    const uint16_t source = get16(wire + 3), recipient = get16(wire + wici_link::HEADER + 3);
+    const uint8_t hops = wire[7] >> 4, ttl = wire[7] & 15;
+    const uint16_t next = down ? routes_.down(recipient) : routes_.parent();
+    if (next == wici_link::BROADCAST) return allowFlood_ ? next : 0;
+    // Never hand a frame back to the neighbor it came from. A next hop that
+    // stopped answering is held; frames to others still go.
+    if (!id(next) || next == source || held(next, nowS)) return 0;
+    // The last allowed hop must end at the root (up) or at the envelope
+    // destination (down): a relay there refuses it. The frame waits for a
+    // next hop that ends there (e.g. the planned parent back after a detour
+    // to the backup); the 30-min expiry bounds the wait.
+    if (hops + 1 >= ttl && next != (down ? recipient : config_.root)) return 0;
+    return next;
+}
+
+bool Relay::contendedK2(uint32_t nowS) const {
     if (!active_ || activePriority_) return false;
-    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
-        if (slot != slot_ && queue_.k1Neighbor(slot)) return true;
+    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
+        size_t length = 0;
+        const uint8_t* wire = slot != slot_ && queue_.k1Neighbor(slot) ? queue_.peek(slot, length) : nullptr;
+        const uint16_t next = wire ? nextHop(wire, nowS) : 0;
+        if (next && next != wici_link::BROADCAST) return true;
+    }
     return false;
 }
 
