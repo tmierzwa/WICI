@@ -101,7 +101,7 @@ class NativeWiciLink(unittest.TestCase):
         run(native("wici_flood_check", "wici_flood"))
 
     def test_relay_hop_coordinator_crash_retry_and_hack(self):
-        run(native("wici_hop_check", "wici_hop", "wici_flood", "wici_route", "wici_seq", *RELAY))
+        run(native("wici_hop_check", "wici_hop", "wici_flood", "wici_route", "wici_seq", "wici_airtime", *RELAY))
 
     def test_durable_link_sequence_reservation(self):
         run(native("wici_seq_check", "wici_seq"))
