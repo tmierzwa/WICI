@@ -258,6 +258,8 @@ const char* checkText(const char* text, size_t maximum, size_t minimum) {
 
 const char* decode(const char* wire, size_t length, Message& out) {
     if (length > MAX_CONTENT) return "Content too large";
+    // Bajt 0x00 ucięłby kopię: parser nie zobaczyłby tego, co za nim.
+    if (memchr(wire, '\0', length)) return "Expected message array";
     char copy[MAX_CONTENT + 1];
     memcpy(copy, wire, length);
     copy[length] = '\0';

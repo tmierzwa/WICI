@@ -1,0 +1,1003 @@
+{
+  "description": "Trwałe wektory SA1 (docs/spec/oprogramowanie.md, „Wiadomości SA1”). Bajty to pole wire, szesnastkowo; pole text pokazuje te same bajty jako tekst, gdy są poprawnym UTF-8. Plik jest zapisem, a nie wynikiem kodu: testy sprawdzają nim kod stacji (firmware/src/sa1.cpp) i kod stanowiska (software/reference/reference.py), tests/test_sa1_vectors.py. Wspólny zestaw bajtów nie dowodzi współdziałania z niezależną implementacją.",
+  "valid": {
+    "description": "Koder tworzy dokładnie te bajty z message, a dekoder czyta z nich message.",
+    "cases": [
+      {
+        "name": "request_spec",
+        "note": "REQUEST: przykład ze specyfikacji",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,4,\"Lipowa 2\",\"Brak wody\",1]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c342c224c69706f77612032222c224272616b20776f6479222c315d",
+        "length": 71,
+        "message": [1, 0, "0123456789abcdef0123456789abcdef", 0, 3, 4, "Lipowa 2", "Brak wody", 1]
+      },
+      {
+        "name": "request_limits",
+        "note": "REQUEST: największe wartości i pełne limity adresu (64 B) i tekstu (96 B)",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",65535,9,65535,\"LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\",\"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\",2]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c36353533352c392c36353533352c224c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c222c22747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474222c325d",
+        "length": 222,
+        "message": [1, 0, "0123456789abcdef0123456789abcdef", 65535, 9, 65535, "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL", "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt", 2]
+      },
+      {
+        "name": "request_least",
+        "note": "REQUEST: najmniejsze wartości, adres 1 B, pusty tekst",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,0,1,\"L\",\"\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c302c312c224c222c22222c305d",
+        "length": 55,
+        "message": [1, 0, "0123456789abcdef0123456789abcdef", 0, 0, 1, "L", "", 0]
+      },
+      {
+        "name": "request_polish",
+        "note": "REQUEST: polskie znaki w UTF-8, bez zamiany na \\u",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",1,3,4,\"Łąkowa 2\",\"Żółć i woda\",1]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c312c332c342c22c581c4856b6f77612032222c22c5bbc3b3c582c487206920776f6461222c315d",
+        "length": 79,
+        "message": [1, 0, "0123456789abcdef0123456789abcdef", 1, 3, 4, "Łąkowa 2", "Żółć i woda", 1]
+      },
+      {
+        "name": "request_multibyte_limit",
+        "note": "REQUEST: limity liczone w bajtach UTF-8, tekst z 48 znaków po 2 B",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,4,\"Lipowa 2\",\"łłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłł\",1]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c342c224c69706f77612032222c22c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582222c315d",
+        "length": 158,
+        "message": [1, 0, "0123456789abcdef0123456789abcdef", 0, 3, 4, "Lipowa 2", "łłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłł", 1]
+      },
+      {
+        "name": "received_spec",
+        "note": "RECEIVED: przykład ze specyfikacji",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "length": 46,
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1]
+      },
+      {
+        "name": "received_last_revision",
+        "note": "RECEIVED: największa rewizja",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",65535,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c36353533352c312c315d",
+        "length": 50,
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 65535, 1, 1]
+      },
+      {
+        "name": "status_spec",
+        "note": "STATUS: przykład ze specyfikacji",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,2,2]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c322c325d",
+        "length": 46,
+        "message": [1, 2, "0123456789abcdef0123456789abcdef", 0, 2, 2]
+      },
+      {
+        "name": "status_limits",
+        "note": "STATUS: największe zdarzenie i stan końcowy",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",65535,2147483647,6]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c36353533352c323134373438333634372c365d",
+        "length": 59,
+        "message": [1, 2, "0123456789abcdef0123456789abcdef", 65535, 2147483647, 6]
+      },
+      {
+        "name": "reply_spec",
+        "note": "REPLY: przykład ze specyfikacji",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"Dostarczamy wode\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22446f73746172637a616d7920776f6465225d",
+        "length": 63,
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2, "Dostarczamy wode"]
+      },
+      {
+        "name": "reply_limits",
+        "note": "REPLY: zdarzenie 1, największa rewizja, tekst 96 B",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",65535,1,\"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c36353533352c312c22747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474225d",
+        "length": 147,
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 65535, 1, "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"]
+      },
+      {
+        "name": "reply_empty_text",
+        "note": "REPLY: pusty tekst",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2147483647,\"\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c323134373438333634372c22225d",
+        "length": 56,
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2147483647, ""]
+      },
+      {
+        "name": "reply_nfc_nbsp_emoji",
+        "note": "REPLY: tekst NFC, twarda spacja (Zs) i znak spoza BMP",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,1,\"á 😀\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c312c22c3a1c2a0f09f9880225d",
+        "length": 55,
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 1, "á 😀"]
+      },
+      {
+        "name": "bulletin_spec",
+        "note": "BULLETIN: przykład ze specyfikacji",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",2,\"Punkt czynny\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c322c2250756e6b7420637a796e6e79225d",
+        "length": 57,
+        "message": [1, 4, "fedcba9876543210fedcba9876543210", 2, "Punkt czynny"]
+      },
+      {
+        "name": "bulletin_limits",
+        "note": "BULLETIN: największe zdarzenie, tekst 192 B",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",2147483647,\"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c323134373438333634372c22747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474225d",
+        "length": 246,
+        "message": [1, 4, "fedcba9876543210fedcba9876543210", 2147483647, "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"]
+      },
+      {
+        "name": "bulletin_empty_text",
+        "note": "BULLETIN: zdarzenie 1, pusty tekst",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",1,\"\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c312c22225d",
+        "length": 45,
+        "message": [1, 4, "fedcba9876543210fedcba9876543210", 1, ""]
+      },
+      {
+        "name": "test_spec",
+        "note": "TEST: przykład ze specyfikacji",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,9,1,\"Lipowa 2\",\"test\",0]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c392c312c224c69706f77612032222c2274657374222c305d",
+        "length": 66,
+        "message": [1, 5, "00112233445566778899aabbccddeeff", 0, 9, 1, "Lipowa 2", "test", 0]
+      },
+      {
+        "name": "test_limits",
+        "note": "TEST: największe wartości i pełne limity",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",65535,9,65535,\"LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\",\"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\",2]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c36353533352c392c36353533352c224c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c222c22747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474222c325d",
+        "length": 222,
+        "message": [1, 5, "00112233445566778899aabbccddeeff", 65535, 9, 65535, "LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL", "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt", 2]
+      }
+    ]
+  },
+  "rejected": {
+    "description": "Oba dekodery odrzucają bajty. reason to przyczyna; error_cpp to powód zwracany przez sa1::decode, error_python to treść ValueError z validate_message albo nazwa klasy błędu JSON lub UTF-8.",
+    "cases": [
+      {
+        "name": "request_people_0",
+        "reason": "people = 0",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,0,\"Lipowa 2\",\"Brak wody\",1]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c302c224c69706f77612032222c224272616b20776f6479222c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "received_event_2",
+        "reason": "RECEIVED: pole zdarzenia musi mieć wartość 1",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,2,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c322c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "status_state_1",
+        "reason": "STATUS: state = 1 należy do RECEIVED",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,2,1]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c322c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "reply_event_0",
+        "reason": "event = 0",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,0,\"Dostarczamy wode\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c302c22446f73746172637a616d7920776f6465225d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "bulletin_event_0",
+        "reason": "event = 0",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",0,\"Punkt czynny\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c302c2250756e6b7420637a796e6e79225d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "test_category_10",
+        "reason": "category = 10",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,10,1,\"Lipowa 2\",\"test\",0]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c31302c312c224c69706f77612032222c2274657374222c305d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "empty",
+        "reason": "pusty ciąg bajtów",
+        "text": "",
+        "wire": "",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "object",
+        "reason": "obiekt zamiast tablicy",
+        "text": "{\"v\":1}",
+        "wire": "7b2276223a317d",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "string",
+        "reason": "napis zamiast tablicy",
+        "text": "\"x\"",
+        "wire": "227822",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "null",
+        "reason": "null zamiast tablicy",
+        "text": "null",
+        "wire": "6e756c6c",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "empty_array",
+        "reason": "pusta tablica",
+        "text": "[]",
+        "wire": "5b5d",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "too_few_fields",
+        "reason": "mniej niż 4 pola",
+        "text": "[1,1,\"x\"]",
+        "wire": "5b312c312c2278225d",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "unterminated",
+        "reason": "tablica bez zamknięcia",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c31",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "trailing_comma",
+        "reason": "przecinek po ostatnim polu",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1,]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c312c5d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "two_arrays",
+        "reason": "druga tablica po pierwszej",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1][1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "form_feed_after",
+        "reason": "znak U+000C po tablicy nie jest białym znakiem JSON",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\f",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d0c",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "bom_before",
+        "reason": "znacznik BOM przed tablicą",
+        "text": "﻿[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "efbbbf5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "utf16",
+        "reason": "zapis UTF-16 zamiast UTF-8",
+        "text": "[\u00001\u0000,\u00001\u0000,\u0000\"\u00000\u00001\u00002\u00003\u00004\u00005\u00006\u00007\u00008\u00009\u0000a\u0000b\u0000c\u0000d\u0000e\u0000f\u00000\u00001\u00002\u00003\u00004\u00005\u00006\u00007\u00008\u00009\u0000a\u0000b\u0000c\u0000d\u0000e\u0000f\u0000\"\u0000,\u00000\u0000,\u00001\u0000,\u00001\u0000]\u0000",
+        "wire": "5b0031002c0031002c0022003000310032003300340035003600370038003900610062006300640065006600300031003200330034003500360037003800390061006200630064006500660022002c0030002c0031002c0031005d00",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "nesting_too_deep",
+        "reason": "128 poziomów zagnieżdżenia: 256 B, cała treść mieści się w limicie",
+        "text": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+        "wire": "5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d",
+        "error_cpp": "Expected message array",
+        "error_python": "Expected message array"
+      },
+      {
+        "name": "content_257",
+        "reason": "257 B: jeden bajt ponad limit treści",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]                                                                                                                                                                                                                   ",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d20202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020",
+        "error_cpp": "Content too large",
+        "error_python": "Content too large"
+      },
+      {
+        "name": "version_0",
+        "reason": "wersja 0",
+        "text": "[0,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b302c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_2",
+        "reason": "wersja 2",
+        "text": "[2,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b322c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "type_6",
+        "reason": "nieznany typ 6",
+        "text": "[1,6,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312c362c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "type_negative",
+        "reason": "typ -1",
+        "text": "[1,-1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312c2d312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_bool",
+        "reason": "true zamiast liczby",
+        "text": "[true,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b747275652c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_float",
+        "reason": "liczba z ułamkiem",
+        "text": "[1.0,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312e302c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_exponent",
+        "reason": "liczba z wykładnikiem",
+        "text": "[1e0,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b3165302c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_string",
+        "reason": "napis zamiast liczby",
+        "text": "[\"1\",1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b2231222c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "version_null",
+        "reason": "null zamiast liczby",
+        "text": "[null,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b6e756c6c2c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "leading_zero",
+        "reason": "zero wiodące",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",00,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c30302c312c315d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "plus_sign",
+        "reason": "znak plus przed liczbą",
+        "text": "[+1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b2b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "nan",
+        "reason": "NaN zamiast liczby",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",NaN,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c4e614e2c312c315d",
+        "error_cpp": "Expected message array",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "integer_over_int64",
+        "reason": "liczba ponad zakres int64",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",18446744073709551616,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c31383434363734343037333730393535313631362c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "array_as_integer",
+        "reason": "tablica zamiast liczby",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",[0],1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c5b305d2c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "id_uppercase",
+        "reason": "wielkie litery w identyfikatorze",
+        "text": "[1,1,\"0123456789ABCDEF0123456789ABCDEF\",0,1,1]",
+        "wire": "5b312c312c223031323334353637383941424344454630313233343536373839414243444546222c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "Invalid message id"
+      },
+      {
+        "name": "id_short",
+        "reason": "31 znaków identyfikatora",
+        "text": "[1,1,\"0123456789abcdef0123456789abcde\",0,1,1]",
+        "wire": "5b312c312c2230313233343536373839616263646566303132333435363738396162636465222c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "Invalid message id"
+      },
+      {
+        "name": "id_long",
+        "reason": "33 znaki identyfikatora",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef0\",0,1,1]",
+        "wire": "5b312c312c22303132333435363738396162636465663031323334353637383961626364656630222c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "Invalid message id"
+      },
+      {
+        "name": "id_not_hex",
+        "reason": "znak spoza cyfr szesnastkowych",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdeg\",0,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646567222c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "Invalid message id"
+      },
+      {
+        "name": "id_number",
+        "reason": "liczba zamiast identyfikatora",
+        "text": "[1,1,5,0,1,1]",
+        "wire": "5b312c312c352c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "Invalid message id"
+      },
+      {
+        "name": "id_invalid_utf8",
+        "reason": "niepoprawne UTF-8 w identyfikatorze",
+        "wire": "5b312c312c22ff31323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "error_cpp": "Invalid message id",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "request_arity_short",
+        "reason": "REQUEST bez pola urgency",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,4,\"Lipowa 2\",\"Brak wody\"]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c342c224c69706f77612032222c224272616b20776f6479225d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "received_arity_long",
+        "reason": "RECEIVED z dodatkowym polem",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c312c315d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "status_arity_short",
+        "reason": "STATUS bez pola state",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,2]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c325d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "reply_arity_long",
+        "reason": "REPLY z dodatkowym polem",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"x\",1]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2278222c315d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "bulletin_arity_long",
+        "reason": "BULLETIN z polem revision",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",0,2,\"x\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c302c322c2278225d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "test_arity_short",
+        "reason": "TEST bez pola urgency",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,9,1,\"Lipowa 2\",\"test\"]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c392c312c224c69706f77612032222c2274657374225d",
+        "error_cpp": "Invalid message arity",
+        "error_python": "Invalid message arity"
+      },
+      {
+        "name": "revision_negative",
+        "reason": "revision = -1",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",-1,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c2d312c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "revision_65536",
+        "reason": "revision = 65536",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",65536,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c36353533362c312c315d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "received_state_2",
+        "reason": "RECEIVED: pole stanu musi mieć wartość 1",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,2]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c325d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "status_event_1",
+        "reason": "STATUS: event = 1 należy do RECEIVED",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,1,2]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c312c325d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "status_state_7",
+        "reason": "state = 7",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,2,7]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c322c375d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "status_event_over",
+        "reason": "event = 2^31",
+        "text": "[1,2,\"0123456789abcdef0123456789abcdef\",0,2147483648,6]",
+        "wire": "5b312c322c223031323334353637383961626364656630313233343536373839616263646566222c302c323134373438333634382c365d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "reply_event_over",
+        "reason": "event = 2^31",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2147483648,\"x\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c323134373438333634382c2278225d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "bulletin_event_over",
+        "reason": "event = 2^31",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",2147483648,\"x\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c323134373438333634382c2278225d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "request_category_10",
+        "reason": "category = 10",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,10,1,\"L\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c31302c312c224c222c2274222c305d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "request_people_65536",
+        "reason": "people = 65536",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,65536,\"L\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c36353533362c224c222c2274222c305d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "request_people_bool",
+        "reason": "true zamiast liczby osób",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,true,\"L\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c747275652c224c222c2274222c305d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "request_urgency_3",
+        "reason": "urgency = 3",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"L\",\"t\",3]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c224c222c2274222c335d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "test_people_0",
+        "reason": "people = 0",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,9,0,\"Lipowa 2\",\"test\",0]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c392c302c224c69706f77612032222c2274657374222c305d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "test_urgency_3",
+        "reason": "urgency = 3",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,9,1,\"Lipowa 2\",\"test\",3]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c392c312c224c69706f77612032222c2274657374222c335d",
+        "error_cpp": "Invalid integer",
+        "error_python": "Invalid integer"
+      },
+      {
+        "name": "location_empty",
+        "reason": "pusty adres",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c22222c2274222c305d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "location_65",
+        "reason": "adres 65 B",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c224c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c222c2274222c305d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "request_text_97",
+        "reason": "tekst 97 B",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"L\",\"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c224c222c2274747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474222c305d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "test_text_97",
+        "reason": "tekst 97 B",
+        "text": "[1,5,\"00112233445566778899aabbccddeeff\",0,9,1,\"L\",\"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\",0]",
+        "wire": "5b312c352c223030313132323333343435353636373738383939616162626363646465656666222c302c392c312c224c222c2274747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474222c305d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "request_text_multibyte_98",
+        "reason": "tekst 49 znaków, ale 98 B",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"L\",\"łłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłłł\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c224c222c22c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582c582222c305d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "reply_text_97",
+        "reason": "tekst 97 B",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2274747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474225d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "reply_text_number",
+        "reason": "liczba zamiast tekstu",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,5]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c355d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "bulletin_text_193",
+        "reason": "tekst 193 B",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",2,\"ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c322c2274747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474225d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Invalid UTF-8 text size"
+      },
+      {
+        "name": "text_quotation_mark",
+        "reason": "cudzysłów w tekście, zapisany przez \\\"",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a\\\"b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22615c2262225d",
+        "error_cpp": "Quotation mark or backslash",
+        "error_python": "Quotation mark or backslash"
+      },
+      {
+        "name": "text_backslash",
+        "reason": "ukośnik wsteczny w tekście, zapisany przez \\\\",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a\\\\b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22615c5c62225d",
+        "error_cpp": "Quotation mark or backslash",
+        "error_python": "Quotation mark or backslash"
+      },
+      {
+        "name": "text_escaped_newline",
+        "reason": "znak Cc zapisany przez \\n",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a\\nb\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22615c6e62225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_raw_newline",
+        "reason": "niezakodowany znak nowego wiersza w napisie JSON",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a\nb\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22610a62225d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "text_raw_delete",
+        "reason": "znak Cc U+007F",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"ab\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22617f62225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_escaped_nul",
+        "reason": "\\u0000 w tekście",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\u0000\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c7530303030225d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_raw_nul",
+        "reason": "bajt 0x00 w napisie",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a\u0000b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22610062225d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "nul_after_array",
+        "reason": "bajt 0x00 za poprawną tablicą",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\u0000",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d00",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "nul_then_bytes",
+        "reason": "bajt 0x00 i dowolne bajty za poprawną tablicą",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\u0000dowolne bajty",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d00646f776f6c6e652062616a7479",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "text_format_zwsp",
+        "reason": "znak Cf U+200B",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a​b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261e2808b62225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_format_bidi",
+        "reason": "znak Cf U+202E",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a‮b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261e280ae62225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_line_separator",
+        "reason": "znak Zl U+2028",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261e280a862225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_paragraph_separator",
+        "reason": "znak Zp U+2029",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261e280a962225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_private_use",
+        "reason": "znak Co U+E000",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"ab\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261ee808062225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_noncharacter",
+        "reason": "znak Cn U+FFFF, nieprzypisany w każdej wersji Unicode",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"a￿b\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261efbfbf62225d",
+        "error_cpp": "Control, format, separator, private or unassigned character",
+        "error_python": "Control, format, separator, private or unassigned character"
+      },
+      {
+        "name": "text_lone_surrogate_escape",
+        "reason": "samotna połowa pary \\ud83d",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\ud83d\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c7564383364225d",
+        "error_cpp": "Invalid UTF-8 text size",
+        "error_python": "UnicodeEncodeError"
+      },
+      {
+        "name": "text_bad_escape",
+        "reason": "nieznana sekwencja \\x",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\x41\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c783431225d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "text_bad_unicode_escape",
+        "reason": "niepełna sekwencja \\u",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\u12\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c753132225d",
+        "error_cpp": "Expected message array",
+        "error_python": "JSONDecodeError"
+      },
+      {
+        "name": "text_not_nfc_combining",
+        "reason": "tekst poza NFC: a i U+0301",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"á\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c2261cc81225d",
+        "error_cpp": "Text is not NFC",
+        "error_python": "Text is not NFC"
+      },
+      {
+        "name": "text_not_nfc_singleton",
+        "reason": "tekst poza NFC: U+212B",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"Å\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22e284ab225d",
+        "error_cpp": "Text is not NFC",
+        "error_python": "Text is not NFC"
+      },
+      {
+        "name": "location_not_nfc",
+        "reason": "adres poza NFC",
+        "text": "[1,0,\"0123456789abcdef0123456789abcdef\",0,3,1,\"á\",\"t\",0]",
+        "wire": "5b312c302c223031323334353637383961626364656630313233343536373839616263646566222c302c332c312c2261cc81222c2274222c305d",
+        "error_cpp": "Text is not NFC",
+        "error_python": "Text is not NFC"
+      },
+      {
+        "name": "bulletin_not_nfc",
+        "reason": "BULLETIN: tekst poza NFC",
+        "text": "[1,4,\"fedcba9876543210fedcba9876543210\",2,\"á\"]",
+        "wire": "5b312c342c226665646362613938373635343332313066656463626139383736353433323130222c322c2261cc81225d",
+        "error_cpp": "Text is not NFC",
+        "error_python": "Text is not NFC"
+      },
+      {
+        "name": "utf8_truncated",
+        "reason": "ucięty znak UTF-8",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225dc5225d",
+        "error_cpp": "Invalid UTF-8",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "utf8_overlong",
+        "reason": "nadmiarowa forma UTF-8",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225dc0af225d",
+        "error_cpp": "Invalid UTF-8",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "utf8_surrogate",
+        "reason": "para zastępcza zapisana w UTF-8",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225deda080225d",
+        "error_cpp": "Invalid UTF-8",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "utf8_over_range",
+        "reason": "znak ponad U+10FFFF",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225df4908080225d",
+        "error_cpp": "Invalid UTF-8",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "utf8_invalid_byte",
+        "reason": "bajt 0xFF w tekście",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225dff225d",
+        "error_cpp": "Invalid UTF-8",
+        "error_python": "UnicodeDecodeError"
+      },
+      {
+        "name": "utf8_after_array",
+        "reason": "bajt 0xFF po tablicy",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315dff",
+        "error_cpp": "Expected message array",
+        "error_python": "UnicodeDecodeError"
+      }
+    ]
+  },
+  "accepted_noncanonical": {
+    "description": "Stan obecnego kodu, a nie wymaganie: oba dekodery przyjmują te bajty, a ponowne kodowanie daje canonical. Reguła dla zapisu niekanonicznego czeka na decyzję WICI-DEC-003 w specyfikacji systemu.",
+    "cases": [
+      {
+        "name": "space_before_after",
+        "note": "spacja przed i po tablicy",
+        "text": " [1,1,\"0123456789abcdef0123456789abcdef\",0,1,1] ",
+        "wire": "205b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d20",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "spaces_inside",
+        "note": "spacje między polami",
+        "text": "[ 1 , 1 , \"0123456789abcdef0123456789abcdef\" , 0 , 1 , 1 ]",
+        "wire": "5b2031202c2031202c2022303132333435363738396162636465663031323334353637383961626364656622202c2030202c2031202c2031205d",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "newline_after",
+        "note": "znak nowego wiersza po tablicy",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]\n",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d0a",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "content_256",
+        "note": "256 B: dokładnie limit treści, dopełniony spacjami",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",0,1,1]                                                                                                                                                                                                                  ",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "minus_zero",
+        "note": "-0 jako revision",
+        "text": "[1,1,\"0123456789abcdef0123456789abcdef\",-0,1,1]",
+        "wire": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c2d302c312c315d",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "escaped_id",
+        "note": "identyfikator z sekwencją \\u0030",
+        "text": "[1,1,\"\\u0030123456789abcdef0123456789abcdef\",0,1,1]",
+        "wire": "5b312c312c225c753030333031323334353637383961626364656630313233343536373839616263646566222c302c312c315d",
+        "message": [1, 1, "0123456789abcdef0123456789abcdef", 0, 1, 1],
+        "canonical": "5b312c312c223031323334353637383961626364656630313233343536373839616263646566222c302c312c315d"
+      },
+      {
+        "name": "escaped_text",
+        "note": "litera ł zapisana przez \\u0142",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\u0142\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c7530313432225d",
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2, "ł"],
+        "canonical": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22c582225d"
+      },
+      {
+        "name": "escaped_pair",
+        "note": "znak spoza BMP zapisany parą \\ud83d\\ude00",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\ud83d\\ude00\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c75643833645c7564653030225d",
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2, "😀"],
+        "canonical": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22f09f9880225d"
+      },
+      {
+        "name": "escaped_slash",
+        "note": "ukośnik zapisany przez \\/",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\/\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c2f225d",
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2, "/"],
+        "canonical": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c222f225d"
+      },
+      {
+        "name": "escaped_within_limit",
+        "note": "33 sekwencje \\u0041: 198 B zapisu, po zdekodowaniu 33 B tekstu",
+        "text": "[1,3,\"0123456789abcdef0123456789abcdef\",0,2,\"\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\\u0041\"]",
+        "wire": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c225c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c75303034315c7530303431225d",
+        "message": [1, 3, "0123456789abcdef0123456789abcdef", 0, 2, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"],
+        "canonical": "5b312c332c223031323334353637383961626364656630313233343536373839616263646566222c302c322c22414141414141414141414141414141414141414141414141414141414141414141225d"
+      }
+    ]
+  }
+}
