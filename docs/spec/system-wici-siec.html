@@ -30,11 +30,11 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
-      <a href="#ramka">Ramka</a><a href="#trasy">Trasy</a><a href="#przekazywanie">Przekazywanie</a>
+      <a href="#ramka">Ramka</a><a href="#trasy">Trasy</a><a href="#plan-sieci">Plan sieci</a><a href="#przekazywanie">Przekazywanie</a>
       <a href="#potwierdzenia">Potwierdzenia</a><a href="#kolejki">Kolejki</a>
       <a href="#kanal">Kanał</a><a href="#profil">Profil</a><a href="#rozstrzygniecia-dec-009">Drogi 3–15 skoków</a><a href="#dowody">Pomiary</a><a href="#pytania">Pytania</a>
     </nav>
@@ -109,9 +109,23 @@
       <p><strong>Parametr profilu.</strong> Koszt łącza w szesnastych częściach ETX to <code>256 / p</code> plus kara 1/16 za każdy dB SNR poniżej 0, najwyżej 32/16; <code>p</code> jest średnią skuteczności HACK w szesnastych, z wagą ostatniej próby 1/4.</p>
       <p><strong>Reguła protokołu.</strong> Ranga roota wynosi 0; stacja ogłasza rangę rodzica plus koszt łącza. Dynamiczny rodzic ma ważny BEACON bieżącej epoki, rangę niższą od najniższej rangi stacji w tej epoce i najniższy koszt <code>rank + koszt łącza</code>. Nowy dynamiczny zastępuje obecnego po przewadze z profilu (dziś 1,5 ETX). Sąsiad wskazujący stację jako własnego rodzica jest wykluczony.</p>
       <p><strong>Reguła protokołu.</strong> BEACON niesie podpis epoki roota i podpis nadawcy. Ranga jest deklaracją sąsiada ze skonfigurowanym kluczem, bez osobnego poświadczenia (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). <code>epoch</code> jest trwałym licznikiem startów roota. Po zmianie epoki stacja czyści sąsiadów; starszą przyjmuje dopiero po 90 min bez ważnego BEACON-u bieżącej epoki od bieżącego rodzica. Wpis sąsiada i jego <code>seq</code> wygasa po 90 min. Ranga bez świeżego BEACON-u rodzica wygasa: stacja nadal przesyła DATA w górę, lecz nie ogłasza rangi. Sprawdzanie podpisów odbywa się poza torem HACK, najwyżej dla jednego BEACON-u na sekundę.</p>
+      <p><strong>Reguła protokołu.</strong> Root główny i zapasowy mają ten sam numer, lecz osobne klucze X25519 i Ed25519. Obie karty są w planie każdej stacji; zapasowy root pozostaje wyłączony do przejęcia. Sąsiad roota przyjmuje tag pary wyliczony z kluczem któregoś roota, a każda stacja sprawdza podpis epoki jednym z dwóch kluczy Ed25519. Pierwsza ramka uwierzytelniona kluczem zapasowego roota albo BEACON z jego podpisem epoki trwale wybiera zapasowy root w FRAM. Od tego zapisu stacja odrzuca klucze roota głównego; powrót do niego wymaga trybu przygotowania. Ruch do rodzica z planu może ruszyć bez BEACON-u, a powrót rangi po starszej epoce podlega regule 90 min powyżej.</p>
       <p><strong>Reguła protokołu.</strong> Root ogłasza trasę tylko przy otwartym porcie KISS stanowiska. Poza okresem blokady rodzic z planu i zapasowy wypierają sąsiada dynamicznego, nigdy odwrotnie.</p>
       <p><strong>Parametr profilu.</strong> BEACON wychodzi 1–5 s po starcie, dwa razy co 120 s, potem co 24–36 min oraz po zmianie rodzica albo rangi o co najmniej 1 ETX, także przy pojawieniu się lub wygaśnięciu rangi; najwyżej raz na 60 s. Tablica ma 16 sąsiadów.</p>
       <p><strong>Reguła protokołu.</strong> Graf rodziców z planu i zapasowych w konfiguracji jest acykliczny. Pole TTL i przekazywanie obejmują 1–15 skoków; <code>network.ttl</code> przyjmuje 1–15, domyślnie 7.</p>
+      <h3 id="plan-sieci">Sprawdzenie całego planu</h3>
+      <p><strong>Reguła protokołu.</strong> Przed zapisem pierwszej konfiguracji z planu przygotowanie sprawdza cały plan, nie tylko dokument każdej stacji. Odrzuca plan, jeśli:</p>
+      <ul>
+        <li>graf rodziców z planu i zapasowych ma cykl albo choć jedna droga nie kończy się w roocie;</li>
+        <li>numer stacji się powtarza lub pokrywa z numerem odbiorcy; dwie przygotowane tożsamości tego samego roota stanowią wyjątek i mają jeden wspólny numer;</li>
+        <li>listy <code>behind</code> i <code>behind_backup</code> nie odpowiadają rodzicom stacji;</li>
+        <li>którejś stacji brakuje kluczy obu rootów albo klucza rodzica z planu lub zapasowego w <code>priority_keys</code>;</li>
+        <li>konfiguracja którejkolwiek stacji przekracza 50 kluczy albo łącznie 128 wpisów <code>behind</code> i <code>behind_backup</code>, lub jej najdłuższa droga planowa bądź zapasowa przekracza własne <code>network.ttl</code> w zakresie 1–15.</li>
+      </ul>
+      <p class="explain"><strong>Przypadki odrzucenia.</strong> Stacja 12 z rodzicem 5 i stacja 5 z zapasowym rodzicem 12 tworzą cykl, choć każdy dokument może przejść osobne sprawdzenie. Tak samo odrzuca się drogę bez roota, powtórzony numer oraz listę <code>behind</code> niezgodną z rodzicami. Wektory tych planów wymagają utrwalenia (<a href="system-wici-decyzje.html#wici-inv-050">WICI-INV-050</a>).</p>
+      <p><strong>Zalecenie planowania.</strong> Droga zapasowa powinna omijać przekaźnik zbierający ruch wielu sąsiadów: jego kolejka i limit nadawania około 1/13 czasu wyczerpują się pierwsze. Nie jest to warunek odrzucenia planu.</p>
+      <p><strong>Zaczep dla późniejszej wersji.</strong> Pierwsza konfiguracja ma zawierać 32-bajtowy klucz publiczny Ed25519 planu; typ 2 koperty pozostaje zarezerwowany na polecenia planu i jest odrzucany przez stacje bez ich obsługi. To nie uruchamia zdalnych zmian konfiguracji w pierwszej wersji normatywnej.</p>
+      <p class="explain"><strong>Kierunek po pierwszej wersji normatywnej.</strong> Klucz prywatny planu pozostaje poza siecią, a stanowisko tylko przekazuje podpisane polecenia. Rozważane są krótkie zmiany sąsiadów, rodziców, list <code>behind</code> i klucza sieci zaszyfrowanego dla stacji: jedna koperta, około 70 B treści i 64 B podpisu, rosnący numer w FRAM. Zmiana rodzica miałaby okres próbny i powrót do poprzedniej z dwóch kopii FRAM bez HACK; cały plan byłby sprawdzany przed podpisem. Pierwsze wygenerowanie tożsamości i odczyt karty pozostają lokalne. Kradzież klucza planu lub błąd obsługi poleceń może dotknąć całej sieci. Przy wdrożeniu trzeba określić wyjątki od zasad „klucze nie przychodzą przez radio” i fizycznego przycisku serwisowego; obecnie zasady te obowiązują bez wyjątku.</p>
       <p><strong>Plan pilotażu.</strong> Rozmieszczenie dopuszcza najwyżej dwa przeskoki do stanowiska przed T5. Blokada powrotu do rodzica z planu oraz drogi w dół w dłuższych łańcuchach wymagają <a href="#sprawdzenie-pelnego-zakresu">sprawdzenia</a>.</p>
 
       <h3 id="przekazywanie">Przekazywanie w obu kierunkach</h3>
@@ -234,7 +248,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Model i zakres systemu</h1>
-      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#granice">Granice</a>
@@ -45,8 +45,8 @@
       <table>
         <thead><tr><th>Część</th><th>Zakres pierwszej wersji normatywnej</th></tr></thead>
         <tbody>
-          <tr><td>Normatywna</td><td>SA1, koperta WICI, WICI-Link, cały kontrakt USB v2 po stronie stacji, funkcje stacji i stanowiska z panelem dyżurnego, trwałość oraz wyrób poziomu 1.</td></tr>
-          <tr><td>Informacyjna, bez mocy wymagań</td><td>Panel gospodarza, strona mieszkańca, kiosk i wymagania zasilania poziomu 3. Opisuje zamierzony etap po pilotażu.</td></tr>
+          <tr><td>Normatywna</td><td>SA1, koperta WICI, WICI-Link, reguły całego planu sieci, cały kontrakt USB v2 po stronie stacji, funkcje stacji i stanowiska z panelem dyżurnego, trwałość oraz wyrób poziomu 1.</td></tr>
+          <tr><td>Informacyjna, bez mocy wymagań</td><td>Narzędzie przygotowania, jego ekrany i przebieg pracy; panel gospodarza, strona mieszkańca, kiosk i wymagania zasilania poziomu 3. Opisuje zamierzony etap po pilotażu.</td></tr>
         </tbody>
       </table>
       <p class="explain"><strong>Granica zakresu.</strong> Kontrakt USB obejmuje stronę stacji, także zachowania wpływające na radio: wyjątek od ciszy i przeniesienie stacji. Wybór samych formatów pominąłby gwarancje funkcji i wyrobu. Włączenie poziomów 2–3 jako wymagań opisałoby niewdrożone funkcje bez określonej ochrony danych mieszkańców.</p>
@@ -57,7 +57,7 @@
         <tbody>
           <tr><td>Zamknięta sieć: stacje i tożsamości odbiorcy są znane z planu i kart przygotowania; klucze nie przychodzą przez radio.</td><td>Cecha protokołu i modelu zaufania; format tożsamości i zasady odcięcia rozstrzyga <a href="system-wici-decyzje.html#wici-dec-004">WICI-DEC-004</a>.</td></tr>
           <tr><td>Ruch biegnie między schronieniami a stanowiskiem odbiorczym, w obie strony; schronienia nie wymieniają wiadomości między sobą.</td><td>Zakres funkcji protokołu w <a href="system-wici-decyzje.html#wici-dec-001">pierwszej wersji normatywnej</a>; szczegółowe wymagania nadal są szkicem.</td></tr>
-          <tr><td>Każda włączona stacja przekazuje ruch innych.</td><td>Cecha protokołu, niezależna od liczby skoków w profilu pilotażu.</td></tr>
+          <tr><td>Każda włączona stacja przekazuje ruch innych, poza ciszą radiową.</td><td>Cecha protokołu, niezależna od liczby skoków w profilu pilotażu.</td></tr>
           <tr><td>Stacje stoją w stałych miejscach, a trasy można zmierzyć przed kryzysem.</td><td>Założenie planowania sieci i profilu pilotażu. Zakres pracy poza stałymi miejscami pozostaje otwarty w <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</td></tr>
           <tr><td>Sieć obejmuje jedną gminę albo jej część.</td><td>Kandydat na granicę profilu, nie limit protokołu; <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</td></tr>
         </tbody>
@@ -69,8 +69,8 @@
         <tbody>
           <tr><td>Stacja schronienia</td><td>Stacja WICI w schronieniu</td><td>Tworzy i przechowuje zgłoszenia SA1, prowadzi kolejkę, wymienia wiadomości z odbiorcą; na poziomach 2–3 łączy się z laptopem przez USB.</td></tr>
           <tr><td>Przekaźnik</td><td>Każda włączona stacja, także bez laptopa</td><td>Przekazuje ramki innych stacji i utrzymuje trasy oraz kolejkę przekazywania. Osobny przekaźnik to stacja poziomu 1.</td></tr>
-          <tr><td>Stacja stanowiska, węzeł stanowiska</td><td>Zwykła stacja w konfiguracji węzła stanowiska</td><td>Łączy radio z komputerem stanowiska przez USB i przekazuje ruch. Nie przechowuje tożsamości odbiorcy. Zapasową może być dowolna sprawna stacja przełączona w trybie przygotowania; wymiana nie zmienia tożsamości odbiorcy.</td></tr>
-          <tr><td>Root</td><td>Stacja stanowiska w WICI-Link</td><td>Jest początkiem drzewa tras; stacje kierują ku niemu ruch do odbiorcy. Nie jest komputerem stanowiska. Wymieniony lub wyczyszczony root liczy epoki od nowa.</td></tr>
+          <tr><td>Stacja stanowiska, węzeł stanowiska</td><td>Zwykła stacja w konfiguracji węzła stanowiska</td><td>Łączy radio z komputerem stanowiska przez USB i przekazuje ruch. Nie przechowuje tożsamości odbiorcy. Zapasowa stacja jest przygotowana z góry: ma własne klucze, ten sam numer roota i pozostaje wyłączona przy stanowisku. Wymiana nie zmienia tożsamości odbiorcy.</td></tr>
+          <tr><td>Root</td><td>Stacja stanowiska w WICI-Link</td><td>Jest początkiem drzewa tras; stacje kierują ku niemu ruch do odbiorcy. Nie jest komputerem stanowiska. Plan każdej stacji zawiera klucze roota głównego i zapasowego. Wymieniony lub wyczyszczony root liczy epoki od nowa.</td></tr>
           <tr><td>Komputer stanowiska i zapasowy</td><td>Przygotowane komputery stanowiska odbiorczego</td><td>Uruchamiają aplikację odbiorcy. Aktywny komputer przechowuje bazę zgłoszeń, karty zaufanych stacji i klucz aktywnej tożsamości odbiorcy na nośniku stanowiska; zapasowy przejmuje ten nośnik przy awarii.</td></tr>
           <tr><td>Tożsamość odbiorcy: główna i zapasowa</td><td>Dwie tożsamości tego samego stanowiska, nie dwa urządzenia</td><td>Stacja przyjmuje wiadomości tylko od tożsamości aktywnej, początkowo głównej. Jednorazowa paczka zapasowa leży w kopertach poza stanowiskiem. Gospodarz przełącza stację lokalnie, na polecenie słowne lub przez gońca, nigdy przez radio; powrót wymaga trybu przygotowania. <a href="system-wici-funkcje.html#powrot-nadawania">Powrót nadawania po odtworzeniu kopii</a> jest osobną operacją stanowiska.</td></tr>
           <tr><td>Przygotowanie</td><td>Osoba utrzymująca system, w porozumieniu z organizatorem sieci (zwykle samorządem gminy), i aplikacja przygotowania na laptopie</td><td>Ustala plan i numery, nadaje klucz sieci, rozprowadza karty z kluczami publicznymi i zapisuje konfigurację przez USB. Stacja sama generuje tożsamość przed wydaniem karty; jej klucz prywatny nie jest nadawany z zewnątrz.</td></tr>
@@ -110,7 +110,7 @@
           <tr><td>Przekazane; przekazane dalej</td><td>„Przekazane” jest wynikiem następnego skoku radiowego; nie potwierdza odbioru zgłoszenia przez stanowisko. „Przekazane dalej” to stan 4 obsługi: skierowanie zgłoszenia do służb. Te dwa wyniki są niezależne.</td></tr>
           <tr><td>Zdarzenie SA1; zdarzenie kryzysowe</td><td>Zdarzenie SA1 jest wpisem z numerem <code>event</code>, na przykład nową decyzją dyżurnego. Zdarzenie kryzysowe obejmuje całą sytuację, której zamknięcie kończy ponawianie intencji. Służy temu operacja <a href="oprogramowanie.md">ZAMKNIJ ZDARZENIE</a>; <a href="system-wici-decyzje.html#wici-inv-021">kod nie zamyka dziś wszystkich intencji</a>. Skutki dla trwałości opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</td></tr>
           <tr><td>Zgłoszenie; rewizja</td><td>Zgłoszenie ma stałe <code>id</code>. Zmiana jego danych tworzy rewizję z tym samym <code>id</code> i wyższym <code>revision</code>; każda rewizja zawiera pełną treść i jest potwierdzana osobno.</td></tr>
-          <tr><td>Root; rodzic; ranga; epoka</td><td>Root jest stacją stanowiska na początku drzewa tras WICI-Link. Rodzic to następny skok ku rootowi. Ranga wyraża koszt drogi do roota, a epoka oznacza trwały licznik jego uruchomień używany przy aktualizacji tras.</td></tr>
+          <tr><td>Root; rodzic; ranga; epoka</td><td>Root jest stacją stanowiska na początku drzewa tras WICI-Link. Root główny i przygotowany z góry zapasowy mają ten sam numer, lecz różne klucze; po uwierzytelnionym przejęciu przez zapasowy stacje nie przyjmują już głównego. Rodzic to następny skok ku rootowi. Ranga wyraża koszt drogi do roota, a epoka oznacza trwały licznik jego uruchomień używany przy aktualizacji tras.</td></tr>
           <tr><td>BEACON</td><td>Podpisane ogłoszenie trasy z informacją o roocie, randze, epoce i rodzicu.</td></tr>
         </tbody>
       </table>
@@ -136,7 +136,7 @@
       </figure>
       <p class="meta">Źródła modelu: <a href="../concept/slownik.html">słownik koncepcji</a>, <a href="../concept/05-projekt-koncepcyjny-komunikacji.html">model komunikacji</a>, <a href="projekt.md">poziomy zestawu</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="wici-link.md">WICI-Link</a> i <a href="transport.md">transport</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

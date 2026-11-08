@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Interfejsy i trwałość</h1>
-      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
       <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -139,13 +139,14 @@
           <tr><td>Zerwanie USB lub restart laptopa</td><td>Po ponownym <code>hello</code> laptop wykonuje <code>sync</code>; luka w 256 zdarzeniach prowadzi do migawki. Niedokończony transfer nie jest wynikiem operacji. Stacja działa bez laptopa, a pełny rejestr odmawia nowych zgłoszeń. <a href="../../firmware/src/usbproto.cpp">Kod USB</a>, <a href="usb-protocol.md#synchronizacja">kontrakt</a>.</td></tr>
           <tr><td>Zanik zasilania stacji</td><td>Odtwarzany jest ostatni zatwierdzony stan FRAM. Przygotowanie i import większe niż pojedyncza transakcja mają własne bariery publikacji; przerwany import nie uruchamia częściowo odtworzonej stacji. <a href="../../firmware/src/store.cpp">Kod magazynu</a>, <a href="oprogramowanie.md#zapisy-większe-niż-transakcja">opis zapisów większych</a>.</td></tr>
           <tr><td>Restart komputera stanowiska</td><td>Wczytywana jest ostatnia poprawna zaszyfrowana migawka, potem dziennik przyjęć. Ucięty ostatni rekord, za który nie wysłano HACK ani RECEIVED, jest pomijany; uszkodzenie między poprawnymi rekordami blokuje start. <a href="../../software/laptop/wici/stanowisko/nosnik.py">Kod nośnika</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">odtwarzanie przyjęć</a>, <a href="stanowisko-osp.md#komputer-i-aplikacja-stanowiska">opis</a>.</td></tr>
+          <tr><td>Utrata stacji stanowiska</td><td>Przygotowany i wyłączony zapasowy root przejmuje ten sam numer z własnymi kluczami. Pierwsza uwierzytelniona ramka lub BEACON zapasowego roota trwale odcina klucze głównego w FRAM stacji. Ramki z FRAM utraconego roota przepadają; zgłoszenie bez zapisu na komputerze nie dostało od niego HACK i będzie ponowione, a odpowiedzi w dół wracają przez ponowienia. Wymaga wdrożenia i próby (<a href="system-wici-decyzje.html#wici-inv-049">WICI-INV-049</a>).</td></tr>
           <tr><td>Utrata nośnika stanowiska</td><td>Po odtworzeniu kopii stare klucze nie mogą od razu nadawać. Nowa tożsamość zapasowa i przełączenie stacji mają przywrócić także otwarte zgłoszenia z RECEIVED; obecny kod nie domyka tej ścieżki (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>, <a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>).</td></tr>
           <tr><td>Zamknięcie lub zniszczenie danych</td><td>ZAMKNIJ ZDARZENIE kończy ponawianie intencji, zapisuje archiwum i usuwa treść według procedury; kopie są usuwane po potwierdzeniu odbioru archiwum. ZNISZCZ DANE jest osobną czynnością. <a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Kod archiwum i czyszczenia</a>, <a href="../../software/laptop/wici/stanowisko/panel.py">usunięcie kopii</a>. Kod nadal pozostawia część intencji po zamknięciu i nie domyka procedury starych kluczy (<a href="system-wici-decyzje.html#wici-inv-021">WICI-INV-021</a>, <a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>).</td></tr>
         </tbody>
       </table>
       <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

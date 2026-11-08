@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -388,6 +388,39 @@
             <div><dt>Luka i termin</dt><dd>Automatyczny powrót jest niezgodny z <a href="system-wici-zasady.html#wici-zal-004">architekturą podstawową</a> i <a href="#wici-dec-008">zakresem normatywnym</a>. Usunięcie następuje dopiero po zaliczeniu próby D21; do tego czasu Reticulum pozostaje drogą zapasową.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-049">
+          <h4>WICI-INV-049</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/main.cpp">Start WICI-Link</a> wymaga jednego klucza roota w <code>priority_keys</code>; <a href="wici-link.md#klucze-łącza">tag pary</a> i podpis epoki wiążą się z jego kluczami. <a href="stanowisko-osp.md#stacja-stanowiska">Opis Reticulum</a> dopuszcza dowolną stację zapasową, co jest niezgodne z WICI-Link. PRZENIEŚ STACJĘ wymaga działającej stacji źródłowej. Utrata roota odcina więc stanowisko do ponownego przygotowania wszystkich stacji.</dd></div>
+            <div><dt>Luka i decyzja</dt><dd><a href="system-wici-siec.html#trasy">Dwa przygotowane rooty</a> o jednym numerze i osobnych kluczach wymagają zmiany formatu konfiguracji, sprawdzania tagu i trwałego wyboru w FRAM. Koszt to jeden wpis planu na stację przy limicie 50 i dwa sprawdzenia tagu u sąsiadów roota; zakres 15 skoków i rozsyłanie się nie zmieniają. Zapasowy klucz prywatny chroni się jak paczkę zapasowej tożsamości odbiorcy: kradzież jest równie groźna jak kradzież klucza głównego. Kopia kluczy roota łamałaby zasadę nieeksportowania klucza prywatnego i pozwalała uruchomić nierozróżnialne rooty; brak zapasu wymagałby objazdu stacji z USB.</dd></div>
+            <div><dt>Sprawdzenie</dt><dd>Emulator ma objąć przejęcie w trakcie ruchu i powrót starego roota. Przegląd rozdziału 6 rozstrzygnie, czy dodać te przypadki do prób przy stole.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-050">
+          <h4>WICI-INV-050</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd><a href="../../software/laptop/wici/configdoc.py"><code>configdoc.py</code></a> sprawdza pojedynczy dokument, nie cały plan. Cykl 12 → 5 → 12 może przejść te sprawdzenia. Kod dopuszcza <code>behind</code> tylko u roota i nie ma <code>behind_backup</code>; pozostaje to w sprzeczności z regułami dróg w dół i <a href="system-wici-siec.html#plan-sieci">sprawdzeniem obu list w całym planie</a>.</dd></div>
+            <div><dt>Luka</dt><dd>Przygotowanie ma odrzucać cały błędny plan przed pierwszym zapisem konfiguracji. Potrzebne są wektory odrzucenia: cykl, droga bez roota, powtórzony numer i niezgodne <code>behind</code>. Wiązanie ekranów narzędzia jako normatywnych nie służy współdziałaniu; samo zalecenie nie zapobiega błędowi odkrytemu dopiero w terenie.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-051">
+          <h4>WICI-INV-051</h4>
+          <dl>
+            <div><dt>Luka</dt><dd><a href="system-wici-wyrob.html#przekaznik-terenowy">Przekaźnik terenowy</a> nie zgłasza przez sieć stanu baterii, ładowania, temperatury ani otwarcia obudowy. Wymaga to nowego rodzaju wiadomości lub typu koperty. Typ 1 jest już dowodem doręczenia; wolne typy 2–15 są dziś odrzucane (<a href="../../firmware/src/envelope.h">kodek</a>).</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-052">
+          <h4>WICI-INV-052</h4>
+          <dl>
+            <div><dt>Luka</dt><dd>Odcięcie przejętego przekaźnika terenowego i zmiana jego planu wymagają dziś fizycznego dostępu. Zdalne polecenia planu są kierunkiem po pierwszej wersji normatywnej, nie gotową funkcją (<a href="system-wici-siec.html#plan-sieci">szkic</a>).</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-053">
+          <h4>WICI-INV-053</h4>
+          <dl>
+            <div><dt>Luka</dt><dd>Konfiguracja nie zawiera 32-bajtowego klucza publicznego Ed25519 planu, a <a href="../../firmware/src/envelope.h">koperta</a> nie rezerwuje osobno typu 2 na polecenia planu; dziś odrzuca go wraz z innymi typami 2–15. Oba zaczepy pierwszej wersji normatywnej wymagają wdrożenia. Obsługa poleceń, licznik FRAM i wyjątki od lokalnego przygotowania należą do późniejszej wersji.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
       <p>Właściciel projektu zatwierdza rozdziały według <a href="system-wici-zasady.html#zatwierdzanie">dwóch stopni</a>. Obecnie żaden rozdział nie został zatwierdzony.</p>
@@ -439,12 +472,14 @@
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum pozostaje do usunięcia po D21 (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Reguła zalewu czeka na wynik emulatora; D21 pozostaje otwarta. Luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
+          <tr id="wici-dec-011"><td>WICI-DEC-011</td><td>Rozstrzygnięcia właściciela z 8 listopada 2026 r.: <a href="system-wici-siec.html#trasy">przygotowany z góry zapasowy root</a>, <a href="system-wici-siec.html#plan-sieci">normatywne reguły całego planu</a>, <a href="system-wici-wyrob.html#przekaznik-terenowy">informacyjny profil przekaźnika terenowego</a> oraz zaczep dla późniejszego zarządzania planem przez sieć. Luki wdrożenia i prób: <a href="#wici-inv-049">WICI-INV-049</a>–<a href="#wici-inv-053">053</a>.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.37</td><td>Opisano zapasowy root, sprawdzanie całego planu, profil przekaźnika terenowego i zaczep dla późniejszych poleceń planu; skorygowano wyjątek ciszy radiowej.</td></tr>
           <tr><td>0.36</td><td>Rozstrzygnięto zatwierdzanie rozdziałów, zakres normatywny, jeden słownik i szew nośnika; zapisano stan szkiców i trzy sprawy do dalszej pracy.</td></tr>
           <tr><td>0.35</td><td>Rozstrzygnięto odrzucanie <code>0x00</code> w SA1, sprzęt i kryteria D21; zapisano kandydata przeciw zalewowi bez potwierdzenia wynikiem.</td></tr>
           <tr><td>0.34</td><td>Wybrano wariant poprawki kolejki K1 i zapisano ryzyko zalewu przez sąsiada; uzupełniono uzasadnienie blokady rodzica w WICI-DEC-009.</td></tr>
@@ -481,7 +516,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

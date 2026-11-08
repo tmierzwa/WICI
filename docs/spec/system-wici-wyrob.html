@@ -30,13 +30,14 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wyrób i eksploatacja</h1>
-      <p><span class="status">Projekt 0.36</span> · 6 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
       <p>Rozdział opisuje zachowanie stacji i zestawu w użyciu oraz wyniki, które trzeba sprawdzić na ocenianej konfiguracji. Czynności krok po kroku pozostają w <a href="projekt.md">opisie zestawu</a> i instrukcjach obsługi.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#konfiguracja">Konfiguracja i odtwarzalność</a>
       <a href="#praca">Przygotowanie i praca</a>
       <a href="#energia">Zasilanie</a>
+      <a href="#przekaznik-terenowy">Przekaźnik terenowy</a>
       <a href="#stanowisko">Stanowisko i przeglądy</a>
       <a href="#bezpieczenstwo-wyrobu">Bezpieczeństwo wyrobu</a>
       <a href="#sprawdzenie">Próby i rozstrzygnięcia</a>
@@ -120,6 +121,10 @@
         </tbody>
       </table></div>
       <p>Model z projektu toru R02 zakłada średni pobór MCU najwyżej około 49 mA dla celu 48 h. Tor płytki v2 jest inny, więc rozstrzyga pomiar, a nie model (<a href="radio.md#profil-lora-pilotażu">założenia modelu</a>). Zasilanie laptopa, routera i ładowarki telefonów na poziomie 3 jest odrębne od zasilania stacji WICI (<a href="elektronika.md#poziom-3-kupiona-stacja-zasilania">poziom 3</a>).</p>
+      <h3 id="przekaznik-terenowy">Przekaźnik terenowy — profil informacyjny</h3>
+      <p>Bezobsługowa stacja na maszcie lub dachu, poza schronieniem, poprawia zasięg przy większych odległościach. Korzysta z istniejącej roli osobnego przekaźnika; ten profil nie ustala jeszcze wymagań wyrobu.</p>
+      <p class="explain"><strong>Do opracowania.</strong> Trzeba określić szerszy niż −10…+40 °C zakres temperatur i wyższy niż IP40 stopień ochrony obudowy, wykrywanie otwarcia oraz zasilanie słoneczne na kilka pochmurnych dni w grudniu. Wstępny szacunek to panel 10–20 W i akumulator na około 5 dni przy poborze około 2 Wh/dobę; nie są to progi zgodności. Ładowanie w mrozie wymaga rozwiązania odpowiedniego do chemii ogniw, na przykład ogrzewania LiFePO4 poniżej 0 °C. Druga niezależna implementacja z inną rodziną MCU, wymagana przed wydaniem, może zmniejszyć pobór względem ESP32-S3.</p>
+      <p>Przed użyciem tego profilu trzeba rozstrzygnąć zgłaszanie przez sieć stanu baterii, ładowania, temperatury i otwarcia obudowy oraz odcięcie przejętego przekaźnika i zmianę jego planu bez fizycznego dostępu (<a href="system-wici-decyzje.html#wici-inv-051">WICI-INV-051</a>, <a href="system-wici-decyzje.html#wici-inv-052">WICI-INV-052</a>).</p>
     </section>
 
     <section id="stanowisko" aria-labelledby="h-stanowisko">
@@ -163,7 +168,7 @@
       <p class="explain"><strong>Dlaczego próg nasycenia czeka na pomiar.</strong> Dług ciszy 12t ogranicza udział nadawania do około 1/13 czasu niezależnie od liczby skoków; próbę można wykonać na jednej stacji z generatorem ruchu. Sprawność przetwornicy i pobór MCU nie są zmierzone, a model ma małą marżę. Odrzucono próg 48 h przy nasyceniu oraz ruch modelowy dla 15 skoków jako podstawę progu.</p>
       <p class="explain"><strong>Granice środowiskowe.</strong> Odrzucono −20…+45 °C z koncepcji z powodu braku zapasu ekranu w −20 °C i większych wymagań wobec płytki. IP54 wymagałoby uszczelnienia okna, USB i komory ogniw bez uzasadnienia dla suchego miejsca i skrzynki.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.36 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
