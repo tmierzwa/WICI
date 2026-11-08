@@ -28,7 +28,7 @@ Płytkę v1 prototypu opisuje [hardware/dev-bench](../hardware/dev-bench/README.
 
 [Narzędzia i tworzenie paczek](development.md). Bieżąca kontrola repozytorium: `tools/verify_repository.py` i CI dla aktualnego commita.
 
-[Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia. Przegląd szwu transportu (D21, po angielsku): [zlecenie](transport-seam-review-brief.md), [raport](transport-seam-review.md) i [odpowiedź](transport-seam-review-response.md).
+[Aktualne ustalenia przeglądu technicznego](review.md): poprawione rozbieżności, konkretne przeszkody i warunki ich zamknięcia. Zewnętrzne przeglądy są w `przeglady/`, każdy w folderze z datą. Przegląd szwu transportu (D21, po angielsku): [zlecenie](przeglady/2026-11-01-szew-transportu/brief.md), [raport](przeglady/2026-11-01-szew-transportu/review.md) i [odpowiedź](przeglady/2026-11-01-szew-transportu/response.md).
 
 W specyfikacji skrót OSP oznacza tylko ochotniczą straż pożarną. Stanowisko odbiorcze to rola wyznaczona przez wójta (burmistrza, prezydenta miasta). Zwykle jest to jednostka ochotniczej straży pożarnej z grafikiem dyżurów na czas kryzysu, ale może nim być także gminne centrum zarządzania kryzysowego lub stanowisko gminnego zespołu zarządzania kryzysowego ([koncepcja, rozdział 02](concept/02-scenariusze-i-organizacja.html#miejsce-w-systemie-ochrony-ludnosci)).
 
