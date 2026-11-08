@@ -33,7 +33,7 @@ index 006691a..7ed9dbb 100644
  
  }  // namespace wici_gateway
 diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
-index 2008ec4..aaa3c9a 100644
+index 2008ec4..7855584 100644
 --- a/firmware/src/wici_hop.cpp
 +++ b/firmware/src/wici_hop.cpp
 @@ -2,6 +2,7 @@
@@ -50,7 +50,7 @@ index 2008ec4..aaa3c9a 100644
          return Receipt::REJECTED;
 -    if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
 +    // WARIANT: kopia nie od rodzica nie jest przekazywana ani oznaczana jako widziana (poza kontrolą pułapki).
-+    if (floodRefused(frame)) {
++    if (floodRefused(frame.flags & wici_link::DOWN, frame.source, get16(frame.payload + 3), broadcast)) {
 +        if (wici_variant::flags.floodCopy) wici_variant::flags.floodCopy(broadcast ? 0 : 3, config_.own, frame.payload);
 +        if (!broadcast && wici_variant::flags.hopEvent)
 +            wici_variant::flags.hopEvent(0, config_.own, frame.source, get16(frame.payload + 3));
@@ -89,22 +89,35 @@ index 2008ec4..aaa3c9a 100644
                  slot = i;
          learn_ &= static_cast<uint8_t>(~(1u << slot));
          size_t length = 0;
-@@ -137,8 +154,12 @@ bool Relay::prepare(uint32_t nowS) {
+@@ -137,25 +154,14 @@ bool Relay::prepare(uint32_t nowS) {
          if (k1 != (order < wici_relay::SLOTS) ||
              !queue_.read(slot, nowS, wire, sizeof(wire), length) ||
              !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
 -        const uint16_t next = frame.flags & wici_link::DOWN ?
 -                              routes_.down(get16(frame.payload + 3)) : routes_.parent();
-+        uint16_t next = frame.flags & wici_link::DOWN ?
-+                        routes_.down(get16(frame.payload + 3)) : routes_.parent();
-+        // WARIANT: ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem do uwierzytelnionego sąsiada.
-+        if (wici_variant::flags.floodStays && frame.destination == wici_link::BROADCAST &&
-+            next != get16(frame.payload + 3)) next = wici_link::BROADCAST;
-+        if (next == wici_link::BROADCAST && floodRefused(frame)) continue;  // WARIANT: droga zniknęła po przyjęciu
-         // Never hand a frame back to the neighbor it came from.
-         if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
-         // A next hop that stopped answering is held; frames to others still go.
-@@ -194,7 +215,9 @@ bool Relay::prepare(uint32_t nowS) {
+-        // Never hand a frame back to the neighbor it came from.
+-        if ((!id(next) && next != wici_link::BROADCAST) || next == frame.source) continue;
+-        // A next hop that stopped answering is held; frames to others still go.
+-        if (next != wici_link::BROADCAST && held(next, nowS)) continue;
+-        // The last allowed hop must end at the root (up) or at the envelope
+-        // destination (down): a relay there refuses it. The frame waits for a
+-        // next hop that ends there (e.g. the planned parent back after a
+-        // detour to the backup); the 30-min expiry bounds the wait.
+-        if (next != wici_link::BROADCAST && frame.hops + 1 >= frame.ttl &&
+-            next != (frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : config_.root)) continue;
++        const uint16_t next = nextHop(wire, nowS);
++        if (!next) continue;
+         Attempt& last = prepared_[slot];
+         // The same item for the same next hop is the same frame: it keeps its
+         // seq, so a radio refusal burns none.
+         const bool again = last.valid && last.generation == queue_.generation(slot) && last.next == next;
+         wici_flood::Lookup flood = wici_flood::Lookup::NONE;
+         if (next == wici_link::BROADCAST) {
+-            if (!allowFlood_) continue;
+             flood = flood_.lookup(frame.payload, nowS);
+             if (flood == wici_flood::Lookup::IO_ERROR) return false;
+             // A marker this relay wrote for a flood the radio then refused
+@@ -194,7 +200,9 @@ bool Relay::prepare(uint32_t nowS) {
          downTo_ = frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : 0;
          nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
          noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
@@ -115,43 +128,64 @@ index 2008ec4..aaa3c9a 100644
          outgoingLength_ = n;
          sent_ = false; active_ = true;
          return true;
-@@ -207,8 +230,35 @@ const uint8_t* Relay::outgoing(size_t& length) const {
+@@ -207,8 +215,55 @@ const uint8_t* Relay::outgoing(size_t& length) const {
      return active_ ? outgoing_ : nullptr;
  }
  
-+bool Relay::floodRefused(const wici_link::Frame& frame) const {
+-bool Relay::contendedK2() const {
++uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
++    // Stored items were authenticated at admission: the header and the
++    // envelope recipient are read from the bytes without a second MAC check.
++    const bool down = wire[0] & wici_link::DOWN, broadcast = get16(wire + 5) == wici_link::BROADCAST;
++    const uint16_t source = get16(wire + 3), recipient = get16(wire + wici_link::HEADER + 3);
++    const uint8_t hops = wire[7] >> 4, ttl = wire[7] & 15;
++    uint16_t next = down ? routes_.down(recipient) : routes_.parent();
++    // WARIANT: ramka rozsyłana zostaje rozsyłana poza ostatnim skokiem do uwierzytelnionego sąsiada.
++    if (wici_variant::flags.floodStays && broadcast && next != recipient) next = wici_link::BROADCAST;
++    // WARIANT: reguła rozsyłania od rodzica, gdy droga zniknęła po przyjęciu.
++    if (next == wici_link::BROADCAST) return allowFlood_ && !floodRefused(down, source, recipient, broadcast) ? next : 0;
++    // Never hand a frame back to the neighbor it came from. A next hop that
++    // stopped answering is held; frames to others still go.
++    if (!id(next) || next == source || held(next, nowS)) return 0;
++    // The last allowed hop must end at the root (up) or at the envelope
++    // destination (down): a relay there refuses it. The frame waits for a
++    // next hop that ends there (e.g. the planned parent back after a detour
++    // to the backup); the 30-min expiry bounds the wait.
++    if (hops + 1 >= ttl && next != (down ? recipient : config_.root)) return 0;
++    return next;
++}
++
++bool Relay::floodRefused(bool down, uint16_t source, uint16_t recipient, bool broadcast) const {
 +    const unsigned mode = wici_variant::flags.floodFromParent;
-+    if (!mode || !(frame.flags & wici_link::DOWN) || frame.source == config_.planned || frame.source == config_.backup ||
-+        (mode == 2 && frame.source == routes_.parent())) return false;
-+    const uint16_t recipient = get16(frame.payload + 3);
++    if (!mode || !down || source == config_.planned || source == config_.backup ||
++        (mode == 2 && source == routes_.parent())) return false;
 +    uint16_t next = routes_.down(recipient);
-+    if (wici_variant::flags.floodStays && frame.destination == wici_link::BROADCAST && next != recipient)
-+        next = wici_link::BROADCAST;
++    if (wici_variant::flags.floodStays && broadcast && next != recipient) next = wici_link::BROADCAST;
 +    return next == wici_link::BROADCAST;
 +}
 +
-+bool Relay::k1Routed(uint8_t slot) const {
++bool Relay::k1Routed(uint8_t slot, uint32_t nowS) const {
++    // Poprawka K1 po przeglądzie #187: liczy się tylko ramka K1, która może teraz wyjść jednoadresowo (nextHop).
 +    size_t length = 0;
-+    const uint8_t* wire = queue_.stored(slot, length);
-+    wici_link::Frame frame;
-+    if (!queue_.k1Neighbor(slot) || !wire || !wici_link::decode(key_, config_.network, wire, length, frame)) return false;
-+    return !(frame.flags & wici_link::DOWN) || routes_.down(get16(frame.payload + 3)) != wici_link::BROADCAST;
++    const uint8_t* wire = queue_.k1Neighbor(slot) ? queue_.stored(slot, length) : nullptr;
++    const uint16_t next = wire ? nextHop(wire, nowS) : 0;
++    return next && next != wici_link::BROADCAST;
 +}
 +
-+bool Relay::routedK1Waiting() const {
++bool Relay::routedK1Waiting(uint32_t nowS) const {
 +    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
-+        if ((!active_ || slot != slot_) && k1Routed(slot)) return true;
++        if ((!active_ || slot != slot_) && k1Routed(slot, nowS)) return true;
 +    return false;
 +}
 +
- bool Relay::contendedK2() const {
++bool Relay::contendedK2(uint32_t nowS) const {
      if (!active_ || activePriority_) return false;
 +    // WARIANT: ramka K1 bez znanej drogi wyjdzie rozsyłaniem, czyli jako K2; nie ma pierwszeństwa, na które trzeba czekać.
-+    if (wici_variant::flags.k1RoutedOnly) return routedK1Waiting();
++    if (wici_variant::flags.k1RoutedOnly) return routedK1Waiting(nowS);
      for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot)
          if (slot != slot_ && queue_.k1Neighbor(slot)) return true;
      return false;
-@@ -269,6 +319,7 @@ bool Relay::timeout(uint32_t nowS) {
+@@ -269,6 +324,7 @@ bool Relay::timeout(uint32_t nowS) {
          return true;
      }
      active_ = false;  // No HACK: keep the durable queue item for another route.
@@ -160,36 +194,52 @@ index 2008ec4..aaa3c9a 100644
      failedRound(next_, nowS);
      // A relay learns no route over a working one (Table::learn), so a station
 diff --git a/firmware/src/wici_hop.h b/firmware/src/wici_hop.h
-index 0b81de2..3b2891d 100644
+index 0b81de2..9dd4ea6 100644
 --- a/firmware/src/wici_hop.h
 +++ b/firmware/src/wici_hop.h
-@@ -69,6 +69,8 @@ public:
+@@ -68,7 +68,9 @@ public:
+     void yield();
      const uint8_t* outgoing(size_t& length) const;
      // The active transfer is K2 while a K1 frame waits in the queue.
-     bool contendedK2() const;
+-    bool contendedK2() const;
++    bool contendedK2(uint32_t nowS) const;
 +    // WARIANT: czeka inna ramka K1 ze znaną drogą (też pomiar w emulatorze).
-+    bool routedK1Waiting() const;
++    bool routedK1Waiting(uint32_t nowS) const;
      // Call only after a real TX attempt. A frame without HACK (flood, silence
      // exception) is retired after a successful TX; unicast waits for a
      // matching authenticated HACK. After a failed TX the item stays queued.
-@@ -114,6 +116,8 @@ private:
+@@ -114,6 +116,9 @@ private:
      bool allowFlood_ = false;
      uint16_t receivers_[2] = {};
      bool priority(const wici_link::Frame& frame) const;
-+    bool k1Routed(uint8_t slot) const;  // WARIANT
-+    bool floodRefused(const wici_link::Frame& frame) const;  // WARIANT
++    bool k1Routed(uint8_t slot, uint32_t nowS) const;  // WARIANT
++    uint16_t nextHop(const uint8_t* wire, uint32_t nowS) const;  // jedno miejsce reguły „ramka może teraz wyjść”
++    bool floodRefused(bool down, uint16_t source, uint16_t recipient, bool broadcast) const;  // WARIANT
      uint8_t key_[32] = {};
      bool keyReady_ = false;
      wici_relay::Queue queue_;
+diff --git a/firmware/src/wici_radio.cpp b/firmware/src/wici_radio.cpp
+index 5818a20..eddd8c6 100644
+--- a/firmware/src/wici_radio.cpp
++++ b/firmware/src/wici_radio.cpp
+@@ -270,7 +270,7 @@ void Shelter::poll(uint32_t nowMs, uint32_t nowS) {
+     size_t length = 0;
+     const uint8_t* frame = relay_.outgoing(length);
+     if (frame && length) {
+-        const auto traffic = relay_.contendedK2() ? wici_link::TxClass::CONTENDED_K2 :
++        const auto traffic = relay_.contendedK2(nowS) ? wici_link::TxClass::CONTENDED_K2 :
+                                                      wici_link::TxClass::TRANSIT;
+         if (air_.sendData(frame, length, traffic)) {
+             submitted_ = true;
 diff --git a/firmware/src/wici_radio.h b/firmware/src/wici_radio.h
-index f8b223f..c739b27 100644
+index f8b223f..3b10ce7 100644
 --- a/firmware/src/wici_radio.h
 +++ b/firmware/src/wici_radio.h
 @@ -97,6 +97,7 @@ public:
      // Delivery proofs lost to a full list; the receiver resends those messages.
      uint16_t proofsDropped() const { return proofsDropped_; }
      wici_route::Table& routes() { return relay_.routes(); }
-+    bool routedK1Waiting() const { return relay_.routedK1Waiting(); }  // WARIANT: pomiar w emulatorze
++    bool routedK1Waiting(uint32_t nowS) const { return relay_.routedK1Waiting(nowS); }  // WARIANT: pomiar w emulatorze
  
  private:
      uint32_t backoff() const;

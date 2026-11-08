@@ -115,7 +115,7 @@ bool Radio::sendData(const uint8_t* wire, size_t length, wici_link::TxClass traf
     if (!radioLength) return false;
     const bool flood = !beacon && traffic != wici_link::TxClass::OWN && get16(wire + 5) == wici_link::BROADCAST;
 #ifdef WICI_EMU_VARIANT
-    const bool overCap = net_.k1Stats && flood && self.shelter && self.shelter->routedK1Waiting() &&
+    const bool overCap = net_.k1Stats && flood && self.shelter && self.shelter->routedK1Waiting(net_.nowS()) &&
                          !budget_.allows(false, lora::frameAirMs(radioLength), net_.nowS(), true);
 #else
     const bool overCap = false;
