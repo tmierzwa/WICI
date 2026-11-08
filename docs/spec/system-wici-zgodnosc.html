@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
-  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.36</title>
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.38</title>
   <link rel="stylesheet" href="system-wici.css">
   <style>
     .evidence-table { min-width: 94rem; }
@@ -18,6 +18,7 @@
     <strong>Specyfikacja WICI</strong>
     <ol>
       <li><a href="system-wici.html">Start</a></li>
+      <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
       <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
       <li><a href="system-wici-model.html">2. Model systemu</a></li>
       <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
@@ -34,7 +35,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wersje, zgodność i dowody</h1>
-      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.38</span> · 8 listopada 2026 r.</p>
       <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie pozostaje otwarta; wynik jednej drogi posłuży do kalibracji <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">emulatora</a>, lecz nie potwierdzi 15 skoków.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -47,6 +48,7 @@
 
     <section id="wersje" aria-labelledby="h-wersje">
       <h2 id="h-wersje">9.1. Wersje i profile</h2>
+      <p class="meta">Kształt wymagań: dotychczasowy; metamodel zostanie wprowadzony przy przeglądzie rozdziału.</p>
       <div class="table-scroll" role="region" aria-label="Wersje formatów" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Format</th><th>Numer i miejsce</th><th>Źródło w kodzie</th><th>Nieznana wersja</th></tr></thead>
         <tbody>
@@ -107,6 +109,7 @@
           <tr><td>Format koperty</td><td><a href="system-wici-bezpieczenstwo.html#koperta-wici">5. Bezpieczeństwo</a></td><td>Protokół</td><td>Test</td><td>Wektor</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="https://github.com/tmierzwa/WICI/actions/runs/41730879991">Checks 41730879991</a>, <code>d637149</code>, 3.11.2026: <code>test_envelope_vectors</code> (2/2) i <code>test_vectors_authentication_and_reserved_kinds</code> — „ok”. Wzory, kodowanie i odbiór sprawdzono w kodzie Python oraz C++ stacji uruchomionym na komputerze, bez sprzętu docelowego. Dziennik CI może wygasnąć (<a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>).</td></tr>
           <tr><td>Rezerwacja licznika koperty</td><td><a href="system-wici-bezpieczenstwo.html#koperta-wici">5. Bezpieczeństwo</a></td><td>Protokół</td><td>Test</td><td>T2</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="https://github.com/tmierzwa/WICI/actions/runs/41730879991">Checks 41730879991</a>, <code>d637149</code>, 3.11.2026: <code>test_counter_reservation_survives_restart_and_write_failure</code> — „ok”. Kod C++ stacji z symulowaną pamięcią, bez odcięć zasilania na v2. Trwały raport pozostaje luką (<a href="system-wici-decyzje.html#wici-inv-033">WICI-INV-033</a>).</td></tr>
           <tr><td>Format ramki WICI-Link</td><td><a href="system-wici-siec.html#ramka">6. Sieć</a></td><td>Protokół</td><td>Test</td><td>T3</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="https://github.com/tmierzwa/WICI/actions/runs/41730879991">Checks 41730879991</a>, <code>d637149</code>, 3.11.2026: <code>test_wici_link_mac_and_frame_filter</code> i <code>test_pairwise_hop_auth_rejects_spoofed_or_untagged_unicast</code> — „ok”. Kodeki C++ stacji i Python oraz uwierzytelnienie skoku sprawdzono na komputerze, bez radia.</td></tr>
+          <tr><td>Wystarczalność opisu formatów</td><td><a href="system-wici-o-dokumencie.html#zatwierdzanie">O dokumencie</a></td><td>Dokument</td><td>Niezależna implementacja</td><td>—</td><td>Przed stopniem normatywnym</td><td>Brak próby</td><td>Raport porównania z implementacją wzorcową pozostaje do wykonania; procedura próby jest luką <a href="system-wici-decyzje.html#wici-inv-054">WICI-INV-054</a>.</td></tr>
           <tr><td>Logika HACK i kolejek</td><td><a href="system-wici-siec.html#potwierdzenia">6. Sieć</a></td><td>Protokół</td><td>Test</td><td>T3, T5</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="https://github.com/tmierzwa/WICI/actions/runs/41730879991">Checks 41730879991</a>, <code>d637149</code>, 3.11.2026: <code>test_relay_hop_coordinator_crash_retry_and_hack</code>, <code>test_root_kiss_gateway_requires_matching_timely_hack</code> i <code>test_memory_bearer_one_relay_crash_and_return_route</code> — „ok”. Kod C++ na komputerze, łącze w pamięci i jeden przekaźnik; bez radia i łańcuchów 3–15 skoków.</td></tr>
           <tr><td>HACK i kolejki na sprzęcie</td><td><a href="system-wici-siec.html#potwierdzenia">6. Sieć</a></td><td>Wyrób</td><td>Test</td><td>T3, T5</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan</a>; D21 nadal otwarta.</td></tr>
           <tr><td>D21: część energii na v1</td><td><a href="system-wici-siec.html#warunek-d21-v1">6. Sieć</a></td><td>Wybór protokołu</td><td>Pomiar</td><td>—</td><td>Przed wyborem protokołu</td><td>Brak próby</td><td>Brakuje pomiaru prądu Wio na osobnej linii 3,3 V i czasu wybudzenia procesora; oba wyniki odnoszą się do W23 (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</td></tr>
@@ -120,6 +123,7 @@
           <tr><td>Obsługa według karty</td><td><a href="system-wici-funkcje.html#operacje">3. Funkcje</a></td><td>Wyrób</td><td>Próba z ludźmi</td><td>T1, T8</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">„Obsługa według karty”</a>; próba niewykonana.</td></tr>
           <tr><td>Praca na AA</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T6</a>; brak pomiaru na v2.</td></tr>
           <tr><td>Radio i klimat</td><td><a href="system-wici-wyrob.html#bezpieczenstwo-wyrobu">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T4, T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="system-wici-decyzje.html#wici-inv-026">Progi klimatu wymagają korekty</a>; brak wyniku wyrobu.</td></tr>
+          <tr><td>Współistnienie w kanale</td><td><a href="system-wici-siec.html#wspolistnienie">6. Sieć</a></td><td>Protokół i wyrób</td><td>Próba przy stole i pomiar w terenie</td><td>—</td><td>Przed terenem i wydaniem</td><td>Brak próby</td><td>Trzeba zmierzyć zajętość przez obcy ruch i jego wpływ na doręczenie; <a href="radio.md#współdzielenie-kanału">plan pomiaru</a> nie ma wyniku.</td></tr>
           <tr><td>Łańcuch 3–15 skoków</td><td><a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">6. Sieć</a></td><td>Wyrób</td><td>Emulator i próba fizyczna</td><td>T5</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala emulator kodu C++ kalibrowany D21 i krótkim łańcuchem fizycznym. W niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a> są wstępne wyniki emulatora, bez kalibracji. Brak próby pełnego zakresu w planie odbioru (<a href="system-wici-decyzje.html#wici-inv-039">WICI-INV-039</a>). Rejestr oddzieli głębokość sprawdzoną fizycznie od symulowanej.</td></tr>
           <tr><td>Nasycenie i sen przekaźnika</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar i test</td><td>T6</td><td>Przed wydaniem</td><td>Brak próby</td><td><a href="system-wici-decyzje.html#wici-inv-030">WICI-INV-030</a>: brak pomiaru i próby ramek.</td></tr>
           <tr><td>Odtworzenie wykonania</td><td><a href="system-wici-wyrob.html#konfiguracja">8. Wyrób</a></td><td>Wyrób</td><td>Test i przegląd</td><td>T7</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T7</a>; brak raportu wykonawców.</td></tr>
@@ -206,7 +210,7 @@
       <h3 id="warunki-zamkniecia">Warunki zamknięcia</h3>
       <p>Pierwszą wersję normatywną zamykają: rozstrzygnięte otwarte decyzje, ponumerowane wymagania ze słowami normatywnymi, opisany stan każdej luki z inwentaryzacji oraz rozstrzygnięta na docelowym sprzęcie próba D21. Sprawa dróg w łańcuchach 3–15 skoków (<a href="system-wici-decyzje.html#wici-dec-009">WICI-DEC-009</a>) musi być rozstrzygnięta w tekście, łącznie ze sposobem sprawdzenia; dowód może powstać później. Wymaganie może mieć stan „brak próby”, a znana luka kodu pozostaje oznaczona jako wymagająca wdrożenia. Wersja normatywna nie stwierdza, że kod lub wyrób ją spełnia.</p>
       <p class="explain"><strong>Uzasadnienie.</strong> Wymaganie i dowód jego spełnienia mają różne terminy. D21 może jeszcze zmienić opis sieci. Sam dokument mógłby więc wymagać przeróbki zaraz po zatwierdzeniu; czekanie na pilotaż nie dałoby dokumentu odniesienia, a czekanie na pełną zgodność kodu odsunęłoby zatwierdzenie do końca wdrożeń. Jeśli D21 odsunie się o wiele miesięcy, rozstrzygnięcie wraca do przeglądu.</p>
-      <p>Przed stopniem normatywnym nowa sesja bez dostępu do kodu pisze dekodery SA1 i koperty z samej specyfikacji. Wspólne wektory sprawdzają wyniki, a sesja wypisuje każde przyjęte założenie. Konieczność zgadywania oznacza błąd specyfikacji do poprawy. WICI-Link przechodzi tę próbę po D21, gdy powstaną jego wektory.</p>
+      <p>Przed stopniem normatywnym obowiązuje <a href="system-wici-o-dokumencie.html#zatwierdzanie">próba wystarczalności opisu</a>. WICI-Link przechodzi ją po D21, gdy powstaną jego wektory; raport trafia do <a href="#sprawdzanie">rejestru zgodności</a>.</p>
       <p class="explain"><strong>Granica próby.</strong> Odtworzenie dekoderów sprawdza wystarczalność opisu, nie słuszność reguł i nie zastępuje przeglądu przez niezależnego człowieka. Przegląd zewnętrzny jest zaproszeniem i nie blokuje wydania; wydanie podaje, czy się odbył.</p>
       <h3 id="numeracja-wymagan">Numeracja wymagań</h3>
       <p>Identyfikatory nadaje się wszystkim wymaganiom po rozstrzygnięciu otwartych decyzji, przed zatwierdzeniem, rozdział po rozdziale z przeglądem. Pierwszy rozdział jest wzorem formy i jest przeglądany przed następnymi. Numeracja nie czeka na próbę D21 ani na pomiary na płytce v2; progi ustalane po pomiarze pozostają parametrami profilu. Do tego czasu rejestr działa na poziomie obszarów.</p>
@@ -218,7 +222,7 @@
       <p>W sieci działa jedna wersja WICI-Link. Zmiana formatu łącza następuje poza kryzysem, przez przygotowanie wszystkich węzłów przez USB, i można ją połączyć z wymianą klucza sieci. Protokół nie obsługuje dwóch wersji naraz i nie obiecuje zgodności wstecznej formatu łącza. Po przygotowaniu każdego węzła wykonuje się próbę TEST. Zmiany kolejek, ponowień i polityki dróg nie wymagają zmiany formatu, jeśli nie zmieniają bajtów w eterze.</p>
       <p class="explain"><strong>Granica i koszt.</strong> Pole wersji ma dwa bity: v3 zajmuje wartość maksymalną, v2 jest wycofana, a 0 i 1 są wolne. Następny format użyje jednej z nich. Klucz łącza pochodzi z etykiety <code>WICI link v3</code>; po jej zmianie starszy węzeł odrzuci ramkę przy sprawdzaniu MAC i nie odróżni jej od zakłóceń. Niezgodność ujawni nieudany TEST. Podczas objazdu sieć jest podzielona, przy 15 skokach potencjalnie przez dzień lub dłużej; pilna poprawka formatu ma ten sam koszt. Dwie wersje naraz wymagałyby sprawdzenia dwóch kluczy łącza oraz kombinacji kolejek, HACK i tagów pary, pozostawiając starą wersję podatną na ataki i nadal wymagając objazdu. Zmiana przez radio otwiera nową drogę ataku i zużywa czas nadawania; węzeł tłumaczący ponosi koszt obu wersji. Procedura objazdu pozostaje <a href="system-wici-decyzje.html#wici-inv-035">luką</a>. Decyzja nie dotyczy SA1 ani koperty.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.38 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

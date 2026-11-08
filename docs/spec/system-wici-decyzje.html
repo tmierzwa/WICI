@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.36</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.38</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -14,6 +14,7 @@
       <strong>Specyfikacja WICI</strong>
       <ol>
         <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
         <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
         <li><a href="system-wici-model.html">2. Model systemu</a></li>
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
@@ -30,7 +31,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.38</span> · 8 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -421,21 +422,33 @@
             <div><dt>Luka</dt><dd>Konfiguracja nie zawiera 32-bajtowego klucza publicznego Ed25519 planu, a <a href="../../firmware/src/envelope.h">koperta</a> nie rezerwuje osobno typu 2 na polecenia planu; dziś odrzuca go wraz z innymi typami 2–15. Oba zaczepy pierwszej wersji normatywnej wymagają wdrożenia. Obsługa poleceń, licznik FRAM i wyjątki od lokalnego przygotowania należą do późniejszej wersji.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-054">
+          <h4>WICI-INV-054</h4>
+          <dl>
+            <div><dt>Luka procedury</dt><dd>Warunek <a href="system-wici-o-dokumencie.html#zatwierdzanie">niezależnej implementacji</a> ma dostać procedurę prób w repozytorium, poza specyfikacją: dwa modele różnych firm pracują osobno w pustych katalogach, mają tylko HTML specyfikacji i wektory, bez repozytorium i internetu. Każdy wypisuje założenia; losowe zmiany bajtów porównuje się z implementacją wzorcową. Zaliczenie wymaga przejścia wektorów i braku różnic werdyktu; każde zgadywanie trzeba wyjaśnić w tekście albo świadomie zapisać.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-055">
+          <h4>WICI-INV-055</h4>
+          <dl>
+            <div><dt>Sprzeczności źródeł</dt><dd><a href="system-wici-zgodnosc.html#trwale-wektory">Starsze rozstrzygnięcie o wektorach</a> nazywa raport niezależnej implementacji luką, nie warunkiem; <a href="system-wici-o-dokumencie.html#zatwierdzanie">nowa decyzja</a> wymaga go przed stopniem normatywnym. <a href="#wici-inv-044">WICI-INV-044</a> i <a href="transport.md#warunek-przyjęcia">transport.md</a> uruchamiają próbę Reticulum po każdym niezaliczeniu WICI-Link; <a href="system-wici-zasady.html#warunek-d21">nowy zapis</a> pozostawia ją zapasem po upływie czasu ustalonego przez właściciela. Oba starsze zapisy pozostają do uzgodnienia.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
-      <p>Właściciel projektu zatwierdza rozdziały według <a href="system-wici-zasady.html#zatwierdzanie">dwóch stopni</a>. Obecnie żaden rozdział nie został zatwierdzony.</p>
+      <p>Właściciel projektu zatwierdza rozdziały według <a href="system-wici-o-dokumencie.html#zatwierdzanie">dwóch stopni</a>. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
       <div class="table-scroll" role="region" aria-label="Stan zatwierdzeń rozdziałów" tabindex="0"><table class="chapter-table">
-        <thead><tr><th>Rozdział</th><th>Stopień</th><th>Commit zatwierdzenia</th><th>Data</th><th>Osoba</th></tr></thead>
+        <thead><tr><th>Rozdział</th><th>Kształt wymagań</th><th>Stopień</th><th>Commit zatwierdzenia</th><th>Data</th><th>Osoba</th></tr></thead>
         <tbody>
-          <tr><td>1. Status i zasady</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>2. Model i zakres</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>3. Funkcje i dane</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>4. Protokół SA1</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>5. Bezpieczeństwo i koperta</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>6. Sieć i radio</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>7. Interfejsy i trwałość</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>8. Wyrób i eksploatacja</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>9. Wersje, zgodność i dowody</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>1. Status i zasady</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>2. Model i zakres</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>3. Funkcje i dane</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>4. Protokół SA1</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>5. Bezpieczeństwo i koperta</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>6. Sieć i radio</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>7. Interfejsy i trwałość</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>8. Wyrób i eksploatacja</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>9. Wersje, zgodność i dowody</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
         </tbody>
       </table></div>
       <p>W opisach źródłowych pozostają dwa stwierdzenia do wyjaśnienia: <a href="radio.md">radio.md</a> przedstawia Reticulum jako rdzeń, a <a href="stanowisko-osp.md">stanowisko-osp.md</a> mówi, że stanowisko nie jest zbudowane. Stan kodu po PR 181 wymaga osobnej oceny tych zdań.</p>
@@ -466,19 +479,21 @@
         <thead><tr><th>ID</th><th>Rozstrzygnięcie i stan wdrożenia</th></tr></thead>
         <tbody>
           <tr id="wici-dec-001"><td>WICI-DEC-001</td><td><a href="system-wici-model.html#granice">Dziewięć rozdziałów i zakres normatywny</a> oraz <a href="system-wici-model.html#sownik-techniczny">jeden słownik</a> rozstrzygnięto 6 listopada 2026 r. Inwentaryzacja jest roboczym dodatkiem. <a href="system-wici-zgodnosc.html#wersja-normatywna">Warunki zamknięcia, termin numeracji i wektory</a> pozostają według rozstrzygnięć z 5 listopada. Dostosowanie koncepcji: <a href="#wici-inv-047">WICI-INV-047</a>.</td></tr>
-          <tr id="wici-dec-002"><td>WICI-DEC-002</td><td><a href="system-wici-zasady.html#zatwierdzanie">Właściciel sam zatwierdza rozdziały</a> do próby albo jako normatywne; każda zmiana treści wymaga ponownego zatwierdzenia. <a href="system-wici-zasady.html#utrzymanie-zgodnosci-z-kodem">Kontrola repozytorium</a> działa od wersji normatywnej, bez ochrony gałęzi; ścieżki zostaną wtedy wybrane. Stan rozdziałów: <a href="#stan-zatwierdzen">tabela</a>.</td></tr>
+          <tr id="wici-dec-002"><td>WICI-DEC-002</td><td><a href="system-wici-o-dokumencie.html#zatwierdzanie">Właściciel sam zatwierdza rozdziały</a> do próby albo jako normatywne; każda zmiana treści wymaga ponownego zatwierdzenia. <a href="system-wici-o-dokumencie.html#utrzymanie-zgodnosci-z-kodem">Kontrola repozytorium</a> działa od wersji normatywnej, bez ochrony gałęzi; ścieżki zostaną wtedy wybrane. Stan rozdziałów: <a href="#stan-zatwierdzen">tabela</a>.</td></tr>
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum pozostaje do usunięcia po D21 (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Reguła zalewu czeka na wynik emulatora; D21 pozostaje otwarta. Luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
           <tr id="wici-dec-011"><td>WICI-DEC-011</td><td>Rozstrzygnięcia właściciela z 8 listopada 2026 r.: <a href="system-wici-siec.html#trasy">przygotowany z góry zapasowy root</a>, <a href="system-wici-siec.html#plan-sieci">normatywne reguły całego planu</a>, <a href="system-wici-wyrob.html#przekaznik-terenowy">informacyjny profil przekaźnika terenowego</a> oraz zaczep dla późniejszego zarządzania planem przez sieć. Luki wdrożenia i prób: <a href="#wici-inv-049">WICI-INV-049</a>–<a href="#wici-inv-053">053</a>.</td></tr>
+          <tr id="wici-dec-012"><td>WICI-DEC-012</td><td>Przegląd rozdziału 1 z 8 listopada 2026 r.: <a href="system-wici-zasady.html#zaozenia-uzgodnione">obce protokoły</a> poza architekturą i <a href="system-wici-siec.html#wspolistnienie">współistnienie w kanale</a>; <a href="system-wici-o-dokumencie.html">osobna przedmowa</a> i metamodel; <a href="system-wici-zasady.html#dokumenty-powolane">dokumenty powołane</a> oraz <a href="system-wici-zasady.html#klasy-zgodnosci">klasy zgodności</a>; <a href="system-wici-o-dokumencie.html#zatwierdzanie">warunek próby wystarczalności</a> i <a href="system-wici-zasady.html#warunek-d21">prosty zapis D21</a>. Sprzeczności starszych rozstrzygnięć: <a href="#wici-inv-055">WICI-INV-055</a>.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.38</td><td>Oddzielono zasady dokumentu od rozdziału 1; zapisano dokumenty powołane, klasy zgodności, metamodel, współistnienie w kanale, próbę wystarczalności opisu i prosty warunek D21.</td></tr>
           <tr><td>0.37</td><td>Opisano zapasowy root, sprawdzanie całego planu, profil przekaźnika terenowego i zaczep dla późniejszych poleceń planu; skorygowano wyjątek ciszy radiowej.</td></tr>
           <tr><td>0.36</td><td>Rozstrzygnięto zatwierdzanie rozdziałów, zakres normatywny, jeden słownik i szew nośnika; zapisano stan szkiców i trzy sprawy do dalszej pracy.</td></tr>
           <tr><td>0.35</td><td>Rozstrzygnięto odrzucanie <code>0x00</code> w SA1, sprzęt i kryteria D21; zapisano kandydata przeciw zalewowi bez potwierdzenia wynikiem.</td></tr>
@@ -516,7 +531,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.38 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

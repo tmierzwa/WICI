@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interfejsy lokalne, granice zapisu i odtwarzanie stanu w systemie WICI.">
-  <title>Interfejsy i trwałość — Specyfikacja WICI 0.36</title>
+  <title>Interfejsy i trwałość — Specyfikacja WICI 0.38</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -14,6 +14,7 @@
     <strong>Specyfikacja WICI</strong>
     <ol>
       <li><a href="system-wici.html">Start</a></li>
+      <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
       <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
       <li><a href="system-wici-model.html">2. Model systemu</a></li>
       <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
@@ -30,7 +31,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Interfejsy i trwałość</h1>
-      <p><span class="status">Projekt 0.37</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.38</span> · 8 listopada 2026 r.</p>
       <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -42,6 +43,7 @@
     </nav>
     <section id="granice" aria-labelledby="h-granice">
       <h2 id="h-granice">7. Granice interfejsów</h2>
+      <p class="meta">Kształt wymagań: dotychczasowy; metamodel zostanie wprowadzony przy przeglądzie rozdziału.</p>
       <p class="explain"><strong>Status zakresu.</strong> Firmware stacji obsługuje <a href="../../firmware/src/usbproto.cpp">USB v2</a>, a komputer stanowiska obsługuje KISS i <a href="../../software/laptop/wici/stanowisko/panel.py">lokalny panel dyżurnego</a>. Pełny kontrakt USB po stronie stacji i panel dyżurnego należą do części normatywnej. Aplikacja laptopa schronienia na poziomach 2–3, panel gospodarza, strona mieszkańca i kiosk są informacyjne, bez mocy wymagań. Opis tych elementów nie potwierdza wdrożenia (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</p>
       <table>
         <thead><tr><th>Granica</th><th>Przenoszone dane i uprawnienia</th><th>Stan</th></tr></thead>
@@ -146,7 +148,7 @@
       </table>
       <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.37 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.38 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
