@@ -302,7 +302,8 @@ def matrix_drzewo():
 # Wybór poprawki kolejki K1. Trzy kody na tych samych ziarnach, w obu obrazach: bez nauki dróg (poprawka wejdzie
 # wcześniej) i z zestawem przyjętym przez właściciela. Pierwszy kod bez przełączników to obecny (test zgodności).
 OBRAZY = (("bez_nauki", ()), ("z_nauka", ("learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2", "permessage=1")))
-KOD_K1 = (("obecny", ()), ("wariant1", ("k1flood=1",)), ("wariant2", ("k1routed=1",)))
+# Wariant 2 (limit 25% liczy tylko K1, które może teraz wyjść) jest w main od #187, więc „obecny” to już on.
+KOD_K1 = (("obecny", ()), ("wariant1", ("k1flood=1",)))
 K1_SEEDS = (1, 2, 3, 4, 5)
 K1_NEW_SEEDS = tuple(range(301, 311))
 ATTACK_SEEDS = (1, 2, 3, 4, 5, 301, 302, 303, 304, 305)
@@ -338,8 +339,8 @@ def matrix_k1_atak():
 
 # Reguła „rozsyłanie w dół tylko od rodzica” na kodzie z poprawką K1. Tryb 1 to reguła właściciela, 2 dodaje bieżącego
 # rodzica, 3 to kontrola pułapki (odrzucona kopia oznaczona jako widziana), tylko w próbach pułapki.
-RODZIC_OBRAZY = (("bez_nauki", ("k1routed=1", "hold=7200")),
-                 ("z_nauka", ("k1routed=1", "learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2", "permessage=1")))
+RODZIC_OBRAZY = (("bez_nauki", ("hold=7200",)),
+                 ("z_nauka", ("learn=1", "alternate=1", "hold=7200", "flood=700", "leaven=2", "permessage=1")))
 RODZIC_SEEDS = (1, 2, 3, 4, 5, 301, 302, 303, 304, 305)
 
 

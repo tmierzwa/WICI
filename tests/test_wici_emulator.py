@@ -57,23 +57,24 @@ class Emulator(unittest.TestCase):
         for source in (ROOT / "firmware" / "src").glob("wici_*"):
             self.assertNotIn("wici_variant", source.read_text(encoding="utf-8"), source.name)
 
-    def test_routed_k1_variant_never_floods_over_the_contended_cap(self):
+    def test_k1_rule_from_main_never_floods_over_the_contended_cap(self):
+        # Limit 25% z #187: rozsyłanie nie wychodzi ponad limit, gdy czeka K1, które może wyjść; łatka tego nie zmienia.
         attack = ("atak_k1", "seed=1", "p=900", "skip=700", "hours=2", "reports=10", "spread=3600", "fakeevery=2")
-        routed = json.loads(run("variant", *attack, "k1routed=1"))
+        routed = json.loads(run("variant", *attack))
         self.assertEqual(routed["flood_over_cap"], 0)
         self.assertGreater(routed["flood"], 1000)
-        self.assertEqual(run("variant", *attack, "k1routed=1"), run("variant", *attack, "k1routed=1"))
+        self.assertEqual(run("base", *attack), run("variant", *attack))
 
     def test_refused_flood_copy_is_not_marked_seen(self):
         # Kopia spoza rodziców nie może zablokować prawdziwej kopii od rodzica; tryb 3 pokazuje, że miara to wykrywa.
-        case = ("regula_rodzica", "seed=1", "p=900", "n=60", "hours=1", "reports=5", "spread=600", "downrounds=1", "k1routed=1")
+        case = ("regula_rodzica", "seed=1", "p=900", "n=60", "hours=1", "reports=5", "spread=600", "downrounds=1")
         self.assertEqual(json.loads(run("variant", *case, "floodparent=1"))["parent_seen_unsent"], 0)
         self.assertGreater(json.loads(run("variant", *case, "floodparent=3"))["parent_seen_unsent"], 0)
 
     def test_attacker_as_current_parent_passes_only_with_current_parent(self):
         # Napastnik z fałszywie niską rangą zostaje rodzicem dynamicznym stacji 5: tylko tryb 2 przepuszcza jego rozsyłanie.
         case = ("regula_rodzica", "seed=1", "p=900", "skip=700", "hops=10", "hours=1", "reports=10", "spread=1800",
-                "evilparent=5", "fakeevery=2", "k1routed=1")
+                "evilparent=5", "fakeevery=2")
         strict = json.loads(run("variant", *case, "floodparent=1"))
         current = json.loads(run("variant", *case, "floodparent=2"))
         self.assertGreater(strict["victim_on_attacker_pm"], 0)
@@ -82,7 +83,7 @@ class Emulator(unittest.TestCase):
     def test_stale_route_to_a_refusing_station_is_counted(self):
         # Stara droga przez stację, która nie ma nadawcy za rodzica: reguła odmawia bez HACK, obecny kod nie.
         case = ("regula_rodzica", "seed=1", "p=900", "skip=700", "hours=1", "reports=10", "spread=1800", "downrounds=1",
-                "stale=1", "learn=1", "k1routed=1")
+                "stale=1", "learn=1")
         self.assertEqual(json.loads(run("variant", *case, "floodparent=0"))["refused_unicast"], 0)
         self.assertGreater(json.loads(run("variant", *case, "floodparent=1"))["refused_unicast"], 0)
 
@@ -99,13 +100,12 @@ class Emulator(unittest.TestCase):
         self.assertGreater(decided["closed"], today["closed"])
         self.assertGreaterEqual(decided["leaves"], 1)
 
-    def test_k1_frames_without_route_do_not_silence_a_relay_under_the_fix(self):
-        # Bez poprawki ramki z gniazd K1 bez drogi czekają przy limicie 25% na siebie nawzajem: przekaźnik milknie.
+    def test_k1_frames_without_route_do_not_silence_a_relay(self):
+        # Przed #187 ramki z gniazd K1 bez drogi czekały przy limicie 25% na siebie nawzajem i przekaźnik milkł
+        # na ponad 300 s w tym przebiegu. Obecny kod i odrzucony wariant pierwszy (k1flood) już nie milkną.
         args = ("seed=2", "p=900", "skip=700", "hours=12", "learn=1", "alternate=1", "flood=700")
-        without = json.loads(run("variant", "koniec", *args))
-        fixed = json.loads(run("variant", "koniec", *args, "k1flood=1"))
-        self.assertGreater(without["longest_mute_s"], 300)
-        self.assertLess(fixed["longest_mute_s"], 60)
+        self.assertLess(json.loads(run("variant", "koniec", *args))["longest_mute_s"], 60)
+        self.assertLess(json.loads(run("variant", "koniec", *args, "k1flood=1"))["longest_mute_s"], 60)
 
     def test_count_threshold_leaves_a_dropping_parent(self):
         args = ("seed=1", "hops=10", "reports=6", "spread=60", "hours=4", "p=950", *DECISIONS[:2], "hold=7200")

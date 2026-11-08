@@ -852,7 +852,6 @@ int main(int argc, char** argv) {
         else if (name == "flood") params.variant.floodMsPerStation = value;
         else if (name == "sticky") params.variant.stickyRoutes = value;
         else if (name == "k1flood") params.variant.k1Flood = value;
-        else if (name == "k1routed") params.variant.k1Routed = value;
         else if (name == "floodparent") params.variant.floodFromParent = value;
         else if (name == "two") params.two = value;
         else if (name == "bridge") params.bridge = value;
@@ -873,7 +872,7 @@ int main(int argc, char** argv) {
     }
 #ifndef WICI_EMU_VARIANT
     if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS || params.variant.leaveCount ||
-        params.variant.k1Flood || params.variant.k1Routed || params.variant.stickyRoutes || params.variant.floodFromParent) {
+        params.variant.k1Flood || params.variant.stickyRoutes || params.variant.floodFromParent) {
         fprintf(stderr, "ten plik wykonywalny to obecny kod bez wariantów\n");
         return 2;
     }
@@ -882,7 +881,6 @@ int main(int argc, char** argv) {
     wici_variant::flags.floodStays = params.variant.alternate;
     wici_variant::flags.stickyRoutes = params.variant.stickyRoutes;
     wici_variant::flags.k1FloodKeepsPriority = params.variant.k1Flood;
-    wici_variant::flags.k1RoutedOnly = params.variant.k1Routed;
     wici_variant::flags.floodFromParent = params.variant.floodFromParent;
 #endif
     const std::string& s = params.scenario;

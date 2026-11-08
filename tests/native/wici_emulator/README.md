@@ -50,7 +50,6 @@ Próby z drugiej tury raportu, też tylko tu:
 | Parametr | Co robi | Gdzie działa |
 |---|---|---|
 | `k1flood=1` | ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1 przy limicie 25% (poprawka bez zmiany bajtów) | `wici_hop` |
-| `k1routed=1` | przy limicie 25% liczą się tylko czekające ramki K1, które mogą teraz wyjść jednoadresowo (`Relay::nextHop`, jak w #187 po przeglądzie); ramka K1 bez drogi zostaje K2 (poprawka bez zmiany bajtów) | `wici_hop` |
 | `floodparent=1\|2\|3` | ramka w dół wychodzi rozsyłaniem tylko od rodzica. 1: planowy lub zapasowy; 2: także bieżący; 3: kontrola pułapki, odrzucona kopia oznaczona jako widziana | `wici_hop` |
 | `sticky=1` | nauka tylko brakującej drogi zamiast „ostatnia wygrywa” (próba przyczyny) | `wici_route` |
 | `nopool=1` | bez dziennika czasu nadawania (tylko próba przyczyny, nie do firmware) | `Radio` |

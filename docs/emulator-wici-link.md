@@ -462,7 +462,7 @@ Miara to kopia od rodzica uznana za widzianą, choć ta stacja jej nie przekaza�
 **Czego ta próba nie widzi:**
 - Reguła odmawia ramce jednoadresowej bez HACK, więc sąsiad po trzech próbach wstrzymuje tę stację. Pomiar jest w drugiej turze niżej.
 - Jeden napastnik, jeden kształt obejścia, jedna głębokość. Straty seriami i przechwycenie są poza modelem, jak w całym raporcie, a łącze obejścia ma założone 70%.
-- Wynik dotyczy `k1routed=1` w `variant.patch`, czyli tej samej zmiany co w [#187](https://github.com/tmierzwa/WICI/pull/187), która nie jest jeszcze scalona.
+- Wynik dotyczy poprawki K1 z [#187](https://github.com/tmierzwa/WICI/pull/187), która jest już w main; wcześniej był to przełącznik `k1routed=1` w `variant.patch`.
 
 ### Rozsyłanie od rodzica: druga tura
 
