@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Przedmiot, status, założenia i zasady utrzymania specyfikacji WICI.">
-  <title>Status i zasady — Specyfikacja WICI 0.40</title>
+  <title>Status i zasady — Specyfikacja WICI 0.41</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -30,7 +30,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Status i zasady</h1>
-      <p><span class="status">Projekt 0.40</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.41</span> · 8 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#zaozenia-uzgodnione">Założenia systemu</a>
@@ -40,32 +40,41 @@
       </nav>
     <section id="status" aria-labelledby="h-status">
       <h2 id="h-status">1. Przedmiot, status i zasady</h2>
-      <p class="meta">Kształt wymagań: wprowadzony; założenia i warunek wyboru protokołu pozostają odrębnymi rodzajami zapisów.</p>
-      <p class="explain"><strong>Przykład informacyjny.</strong> <a href="system-wici-siec.html#wspolistnienie">Nakaz odrzucenia obcej ramki</a> jest wymaganiem wobec stacji; <a href="#wici-zal-003">WICI-ZAL-003</a> jest założeniem, a D21 warunkiem wyboru protokołu. Szkic czeka na zatwierdzenie. Rozdział zatwierdzony do próby opisuje stan docelowy, nawet gdy kod jeszcze się różni — rozbieżność trafia do inwentaryzacji.</p>
-      <p>Specyfikacja ma pozwolić na budowę niezależnych, współpracujących implementacji oraz określić wymagane właściwości wyrobu. Obejmie funkcje, dane, formaty, bezpieczeństwo, ograniczenia i metody sprawdzenia. Nie narzuca konstrukcji ani organizacji kodu, chyba że wybór wpływa na zgodność, bezpieczeństwo lub współdziałanie.</p>
-      <p>Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> odpowiadają poziomom wymagań z RFC 2119. Tylko zapisane wielkimi literami mają to znaczenie, zgodnie z RFC 8174. Wymaganie otrzyma identyfikator, podmiot, źródło i sposób sprawdzenia według <a href="system-wici-o-dokumencie.html#metamodel">metamodelu</a>; do czasu numeracji identyfikator jest roboczy.</p>
-      <p>Stopień <em>normatywny</em> oznacza obowiązujące wymaganie z ustalonym sposobem sprawdzenia, nie stwierdzenie zgodności kodu ani wyrobu. Zakres normatywny i informacyjny podaje <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
+      <p class="meta">Kształt wymagań: wprowadzony. Założenia i warunek wyboru protokołu pozostają odrębnymi rodzajami zapisów.</p>
+      <p class="explain"><strong>Przykład informacyjny.</strong> Zdanie „stacja MUSI odrzucić obcą ramkę” jest <a href="system-wici-siec.html#wspolistnienie">wymaganiem wobec stacji</a>. „Podstawą komunikacji jest własny protokół WICI” (<a href="#wici-zal-003">WICI-ZAL-003</a>) jest założeniem, a próba przy stole (D21) jest warunkiem wyboru protokołu. Rozdział zatwierdzony do próby opisuje stan docelowy także wtedy, gdy kod się od niego różni. Rozbieżność zapisuje się w inwentaryzacji.</p>
+      <p>Specyfikacja ma umożliwiać budowę niezależnych, współpracujących implementacji i określać wymagane właściwości wyrobu. Obejmuje funkcje, dane, formaty, bezpieczeństwo, ograniczenia i metody sprawdzenia. Nie narzuca budowy ani organizacji kodu, chyba że od tego zależy zgodność, bezpieczeństwo lub współdziałanie.</p>
+      <p>Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> odpowiadają poziomom wymagań z RFC 2119. Tylko zapisane wielkimi literami mają to znaczenie, zgodnie z RFC 8174. Budowę wymagania opisuje <a href="system-wici-o-dokumencie.html#metamodel">przedmowa</a>.</p>
+      <p>Stopień <em>normatywny</em> znaczy, że wymaganie obowiązuje i ma ustalony sposób sprawdzenia. Nie stwierdza, że kod albo wyrób są zgodne. Zakres normatywny i informacyjny podaje <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
       <h3 id="zaozenia-uzgodnione">Założenia systemu</h3>
       <table class="id-table">
         <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
         <tbody>
-          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, przeznaczonym do potrzeb systemu.</td></tr>
-          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum, Meshtastic, MeshCore i inne obce protokoły pozostają poza architekturą podstawową. Współpraca może być opisana informacyjnie jako nośnik lub brama przez <a href="system-wici-interfejsy.html#szew-nosnika">szew nośnika</a>.</td></tr>
+          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, zaprojektowanym dla tego systemu.</td></tr>
+          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum, Meshtastic, MeshCore i inne obce protokoły pozostają poza architekturą podstawową. Współpracę z nimi można opisać informacyjnie jako nośnik albo bramę na <a href="system-wici-interfejsy.html#szew-nosnika">szwie nośnika</a>.</td></tr>
           <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
         </tbody>
       </table>
       <h3 id="dokumenty-powolane">Dokumenty powołane</h3>
-      <p>Wskazany numer lub wersja ustala znaczenie formatu i algorytmu. Warunki prawne stosuje się według miejsca i daty oceny wyrobu.</p>
+      <p>Znaczenie formatów i algorytmów ustala wskazany numer albo wersja dokumentu. Warunki prawne stosuje się według miejsca i daty oceny wyrobu.</p>
       <h4>Normatywne</h4>
       <ul>
-        <li><a href="https://www.rfc-editor.org/rfc/rfc8439.html">RFC 8439</a> — ChaCha20-Poly1305; <a href="https://www.rfc-editor.org/rfc/rfc5869.html">RFC 5869</a> — HKDF; <a href="https://csrc.nist.gov/pubs/fips/180-4/upd1/final">FIPS 180-4</a> — SHA-256; <a href="https://www.rfc-editor.org/rfc/rfc2104.html">RFC 2104</a> — HMAC.</li>
-        <li><a href="https://www.rfc-editor.org/rfc/rfc7748.html">RFC 7748</a> — X25519; <a href="https://www.rfc-editor.org/rfc/rfc8032.html">RFC 8032</a> — Ed25519.</li>
-        <li><a href="https://www.rfc-editor.org/rfc/rfc8259.html">RFC 8259</a> — JSON; <a href="https://www.rfc-editor.org/rfc/rfc3629.html">RFC 3629</a> — UTF-8; <a href="https://www.rfc-editor.org/rfc/rfc4648.html">RFC 4648</a> — base64; <a href="https://www.unicode.org/reports/tr15/tr15-57.html">UAX #15, rewizja 57 (Unicode 17.0.0)</a> — NFC.</li>
-        <li><a href="https://www.rfc-editor.org/rfc/rfc8018.html">RFC 8018, PKCS #5 v2.1</a> — PBKDF2 dla nośnika stanowiska; <a href="https://www.rfc-editor.org/rfc/rfc2119.html">RFC 2119</a> i <a href="https://www.rfc-editor.org/rfc/rfc8174.html">RFC 8174</a> — słowa wymagań.</li>
-        <li><a href="https://eur-lex.europa.eu/eli/dec_impl/2025/105/oj/eng">Decyzja wykonawcza (UE) 2025/105</a>, wiersz 54 załącznika — warunki pasma 869,4–869,65 MHz; obowiązujące warunki krajowe wymagają potwierdzenia przed oceną wyrobu.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8439.html">RFC 8439</a>: ChaCha20-Poly1305.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc5869.html">RFC 5869</a>: HKDF.</li>
+        <li><a href="https://csrc.nist.gov/pubs/fips/180-4/upd1/final">FIPS 180-4</a>: SHA-256.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc2104.html">RFC 2104</a>: HMAC.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc7748.html">RFC 7748</a>: X25519.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8032.html">RFC 8032</a>: Ed25519.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8259.html">RFC 8259</a>: JSON.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc3629.html">RFC 3629</a>: UTF-8.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc4648.html">RFC 4648</a>: base64.</li>
+        <li><a href="https://www.unicode.org/reports/tr15/tr15-57.html">UAX #15, rewizja 57 (Unicode 17.0.0)</a>: NFC.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8018.html">RFC 8018, PKCS #5 v2.1</a>: PBKDF2 dla nośnika stanowiska.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc2119.html">RFC 2119</a>: słowa wymagań.</li>
+        <li><a href="https://www.rfc-editor.org/rfc/rfc8174.html">RFC 8174</a>: użycie wielkich liter w słowach wymagań.</li>
+        <li><a href="https://eur-lex.europa.eu/eli/dec_impl/2025/105/oj/eng">Decyzja wykonawcza (UE) 2025/105</a>, wiersz 54 załącznika: warunki pasma 869,4–869,65 MHz. Obowiązujące warunki krajowe wymagają potwierdzenia przed oceną wyrobu.</li>
       </ul>
       <h4>Pomocnicze</h4>
-      <p><a href="https://reticulum.network/manual/">Dokumentacja Reticulum 1.6.0</a>, <a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">karta SX1261/SX1262 z 7 kwietnia 2025 r.</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a> i <a href="https://meshtastic.org/docs/overview/radio-settings/">ustawienia Meshtastic</a> służą opisowi otoczenia i źródeł projektu; nie rozszerzają wymagań WICI.</p>
+      <p><a href="https://reticulum.network/manual/">Dokumentacja Reticulum 1.6.0</a>, <a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">karta SX1261/SX1262 z 7 kwietnia 2025 r.</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a> i <a href="https://meshtastic.org/docs/overview/radio-settings/">ustawienia Meshtastic</a> opisują otoczenie i źródła projektu. Nie dodają wymagań WICI.</p>
       <h3 id="klasy-zgodnosci">Zgodność</h3>
       <p>Deklaracja zgodności wskazuje wersję specyfikacji, profil i jedną z klas:</p>
       <table>
@@ -77,12 +86,12 @@
           <tr><td>Wyrób poziomu 1</td><td>Stacja jako urządzenie: sprzęt, zasilanie, środowisko i badania z rozdziału 8 wraz z właściwymi wymaganiami stacji z rozdziałów 2–7.</td></tr>
         </tbody>
       </table>
-      <p>Implementacja zgodna przechodzi wspólne wektory. Po próbie przy stole wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu; kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
+      <p>Implementacja zgodna przechodzi wspólne wektory. Po próbie przy stole wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu. Kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
       <h3 id="warunek-d21">Warunek próby przy stole</h3>
       <p><strong>Warunek zamknięcia D21.</strong> Zatwierdzenie WICI-Link wymaga zaliczenia próby przy stole na docelowym sprzęcie według <a href="system-wici-siec.html#warunek-d21-v1">ustalonych kryteriów D21</a>. Reticulum pozostaje zapasem, gdy oczekiwanych wyników nie da się osiągnąć w czasie ustalonym przez właściciela projektu.</p>
-      <p class="explain">Podstawa architektury zakłada pozytywny wynik decyzji <a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21</a> z koncepcji. Dla wyboru protokołu „docelowy sprzęt” oznacza <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki, po wyborze protokołu. Decyzja pozostaje otwarta.</p>
+      <p class="explain">Architektura zakłada, że próba przy stole (<a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21 w koncepcji</a>) da wynik pozytywny. Dla wyboru protokołu „docelowy sprzęt” oznacza <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki, po wyborze protokołu. Decyzja pozostaje otwarta.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.40 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.41 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

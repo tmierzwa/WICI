@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zasady opracowania, zatwierdzania i utrzymania specyfikacji WICI.">
-  <title>O dokumencie — Specyfikacja WICI 0.40</title>
+  <title>O dokumencie — Specyfikacja WICI 0.41</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -31,8 +31,8 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>O dokumencie</h1>
-      <p><span class="status">Projekt 0.40</span> · 8 listopada 2026 r.</p>
-      <p>Ta przedmowa określa sposób czytania i utrzymania specyfikacji. Nie jest numerowanym rozdziałem.</p>
+      <p><span class="status">Projekt 0.41</span> · 8 listopada 2026 r.</p>
+      <p>Przedmowa mówi, jak czytać i utrzymywać specyfikację. Nie jest numerowanym rozdziałem.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#zasady-dokumentu">Zasady</a><a href="#metamodel">Rodzaje zapisów</a>
@@ -43,39 +43,39 @@
       <table class="id-table">
         <thead><tr><th>ID</th><th>Zasada</th></tr></thead>
         <tbody>
-          <tr id="wici-zal-001"><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest niezależnym dokumentem nadrzędnym, określającym wymagane właściwości i zachowanie rozwiązania.</td></tr>
-          <tr id="wici-zal-002"><td>WICI-ZAL-002</td><td>Specyfikacja stanowi dokument odniesienia dla dokumentacji szczegółowej oraz implementacji.</td></tr>
-          <tr id="wici-zal-005"><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, użyteczna, poprawna i otwarta oraz wystarczająca do opracowania niezależnych implementacji.</td></tr>
-          <tr id="wici-zal-006"><td>WICI-ZAL-006</td><td>Do zatwierdzenia pierwszej wersji normatywnej zmianę kodu w obszarze objętym specyfikacją odnotowuje się w inwentaryzacji. Po zatwierdzeniu zmianie kodu w tym obszarze towarzyszy aktualizacja wymagań albo wpis o braku wpływu na specyfikację.</td></tr>
+          <tr id="wici-zal-001"><td>WICI-ZAL-001</td><td>Specyfikacja systemu WICI jest samodzielnym dokumentem nadrzędnym. Określa wymagane właściwości i zachowanie systemu.</td></tr>
+          <tr id="wici-zal-002"><td>WICI-ZAL-002</td><td>Specyfikacja jest dokumentem odniesienia dla dokumentacji szczegółowej i implementacji. Rozbieżność wymaga poprawy implementacji albo zatwierdzonej zmiany specyfikacji.</td></tr>
+          <tr id="wici-zal-005"><td>WICI-ZAL-005</td><td>Specyfikacja ma być kompletna, poprawna, otwarta i użyteczna. Ma wystarczać do stworzenia niezależnych implementacji.</td></tr>
+          <tr id="wici-zal-006"><td>WICI-ZAL-006</td><td>Do zatwierdzenia pierwszej wersji normatywnej każdą zmianę kodu w obszarze specyfikacji zapisuje się w inwentaryzacji. Po zatwierdzeniu każda zmiana kodu w tym obszarze wymaga aktualizacji wymagań albo zapisu o braku wpływu na specyfikację. Szczegóły: <a href="#utrzymanie-zgodnosci-z-kodem">Utrzymanie zgodności z kodem</a>.</td></tr>
           <tr id="wici-zal-007"><td>WICI-ZAL-007</td><td>Treść i nomenklatura muszą być spójne merytorycznie, logicznie i językowo.</td></tr>
           <tr id="wici-zal-008"><td>WICI-ZAL-008</td><td>Językiem oryginału jest język polski. Formatem publikacji jest HTML.</td></tr>
         </tbody>
       </table>
-      <p>Specyfikacja jest dokumentem odniesienia dla kodu i dokumentacji szczegółowej. Rozbieżność wymaga poprawy implementacji albo zatwierdzenia zmiany specyfikacji. Publikacja określi licencję, identyfikator wydania, dostęp do wcześniejszych wersji i sposób zgłaszania błędów.</p>
+      <p>Publikacja określi licencję, identyfikator wydania, dostęp do wcześniejszych wersji i sposób zgłaszania błędów.</p>
     </section>
     <section id="metamodel" aria-labelledby="h-metamodel">
       <h2 id="h-metamodel">Rodzaje zapisów</h2>
-      <p>Założenie określa punkt wyjścia, definicja ustala znaczenie terminu, a wymaganie podaje sprawdzalne zachowanie podmiotu. Parametr profilu ustala wartość dla wybranej konfiguracji. Decyzja dokumentuje wybór właściciela, a warunek zamknięcia wyznacza próbę potrzebną do zakończenia etapu projektu. Wpis inwentaryzacji opisuje stan kodu i lukę, a dowód zapisuje wynik sprawdzenia.</p>
+      <p>Założenie określa punkt wyjścia, a definicja znaczenie terminu. Wymaganie podaje sprawdzalne zachowanie podmiotu, a parametr profilu wartość dla wybranej konfiguracji. Decyzja opisuje wybór właściciela, a warunek zamknięcia próbę potrzebną do zakończenia etapu projektu. Wpis inwentaryzacji opisuje stan kodu i lukę, a dowód wynik sprawdzenia.</p>
       <p>Wymaganie ma identyfikator, podmiot z <a href="system-wici-zasady.html#klasy-zgodnosci">czterech klas zgodności</a>, rodzaj (reguła protokołu, parametr profilu albo wymaganie wyrobu), jedno zdanie ze słowem <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> lub <strong>MOŻE</strong>, uzasadnienie, sposób sprawdzenia i źródło. Sprawdzeniem może być wektor, test, próba, pomiar lub przegląd. Uzasadnienie na kolorowym tle objaśnia wymaganie, lecz go nie rozszerza. Stan kodu należy do inwentaryzacji, nie do treści wymagania.</p>
-      <p>Nowy kształt wprowadza się rozdział po rozdziale przed zatwierdzeniem do próby. Status kształtu przy rozdziale i w <a href="system-wici-decyzje.html#stan-zatwierdzen">rejestrze</a> nie jest stopniem zatwierdzenia. Identyfikatory wymagań nadaje się po decyzjach; do tego czasu pole pozostaje robocze lub puste (<a href="system-wici-zgodnosc.html#numeracja-wymagan">termin numeracji</a>).</p>
-      <p class="explain"><strong>Przykład informacyjny.</strong> „Stacja MUSI odrzucić obcą ramkę bez zmiany stanu protokołu”; podmiot: stacja, rodzaj: reguła protokołu, sprawdzenie: test. Przykład pokazuje formę, nie ustanawia wymagania.</p>
+      <p>Nowy kształt wprowadza się rozdział po rozdziale przed zatwierdzeniem do próby. Status kształtu przy rozdziale i w <a href="system-wici-decyzje.html#stan-zatwierdzen">rejestrze</a> nie jest stopniem zatwierdzenia. Identyfikatory wymagań nadaje się po decyzjach. Do tego czasu pole jest robocze albo puste, zgodnie z <a href="system-wici-zgodnosc.html#numeracja-wymagan">decyzją o terminie numeracji</a>.</p>
+      <p class="explain"><strong>Przykład informacyjny.</strong> „Stacja MUSI odrzucić obcą ramkę bez zmiany stanu protokołu”. Podmiotem jest stacja, rodzajem jest reguła protokołu, a sprawdzeniem test. Przykład pokazuje tylko formę i nie jest wymaganiem.</p>
     </section>
     <section id="zatwierdzanie" aria-labelledby="h-zatwierdzanie">
       <h2 id="h-zatwierdzanie">Zatwierdzanie rozdziałów</h2>
-      <p>Właściciel projektu zatwierdza rozdziały sam. Stopnie to „szkic”, „zatwierdzony do próby” i „normatywny”. Przy każdym rozdziale zapisuje się stopień, commit, datę i osobę zatwierdzającą (<a href="system-wici-decyzje.html#stan-zatwierdzen">rejestr</a>). Zmiana treści wymaga ponownego zatwierdzenia; przegląd pomija różnice dotyczące wyłącznie numeru wersji.</p>
-      <p>„Zatwierdzony do próby” opisuje stan docelowy, bez stwierdzenia zgodności kodu. Rozbieżności z kodem pozostają w inwentaryzacji. Stopień normatywny wymaga ponadto spełnienia <a href="system-wici-zgodnosc.html#warunki-zamkniecia">warunków zamknięcia</a>.</p>
-      <p>Przed stopniem normatywnym wystarczalność opisu formatów sprawdza się niezależną implementacją napisaną z samego tekstu, bez dostępu do kodu, porównaną z implementacją wzorcową; wynik zapisuje się w raporcie. <a href="system-wici-decyzje.html#wici-inv-054">Procedura próby</a> pozostaje poza specyfikacją.</p>
+      <p>Właściciel projektu zatwierdza rozdziały sam. Stopnie to „szkic”, „zatwierdzony do próby” i „normatywny”. Przy każdym rozdziale zapisuje się stopień, commit, datę i osobę zatwierdzającą (<a href="system-wici-decyzje.html#stan-zatwierdzen">rejestr</a>). Zmiana treści wymaga ponownego zatwierdzenia. Zmiana samego numeru wersji go nie wymaga.</p>
+      <p>Rozdział „zatwierdzony do próby” opisuje stan docelowy. Nie stwierdza, że kod jest z nim zgodny. Rozbieżności z kodem pozostają w inwentaryzacji. Stopień normatywny wymaga ponadto spełnienia <a href="system-wici-zgodnosc.html#warunki-zamkniecia">warunków zamknięcia</a>.</p>
+      <p>Przed stopniem normatywnym wystarczalność opisu formatów sprawdza się niezależną implementacją napisaną z samego tekstu, bez dostępu do kodu. Porównuje się ją z implementacją wzorcową, a wynik zapisuje w raporcie. <a href="system-wici-decyzje.html#wici-inv-054">Procedura próby</a> pozostaje poza specyfikacją.</p>
     </section>
     <section id="utrzymanie-zgodnosci-z-kodem" aria-labelledby="h-utrzymanie-zgodnosci-z-kodem">
       <h2 id="h-utrzymanie-zgodnosci-z-kodem">Utrzymanie zgodności z kodem</h2>
       <h3>Przed pierwszą wersją normatywną</h3>
       <p>Pierwszą wersję normatywną opracowuje się przez zebranie istniejących założeń i zachowań kodu, ich weryfikację oraz zatwierdzenie (<a href="#wici-zal-006">WICI-ZAL-006</a>).</p>
-      <p>Zmiana kodu w obszarze objętym specyfikacją dodaje wpis do inwentaryzacji w tej samej zmianie. Kod i testy są źródłami kandydatów na wymagania; nie nadają im statusu normatywnego. Na tym etapie nie ma automatycznej kontroli repozytorium. <a href="system-wici-zgodnosc.html#warunki-zamkniecia">Warunki zamknięcia pierwszej wersji normatywnej</a> obejmują próbę D21 na docelowym sprzęcie.</p>
+      <p>Zmiana kodu w obszarze objętym specyfikacją dodaje wpis do inwentaryzacji w tej samej zmianie. Kod i testy są źródłami kandydatów na wymagania. Nie nadają im statusu normatywnego. Na tym etapie nie ma automatycznej kontroli repozytorium. <a href="system-wici-zgodnosc.html#warunki-zamkniecia">Warunki zamknięcia pierwszej wersji normatywnej</a> obejmują próbę przy stole na docelowym sprzęcie (D21).</p>
       <h3>Od pierwszej wersji normatywnej</h3>
-      <p>Każda zmiana kodu w obszarze objętym specyfikacją aktualizuje dotknięte wymagania albo zapisuje w historii specyfikacji deklarację „bez wpływu na specyfikację” wraz ze sposobem sprawdzenia. Zmiana wskazuje też dotknięte testy i wpływ na ocenę zgodności wyrobu. Kontrola repozytorium oznacza zmianę kodu bez jednego z tych zapisów. Zaczyna działać od wersji normatywnej; listę ścieżek ustala się wtedy, bez ochrony gałęzi (<a href="system-wici-decyzje.html#wici-dec-002">WICI-DEC-002</a>).</p>
-      <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami. Akapity wyróżnione kolorem objaśniają treść; nie ustanawiają wymagań.</p>
+      <p>Każda zmiana kodu w obszarze objętym specyfikacją aktualizuje dotknięte wymagania albo zapisuje w historii specyfikacji deklarację „bez wpływu na specyfikację” wraz ze sposobem sprawdzenia. Zmiana wskazuje też dotknięte testy i wpływ na ocenę zgodności wyrobu. Automatyczna kontrola repozytorium wskazuje zmianę kodu bez takiego zapisu. Działa od wersji normatywnej. Wtedy ustala się listę ścieżek, które obejmuje. Gałęzie nie są chronione (<a href="system-wici-decyzje.html#wici-dec-002">WICI-DEC-002</a>).</p>
+      <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.40 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.41 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
