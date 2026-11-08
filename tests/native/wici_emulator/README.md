@@ -50,7 +50,7 @@ Próby z drugiej tury raportu, też tylko tu:
 | Parametr | Co robi | Gdzie działa |
 |---|---|---|
 | `k1flood=1` | ramka z gniazda K1 bez znanej drogi zachowuje pierwszeństwo K1 przy limicie 25% (poprawka bez zmiany bajtów) | `wici_hop` |
-| `floodparent=0\|1\|2\|3` | ramka w dół wychodzi rozsyłaniem tylko od rodzica. 0: bez reguły (kod przed #188); 1: planowy lub zapasowy; 2: także bieżący, jak obecny kod (domyślnie); 3: kontrola pułapki, odrzucona kopia oznaczona jako widziana | `wici_hop` |
+| `floodparent=0\|1\|2\|3` | ramka w dół wychodzi rozsyłaniem tylko od rodzica. 0: bez reguły (kod przed #188); 1: planowy lub zapasowy; 2: także bieżący, jak obecny kod (domyślnie); 3: kontrola pułapki, odrzucona kopia oznaczona jako widziana. Przełącznik zostaje do porównań z kodem bez reguły; w każdym trybie reguła jest rozstrzygana raz, przy przyjęciu, jak w firmware | `wici_hop` |
 | `sticky=1` | nauka tylko brakującej drogi zamiast „ostatnia wygrywa” (próba przyczyny) | `wici_route` |
 | `nopool=1` | bez dziennika czasu nadawania (tylko próba przyczyny, nie do firmware) | `Radio` |
 | `leaven=N`, `permessage=1` | zmiana rodzica przed nadaniem, gdy N nadań dostało HACK i nic nie wróciło; `permessage`: licznik zeruje tylko odpowiedź na tę wiadomość | skrót stacji |

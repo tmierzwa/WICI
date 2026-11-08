@@ -63,18 +63,25 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (broadcast && !allowFlood_) return Receipt::IGNORED;
     if (broadcast && (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ))
         return Receipt::REJECTED;
-    // A downward copy without a route is passed on only from a parent
-    // (floodRefused). Any other copy is dropped before the flood ring and the
-    // seen ring: marked seen, it would block the parent's later copy.
-    if (floodRefused(wire)) return Receipt::IGNORED;
+    // Flood rule (wici-link.md, "Rozsyłanie tylko od rodzica"), decided once
+    // here: a downward frame from a neighbour other than the planned, backup
+    // or current parent may leave only along a route. Without one it is
+    // dropped before the flood ring and the seen ring: marked seen, it would
+    // block the parent's later copy. A captured neighbour with a valid pair
+    // tag could otherwise hand this relay frames to numbers without a route,
+    // and the whole network would flood them. The current parent counts too
+    // (also a dynamic one): without it a detour through a neighbouring chain
+    // is lost.
+    const bool routedOnly = (frame.flags & wici_link::DOWN) && !fromParent(frame.source);
+    if (routedOnly && routes_.down(get16(frame.payload + 3)) == wici_link::BROADCAST) return Receipt::IGNORED;
     if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
         return Receipt::IGNORED;
     // A neighbour that already holds its K1 slot competes for K2 space.
     uint8_t slot = wici_relay::SLOTS;
     const bool k1 = priority(frame);
-    wici_relay::Admission stored = k1 ? queue_.admit(wire, length, nowS, frame.source, &slot) :
+    wici_relay::Admission stored = k1 ? queue_.admit(wire, length, nowS, frame.source, &slot, routedOnly) :
                                         wici_relay::Admission::FULL;
-    if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot);
+    if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot, routedOnly);
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
         stored != wici_relay::Admission::FORWARDED)
         return Receipt::REJECTED;
@@ -141,7 +148,7 @@ bool Relay::prepare(uint32_t nowS) {
         if (k1 != (order < wici_relay::SLOTS) ||
             !queue_.read(slot, nowS, wire, sizeof(wire), length) ||
             !wici_link::decode(key_, config_.network, wire, length, frame)) continue;
-        const uint16_t next = nextHop(wire, nowS);
+        const uint16_t next = nextHop(slot, wire, nowS);
         if (!next) continue;
         Attempt& last = prepared_[slot];
         // The same item for the same next hop is the same frame: it keeps its
@@ -200,15 +207,16 @@ const uint8_t* Relay::outgoing(size_t& length) const {
     return active_ ? outgoing_ : nullptr;
 }
 
-uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
+uint16_t Relay::nextHop(uint8_t slot, const uint8_t* wire, uint32_t nowS) const {
     // Stored items were authenticated at admission: the header and the
     // envelope recipient are read from the bytes without a second MAC check.
     const bool down = wire[0] & wici_link::DOWN;
     const uint16_t source = get16(wire + 3), recipient = get16(wire + wici_link::HEADER + 3);
     const uint8_t hops = wire[7] >> 4, ttl = wire[7] & 15;
     const uint16_t next = down ? routes_.down(recipient) : routes_.parent();
-    // The route can go after admission (three failed rounds forget it).
-    if (next == wici_link::BROADCAST) return allowFlood_ && !floodRefused(wire) ? next : 0;
+    // A frame admitted only for its route waits when the route goes (three
+    // failed rounds forget it): for a route back or the 30-min expiry.
+    if (next == wici_link::BROADCAST) return allowFlood_ && !queue_.routedOnly(slot) ? next : 0;
     // Never hand a frame back to the neighbor it came from. A next hop that
     // stopped answering is held; frames to others still go.
     if (!id(next) || next == source || held(next, nowS)) return 0;
@@ -220,16 +228,8 @@ uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
     return next;
 }
 
-bool Relay::floodRefused(const uint8_t* wire) const {
-    // Flood rule (wici-link.md, "Rozsyłanie"): a captured neighbour with a
-    // valid pair tag could otherwise hand this relay frames to numbers without
-    // a route, and the whole network would flood them. The current parent
-    // counts too (also a dynamic one): without it a detour through a
-    // neighbouring chain is lost. Upward frames always have a parent.
-    const uint16_t source = get16(wire + 3);
-    if (!(wire[0] & wici_link::DOWN) || source == config_.planned || source == config_.backup ||
-        source == routes_.parent()) return false;
-    return routes_.down(get16(wire + wici_link::HEADER + 3)) == wici_link::BROADCAST;
+bool Relay::fromParent(uint16_t neighbor) const {
+    return neighbor == config_.planned || neighbor == config_.backup || neighbor == routes_.parent();
 }
 
 bool Relay::contendedK2(uint32_t nowS) const {
@@ -237,7 +237,7 @@ bool Relay::contendedK2(uint32_t nowS) const {
     for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
         size_t length = 0;
         const uint8_t* wire = slot != slot_ && queue_.k1Neighbor(slot) ? queue_.peek(slot, length) : nullptr;
-        const uint16_t next = wire ? nextHop(wire, nowS) : 0;
+        const uint16_t next = wire ? nextHop(slot, wire, nowS) : 0;
         if (next && next != wici_link::BROADCAST) return true;
     }
     return false;
