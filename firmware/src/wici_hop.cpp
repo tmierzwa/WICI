@@ -63,6 +63,10 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     if (broadcast && !allowFlood_) return Receipt::IGNORED;
     if (broadcast && (!(frame.flags & wici_link::DOWN) || frame.flags & wici_link::ACKREQ))
         return Receipt::REJECTED;
+    // A downward copy without a route is passed on only from a parent
+    // (floodRefused). Any other copy is dropped before the flood ring and the
+    // seen ring: marked seen, it would block the parent's later copy.
+    if (floodRefused(wire)) return Receipt::IGNORED;
     if (broadcast && flood_.lookup(frame.payload, nowS) != wici_flood::Lookup::NONE)
         return Receipt::IGNORED;
     // A neighbour that already holds its K1 slot competes for K2 space.
@@ -203,7 +207,8 @@ uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
     const uint16_t source = get16(wire + 3), recipient = get16(wire + wici_link::HEADER + 3);
     const uint8_t hops = wire[7] >> 4, ttl = wire[7] & 15;
     const uint16_t next = down ? routes_.down(recipient) : routes_.parent();
-    if (next == wici_link::BROADCAST) return allowFlood_ ? next : 0;
+    // The route can go after admission (three failed rounds forget it).
+    if (next == wici_link::BROADCAST) return allowFlood_ && !floodRefused(wire) ? next : 0;
     // Never hand a frame back to the neighbor it came from. A next hop that
     // stopped answering is held; frames to others still go.
     if (!id(next) || next == source || held(next, nowS)) return 0;
@@ -213,6 +218,18 @@ uint16_t Relay::nextHop(const uint8_t* wire, uint32_t nowS) const {
     // to the backup); the 30-min expiry bounds the wait.
     if (hops + 1 >= ttl && next != (down ? recipient : config_.root)) return 0;
     return next;
+}
+
+bool Relay::floodRefused(const uint8_t* wire) const {
+    // Flood rule (wici-link.md, "Rozsyłanie"): a captured neighbour with a
+    // valid pair tag could otherwise hand this relay frames to numbers without
+    // a route, and the whole network would flood them. The current parent
+    // counts too (also a dynamic one): without it a detour through a
+    // neighbouring chain is lost. Upward frames always have a parent.
+    const uint16_t source = get16(wire + 3);
+    if (!(wire[0] & wici_link::DOWN) || source == config_.planned || source == config_.backup ||
+        source == routes_.parent()) return false;
+    return routes_.down(get16(wire + wici_link::HEADER + 3)) == wici_link::BROADCAST;
 }
 
 bool Relay::contendedK2(uint32_t nowS) const {

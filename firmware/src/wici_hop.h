@@ -122,6 +122,10 @@ private:
     // The next hop prepare() would use for a stored item now, or 0 when it
     // would skip the item. The one place for that rule.
     uint16_t nextHop(const uint8_t* wire, uint32_t nowS) const;
+    // True for a downward frame without a route that came from a neighbour
+    // other than the planned, backup or current parent: it is not passed on.
+    // `wire` was authenticated (receiveData) or stored after that.
+    bool floodRefused(const uint8_t* wire) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;
