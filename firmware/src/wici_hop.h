@@ -67,8 +67,13 @@ public:
     // queue (receiveHack).
     void yield();
     const uint8_t* outgoing(size_t& length) const;
-    // The active transfer is K2 while a K1 frame waits in the queue.
-    bool contendedK2() const;
+    // The active transfer is K2 while another K1 frame waits that could go
+    // out now as unicast (nextHop). A K1 frame without a route goes out as a
+    // flood, which is K2 itself, and one prepare() would skip (back to its
+    // source, a held next hop, a last hop that does not end at its target)
+    // cannot go at all: counting either kept K2, floods included, at the 25%
+    // cap until the K1 frame expired, and the relay went silent.
+    bool contendedK2(uint32_t nowS) const;
     // Call only after a real TX attempt. A frame without HACK (flood, silence
     // exception) is retired after a successful TX; unicast waits for a
     // matching authenticated HACK. After a failed TX the item stays queued.
@@ -114,6 +119,9 @@ private:
     bool allowFlood_ = false;
     uint16_t receivers_[2] = {};
     bool priority(const wici_link::Frame& frame) const;
+    // The next hop prepare() would use for a stored item now, or 0 when it
+    // would skip the item. The one place for that rule.
+    uint16_t nextHop(const uint8_t* wire, uint32_t nowS) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;
