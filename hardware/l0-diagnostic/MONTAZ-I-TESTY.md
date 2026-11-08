@@ -7,18 +7,22 @@ Etapy są ułożone tak, żeby każdy błąd ujawnił się tam, gdzie jego usuni
 ## 0. Przed lutowaniem
 
 1. **Oględziny SMD pod mikroskopem:** mostki na J7 (raster 0,5 mm) i U2 (SOT-23-6); kropki pinu 1 U1–U4 zgodne z opisem; Q1, D3 (SOT-23), D2 (pasek katody). U1 to MB85RS4MT (montaż JLC); CY15B104QN jest dopuszczonym zamiennikiem. Wady SMD reklamować u producenta przed lutowaniem THT, ze zdjęciami.
-2. **Szyny (na padach):** JP1.1 (+3V3) – J11.1 (GND): bez zwarcia, wskazanie rośnie (C13 100 µF); C9 (+5V_LCD) – GND ≈ 1,3 MΩ (dzielnik R21 + R22).
+2. **Szyny (na padach):** JP1.1 (+3V3) – J11.1 (GND): bez zwarcia (P001: > 10 MΩ; ładowania C13 100 µF na zakresie MΩ zwykle nie widać); C9 (+5V_LCD) – GND ≥ 0,5 MΩ. Dzielnik R21 + R22 ma 1,31 MΩ, ale równolegle leży U2, więc wskazanie zależy od miernika (P001: > 0,6 MΩ). Zwarcie to wskazanie poniżej 1 kΩ.
 3. **Przymiarka 1:1 na płytce bez SMD:** DevKitC w otworach J5/J6 (pin 1 od strony anteny, gniazdo USB w stronę napisu USB na płytce), panel z taśmą FPC wsuniętą do J7 do oporu: panel nie mieści się w obrysie z opisu ([F118](../../docs/review.md)), położenie według [uruchomienia N1](../dev-bench/uruchomienie.md), krok 7, bez ostrego zgięcia taśmy i bez zginania jej w stronę ekranu; przyciski z nasadkami, SW5 i J12 w otworach. Wynik zapisać.
 4. **Wgranie DevKitC poza płytką** (rozdział 4, kroki 1–3). Oddziela problemy USB i narzędzi od problemów montażu, a fabryczny program nie steruje wyprowadzeniami na N1. Bez peryferiów oczekiwane: `INFO l0-0.5 … 0 …`, `FRAM_ID unknown …`, `ERR radio_begin …`; odpowiedź na `INFO` może się opóźnić o około 10 s (program szuka radia, zob. diagnoza w rozdziale 4).
 
 ## 1. N1
 
 1. **R12: 10 kΩ → 1 kΩ** (0805, 1%), jako pierwsza czynność, dopóki THT nie utrudnia dostępu. Kontrola na padach: J5.15 (RF_RESET) – GND ≈ 1,0 kΩ.
-2. **THT:** SW1–SW6, D1 (katoda = płaski bok i kwadratowy pad 1, do masy), BZ1 („+” na padzie 1), SW5, J11, JP1, JP2, J12, na końcu J5/J6 (na wpiętym DevKitC albo na listwie, żeby gniazda stały pionowo i w osi). Pad J6.22 ma pełne połączenie z polem masy: grot o większej pojemności cieplnej.
-    - SW5 (SPDT, wyprowadzenia w linii) da się wlutować obrócony o 180°; wtedy położenie CISZA jest odwrócone wobec opisu. Kontrola: w położeniu CISZA J6.4 – GND ≈ 1 kΩ (R16), w położeniu PRACA ≫ 10 kΩ.
-    - Nie obsadzać J1–J4, J9/J10 i JP3. To złącza stanowisk A/B; J9/J10 leżą na RF_CS, RF_RESET i SPI, wspólnych z Wio.
+2. **THT:** SW1–SW4, SW6, D1 (katoda = płaski bok i kwadratowy pad 1, do masy), BZ1 („+” na padzie 1; znak „+” na płytce leży pod obudową, sprawdzić przed włożeniem), J11, JP1, JP2, J12, SW5 jako najwyższy z nich, na końcu J5/J6 na listwie goldpin, żeby gniazda stały pionowo i w osi. Nie lutować J5/J6 na wpiętym DevKitC: moduł nagrzewa się i jest narażony na ESD. Pad J6.22 ma pełne połączenie z polem masy: grot o większej pojemności cieplnej.
+    - SW5 (przełącznik dźwigienkowy, wyprowadzenia w linii) jest symetryczny: obrót o 180° nie zmienia działania. Dźwignia zwiera styk środkowy ze stykiem po przeciwnej stronie, więc CISZA (zwarte 1–2) to dźwignia przechylona w stronę padu 3, z dala od padu 1 oznaczonego „1”. Napis `CISZA: 1-2` pod przełącznikiem nie wskazuje kierunku dźwigni (P001, 2026-11-01: dźwignia „w stronę CISZA” dawała PRACA). Rozstrzyga pomiar: w położeniu CISZA J6.4 – GND ≈ 1 kΩ (R16), w położeniu PRACA ≫ 10 kΩ. Położenie CISZA oznaczyć na płytce markerem.
+    - Nie obsadzać J1–J4, J9/J10 i JP3. To złącza stanowisk A/B; J9/J10 leżą na RF_CS, RF_RESET i SPI, wspólnych z Wio. Wlutowany JP3 bez zworki nie szkodzi (zasila tylko nieobsadzone J10); zworki na JP3 nie zakładać.
 3. **Zworki** JP1 i JP2 założone (JP1: 3V3 DevKitC → +3V3 N1; JP2: 5 V dla brzęczyka).
-4. **Dystanse** M3 × 12 mm w H1–H5. W H6–H9 tylko nakrętki nylonowe albo nic: pady nieobsadzonych J1–J4 są połączone z sieciami, a środek H7 leży 3,6 mm od padu J4.10.
+4. **Dystanse** M3 × 12 mm w H1–H5. W H6–H9 tylko nakrętki nylonowe albo nic: pady nieobsadzonych J1–J4 są połączone z sieciami, a środek H7 leży 3,6 mm od padu J4.10. Otwory nie mają oznaczeń na płytce. Płytka od strony elementów, SW5, BZ1 i J12 przy dolnej krawędzi:
+    - H1–H4: cztery narożniki, 3,5 mm od krawędzi;
+    - H5: przy dolnej krawędzi, między BZ1 a gniazdem J5;
+    - H6, H7: na prawo od gniazda J6, jeden w dolnej, drugi w górnej połowie płytki;
+    - H8, H9: przy prawej krawędzi, między narożnymi H3 i H4.
 
 ## 2. Adapter Wio
 
@@ -67,7 +71,7 @@ Bez DevKitC i panelu, POWER_BREAK założony.
 Zasilanie wyłącznie przez gniazdo **USB** DevKitC (natywne USB/OTG, nie UART), przewodem z liniami danych, przez miernik prądu USB. Port UART nie ma konsoli tego obrazu. Jedno źródło zasilania naraz; źródła AA i 12 V odłączone.
 
 1. Narzędzia: `python3 -m venv .venv && .venv/bin/pip install -r requirements.txt`. Obraz z paczki (`images/l0-full.bin` pod adres 0x0) albo ze źródeł w `hardware/l0-diagnostic`: `pio run -t upload --upload-port PORT` (wgrywa samą aplikację pod 0x10000; kopia fabryczna wcześniej, krok 2). Windows: `.venv\Scripts\python`, porty `COMn`.
-2. Kopia fabryczna i wgranie: `.venv/bin/python -m esptool --chip esp32s3 --port PORT read_flash 0 0x800000 backups/l0-factory-<nr>.bin`, następnie `shasum -a 256 -c SHA256SUMS.txt` (Linux: `sha256sum -c`) i `write_flash 0x0 images/l0-full.bin`. Bez `erase_flash`. Brak portu: przytrzymać BOOT, nacisnąć RESET. Nazwa portu (`/dev/cu.usbmodem…`, na Linuksie `/dev/ttyACM…`) może się zmienić po każdym resecie.
+2. Kopia fabryczna i wgranie: `.venv/bin/python -m esptool --chip esp32s3 --port PORT read_flash 0 0x800000 backups/l0-factory-<nr>.bin` i `shasum -a 256 backups/l0-factory-<nr>.bin`: sumę kopii zapisać w raporcie, bo kopia pochodzi z jednego modułu i paczka nie ma dla niej sumy. Następnie `shasum -a 256 -c SHA256SUMS.txt` (Linux: `sha256sum -c`), które sprawdza obrazy z paczki, nie kopię, i `write_flash 0x0 images/l0-full.bin`. Bez `erase_flash`. Brak portu: przytrzymać BOOT, nacisnąć RESET. Nazwa portu (`/dev/cu.usbmodem…`, na Linuksie `/dev/ttyACM…`) może się zmienić po każdym resecie.
 3. Konsola: `.venv/bin/pio device monitor --port PORT --baud 115200`. Komunikaty startowe zwykle giną przed otwarciem portu: od razu `INFO`, `STATUS`, `RDID`. Konsolę zamknąć przed uruchomieniem skryptów.
 4. DevKitC wpiąć w N1 bez zasilania, bez panelu. Po podłączeniu USB pomiary według tabeli niżej.
 5. `INFO` ma zwrócić `INFO l0-0.5 <MAC> 1 <reset> <boot_id> 869.525 125 7 5 0 1.8`. Pole 3 = `1`: radio, FRAM, timer ekranu i timer brzęczyka gotowe. Pole 4 (przyczyna resetu): `1` po zasileniu i po RESET; inne wartości zaraz po wgraniu programu przez USB są normalne. `RDID`: `FRAM_ID MB85RS4MT 047F49…` albo `FRAM_ID CY15B104QN 7F7F7F7F7F7FC22C…`. MAC zapisać jako identyfikator sztuki.
@@ -140,10 +144,10 @@ Wyniki skryptów i analizator na J11 pokazują treść transmisji, ale nie pozio
 
 Zrzuty z opisem punktu i ustawień idą do raportu. Niespełniony warunek to wynik projektowy, jak w E4: zapisać przebieg, płytki ani programu nie zmieniać.
 
-Po E5 przykleić panel taśmą 3M 4032 w położeniu wybranym przy przymiarce (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu).
+Po E5 przykleić panel taśmą 3M 4032 w położeniu wybranym przy przymiarce (FPC już wpięta; taśmy FPC nie zginać w stronę ekranu). Na N1 przed rewizją N1.1 panel przy płasko leżącej taśmie wystaje około 3 mm poza krawędź płytki ([F118](../../docs/review.md)). To dopuszczalne położenie; druga możliwość to panel w granicach płytki na podkładce 5–6 mm z łagodnym zgięciem taśmy w stronę płytki.
 
 ## 6. Zapis sztuki
 
-Numer sztuki, MAC z `INFO`, typ FRAM z `RDID`, R12 = 1 kΩ (część spoza BOM), zmierzone napięcia i prądy, zrzuty E4 i EXTCOMIN, logi i JSON, zdjęcia płytki i adaptera, rozbieżności z tą instrukcją.
+Numer sztuki, MAC z `INFO`, typ FRAM z `RDID`, R12 = 1 kΩ (część spoza BOM), suma SHA-256 kopii fabrycznej, zmierzone napięcia i prądy (wartości, nie tylko zaliczenie), RSSI i SNR z R1/R2, zrzuty E4, EXTCOMIN i [pomiaru sygnałów magistrali](#pomiar-sygnałów-magistrali), logi i JSON, zdjęcia płytki i adaptera, rozbieżności z tą instrukcją. Wyniki sztuki trafiają do `evidence/` bez danych osobowych i rozliczeń wykonawcy. P001 (2026-11-01): SPI CLK 1 MHz czysty, 8 MHz bez widocznych problemów na granicy możliwości pomiarowych wykonawcy, na MISO nieco dzwonienia; w E4 CS przy spadku zasilania wymuszony w stan wysoki aż do zera; prąd nadawania około 22 mA dotyczy 0 dBm programu diagnostycznego, nie 13 dBm stacji.
 
 Następny krok po odbiorze: obraz stacji `l0` ([firmware](../../firmware/README.md#stacja-l0-l0)).
