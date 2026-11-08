@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.38</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.39</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -31,7 +31,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.38</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.39</span> · 8 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -133,7 +133,8 @@
       <h3 id="przekazywanie">Przekazywanie w obu kierunkach</h3>
       <p><strong>Reguła protokołu.</strong> DATA w górę idzie przez bieżącego rodzica do roota. Przekaźnik przepisuje nagłówek łącza i MAC, zwiększa <code>hops</code>, zachowuje kopertę. Ostatni dozwolony skok kończy się u roota albo stacji docelowej; ramka, która skończyłaby się u pośrednika, czeka w kolejce na odpowiednią drogę.</p>
       <p><strong>Reguła protokołu.</strong> Przekaźnik uczy się drogi w dół z ostatniej przyjętej ramki w górę, bez listy stacji za sąsiadem. Droga do samego uwierzytelnionego tagiem sąsiada nie jest zastępowana numerem zadeklarowanym przez innego sąsiada. Root uczy się drogi do nadawcy dopiero po uwierzytelnieniu koperty przez laptop (KISS 0x00); KISS 0x02 odświeża tylko drogę do sąsiada. Pierwsza ramka w górę przez nowego rodzica poprawia drogę na nowej ścieżce, bez osobnej procedury zmiany drogi w dół. U roota droga znika po trzech kolejnych ramkach w dół bez HACK, u przekaźnika po trzeciej próbie ramki. Tablica 256 dróg jest trwała w FRAM (<a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a>).</p>
-      <p><strong>Reguła protokołu.</strong> Pierwsza próba wiadomości w dół idzie znaną drogą z HACK; następne na przemian rozsyłaniem i drogą. Bez znanej drogi węzeł rozsyła. Rozsyłana DATA z DOWN pozostaje rozsyłana, bez ACKREQ i z <code>l_dst=0xffff</code>; tylko ostatni skok do uwierzytelnionego sąsiada będącego celem może być jednoadresowy. Ramki jednoadresowej nie oddaje się sąsiadowi, od którego przyszła. Pierścień tożsamości kopert odrzuca powtórną kopię i blokuje kolejne rozsyłanie tej samej koperty przez 120 s, także po restarcie. Pełny pierścień odmawia kolejnego rozsyłania. Zapis przed nadaniem może zgubić jedną próbę przy zaniku; intencja SA1 ponawia ją z nowym licznikiem koperty.</p>
+      <p><strong>Reguła protokołu.</strong> Pierwsza próba wiadomości w dół idzie znaną drogą z HACK; następne na przemian rozsyłaniem i drogą. Bez znanej drogi węzeł rozsyła z ograniczeniem poniżej. Rozsyłana DATA z DOWN pozostaje rozsyłana, bez ACKREQ i z <code>l_dst=0xffff</code>; tylko ostatni skok do uwierzytelnionego sąsiada będącego celem może być jednoadresowy. Ramki jednoadresowej nie oddaje się sąsiadowi, od którego przyszła. Pierścień tożsamości kopert odrzuca powtórną kopię i blokuje kolejne rozsyłanie tej samej koperty przez 120 s, także po restarcie. Pełny pierścień odmawia kolejnego rozsyłania. Zapis przed nadaniem może zgubić jedną próbę przy zaniku; intencja SA1 ponawia ją z nowym licznikiem koperty.</p>
+      <p><strong>Reguła protokołu.</strong> Przekaźnik rozsyła w dół ramkę bez znanej drogi tylko wtedy, gdy dostał ją od rodzica z planu, rodzica zapasowego albo bieżącego rodzica, także dynamicznego. Kopii od innych sąsiadów nie przekazuje i nie oznacza jako widzianych. Stacja będąca celem nadal przyjmuje własną kopię od każdego sąsiada. Reguła nie ogranicza rozsyłania awaryjnego w górę. Kod wymaga wdrożenia (<a href="system-wici-decyzje.html#wici-inv-042">WICI-INV-042</a>).</p>
       <p><strong>Reguła protokołu.</strong> Stanowisko ogranicza rozsyłanie budżetem zależnym od liczby stacji. Po jego wyczerpaniu wiadomość idzie znaną drogą albo czeka; limity na węzeł pozostają bez zmian. Wartość budżetu jest <a href="#rozstrzygniecia-dec-009">kandydatem profilu</a>.</p>
       <p><strong>Stan obrazu.</strong> Przekaźnik uczy się dziś tylko drogi do sąsiada. Nauka dalszego numeru wymaga wpisu <code>behind</code>, lecz konfiguracja dopuszcza go tylko u roota. Przy znanej drodze rozsyłana ramka może zostać zamieniona na jednoadresową. Stanowisko i root nie przeplatają prób rozsyłaniem z drogą i nie mają budżetu rozsyłania. Brak postępu nie zmienia rodzica, a HACK lub BEACON może przywrócić rodzica z planu bez blokady (<a href="system-wici-decyzje.html#wici-inv-036">WICI-INV-036</a>–<a href="system-wici-decyzje.html#wici-inv-038">038</a>).</p>
 
@@ -163,7 +164,7 @@
       <p><strong>Parametr profilu.</strong> Po usłyszeniu DATA v3 z ACKREQ węzeł wstrzymuje własne DATA do 113 ms po jej końcu, aby nie zakłócić HACK. Sam HACK omija okno 50 ms i może wyjść podczas długu ciszy, lecz dolicza do niego własny czas; wymaga CAD i terminu 200 ms. HACK nie wychodzi, gdy łączny dług przekroczyłby 10 056 ms. Odbiór działa także podczas długu.</p>
       <p><strong>Reguła protokołu.</strong> Cisza radiowa zatrzymuje DATA, HACK i BEACON, również tranzytowe. Stacja zachowuje kolejkę i może przyjmować ramki bez HACK. Jedno lokalnie wyjęte spod ciszy zgłoszenie wychodzi bez ACKREQ najwyżej trzy razy w odstępach 60 s; przekaźnik nadaje je jedną próbą.</p>
       <h4 id="wspolistnienie">Współistnienie w kanale</h4>
-      <p><strong>Reguła protokołu.</strong> Stacja <strong>MUSI</strong> odrzucić ramkę obcego protokołu bez zmiany stanu i bez zapisu. Obcy ruch może jedynie zająć kanał zgodnie z regułami dostępu do niego.</p>
+      <p><strong>Reguła protokołu.</strong> Stacja <strong>MUSI</strong> odrzucić ramkę obcego protokołu bez zmiany stanu protokołu i bez zapisu. Obcy ruch zajmuje kanał lub zakłóca odbiór ramki WICI; dostęp do kanału podlega regułom powyżej.</p>
       <p class="explain"><strong>Dlaczego pomiar jest potrzebny.</strong> Nośna 869,525 MHz pokrywa domyślny kanał RX2 LoRaWAN i domyślną częstotliwość Meshtastic EU_868 w podpaśmie 869,4–869,65 MHz. CAD wykrywa preambułę LoRa tylko przy zgodnych SF i szerokości pasma; ramka o innych parametrach może zakłócić odbiór mimo wyniku „kanał wolny”. Silna pobliska bramka LoRaWAN może blokować odbiornik. <a href="radio.md#współdzielenie-kanału">Opis pomiaru</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a>, <a href="https://meshtastic.org/docs/overview/radio-settings/">Meshtastic</a> i <a href="https://www.semtech.com/design-support/faq/faq-lora/P20">granica CAD</a>.</p>
 
       <h3 id="profil">Profil radiowy pilotażu</h3>
@@ -211,6 +212,19 @@
       <p><strong>Kandydat profilu:</strong> rozsyłanie najwyżej 25% czasu kanału, czyli odstęp około 0,7 s na stację; dla 8, 50 i 100 stacji odpowiednio około 6, 35 i 70 s. To zachowawcze założenie, że wszystkie stacje się słyszą.</p>
       <p class="explain"><strong>Uzasadnienie i ryzyko.</strong> Bez budżetu seria ponowień może zająć kanał w gęstej sieci. Limit u każdego przekaźnika może zużyć przejęta stacja, a mniejszy limit skoków rozsyłania może wrócić do oceny później. Budżet stanowiska nie zatrzyma przejętej stacji z kluczem sieci do jego wymiany (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Pod atakiem przyciągającym drogi dostarczenie do 50 stacji może trwać około pół godziny.</p>
       <p class="explain"><strong>Wstępny wynik i koszt.</strong> Przy 100 stacjach słyszących się wzajemnie kandydat 25% dał zajętość kanału 26% wobec 62% bez budżetu. W łańcuchu ten sam limit wydłużył medianę dostarczenia 4–12 razy. Wartość pozostaje kandydatem profilu.</p>
+      <h4 id="ograniczenie-zalewu">Ograniczenie rozsyłania przez przekaźnik</h4>
+      <p>Regułę przekazywania w dół sprawdzono w emulatorze z <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, z poprawką K1 z <a href="https://github.com/tmierzwa/WICI/pull/187">PR 187</a>. Napastnik podsuwał ramkę co 2 s do numerów bez drogi. Mediany zajętości kanału z 10 ziaren:</p>
+      <table>
+        <thead><tr><th>Układ</th><th>Bez reguły</th><th>Z regułą</th></tr></thead>
+        <tbody>
+          <tr><td>15 skoków, napastnik w środku</td><td>45%</td><td>25%</td></tr>
+          <tr><td>15 skoków, napastnik przy roocie</td><td>43%</td><td>32%</td></tr>
+          <tr><td>100 stacji</td><td>68%</td><td>26–35%</td></tr>
+        </tbody>
+      </table>
+      <p>W badanych przebiegach doręczenie w dół było pełne. Wariant dopuszczający tylko rodzica planowego i zapasowego ograniczał obejście awarii przez rodzica dynamicznego z 24 do 4 z 24 prób; wybrana reguła zachowała 24 z 24. Przy dwóch sąsiednich awariach jej wynik mieścił się w rozrzucie wariantu bez reguły, a wariant ścisły tracił obejście.</p>
+      <p class="explain"><strong>Koszt.</strong> Jeśli napastnik o fałszywie niskiej randze stał się bieżącym rodzicem, zajętość kanału wynosiła 22–26% z wybraną regułą, 13–15% z wariantem ścisłym i 42–46% bez reguły; doręczenie było takie jak w wariancie ścisłym. Odmowa ramki jednoadresowej bez HACK przy starej wyuczonej drodze wydłużyła najdłuższe doręczenie z 29 do 215 s, bez utraty wiadomości.</p>
+      <p class="explain"><strong>Granice wyniku.</strong> Odrzuconej kopii nie oznaczono jako widzianej w 640 przebiegach; celowo błędna wersja testowa wykryła tę pułapkę. Cisza u dzieci napastnika w sieci 100 stacji wynikała z wyczerpania godzinnego limitu czasu nadawania tranzytu. Badano jednego napastnika i założone łącza obejścia 70%, bez strat seriami ani efektu przechwycenia. Emulator nie dowodzi działania radia. <a href="system-wici-decyzje.html#wici-inv-042">Stan wdrożenia</a> i <a href="system-wici-decyzje.html#wici-inv-056">pozostałe luki</a> są w inwentaryzacji.</p>
       <h4 id="sprawdzenie-pelnego-zakresu">Sprawdzenie pełnego zakresu</h4>
       <p>Pełny zakres sprawdza emulator: prawdziwy kod C++ w wielu węzłach, zegar wirtualny i model kanału, kalibrowany pomiarami z próby D21 i krótkiego łańcucha fizycznego. Emulator sprawdza logikę i obciążenie przy zmierzonych założeniach; nie dowodzi radia. Długość łańcucha fizycznego ustala się po pierwszych wynikach emulatora. Głębokość sieci w terenie nie jest ograniczona do długości tego łańcucha; rejestr pokazuje, jaką głębokość potwierdzono fizycznie, a jaką tylko w emulatorze.</p>
       <p>Emulator ma sprawdzić przy 15 skokach 50 zgłoszeń z końca łańcucha i z całej sieci przy skuteczności skoku 80–95%, zmianę rodzica i poprawę drogi w dół, porzucanie ruchu mimo HACK i wyjście przez zmianę rodzica, czasy i blokadę wobec opóźnień kolejek oraz brak zakleszczenia przy nasyceniu. Obejmuje też falę BEACON-ów po wyłączeniu stanowiska, budżet rozsyłania przy 50 i 100 stacjach oraz wrogi węzeł przyciągający drogi. Emulator powstaje przed zmianami kodu stacji. Wynik sprzeczny z rozstrzygnięciem otwiera je ponownie.</p>
@@ -254,7 +268,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.38 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.39 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

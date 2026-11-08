@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.38</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.39</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -31,7 +31,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.38</span> · 8 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.39</span> · 8 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -345,8 +345,8 @@
           <h4>WICI-INV-042</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>W modelu emulatora z jednym napastnikiem i bez strat zależnych od odległości sąsiad z poprawnym tagiem pary podsuwa K1 w dół do numerów bez drogi, a przekaźnik je rozsyła. Budżet rozsyłania stanowiska nie obejmuje tej ścieżki; pierścień też nie był granicą (najwyżej 40 rozsyłań na 120 s). Przy 15 skokach pula 60% ogranicza ruch: kanał zajęty 42–45% wobec 3%, domknięte 46–50 z 50 zgłoszeń. Przy 100 stacjach słyszących się wzajemnie żadna stacja nie osiąga puli: kanał zajęty 66–68% wobec 7%, a mediana domknięcia rośnie z kilku sekund do 109–121 s (<a href="https://github.com/tmierzwa/WICI/pull/186">PR 186, <code>4cbdd37</code></a>).</dd></div>
-            <div><dt>Luka</dt><dd>Słabość występuje w obecnym kodzie i obu wariantach poprawki K1. Odcina ją tylko usunięcie stacji u sąsiadów przez USB (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Nie sprawdzono węzła ignorującego dług ciszy. Ryzyko wymaga oceny właściciela; sposób ograniczenia pozostaje bez wyboru.</dd></div>
-            <div><dt>Kandydat w sprawdzaniu</dt><dd>Właściciel wybrał sprawdzenie reguły w emulatorze, bez jej zatwierdzenia: przekaźnik rozsyła ramkę w dół bez drogi tylko po otrzymaniu jej od rodzica planowego lub zapasowego. Kopii od innych sąsiadów nie przekazuje ani nie oznacza jako widzianych, by późniejsza kopia od rodzica mogła przejść. Rozsyłanie awaryjne w górę pozostaje poza tą regułą. Nie ma jeszcze wyniku. Przyjęcie ryzyka bez zmiany odłożono do wyniku emulatora; jeśli reguła pogorszy doręczenie, sprawa wraca do właściciela.</dd></div>
+            <div><dt>Rozstrzygnięcie</dt><dd><a href="system-wici-siec.html#przekazywanie">Przekaźnik rozsyła w dół ramkę bez drogi</a> tylko od rodzica planowego, zapasowego lub bieżącego, także dynamicznego. Kopii od innych sąsiadów nie przekazuje ani nie oznacza jako widzianych, by późniejsza kopia od rodzica mogła przejść; cel przyjmuje własną kopię od każdego sąsiada. Rozsyłanie awaryjne w górę pozostaje poza regułą. Wcześniejszy kandydat dopuszczał tylko rodzica planowego i zapasowego. W emulatorze ten wariant ograniczał obejście przez rodzica dynamicznego z 24 do 4 z 24 prób, a wybrany zachował 24 z 24. Przy dwóch sąsiednich awariach wybrany wariant mieścił się w rozrzucie wyniku bez reguły. <a href="system-wici-siec.html#ograniczenie-zalewu">Pozostałe wyniki i granice dowodu</a> są przy regule.</dd></div>
+            <div><dt>Luka wdrożenia</dt><dd>Reguły nie ma jeszcze w firmware ani w PR do firmware; obecny kod i oba warianty poprawki K1 dopuszczają zalew. Do czasu wdrożenia odcięcie przejętej stacji wymaga usunięcia jej u sąsiadów przez USB (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Nie sprawdzono węzła ignorującego dług ciszy. Przyjęcie ryzyka bez zmiany odłożono wcześniej do wyniku emulatora; pogorszenie doręczenia miało wrócić do decyzji właściciela.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-043">
@@ -434,9 +434,27 @@
             <div><dt>Sprzeczności źródeł</dt><dd><a href="system-wici-zgodnosc.html#trwale-wektory">Starsze rozstrzygnięcie o wektorach</a> nazywa raport niezależnej implementacji luką, nie warunkiem; <a href="system-wici-o-dokumencie.html#zatwierdzanie">nowa decyzja</a> wymaga go przed stopniem normatywnym. <a href="#wici-inv-044">WICI-INV-044</a> i <a href="transport.md#warunek-przyjęcia">transport.md</a> uruchamiają próbę Reticulum po każdym niezaliczeniu WICI-Link; <a href="system-wici-zasady.html#warunek-d21">nowy zapis</a> pozostawia ją zapasem po upływie czasu ustalonego przez właściciela. Oba starsze zapisy pozostają do uzgodnienia.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-056">
+          <h4>WICI-INV-056</h4>
+          <dl>
+            <div><dt>Luka</dt><dd>Napastnik może odesłać HACK i porzucić ruch. W emulatorze dotarło 29–38 z 50 zgłoszeń zarówno z <a href="system-wici-siec.html#ograniczenie-zalewu">regułą rozsyłania</a>, jak i bez niej. Sama reguła nie pogarsza tego wyniku. <a href="system-wici-siec.html#brak-postepu">Zmiana rodzica przy HACK bez postępu</a> pozostaje otwartą granicą ochrony.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-057">
+          <h4>WICI-INV-057</h4>
+          <dl>
+            <div><dt>Luka pomiaru</dt><dd>Po wyczerpaniu godzinnego limitu czasu nadawania tranzytu dziecko napastnika będące przekaźnikiem może odmówić także uczciwego ruchu własnych dzieci. W przebiegu 100 stacji dzieci napastnika nie miały potomków, więc skutku nie zmierzono. Trzeba zbadać w emulatorze poddrzewo z wnukami; <a href="system-wici-siec.html#ograniczenie-zalewu">reguła rozsyłania</a> nie zmienia tego limitu.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-058">
+          <h4>WICI-INV-058</h4>
+          <dl>
+            <div><dt>Luka wyjaśnienia</dt><dd>Scenariusz 100 stacji z ofiarami odciętymi od roota działał źle już bez ataku i bez <a href="system-wici-siec.html#ograniczenie-zalewu">nowej reguły</a>: domknięto 1 z 20 zgłoszeń, a stacje zachowały drogi bezpośrednie. Trzeba ustalić, czy błąd tkwi w scenariuszu, czy w nauce dróg.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
-      <p>Właściciel projektu zatwierdza rozdziały według <a href="system-wici-o-dokumencie.html#zatwierdzanie">dwóch stopni</a>. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
+      <p><a href="system-wici-o-dokumencie.html#zatwierdzanie">Trzy stopnie</a> to szkic, zatwierdzenie do próby i stan normatywny. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
       <div class="table-scroll" role="region" aria-label="Stan zatwierdzeń rozdziałów" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Rozdział</th><th>Kształt wymagań</th><th>Stopień</th><th>Commit zatwierdzenia</th><th>Data</th><th>Osoba</th></tr></thead>
         <tbody>
@@ -484,15 +502,17 @@
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum pozostaje do usunięcia po D21 (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Wdrożenie, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w niescalonym <a href="https://github.com/tmierzwa/WICI/pull/186">PR 186</a>, a D21 pozostaje otwarta.</td></tr>
-          <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Reguła zalewu czeka na wynik emulatora; D21 pozostaje otwarta. Luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
+          <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Wynik emulatora doprowadził do <a href="#wici-dec-013">wyboru reguły</a>; D21 pozostaje otwarta. Luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
           <tr id="wici-dec-011"><td>WICI-DEC-011</td><td>Rozstrzygnięcia właściciela z 8 listopada 2026 r.: <a href="system-wici-siec.html#trasy">przygotowany z góry zapasowy root</a>, <a href="system-wici-siec.html#plan-sieci">normatywne reguły całego planu</a>, <a href="system-wici-wyrob.html#przekaznik-terenowy">informacyjny profil przekaźnika terenowego</a> oraz zaczep dla późniejszego zarządzania planem przez sieć. Luki wdrożenia i prób: <a href="#wici-inv-049">WICI-INV-049</a>–<a href="#wici-inv-053">053</a>.</td></tr>
           <tr id="wici-dec-012"><td>WICI-DEC-012</td><td>Przegląd rozdziału 1 z 8 listopada 2026 r.: <a href="system-wici-zasady.html#zaozenia-uzgodnione">obce protokoły</a> poza architekturą i <a href="system-wici-siec.html#wspolistnienie">współistnienie w kanale</a>; <a href="system-wici-o-dokumencie.html">osobna przedmowa</a> i metamodel; <a href="system-wici-zasady.html#dokumenty-powolane">dokumenty powołane</a> oraz <a href="system-wici-zasady.html#klasy-zgodnosci">klasy zgodności</a>; <a href="system-wici-o-dokumencie.html#zatwierdzanie">warunek próby wystarczalności</a> i <a href="system-wici-zasady.html#warunek-d21">prosty zapis D21</a>. Sprzeczności starszych rozstrzygnięć: <a href="#wici-inv-055">WICI-INV-055</a>.</td></tr>
+          <tr id="wici-dec-013"><td>WICI-DEC-013</td><td>Rozstrzygnięcie z 8 listopada 2026 r.: <a href="system-wici-siec.html#przekazywanie">ograniczenie rozsyłania w dół do kopii od rodzica planowego, zapasowego lub bieżącego</a>. <a href="system-wici-siec.html#ograniczenie-zalewu">Emulator</a> zachował obejście przez rodzica dynamicznego i ograniczył zajętość kanału. Firmware nie zawiera jeszcze reguły (<a href="#wici-inv-042">WICI-INV-042</a>); trzy odrębne sprawy pozostają w <a href="#wici-inv-056">WICI-INV-056</a>–<a href="#wici-inv-058">058</a>.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.39</td><td>Rozstrzygnięto ograniczenie rozsyłania w dół po próbach w emulatorze; zapisano koszt wariantu dynamicznego i trzy odrębne luki. Skorygowano opis stopni zatwierdzenia i skutku obcego ruchu w kanale.</td></tr>
           <tr><td>0.38</td><td>Oddzielono zasady dokumentu od rozdziału 1; zapisano dokumenty powołane, klasy zgodności, metamodel, współistnienie w kanale, próbę wystarczalności opisu i prosty warunek D21.</td></tr>
           <tr><td>0.37</td><td>Opisano zapasowy root, sprawdzanie całego planu, profil przekaźnika terenowego i zaczep dla późniejszych poleceń planu; skorygowano wyjątek ciszy radiowej.</td></tr>
           <tr><td>0.36</td><td>Rozstrzygnięto zatwierdzanie rozdziałów, zakres normatywny, jeden słownik i szew nośnika; zapisano stan szkiców i trzy sprawy do dalszej pracy.</td></tr>
@@ -531,7 +551,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.38 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.39 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
