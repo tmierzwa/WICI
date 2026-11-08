@@ -103,7 +103,8 @@ struct Variant {
     uint32_t probeEveryS = 1800;  // próbka przekaźnika: najkrótszy odstęp między próbkami jednej stacji
     uint32_t probeMode = 1;       // 1: powrót to każda ramka w dół; 2: powrót to tylko uwierzytelniona wiadomość do tej stacji
     bool k1Flood = false;         // poprawka bez zmiany bajtów: ramka z gniazda K1 bez drogi zachowuje pierwszeństwo K1
-    uint32_t floodFromParent = 0; // rozsyłanie ramki DOWN tylko od rodzica: 1 planowy lub zapasowy, 2 także bieżący, 3 kontrola pułapki
+    uint32_t floodFromParent = 2; // rozsyłanie ramki DOWN tylko od rodzica: 0 bez reguły (kod przed #188), 1 planowy lub zapasowy,
+                                  // 2 także bieżący (obecny kod), 3 kontrola pułapki
     bool stickyRoutes = false;    // próba: nauka tylko brakującej drogi zamiast „ostatnia wygrywa”
     bool noPool = false;          // próba przyczyny: bez puli czasu nadawania (nie rozstrzygnięcie, nie do firmware)
 };

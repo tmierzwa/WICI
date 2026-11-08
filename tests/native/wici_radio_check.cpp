@@ -624,7 +624,9 @@ int main() {
     step();
     assert(proofAir.dataCount == 2);
     // A flood (no HACK at all) and a relay: one proof names both counters.
-    assert(arrive(7, 5, wici_link::DOWN) == wici_radio::Event::ADMITTED);
+    // The flood copy comes from 9, not the parent: the target takes its own
+    // copy from any neighbour (the flood rule is for passing on only).
+    assert(arrive(7, 9, wici_link::DOWN) == wici_radio::Event::ADMITTED);
     assert(arrive(8, 7, wici_link::ACKREQ) == wici_radio::Event::HACK_SENT);
     step();
     assert(proofAir.dataCount == 3);

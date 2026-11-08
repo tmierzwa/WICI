@@ -466,7 +466,7 @@ Miara to kopia od rodzica uznana za widzianą, choć ta stacja jej nie przekaza�
 
 ### Rozsyłanie od rodzica: druga tura
 
-Właściciel wybrał wersję z bieżącym rodzicem (`floodparent=2`). Przed zmianą firmware sprawdzono trzy rzeczy, których pierwsza tura nie mierzyła. 720 przebiegów, ziarna 1–5 i 301–305, te same dwa obrazy dróg i poprawka K1 (`k1routed=1`). Tabele podają medianę z 10 ziaren.
+Właściciel wybrał wersję z bieżącym rodzicem (`floodparent=2`). Reguła jest od #188 w firmware (`Relay::floodRefused`), więc obraz `base` ją ma, a `floodparent=2` jest domyślne w wariancie; `floodparent=0` odtwarza kod sprzed reguły, z którym liczono tabele niżej. Przed zmianą firmware sprawdzono trzy rzeczy, których pierwsza tura nie mierzyła. 720 przebiegów, ziarna 1–5 i 301–305, te same dwa obrazy dróg i poprawka K1 (`k1routed=1`). Tabele podają medianę z 10 ziaren.
 
 **Wniosek: wersja z bieżącym rodzicem ma jeden koszt wobec ścisłej, dokładnie ten przewidziany: napastnik, który zostanie bieżącym rodzicem stacji, rozsyła przez nią. Kanał jest wtedy zajęty w 22–26% zamiast 13–15%, wobec 43–47% bez reguły; doręczenie i domknięte zgłoszenia są takie same jak w wersji ścisłej. Odmowa ramki jednoadresowej bez HACK zdarza się tylko przy starej drodze z nauki i nie zepsuła doręczenia. Cisza przy 100 stacjach to pula 60% u dzieci napastnika.**
 

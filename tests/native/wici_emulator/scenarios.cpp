@@ -872,7 +872,7 @@ int main(int argc, char** argv) {
     }
 #ifndef WICI_EMU_VARIANT
     if (params.variant.learnRoutes || params.variant.alternate || params.variant.leaveAfterS || params.variant.leaveCount ||
-        params.variant.k1Flood || params.variant.stickyRoutes || params.variant.floodFromParent) {
+        params.variant.k1Flood || params.variant.stickyRoutes || params.variant.floodFromParent != 2) {
         fprintf(stderr, "ten plik wykonywalny to obecny kod bez wariantów\n");
         return 2;
     }

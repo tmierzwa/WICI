@@ -121,7 +121,10 @@ private:
     bool priority(const wici_link::Frame& frame) const;
     // The next hop prepare() would use for a stored item now, or 0 when it
     // would skip the item. The one place for that rule.
-    uint16_t nextHop(const uint8_t* wire, uint32_t nowS) const;
+    uint16_t nextHop(uint8_t slot, const uint8_t* wire, uint32_t nowS) const;
+    // The planned, backup or current parent (also a dynamic one): a downward
+    // frame from any other neighbour may leave only along a route.
+    bool fromParent(uint16_t neighbor) const;
     uint8_t key_[32] = {};
     bool keyReady_ = false;
     wici_relay::Queue queue_;

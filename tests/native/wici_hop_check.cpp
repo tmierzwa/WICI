@@ -335,6 +335,7 @@ int main() {
     static Memory contentionMemory;
     wici_hop::Relay contentionRelay(contentionMemory, {100, 2, 1, 1, 0}, ifac, false, receivers);
     assert(contentionRelay.begin());
+    assert(contentionRelay.routes().learn(7, 7));  // a route: the flood rule does not apply
     wici_link::Frame waiting = traffic;
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
     waiting.source = 7; waiting.sequence = 80;  // its route leads back to its source: it cannot go
@@ -349,7 +350,6 @@ int main() {
     assert(contentionRelay.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::HACK_READY);
     assert(contentionRelay.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 140));
-    assert(contentionRelay.routes().learn(7, 7));
     assert(contentionRelay.prepare(140));
     out = contentionRelay.outgoing(outLength);
     assert(out && wici_link::decode(key, 100, out, outLength, parsed));
@@ -387,7 +387,8 @@ int main() {
     // neither may hold the other back. Counted as waiting K1 they both stayed
     // refused until the 30-min expiry and the relay went silent.
     static Memory k1NoRouteMemory, k1NoRouteAirtime;
-    wici_hop::Relay k1NoRoute(k1NoRouteMemory, {100, 2, 1, 1, 0}, ifac, true, receivers);
+    // Both from a parent (planned 1, backup 4): only those copies flood.
+    wici_hop::Relay k1NoRoute(k1NoRouteMemory, {100, 2, 1, 1, 4}, ifac, true, receivers);
     assert(k1NoRoute.begin());
     assert(k1NoRoute.routes().beacon(1, {1, 0, 1, 0, 0}, 16, 142));
     waiting.flags = wici_link::ACKREQ | wici_link::DOWN;
@@ -889,4 +890,94 @@ int main() {
     assert(wici_link::decode(key, 100, out, outLength, parsed) &&
            parsed.destination == wici_link::BROADCAST && parsed.sequence == failedSeq);
     assert(failedFlood.transmitted(true, 433) && !failedFlood.prepare(434));
+
+    // Flood rule (wici-link.md, "Rozsyłanie"): a downward frame without a
+    // route is passed on only from the planned (1), backup (3) or current
+    // parent. A copy from another neighbour is not queued, gets no HACK and
+    // is not marked seen, so the parent's later copy still goes out.
+    static Memory parentRuleMemory;
+    wici_hop::Relay parentRule(parentRuleMemory, {100, 2, 1, 1, 3}, ifac, true, rootReceiver);
+    assert(parentRule.begin());
+    wici_link::Frame copy = incoming;
+    copy.flags = wici_link::DOWN; copy.destination = wici_link::BROADCAST; copy.ttl = 15;
+    copy.payload[2] = 90; copy.payload[4] = 40; copy.payload[8] = 60;
+    auto offer = [&](uint16_t from, uint16_t sequence) {
+        copy.source = from; copy.sequence = sequence;
+        n = wici_link::encode(key, copy, wire, sizeof(wire));
+        return parentRule.receiveData(wire, n, 600, hack, sizeof(hack), hackLength);
+    };
+    auto floods = [&]() {
+        if (!parentRule.prepare(600)) return false;
+        out = parentRule.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed));
+        assert(parsed.destination == wici_link::BROADCAST && parsed.payload[4] == copy.payload[4]);
+        return parentRule.transmitted(true, 600);
+    };
+    // A flood copy from neighbour 5 first, then the same envelope from the planned parent.
+    assert(offer(5, 600) == wici_hop::Receipt::IGNORED && hackLength == 0 && !parentRule.prepare(600));
+    assert(offer(1, 601) == wici_hop::Receipt::STORED_NO_HACK && floods());
+    assert(offer(5, 602) == wici_hop::Receipt::IGNORED);  // seen now, from anyone
+    // A unicast frame to this relay without a route: no HACK from neighbour 5,
+    // stored and flooded from the backup parent.
+    copy.flags = wici_link::DOWN | wici_link::ACKREQ; copy.destination = 2; copy.payload[4] = 41;
+    assert(offer(5, 603) == wici_hop::Receipt::IGNORED && hackLength == 0 && !parentRule.prepare(600));
+    assert(offer(3, 604) == wici_hop::Receipt::HACK_READY && floods());
+    // A dynamic parent counts as soon as it is the current one.
+    copy.flags = wici_link::DOWN; copy.destination = wici_link::BROADCAST; copy.payload[4] = 42;
+    assert(parentRule.routes().beacon(6, {1, 16, 1, 1, 0}, 16, 600));
+    assert(offer(6, 605) == wici_hop::Receipt::IGNORED);
+    parentRule.routes().loop(600);
+    parentRule.routes().loop(600);
+    assert(parentRule.routes().parent() == 6);
+    assert(offer(6, 606) == wici_hop::Receipt::STORED_NO_HACK && floods());
+    // The rule is decided once, at admission: a frame from the dynamic parent
+    // still floods after the parent changes and after a restart (the parent
+    // is back to the planned one). Checked again at send time, it sat in a K2
+    // slot until the 30-min expiry.
+    copy.payload[4] = 44;
+    assert(offer(6, 610) == wici_hop::Receipt::STORED_NO_HACK);
+    parentRule.routes().loop(600);
+    assert(parentRule.routes().parent() != 6 && floods());
+    parentRule.routes().loop(600);
+    parentRule.routes().loop(600);
+    assert(parentRule.routes().parent() == 6);
+    copy.payload[4] = 45;
+    assert(offer(6, 611) == wici_hop::Receipt::STORED_NO_HACK);
+    {
+        wici_hop::Relay restarted(parentRuleMemory, {100, 2, 1, 1, 3}, ifac, true, rootReceiver);
+        assert(restarted.begin() && restarted.routes().parent() == 1 && restarted.prepare(601));
+        out = restarted.outgoing(outLength);
+        assert(wici_link::decode(key, 100, out, outLength, parsed));
+        assert(parsed.destination == wici_link::BROADCAST && parsed.payload[4] == 45);
+        assert(restarted.transmitted(true, 601));
+    }
+    assert(parentRule.begin() && !parentRule.prepare(602));  // the flood left before the restart above
+    copy.payload[4] = 43;
+    assert(offer(1, 607) == wici_hop::Receipt::STORED_NO_HACK && floods());  // the planned parent still counts
+    // An upward frame and a frame with a known route go on from any neighbour.
+    copy.flags = wici_link::ACKREQ; copy.destination = 2; copy.payload[2] = 40; copy.payload[4] = 90;
+    assert(offer(5, 608) == wici_hop::Receipt::HACK_READY && parentRule.prepare(600));
+    out = parentRule.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 1);
+    parentRule.yield();
+    static Memory routedMemory;
+    wici_hop::Relay routed(routedMemory, {100, 2, 1, 1, 3}, ifac, true, rootReceiver);
+    assert(routed.begin() && routed.routes().learn(7, 7));
+    copy.flags = wici_link::DOWN | wici_link::ACKREQ; copy.source = 5; copy.sequence = 609;
+    copy.payload[2] = 90; copy.payload[4] = 7;
+    n = wici_link::encode(key, copy, wire, sizeof(wire));
+    assert(routed.receiveData(wire, n, 600, hack, sizeof(hack), hackLength) == wici_hop::Receipt::HACK_READY);
+    assert(routed.prepare(600));
+    out = routed.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 7);
+    // A route that goes after admission (three failed rounds) does not turn
+    // the frame of neighbour 5 into a flood: it waits for a route or expiry.
+    routed.yield();
+    assert(routed.routes().forget(7, 7) && !routed.prepare(600) && !routed.contendedK2(600));
+    // The mark is durable: after a restart the frame still waits for its route.
+    wici_hop::Relay routedAgain(routedMemory, {100, 2, 1, 1, 3}, ifac, true, rootReceiver);
+    assert(routedAgain.begin() && routedAgain.routes().down(7) == wici_link::BROADCAST && !routedAgain.prepare(601));
+    assert(routedAgain.routes().learn(7, 7) && routedAgain.prepare(601));
+    out = routedAgain.outgoing(outLength);
+    assert(wici_link::decode(key, 100, out, outLength, parsed) && parsed.destination == 7);
 }

@@ -7,15 +7,19 @@ namespace wici_relay {
 namespace {
 using namespace fram_record;
 constexpr uint8_t MAGIC[4] = {'W', 'R', 'Q', '1'};
-constexpr size_t WIRE_AT = 25, CRC_AT = WIRE_AT + wici_link::MAX_FRAME;
+constexpr size_t FLAGS_AT = 8, LENGTH_AT = 9, WIRE_AT = 25, CRC_AT = WIRE_AT + wici_link::MAX_FRAME;
+// Byte 8 was the zero high byte of a u16 length (a frame has at most 255 B):
+// records written before ROUTED_ONLY read as flags 0.
+constexpr uint8_t ROUTED_ONLY = 0x01;
+static_assert(wici_link::MAX_FRAME <= 255, "frame length fits in one byte");
 static_assert(CRC_AT + 2 < COPY_BYTES, "record fits in relay copy");
 
 uint32_t address(uint8_t slot, uint8_t copy) {
     return BASE + (static_cast<uint32_t>(slot) * 2 + copy) * COPY_BYTES;
 }
 bool valid(const uint8_t* p) {
-    const size_t n = get16(p + 8);
-    if ((n && (n < wici_link::HEADER + wici_link::TAG || n > wici_link::MAX_FRAME)) ||
+    const size_t n = p[LENGTH_AT];
+    if ((n && n < wici_link::HEADER + wici_link::TAG) || (p[FLAGS_AT] & ~ROUTED_ONLY) || (!n && p[FLAGS_AT]) ||
         (!n && get16(p + 23)) || get16(p + 23) == wici_link::BROADCAST) return false;
     for (size_t i = WIRE_AT + n; i < CRC_AT; ++i) if (p[i]) return false;
     return true;
@@ -41,6 +45,7 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
     memset(generations_, 0, sizeof(generations_));
     memset(copies_, 0, sizeof(copies_));
     memset(k1_, 0, sizeof(k1_));
+    memset(routedOnly_, 0, sizeof(routedOnly_));
     memset(admittedS_, 0, sizeof(admittedS_));
     for (uint8_t slot = 0; slot < SLOTS; ++slot) {
         bool found = false;
@@ -54,7 +59,8 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
             if (!found || newer(generation, generations_[slot])) {
                 generations_[slot] = generation;
                 copies_[slot] = copy;
-                lengths_[slot] = get16(data + 8);
+                lengths_[slot] = data[LENGTH_AT];
+                routedOnly_[slot] = data[FLAGS_AT] & ROUTED_ONLY;
                 k1_[slot] = get16(data + 23);
                 admittedS_[slot] = get32(data + 19);
                 memcpy(frames_[slot], data + WIRE_AT, lengths_[slot]);
@@ -76,12 +82,13 @@ bool Queue::begin(const uint8_t key[32], uint16_t network, uint16_t own) {
 }
 
 bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
-                   uint16_t k1Neighbor, uint32_t admittedS) {
+                   uint16_t k1Neighbor, uint32_t admittedS, bool routedOnly) {
     uint8_t data[COPY_BYTES] = {};
     memcpy(data, MAGIC, 4);
     put32(data + 4, generations_[slot] + 1);
-    put16(data + 8, static_cast<uint16_t>(length));
+    data[LENGTH_AT] = static_cast<uint8_t>(length);
     if (length) {
+        data[FLAGS_AT] = routedOnly ? ROUTED_ONLY : 0;  // covered by CRC and COMMIT
         memcpy(data + WIRE_AT, wire, length);
         // Cached addressing fields support on-disk inspection after a crash.
         memcpy(data + 10, wire + 1, 2);  // network
@@ -100,6 +107,7 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
     copies_[slot] = target;
     lengths_[slot] = static_cast<uint16_t>(length);
     k1_[slot] = length ? k1Neighbor : 0;
+    routedOnly_[slot] = length && routedOnly;
     admittedS_[slot] = length ? admittedS : 0;
     memset(frames_[slot], 0, sizeof(frames_[slot]));
     if (length) memcpy(frames_[slot], wire, length);
@@ -107,7 +115,7 @@ bool Queue::commit(uint8_t slot, const uint8_t* wire, size_t length,
 }
 
 Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
-                       uint16_t k1Neighbor, uint8_t* slot) {
+                       uint16_t k1Neighbor, uint8_t* slot, bool routedOnly) {
     wici_link::Frame frame;
     if (!ready_ || !wire || !transit(wire, length, frame) ||
         (k1Neighbor && (k1Neighbor != frame.source || frame.destination != own_)))
@@ -135,7 +143,7 @@ Admission Queue::admit(const uint8_t* wire, size_t length, uint32_t nowS,
         else if (first == SLOTS) first = i;
     }
     if (first == SLOTS || (!k1Neighbor && k2 >= SLOTS - K1_RESERVED)) return Admission::FULL;
-    if (!commit(first, wire, length, k1Neighbor, nowS)) return Admission::IO_ERROR;
+    if (!commit(first, wire, length, k1Neighbor, nowS, routedOnly)) return Admission::IO_ERROR;
     if (slot) *slot = first;
     return Admission::STORED;
 }
