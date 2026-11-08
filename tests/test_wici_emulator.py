@@ -70,6 +70,22 @@ class Emulator(unittest.TestCase):
         self.assertEqual(json.loads(run("variant", *case, "floodparent=1"))["parent_seen_unsent"], 0)
         self.assertGreater(json.loads(run("variant", *case, "floodparent=3"))["parent_seen_unsent"], 0)
 
+    def test_attacker_as_current_parent_passes_only_with_current_parent(self):
+        # Napastnik z fałszywie niską rangą zostaje rodzicem dynamicznym stacji 5: tylko tryb 2 przepuszcza jego rozsyłanie.
+        case = ("regula_rodzica", "seed=1", "p=900", "skip=700", "hops=10", "hours=1", "reports=10", "spread=1800",
+                "evilparent=5", "fakeevery=2", "k1routed=1")
+        strict = json.loads(run("variant", *case, "floodparent=1"))
+        current = json.loads(run("variant", *case, "floodparent=2"))
+        self.assertGreater(strict["victim_on_attacker_pm"], 0)
+        self.assertGreater(current["flood"], 10 * strict["flood"])
+
+    def test_stale_route_to_a_refusing_station_is_counted(self):
+        # Stara droga przez stację, która nie ma nadawcy za rodzica: reguła odmawia bez HACK, obecny kod nie.
+        case = ("regula_rodzica", "seed=1", "p=900", "skip=700", "hours=1", "reports=10", "spread=1800", "downrounds=1",
+                "stale=1", "learn=1", "k1routed=1")
+        self.assertEqual(json.loads(run("variant", *case, "floodparent=0"))["refused_unicast"], 0)
+        self.assertGreater(json.loads(run("variant", *case, "floodparent=1"))["refused_unicast"], 0)
+
     def test_flood_reach_matches_the_closed_form(self):
         # Jedno rozsyłanie w pustym łańcuchu: p^hops, bez kolizji. Sprawdza model kanału i tor rozsyłania.
         result = json.loads(run("base", "kalibracja", "hops=6", "p=800", "reports=40", "seed=2"))

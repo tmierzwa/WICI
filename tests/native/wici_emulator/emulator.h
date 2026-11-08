@@ -264,6 +264,8 @@ struct Node {
     uint32_t upWaitS = 0;           // próbka: przekazany ruch w górę czeka na powrót od tej chwili
     uint32_t lastProbeS = 0;
     uint32_t lastTxMs = 0;
+    uint32_t refusedRoundMs = 0;  // ostatnia nieudana runda do sąsiada, który odmówił przez regułę
+    uint16_t refusedRoundNext = 0;
     NodeStats stats;
 };
 
@@ -442,6 +444,11 @@ public:
     using CopyKey = std::pair<uint16_t, std::array<uint8_t, 9>>;
     std::set<CopyKey> refusedCopies, parentCopies, forwardedCopies, seenCopies, fullCopies;
     void noteCopy(unsigned kind, uint16_t own, const uint8_t* header);
+    // Ramka jednoadresowa odrzucona przez regułę bez HACK i jej skutki u nadawcy (pomiar, wariant).
+    void noteHop(unsigned kind, uint16_t own, uint16_t other, uint16_t recipient);
+    std::map<std::array<uint16_t, 3>, uint32_t> refusedUnicastMs;  // (nadawca, odbiorca, adresat) -> ostatnia odmowa
+    uint32_t refusedUnicast = 0, refusedUnicastAttack = 0, refusedRounds = 0, refusedRoundsOnParent = 0,
+             refusedForgets = 0, refusedParentChanges = 0, failedRounds = 0;
     bool k1Stats = false;                        // pomiary ataku na rozsyłanie
     bool trace = false;                          // zapis przebiegu na stderr: ramki, odbiory, zmiany rodzica, migawki dróg
     uint16_t traceStation = 0;                   // czyje drogi pokazują migawki (0: ostatnia stacja łańcucha)
@@ -457,6 +464,8 @@ private:
     void pollApp(Node& node);
     void pollBeacon(Node& node);
     void pollHostile(Node& node);
+    bool pollLowRank(Node& node);
+    void forgeOne(Node& node);
     void pollProbe(Node& node);
     void pollFakeDown(Node& node);
     void noteTraffic(Node& node, const uint8_t* bare, size_t length);

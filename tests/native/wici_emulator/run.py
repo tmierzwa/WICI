@@ -8,6 +8,7 @@ Użycie: python3 tests/native/wici_emulator/run.py build <katalog>
         python3 tests/native/wici_emulator/run.py pytania <katalog> <wyniki.jsonl>   (druga tura raportu)
         python3 tests/native/wici_emulator/run.py k1 <katalog> <wyniki.jsonl>        (wybór poprawki kolejki K1)
         python3 tests/native/wici_emulator/run.py regula_rodzica <katalog> <wyniki.jsonl>
+        python3 tests/native/wici_emulator/run.py regula_rodzica_2 <katalog> <wyniki.jsonl>
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -376,6 +377,22 @@ def matrix_regula_martwy():
             for picture, base in RODZIC_OBRAZY for mode in (0, 1)]
 
 
+def matrix_regula_rodzica_2():
+    """Druga tura reguły: napastnik jako bieżący rodzic, stara droga do stacji, która odmawia, dwie sąsiednie awarie."""
+    chain = ("p=900", "skip=700", "hours=4", "reports=50", "spread=9000", "downrounds=4", "downevery=1800")
+    clique = ("p=900", "n=100", "hours=2", "reports=20", "spread=4500", "downrounds=1")
+    cases = []
+    for name, shape in (("15_skokow_ofiara8", (*chain, "evilparent=8")), ("15_skokow_ofiara3", (*chain, "evilparent=3")),
+                        ("100_stacji_8_ofiar", (*clique, "evilparent=8"))):
+        cases += [(f"N:{name}_bez_ataku", shape), (f"N:{name}_atak2", (*shape, "fakeevery=2")),
+                  (f"N:{name}_atak2_porzuca", (*shape, "fakeevery=2", "evildrop=1"))]
+    cases += [("S:15_skokow_stara_droga", (*chain, "stale=1")),
+              ("S:100_stacji_stara_droga", (*clique, "downrounds=4", "downevery=1200", "stale=8")),
+              ("D:dwie_sasiednie_awarie", (*chain, "dead=8", "dead2=1", "fromend=1"))]
+    return [(f"{name}@regula_rodzica", (f"{picture}:tryb{mode}", "variant", (*base, f"floodparent={mode}")), params)
+            for name, params in cases for picture, base in RODZIC_OBRAZY for mode in (0, 1, 2)]
+
+
 def run_matrix(binaries, out, seeds=SEEDS, workers=None, runs=None):
     """Uruchamia macierz i zapisuje jeden wiersz JSON na przebieg, w stałej kolejności."""
     jobs = [(scenario, config, params, seed) for scenario, config, params in (runs or matrix()) for seed in seeds]
@@ -434,6 +451,8 @@ if __name__ == "__main__":
         binaries = build(sys.argv[2])
         run_matrix(binaries, sys.argv[3], seeds=RODZIC_SEEDS, runs=matrix_regula_rodzica())
         run_matrix(binaries, sys.argv[3] + ".martwy", seeds=tuple(range(401, 431)), runs=matrix_regula_martwy())
+    elif len(sys.argv) >= 4 and sys.argv[1] == "regula_rodzica_2":
+        run_matrix(build(sys.argv[2]), sys.argv[3], seeds=RODZIC_SEEDS, runs=matrix_regula_rodzica_2())
     elif len(sys.argv) >= 3 and sys.argv[1] == "summary":
         print("\n".join(summary(sys.argv[2])))
     else:

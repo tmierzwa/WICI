@@ -21,6 +21,7 @@ struct Params {
     uint32_t sense = 1, miss = 20, skip = 0, trace = 0, hole = 0, selective = 0, fake = 0, fullrun = 0;
     uint32_t fakeEveryS = 0, fromEnd = 0, k1Stats = 0;
     uint32_t two = 0, bridge = 0, dead = 0, moved = 0, leaves = 1, downRounds = 0, downEveryS = 600, fakeBroadcast = 0;
+    uint32_t evilParent = 0, evilDrop = 0, stale = 0, dead2 = 0;
     Variant variant;
 };
 
@@ -568,12 +569,18 @@ Net* currentNet = nullptr;
 void floodRule(const Params& params) {
     const bool clique = params.n != 0, two = params.two != 0;
     const int depth = static_cast<int>(params.hops);
-    const int stations = clique ? static_cast<int>(params.n) : two ? 2 * depth : depth;
+    // `evilparent` w łańcuchu: dodatkowy węzeł napastnika obok tej stacji, poza numeracją łańcucha.
+    const bool evilChain = params.evilParent && !clique;
+    const int stations = clique ? static_cast<int>(params.n) : two ? 2 * depth : depth + (evilChain ? 1 : 0);
     Net net(static_cast<size_t>(stations) + 1, params.seed, assumptionsFor(params), params.variant);
     net.k1Stats = true;
+    net.trace = params.trace;
     currentNet = &net;
 #ifdef WICI_EMU_VARIANT
     wici_variant::flags.floodCopy = [](unsigned kind, unsigned short own, const unsigned char* header) { currentNet->noteCopy(kind, own, header); };
+    wici_variant::flags.hopEvent = [](unsigned kind, unsigned short own, unsigned short other, unsigned short recipient) {
+        currentNet->noteHop(kind, own, other, recipient);
+    };
 #endif
     if (clique) {
         for (int a = 0; a <= stations; ++a)
@@ -596,12 +603,49 @@ void floodRule(const Params& params) {
         if (params.bridge) net.link(static_cast<int>(params.bridge), depth + static_cast<int>(params.bridge) - 2, 700);
         else for (int d = 1; d <= depth; ++d) net.link(d, depth + d, 700);
     } else {
-        chain(net, params, params.skip);
+        chain(net, params, params.skip, depth);
     }
+    const int victim = static_cast<int>(params.evilParent);
+    if (evilChain) {
+        // Napastnik z tagiem pary słyszy stację `victim` i jej sąsiadów; jego rodzic z planu to stacja nad nią.
+        for (int s = victim - 1; s <= victim + 1; ++s) net.link(stations, s, params.p);
+        net.setParents(stations, victim - 1, -1);
+        if (!net.variant().learnRoutes) net.rootPlan(net.node(stations).id, net.node(1).id);
+    }
+    // Awaria dwóch sąsiednich stacji: jedynym wyjściem stacji za nimi jest łącze do stacji nad awarią.
+    if (params.dead2 && !clique) net.link(static_cast<int>(params.dead) + 2, static_cast<int>(params.dead) - 1, 700);
+    // Próba starej drogi w łańcuchu: łącze stacji 2 ze stacją 5, która nie ma jej za rodzica.
+    if (params.stale && !clique) net.link(2, 5, 700);
     net.start();
     net.run(10 * 60000);
-    const int attacker = clique ? 1 : params.hole ? static_cast<int>(params.hole) : depth / 2 + 1;
-    if (params.fakeEveryS) {
+    const int attacker = evilChain ? stations : clique ? 1 : params.hole ? static_cast<int>(params.hole) : depth / 2 + 1;
+    std::vector<int> victims;
+    if (params.evilParent) {
+        // Napastnik ogłasza fałszywie niską rangę; ofiary tracą rodzica planowego i zapasowego, więc jedynym
+        // kandydatem jest napastnik (w sieci słyszącej się: najniższa ranga wśród wszystkich).
+        Node& evil = net.node(attacker);
+        evil.lowRank = true;
+        evil.dropper = params.evilDrop != 0;
+        if (evilChain) {
+            victims.push_back(victim);
+            net.setLinkPermille(victim, victim - 1, 0);
+            if (victim >= 2) net.setLinkPermille(victim, victim - 2, 0);
+        } else {
+            for (int s = 2; s < 2 + victim; ++s) {
+                victims.push_back(s);
+                net.setLinkPermille(s, 0, 0);
+            }
+        }
+    }
+    if (params.fakeEveryS && params.evilParent) {
+        Node& evil = net.node(attacker);
+        evil.fakeEveryMs = params.fakeEveryS * 1000;
+        if (evilChain) {
+            for (int s = victim - 1; s <= victim + 1; ++s) evil.fakeTargets.push_back(net.node(s).id);
+        } else {
+            for (int s : victims) evil.fakeTargets.push_back(net.node(s).id);
+        }
+    } else if (params.fakeEveryS) {
         Node& evil = net.node(attacker);
         evil.fakeEveryMs = params.fakeEveryS * 1000;
         evil.fakeBroadcast = params.fakeBroadcast != 0;
@@ -617,7 +661,11 @@ void floodRule(const Params& params) {
     }
     const uint32_t started = net.now(), endMs = started + hoursOr(params, 4);
     if (params.dead) net.node(static_cast<int>(params.dead)).dead = true;
-    const auto alive = [&](int s) { return s != static_cast<int>(params.dead); };
+    if (params.dead && params.dead2) net.node(static_cast<int>(params.dead) + 1).dead = true;
+    const auto alive = [&](int s) {
+        return s != static_cast<int>(params.dead) && !(params.dead2 && s == static_cast<int>(params.dead) + 1) &&
+               !(evilChain && s == stations);
+    };
     std::vector<int> targets, senders;
     const int fault = params.dead ? static_cast<int>(params.dead) : static_cast<int>(params.moved);
     if (fault && !clique) {
@@ -626,8 +674,12 @@ void floodRule(const Params& params) {
     } else if (fault) {
         // W sieci słyszącej się: stacja i jej dzieci.
         for (int s = fault; s <= stations; s += 49) if (alive(s)) targets.push_back(s);
+    } else if (params.stale) {
+        // Adresaci, do których nadawca ma starą drogę przez sąsiada bez tej drogi.
+        if (clique) for (int i = 0; i < static_cast<int>(params.stale); ++i) targets.push_back(2 + i);
+        else targets.push_back(12);
     } else {
-        for (int s = 1; s <= stations; ++s) targets.push_back(s);
+        for (int s = 1; s <= stations; ++s) if (alive(s)) targets.push_back(s);
     }
     if (params.fromEnd) senders.push_back(targets.empty() ? stations : targets.back());
     else for (int s = 1; s <= stations; ++s) if (alive(s) && !(params.fakeEveryS && s == attacker)) senders.push_back(s);
@@ -641,18 +693,46 @@ void floodRule(const Params& params) {
             events.push_back({started + round * params.downEveryS * 1000 + static_cast<uint32_t>(i) * 1000, 1, targets[i]});
     if (params.moved)
         for (uint32_t i = 0; i < params.leaves; ++i) events.push_back({started + 1800000 + i * 60000, 2, static_cast<int>(params.moved)});
+    if (params.stale)
+        for (uint32_t round = 0; round < params.downRounds; ++round) events.push_back({started + round * params.downEveryS * 1000, 3, 0});
     std::stable_sort(events.begin(), events.end(), [](const Event& a, const Event& b) { return a.atMs < b.atMs; });
     uint32_t downId = 0x80000000u;
     std::map<uint32_t, uint32_t> downSent;
+    // Czas, przez który ofiara ma napastnika za rodzica, próbkowany co minutę.
+    uint32_t victimMinutes = 0, sampledMinutes = 0, nextSampleMs = started;
+    const auto runTo = [&](uint32_t untilMs) {
+        while (nextSampleMs <= untilMs) {
+            net.run(nextSampleMs);
+            nextSampleMs += 60000;
+            if (victims.empty()) continue;
+            ++sampledMinutes;
+            for (int v : victims) victimMinutes += net.node(v).shelter->routes().parent() == net.node(attacker).id;
+        }
+        net.run(untilMs);
+    };
+    const auto injectStale = [&]() {
+#ifdef WICI_EMU_VARIANT
+        // Nadawca ma starą drogę do adresata przez sąsiada, dla którego nie jest rodzicem, a sąsiad tej drogi nie ma.
+        if (clique) {
+            for (int i = 0; i < static_cast<int>(params.stale); ++i)
+                net.node(0).root->routes().learn(net.node(2 + i).id, net.node(50 + i).id, true);
+        } else {
+            wici_route::Table& at5 = net.node(5).shelter->routes();
+            at5.forget(net.node(12).id, at5.down(net.node(12).id));
+            net.node(2).shelter->routes().learn(net.node(12).id, net.node(5).id, true);
+        }
+#endif
+    };
     for (const Event& event : events) {
-        net.run(event.atMs);
+        runTo(event.atMs);
+        if (event.kind == 3) { injectStale(); continue; }
         if (event.kind == 0) net.report(event.station);
         else if (event.kind == 1) {
             downSent[++downId] = net.now();
             net.laptop().enqueue(net.node(event.station).id, downId, 50);
         } else net.leave(net.node(event.station), net.nowS());
     }
-    net.run(endMs);
+    runTo(endMs);
     std::vector<uint32_t> times;
     for (const auto& sent : downSent) {
         const auto at = net.downArrivedMs.find(sent.first);
@@ -686,7 +766,15 @@ void floodRule(const Params& params) {
                         ",\"down_p50_s\":" + std::to_string(p50) + ",\"down_max_s\":" + std::to_string(maximum) +
                         ",\"refused_real\":" + std::to_string(net.refusedCopies.size()) +
                         ",\"refused_then_forwarded\":" + std::to_string(forwarded) +
-                        ",\"refused_parent_heard\":" + std::to_string(heard) + ",\"refused_parent_lost\":" + std::to_string(lost);
+                        ",\"refused_parent_heard\":" + std::to_string(heard) + ",\"refused_parent_lost\":" + std::to_string(lost) +
+                        ",\"refused_unicast\":" + std::to_string(net.refusedUnicast) +
+                        ",\"refused_unicast_attack\":" + std::to_string(net.refusedUnicastAttack) +
+                        ",\"refused_rounds\":" + std::to_string(net.refusedRounds) +
+                        ",\"refused_rounds_on_parent\":" + std::to_string(net.refusedRoundsOnParent) +
+                        ",\"refused_forgets\":" + std::to_string(net.refusedForgets) +
+                        ",\"refused_parent_changes\":" + std::to_string(net.refusedParentChanges) +
+                        ",\"failed_rounds\":" + std::to_string(net.failedRounds) +
+                        ",\"victim_on_attacker_pm\":" + std::to_string(sampledMinutes ? victimMinutes * 1000 / (sampledMinutes * victims.size()) : 0);
     emit(params, "regula_rodzica", net, extra);
 }
 
@@ -774,6 +862,10 @@ int main(int argc, char** argv) {
         else if (name == "downrounds") params.downRounds = value;
         else if (name == "downevery") params.downEveryS = value;
         else if (name == "fakebroadcast") params.fakeBroadcast = value;
+        else if (name == "evilparent") params.evilParent = value;
+        else if (name == "evildrop") params.evilDrop = value;
+        else if (name == "stale") params.stale = value;
+        else if (name == "dead2") params.dead2 = value;
         else if (name == "fakeevery") params.fakeEveryS = value;
         else if (name == "fromend") params.fromEnd = value;
         else if (name == "nopool") params.variant.noPool = value;

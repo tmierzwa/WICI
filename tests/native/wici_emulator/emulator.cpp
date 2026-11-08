@@ -126,6 +126,7 @@ bool Radio::sendData(const uint8_t* wire, size_t length, wici_link::TxClass traf
         if (!beacon && !flood) ++self.stats.unicastRefused;
         const uint32_t mute = (net_.now() - self.lastTxMs) / 1000;
         if (mute > self.stats.longestMuteS) self.stats.longestMuteS = mute;
+        if (net_.trace) fprintf(stderr, "%u R %d %d %u %u\n", net_.now(), index_, static_cast<int>(traffic), mute, get16(wire + 5));
         return false;
     }
     if (net_.k1Stats && !beacon && traffic != wici_link::TxClass::OWN) {
@@ -622,6 +623,13 @@ void Net::forgeVictims(int attacker, std::vector<uint16_t> victims) {
 }
 
 void Net::pollHostile(Node& n) {
+    if (pollLowRank(n)) return;
+    if (!n.forger || now_ < n.nextForgeMs || !n.radio->idle() || n.victims.empty() || !n.radio->accepts(wici_link::TxClass::OWN, 100))
+        return;
+    forgeOne(n);
+}
+
+bool Net::pollLowRank(Node& n) {
     if (n.lowRank && now_ >= n.nextBeaconMs && n.radio->idle()) {
         // Podpisany BEACON z fałszywie niską rangą: klucz stacji jest prawdziwy, podpis epoki powtórzony po roocie.
         n.nextBeaconMs = now_ + 120000 + n.rng.below(4000);
@@ -635,10 +643,12 @@ void Net::pollHostile(Node& n) {
         uint8_t wire[wici_link::MAX_FRAME];
         const size_t length = wici_beacon::encode(linkKey_, n.secret, n.edPublic, NETWORK, n.id, n.forgeSeq++, value, wire, sizeof(wire));
         if (length) n.radio->sendData(wire, length, wici_link::TxClass::BEACON);
-        return;
+        return true;
     }
-    if (!n.forger || now_ < n.nextForgeMs || !n.radio->idle() || n.victims.empty() || !n.radio->accepts(wici_link::TxClass::OWN, 100))
-        return;
+    return false;
+}
+
+void Net::forgeOne(Node& n) {
     n.nextForgeMs = now_ + 30000 + n.rng.below(30000);
     // Ramka w górę do rodzica przez prawdziwy kodek łącza, z cudzym `src` koperty. Tag pary jest prawdziwy,
     // bo przejęta stacja ma swoje klucze; MAC koperty nie, bo nie ma klucza ofiary.
@@ -715,7 +725,31 @@ void Net::noteCopy(unsigned kind, uint16_t own, const uint8_t* header) {
     if (recipient >= 900 && recipient < 950) return;  // numery napastnika: tu odrzucenie jest celem reguły
     std::array<uint8_t, 9> key;
     memcpy(key.data(), header, key.size());
-    (kind == 0 ? refusedCopies : kind == 1 ? seenCopies : fullCopies).insert({own, key});
+    (kind == 0 || kind == 3 ? refusedCopies : kind == 1 ? seenCopies : fullCopies).insert({own, key});
+}
+
+void Net::noteHop(unsigned kind, uint16_t own, uint16_t other, uint16_t recipient) {
+    if (kind == 0) {
+        // Odbiorca `own` odmówił bez HACK ramki od `other` do adresata `recipient`.
+        if (recipient >= 900 && recipient < 950) { ++refusedUnicastAttack; return; }
+        ++refusedUnicast;
+        refusedUnicastMs[{other, own, recipient}] = now_;
+        if (trace) fprintf(stderr, "%u RU %d %d %d\n", now_, indexOf(own), indexOf(other), indexOf(recipient));
+        return;
+    }
+    ++failedRounds;
+    const auto at = refusedUnicastMs.find({own, other, recipient});
+    if (at == refusedUnicastMs.end() || now_ - at->second > 60000) return;
+    // Nieudana runda nadawcy `own` do sąsiada, który przez regułę odmówił tej samej ramki.
+    ++refusedRounds;
+    if (recipient) ++refusedForgets;  // Relay::timeout zapomina drogę do adresata przez ten skok
+    const int index = indexOf(own);
+    if (index < 0) return;
+    Node& n = node(index);
+    if (n.shelter && n.shelter->routes().parent() == other) ++refusedRoundsOnParent;
+    n.refusedRoundMs = now_;
+    n.refusedRoundNext = other;
+    if (trace) fprintf(stderr, "%u RR %d %d %d\n", now_, index, indexOf(other), indexOf(recipient));
 }
 
 void Net::pollBeacon(Node& n) {
@@ -808,17 +842,22 @@ void Net::pollNode(Node& n) {
     if (n.radio->blocked(now_)) return;  // pętla stoi w nadawaniu
     if (n.fakeDownTo || !n.fakeTargets.empty()) pollFakeDown(n);
     if (n.dropper) { pollHostile(n); return; }
+    // Uczciwy przekaźnik z fałszywie niską rangą: zamiast własnych BEACON-ów nadaje podrobione.
+    const bool lowRank = n.lowRank;
     if (n.shelter) {
         n.shelter->poll(now_, nowS());
         const uint16_t parent = n.shelter->routes().parent();
         if (parent != n.lastParent) {
             ++n.stats.parentChanges;
+            // Zmiana rodzica tuż po nieudanej rundzie do rodzica, który odmówił ramki przez regułę.
+            if (n.refusedRoundMs && n.lastParent == n.refusedRoundNext && now_ - n.refusedRoundMs < 5000) ++refusedParentChanges;
             if (trace) fprintf(stderr, "%u P %d %d %d\n", now_, n.index, indexOf(n.lastParent), indexOf(parent));
             n.lastParent = parent;
         }
         if (now_ % 100 < assumptions_.pollMs) pollApp(n);
     }
-    pollBeacon(n);
+    if (lowRank) pollLowRank(n);
+    else pollBeacon(n);
 }
 
 void Net::step() {
