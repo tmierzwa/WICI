@@ -13,10 +13,21 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Historia bez treści plików: kontrola materiałów prywatnych czyta każdy commit zmiany.
+          fetch-depth: 0
+          filter: blob:none
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           # = "python" w software/laptop/build/runtimes.json; Unicode 16 jak firmware/src/unicode_tables.h.
           python-version: '3.14.8'
+      # CONTRIBUTING.md, „Materiały prywatne”: bez list fundacji, tylko reguły ogólne; bramka scalania z main.
+      - name: Private foundation material
+        if: github.event_name == 'pull_request' || !startsWith(github.event.before, '0000000')
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python tools/check_private.py --range "$BASE" "$HEAD"
       - name: Envelope reference dependency
         run: python -m pip install cryptography==48.0.1
       # Sama przypięta biblioteka Crypto: próby koperty, WICI-Link, przeniesienia i rdzenia. Próby wrogiego ruchu

@@ -1,0 +1,12 @@
+# Publiczne adresy e-mail i numery telefonów, które mogą trafić do repozytorium (tools/check_private.py).
+# Jeden wpis na linię; dopasowanie bez rozróżniania wielkości liter, * zastępuje dowolny ciąg.
+# Numery telefonów jako same cyfry bez +48.
+kontakt@wici.net.pl
+*@users.noreply.github.com
+noreply@github.com
+noreply@anthropic.com
+*@example.com
+*@example.org
+*@example.net
+*.test
+*.localhost

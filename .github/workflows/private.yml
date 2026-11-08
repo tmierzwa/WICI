@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: MIT
+# CONTRIBUTING.md, „Materiały prywatne”: szybki alarm przy każdym pushu i każdej zmianie opisu PR.
+# Wypchnięta gałąź jest już publiczna; nieudany przebieg powiadamia od razu, żeby można było ją usunąć.
+# Bramką scalania jest krok „Private foundation material” w checks.yml (wymagana kontrola publication).
+name: Private material
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+permissions:
+  contents: read
+jobs:
+  private:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Commits not yet on main
+        if: github.event_name == 'push'
+        run: python tools/check_private.py --range origin/main HEAD
+      # Tytuł i opis idą przez zmienne środowiskowe, nie przez wstawienie w polecenie.
+      - name: Pull request commits, title and description
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          python tools/check_private.py --range "$BASE" "$HEAD"
+          python tools/check_private.py --text-env PR_TITLE PR_BODY

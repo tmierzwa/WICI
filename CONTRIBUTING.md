@@ -50,6 +50,15 @@ python3 tools/verify_repository.py --pull-request
 
 Nie odświeżaj sum w odpowiedzi na nieznany błąd CI; najpierw ustal, co się zmieniło. Nowy plik musi mieć licencję: nagłówek `SPDX-License-Identifier` albo wpis w [REUSE.toml](REUSE.toml); CI sprawdza to poleceniem `reuse lint`.
 
+## Materiały prywatne
+
+Prywatne materiały fundacji (działanie, komunikacja, plany, finanse, kontakty) nie trafiają do tego repozytorium ani do issue, opisów PR i komentarzy. Pilnuje tego `tools/check_private.py`:
+
+- lokalnie jako hooki `pre-commit`, `commit-msg` i `pre-push`; włącz je raz w klonie poleceniem `git config core.hooksPath .githooks`. Gdy obok repozytorium jest katalog `fundacja` (albo wskazuje go zmienna `WICI_FUNDACJA`), skrypt porównuje zmiany z jego plikami, kontaktami i listą fraz; listy zostają w tamtym katalogu, a trafienie podaje tylko miejsce i numer reguły;
+- w CI tylko regułami ogólnymi: IBAN, PESEL, numery telefonów, adresy e-mail spoza [listy dozwolonych](tools/check_private_allow.txt) i zakazane ścieżki. Krok w kontroli `publication` blokuje scalenie, a zadanie `Private material` sprawdza każdy push i opis PR.
+
+Push jest publiczny od razu, także gałąź bez PR, więc CI tylko skraca czas reakcji; przed publikacją chroni lokalny hook. Alarm na publicznym adresie lub numerze rozwiąż wpisem na liście dozwolonych.
+
 ## Pochodzenie wkładu (DCO)
 
 Każdy commit w PR kończy się wierszem `Signed-off-by: Imię Nazwisko <email>` (`git commit -s`). Oznacza on zgodę na [Developer Certificate of Origin 1.1](https://developercertificate.org/): masz prawo przesłać ten materiał na licencji właściwej dla ścieżki (w `firmware/lib/reticulum_core/` to [licencja Reticulum](LICENSES/LicenseRef-Reticulum.txt), która nie jest licencją open source w rozumieniu OSI; podpis odnosi się do niej). Nie wymagamy CLA ani przeniesienia praw autorskich. CI sprawdza podpis w każdym commicie PR poza commitami scalającymi (`tools/check_dco.py`). Brakujący podpis dodaj poleceniem `git rebase --signoff <gałąź bazowa>` i ponownie wypchnij gałąź.
@@ -95,6 +104,7 @@ Contributions in English are welcome; documentation stays in Polish, and maintai
 - Open an issue for larger changes; small fixes can go straight to a pull request.
 - Run the three checks above with `--pull-request`. **Do not refresh `manifest.json`**; the maintainer does it after merging. Refresh only the evidence your change affects (calculation results, hardware evidence).
 - Sign off every commit (`git commit -s`, [DCO 1.1](https://developercertificate.org/)); CI rejects unsigned commits (`tools/check_dco.py`). No CLA.
+- Never commit private foundation material; enable the local hooks once with `git config core.hooksPath .githooks` (`tools/check_private.py`).
 - Pull requests are merged with "Squash and merge" only, so `main` gets a commit signed by GitHub; `main` accepts signed commits only and no direct pushes, maintainers included. Signing your own commits with an SSH or GPG key is recommended, not required.
 - Keep assumptions separate from measurements; never mark an unperformed test as passed.
 - Safety-critical parts (230 V inverter, phone over-voltage protection, batteries, transmit budget) need review by a qualified person and stay on HOLD until then.
