@@ -41,6 +41,15 @@ section { padding-top: 2rem; }
 .record dt { margin-bottom: .2rem; color: var(--muted); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .record dd { margin: 0; overflow-wrap: anywhere; }
 .record dd ul { margin: .3rem 0; padding-left: 1.25rem; }
+.operation .when { margin: 0 0 .8rem; color: var(--muted); }
+.req { margin: .7rem 0 0; padding: .7rem 0 0; border-top: 1px solid var(--line); }
+.req p { margin: .25rem 0; }
+.req-head { color: var(--muted); font-size: .82rem; }
+.req-id { font-weight: 700; color: var(--accent); }
+.req-text { font-weight: 600; }
+.req-why { padding: .4rem .7rem; border-left: .25rem solid var(--accent); background: #edf5f3; font-size: .92rem; }
+.req-meta { font-size: .85rem; color: var(--muted); }
+h4.group { margin-top: 2rem; font-size: 1.1rem; }
 .table-scroll { overflow-x: auto; margin: 1rem 0; }
 table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem; font-size: .92rem; line-height: 1.42; }
 .table-scroll table { margin: 0; }
