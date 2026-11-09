@@ -204,7 +204,7 @@ Każdy krok planu ma swój sprzęt radiowy ([koncepcja, rozdział 08](../concept
 
 - **radia RNode** (kroki 2, 3 i 5): profil, IFAC i pomiary zasięgu oraz zajętości kanału;
 - **prototyp na płytce v1** (krok 4): program stacji z interfejsem LoRa, T3 z radiem RNode, wstępne pomiary T4 poleceniami pomiarowymi; moduł Wio ma własny tor RF, więc wyniki dotyczą tego modułu z przewodem i anteną prototypu;
-- **stacja pilotażowa na płytce v2** (krok 6): moc, częstotliwość, czułość i emisje na złączu antenowym stacji w obudowie (T4, minimum pilotażu) oraz badania konfiguracji pilotażowej (D20).
+- **stacja pilotażowa na płytce v2** (krok 6): moc, częstotliwość, czułość i emisje na złączu antenowym stacji w obudowie (T4, minimum pilotażu) oraz badania konfiguracji pilotażowej (D20) na wersji ostatecznej płytki v2, po decyzji o poprawkach po 2 prototypach v2.
 
 Radia testowe z kroku 1 (XIAO ESP32-S3 z Wio SX1262, program radiowy `pair`) nie są narzędziem planu; nadawały przy 0 dBm ([wyniki](../../hardware/radio-pair/README.md)).
 
