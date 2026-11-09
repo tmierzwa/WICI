@@ -48,15 +48,15 @@ Płytki stacji projektuje się w KiCad 10.0.6: v1 (dawniej płytka nośna N1, p�
 
 ## Paczka źródłowa
 
-`manifest.json` nie leży w repozytorium. Między wydaniami pliki chroni Git, a manifest z sumami SHA-256 wszystkich plików paczki powstaje tylko przy wydaniu. Przy tagu `v*` CI (`checks.yml`) buduje paczkę i manifest i udostępnia je jako artefakt `source-archive`; opiekun dołącza oba pliki do wydania na GitHubie. To samo lokalnie, po sprawdzeniu repozytorium:
+Manifest z sumami SHA-256 plików paczki (`manifest.json`) powstaje tylko przy wydaniu; między wydaniami pliki chroni Git. Przy tagu `v*` CI (`checks.yml`) buduje paczkę z manifestem i udostępnia oba pliki jako artefakt `source-archive`, a opiekun dołącza je do wydania na GitHubie. Lokalnie, po sprawdzeniu repozytorium:
 
 ```sh
 python3 tools/release.py --version 0.6 --source-zip dist/WICI-0.6-source.zip
 ```
 
-Polecenie tworzy `dist/WICI-0.6-source.zip` z `manifest.json` w środku i ten sam manifest obok, jako `dist/WICI-0.6-source-manifest.json`. Paczka zawiera źródła, dokumentację i eksporty z indeksu Git, bez wyrenderowanych filmów; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Wpisy mają stałe daty i kolejność, a kontrola porównuje bajty każdego wpisu ze źródłem. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
+Powstaje `dist/WICI-0.6-source.zip` z `manifest.json` w środku, a obok ten sam manifest jako `dist/WICI-0.6-source-manifest.json`. Paczka zawiera źródła, dokumentację i eksporty z indeksu Git, bez wyrenderowanych filmów; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Wpisy mają stałe daty i kolejność, a kontrola porównuje bajty każdego wpisu ze źródłem. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
 
-Przed tagiem opiekun przegląda listę zmienionych plików od poprzedniego wydania: `git diff --stat v0.5.2..HEAD` (z numerem poprzedniego tagu).
+Przed tagiem opiekun przegląda pliki zmienione od poprzedniego wydania, np. `git diff --stat v0.5.2..HEAD`.
 
 Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 
