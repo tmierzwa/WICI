@@ -64,6 +64,8 @@ Generator sprawdza też odstęp co najmniej 2,5 mm między padami SMD i przewlek
 
 ## Zamówienie (JLCPCB)
 
+Zamówienie z 2026-10-31: 2 sztuki z montażem SMD i THT, pliki ze stanu oznaczonego tagiem [`hw-przetwornica-3v3-r1`](https://github.com/tmierzwa/WICI/tree/hw-przetwornica-3v3-r1/hardware/przetwornica-3v3) (SHA-256 `przetwornica-3v3-gerber.zip`: `32fc0276…83f72c4`). Późniejsze zmiany plików w tym katalogu nie dotyczą zamówionych płytek.
+
 - PCB: 4 warstwy, 1,6 mm, plik `fabrication/przetwornica-3v3-gerber.zip`, 5 sztuk; przelotki zakryte maską (tented).
 - Montaż: tylko strona górna, SMD i THT z `jlc-bom.csv` i `jlc-cpl.csv` (2 sztuki wystarczą). W wycenie sprawdza się, że części przewlekane (C12, JP1–JP5, J1, J2) są w montażu, a nie pominięte. Kody LCSC i stan sprawdzono 2026-10-31: wszystkie pozycje są w magazynie JLC, ale U1 (C580689) ma tylko 25 sztuk, więc stan sprawdza się ponownie przy zamówieniu.
 - W podglądzie rozmieszczenia sprawdza się:

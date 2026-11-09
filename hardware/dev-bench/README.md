@@ -9,7 +9,7 @@ Płytka v1 (dawniej płytka nośna N1) łączy kupione moduły w prototyp stacji
 | v1 | 5 płytek z JLCPCB zamówionych 2026-10-10, w tym 2 z montażem SMD ([zamówienie](przed-produkcja.md#zamówienie-2026-10-10-l0)). Dwie zmontowane płytki są w montażu u wykonawcy jako prototypy ([zlecenie](../l0-diagnostic/ZLECENIE.md)); trzy są gołe. Panel nie mieści się na v1 w obrysie z opisu płytki (F118); sposób ułożenia podaje krok 7 [uruchomienia](uruchomienie.md#montaż). R12 wymienia się przy montażu na 1 kΩ |
 | v1.1 | projekt na `main`: złącze panelu J7 odsunięte na zmierzoną długość taśmy FPC ([F118](../../docs/review.md)). Nie do zamówienia; jest bazą płytki v2. Wycenę pełnego montażu SMD i THT w JLCPCB sprawdzono w zamkniętym [PR #129](https://github.com/tmierzwa/WICI/pull/129) |
 
-Pliki produkcyjne w `fabrication/N1/` są rewizji v1.1; pliki v1 są w historii Git.
+Pliki produkcyjne w `fabrication/N1/` są rewizji v1.1. Pliki zamówionej rewizji v1 wskazuje tag [`hw-dev-bench-v1`](https://github.com/tmierzwa/WICI/tree/hw-dev-bench-v1/hardware/dev-bench/fabrication/N1) (commit `e137e13`, SHA-256 paczki `wici-plytka-nosna-N1-gerber.zip`: `01598fff…ef11ac`). Paczki wysłanej do JLCPCB nie porównano z tagiem, ale pliki produkcyjne i projekt nie zmieniały się od tego commitu do przejścia na v1.1.
 
 ## Prototyp
 
