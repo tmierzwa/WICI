@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.43</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.44</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -15,8 +15,8 @@
       <ol>
         <li><a href="system-wici.html">Start</a></li>
         <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
-        <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
-        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-zasady.html">1. Przedmiot i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model i zakres systemu</a></li>
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
         <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
         <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.44</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -456,8 +456,8 @@
         <article class="record" id="wici-inv-059">
           <h4>WICI-INV-059</h4>
           <dl>
-            <div><dt>Stan kodu</dt><dd>W <a href="../../firmware/src/station.cpp"><code>Station::received</code></a> wiadomość od nieaktywnej tożsamości odbiorcy jest odrzucana bez dowodu. Ścieżka <code>Station::receivedEnvelope</code> dla WICI-Link zwraca trwałe odrzucenie z dowodem. Żadna nie przełącza stacji automatycznie; lokalna usługa <code>switchBackup</code> istnieje.</dd></div>
-            <div><dt>Luka</dt><dd>Pierwsza uwierzytelniona koperta od zapasowej tożsamości ma zapisać jednokierunkowy wybór w FRAM, zostać przyjęta i pokazać gospodarzowi nowy klucz (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Obie ścieżki odbioru wymagają uzgodnienia. Nie jest to warunek próby D21.</dd></div>
+            <div><dt>Stan kodu</dt><dd>Na ścieżce WICI-Link kopertę od nieaktywnej tożsamości odbiorcy odrzuca <a href="../../firmware/src/wici_destination.cpp"><code>Destination::receive</code></a> przed otwarciem koperty: bez skutku SA1, bez okna powtórzeń i bez dowodu, więc stanowisko ponowi ją po przełączeniu. Od przekaźnika może wrócić HACK w limicie powtórzeń. Sprawdzenie nadawcy w <code>Station::receivedEnvelope</code> jest drugą osłoną. Na ścieżce Reticulum <a href="../../firmware/src/station.cpp"><code>Station::received</code></a> także odrzuca taką wiadomość bez dowodu. Żadna ścieżka nie przełącza stacji automatycznie; istnieje lokalna usługa <code>switchBackup</code>.</dd></div>
+            <div><dt>Luka</dt><dd>Pierwsza uwierzytelniona koperta od zapasowej tożsamości ma zapisać jednokierunkowy wybór w FRAM, zostać przyjęta i pokazać gospodarzowi nowy klucz (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Przełączenie może nastąpić dopiero po udanym otwarciu koperty kluczem zapasowej tożsamości, czyli po uwierzytelnieniu, a nie przy samym numerze nadawcy. Nie jest to warunek próby D21.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-060">
@@ -473,8 +473,8 @@
       <div class="table-scroll" role="region" aria-label="Stan zatwierdzeń rozdziałów" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Rozdział</th><th>Kształt wymagań</th><th>Stopień</th><th>Commit zatwierdzenia</th><th>Data</th><th>Osoba</th></tr></thead>
         <tbody>
-          <tr><td>1. Status i zasady</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
-          <tr><td>2. Model i zakres</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>1. Przedmiot i zasady</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><td>2. Model i zakres systemu</td><td>Wprowadzony</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
           <tr><td>3. Funkcje i dane</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
           <tr><td>4. Protokół SA1</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
           <tr><td>5. Bezpieczeństwo i koperta</td><td>Dotychczasowy</td><td>Szkic</td><td>—</td><td>—</td><td>—</td></tr>
@@ -535,6 +535,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.44</td><td>Uporządkowano początek rozdziału 2 i przeniesiono definicję SA1 do warstw protokołów; ujednolicono nazwy rozdziałów 1–2; poprawiono opis decyzji o profilach; dodano jedenaście haseł słownika; skorygowano opis odrzucania kopert od nieaktywnej tożsamości na ścieżce WICI-Link.</td></tr>
           <tr><td>0.43</td><td>Przebudowano rozdziały 1–2, przeniesiono słownik na osobną stronę i zapisano WICI-DEC-014: nazwy protokołów oraz trwałe przełączenie na zapasową tożsamość przez uwierzytelnioną kopertę. Dodano luki wdrożenia stacji i stanowiska.</td></tr>
           <tr><td>0.42</td><td>Uaktualniono stan wdrożenia i dowodów po scaleniu PR 185–188: emulator, kolejka K1, reguła rodzica i wektory SA1. Przywrócono ogólną zasadę kolorowych objaśnień, przeniesiono definicję sprzętu D21 do warunku i uzupełniono opis trasy odpowiedzi.</td></tr>
           <tr><td>0.41</td><td>Poprawki językowe przedmowy i rozdziałów 1–2, bez zmiany znaczenia. Uproszczenia HACK nie przyjęto: bez nowego zapisu może być potwierdzona także ramka zapisana wcześniej. Szkic ma umożliwiać niezależną implementację; jej wykonalność nie jest jeszcze potwierdzona.</td></tr>
@@ -578,7 +579,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.44 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
