@@ -1,0 +1,4 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Materiały prywatne fundacji nie trafiają do publicznego repozytorium (CONTRIBUTING.md, tools/check_private.py).
+exec python3 "$(git rev-parse --show-toplevel)/tools/check_private.py" --pre-push

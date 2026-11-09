@@ -60,7 +60,8 @@ Przed pierwszym nadpisaniem zapisać kopię fabrycznej pamięci, lokalnie:
 ```sh
 mkdir -p backups
 .venv/bin/python -m esptool --chip esp32s3 --port PORT_L0 read_flash 0 0x800000 backups/l0-factory.bin
-shasum -a 256 -c SHA256SUMS.txt
+shasum -a 256 backups/l0-factory.bin   # sumę kopii zapisać w raporcie
+shasum -a 256 -c SHA256SUMS.txt        # sprawdza obrazy z paczki, nie kopię
 .venv/bin/python -m esptool --chip esp32s3 --port PORT_L0 write_flash 0x0 images/l0-full.bin
 ```
 

@@ -57,7 +57,7 @@ Pilotaż nie ma poufności przyszłej (forward secrecy): przejęty klucz prywatn
  AAD = kind ‖ src ‖ dst ‖ ctr
 ```
 
-Szyfr to AEAD ChaCha20-Poly1305 według RFC 8439 (32-bitowy licznik bloku, 96-bitowy nonce), z kluczem `K` kierunku z [kluczy](#klucze). Stały wektor w `tests/vectors/envelope.json` podaje klucze X25519 obu stron, wyprowadzony klucz kierunku oraz kopertę całą i dwie części; `tests/test_envelope_vectors.py` sprawdza go wzorami z tego rozdziału, niezależnie od `envelope.py`, i przez implementację stanowiska.
+Szyfr to AEAD ChaCha20-Poly1305 według RFC 8439 (32-bitowy licznik bloku, 96-bitowy nonce), z kluczem `K` kierunku z [kluczy](#klucze). Trwałe wektory w `tests/vectors/envelope.json` podają klucze X25519 obu stron, klucze obu kierunków, koperty SA1 i dowody doręczenia oraz przypadki odrzucane, m.in. zarezerwowane rodzaje, zły MAC i nieznaną wersję. `tests/test_envelope_vectors.py` sprawdza je wzorami z tego rozdziału, niezależnie od `envelope.py`, kodem stanowiska i kodem stacji. Wspólny plik daje jedno źródło bajtów, ale nie dowodzi współdziałania z niezależną implementacją.
 
 **Dowód doręczenia (rodzaj 1).** Stacja potwierdza nim odbiorcy, że rozstrzygnęła wiadomości SA1, które od niego dostała ([kiedy](wici-link.md#dowód-doręczenia)). Koperta jest zawsze całością (część 0); jawny tekst to 1–16 liczników `ctr` tych wiadomości, każdy u32 big-endian (4–64 B, koperta 29–89 B). `src` to stacja, `dst` tożsamość odbiorcy, a `ctr` dowodu pochodzi z licznika stacji dla tego odbiorcy, tej samej przestrzeni co jej koperty SA1, więc odbiorca sprawdza go tym samym oknem powtórzeń. Stacja nie otwiera dowodów, a odbiorca otwiera rodzaj 1 tylko na ścieżce dowodu; ścieżka SA1 odrzuca go po obu stronach. `tests/test_envelope_cross_language.py` sprawdza ten sam dowód w C++ i w Pythonie.
 
@@ -178,7 +178,7 @@ v3 nie ma podpisu pochodzenia na DATA, D21 wariant D). Dwa miejsca są
 zarezerwowane dla K1, a jeden sąsiad może zająć najwyżej jedno miejsce K1.
 Drogi w dół root uczy się według planu sieci (`behind`, tylko w dokumencie roota),
 a przekaźnik tylko do swoich sąsiadów; do dalszych stacji ramka w dół idzie rozsyłaniem. Przy
-czekającym K1 limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
+czekającym K1, które może teraz wyjść jednoadresowo, limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
 Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar
 200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki

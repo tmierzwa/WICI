@@ -35,18 +35,27 @@ public:
     // slots. A nonzero k1Neighbor must be the frame's link source (checked by
     // the pairwise hop tag): K1 may take any free slot, but each neighbour
     // holds at most one; FULL then lets the caller try K2. On STORED or
-    // DUPLICATE, `slot` names the queue item.
+    // DUPLICATE, `slot` names the queue item. `routedOnly` (durable) marks an
+    // item that may leave only along a route, never as a flood; a DUPLICATE
+    // keeps the mark of the stored item.
     Admission admit(const uint8_t* wire, size_t length, uint32_t nowS,
-                    uint16_t k1Neighbor = 0, uint8_t* slot = nullptr);
+                    uint16_t k1Neighbor = 0, uint8_t* slot = nullptr, bool routedOnly = false);
     bool ready() const { return ready_ && seen_.ready(); }
     uint16_t clearedRecords() const { return seen_.cleared(); }
     bool pending(uint8_t slot) const;
     uint16_t k1Neighbor(uint8_t slot) const { return pending(slot) ? k1_[slot] : 0; }
+    bool routedOnly(uint8_t slot) const { return pending(slot) && routedOnly_[slot]; }
     // Changes with every durable write of the slot (admission, removal), so
     // (slot, generation) names one queue item for RAM state about it.
     uint32_t generation(uint8_t slot) const { return slot < SLOTS ? generations_[slot] : 0; }
     // Durable admission time of a pending item (monotonic station counter).
     uint32_t admittedS(uint8_t slot) const { return pending(slot) ? admittedS_[slot] : 0; }
+    // The stored bytes of a pending item, with no effect on the queue. Unlike
+    // read(), it also shows an item already recorded as forwarded.
+    const uint8_t* peek(uint8_t slot, size_t& length) const {
+        length = pending(slot) ? lengths_[slot] : 0;
+        return length ? frames_[slot] : nullptr;
+    }
     // Finishes a tombstone interrupted after the durable forwarded marker and
     // retires items held for MAX_HOLD_S. False only on a storage failure.
     bool settle(uint32_t nowS);
@@ -58,7 +67,7 @@ public:
 
 private:
     bool commit(uint8_t slot, const uint8_t* wire, size_t length,
-                uint16_t k1Neighbor = 0, uint32_t admittedS = 0);
+                uint16_t k1Neighbor = 0, uint32_t admittedS = 0, bool routedOnly = false);
     bool transit(const uint8_t* wire, size_t length, wici_link::Frame& frame) const;
     journal::Storage& storage_;
     wici_seen::Ring seen_;
@@ -69,6 +78,7 @@ private:
     uint32_t generations_[SLOTS] = {};
     uint8_t copies_[SLOTS] = {};
     uint16_t k1_[SLOTS] = {};  // K1 neighbour (link source) of the item; 0 for K2
+    bool routedOnly_[SLOTS] = {};
     uint32_t admittedS_[SLOTS] = {};
     bool ready_ = false;
 };
