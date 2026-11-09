@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-09T18:15:45</date>
+    <date>2026-11-09T18:32:44</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -1117,18 +1117,18 @@
       </units>
     </comp>
     <comp ref="D6">
-      <value>BAT54S</value>
+      <value>BAV199</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">onsemi</field>
-        <field name="MPN">BAT54SLT1G</field>
+        <field name="Manufacturer">Nexperia</field>
+        <field name="MPN">BAV199,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Diode" part="BAT54S" description="Vr 30V, If 200mA, Dual schottky barrier diode, in series, SOT-323"/>
-      <property name="Manufacturer" value="onsemi"/>
-      <property name="MPN" value="BAT54SLT1G"/>
+      <property name="Manufacturer" value="Nexperia"/>
+      <property name="MPN" value="BAV199,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="schottky diode"/>
@@ -1258,18 +1258,18 @@
       </units>
     </comp>
     <comp ref="D11">
-      <value>BAT54S</value>
+      <value>BAV199</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">onsemi</field>
-        <field name="MPN">BAT54SLT1G</field>
+        <field name="Manufacturer">Nexperia</field>
+        <field name="MPN">BAV199,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Diode" part="BAT54S" description="Vr 30V, If 200mA, Dual schottky barrier diode, in series, SOT-323"/>
-      <property name="Manufacturer" value="onsemi"/>
-      <property name="MPN" value="BAT54SLT1G"/>
+      <property name="Manufacturer" value="Nexperia"/>
+      <property name="MPN" value="BAV199,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="schottky diode"/>
@@ -1315,21 +1315,21 @@
       </units>
     </comp>
     <comp ref="D13">
-      <value>BAT54H</value>
-      <footprint>Diode_SMD:D_SOD-323</footprint>
+      <value>BAS116H</value>
+      <footprint>Diode_SMD:D_SOD-123F</footprint>
       <fields>
-        <field name="Manufacturer">onsemi</field>
-        <field name="MPN">BAT54HT1G</field>
-        <field name="Footprint">Diode_SMD:D_SOD-323</field>
+        <field name="Manufacturer">Nexperia</field>
+        <field name="MPN">BAS116H,115</field>
+        <field name="Footprint">Diode_SMD:D_SOD-123F</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Device" part="D_Schottky" description="Schottky diode"/>
-      <property name="Manufacturer" value="onsemi"/>
-      <property name="MPN" value="BAT54HT1G"/>
+      <libsource lib="Device" part="D" description="Diode"/>
+      <property name="Manufacturer" value="Nexperia"/>
+      <property name="MPN" value="BAS116H,115"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
-      <property name="ki_keywords" value="diode Schottky"/>
+      <property name="ki_keywords" value="diode"/>
       <property name="ki_fp_filters" value="TO-???* *_Diode_* *SingleDiode* D_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>ceaf1a8c-a98b-5a0f-8183-a12ac774cd1f</tstamps>
@@ -2122,15 +2122,15 @@
       <value>2N7002</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">2N7002-7-F</field>
+        <field name="Manufacturer">Nexperia</field>
+        <field name="MPN">2N7002,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Transistor_FET" part="2N7002" description="0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="2N7002-7-F"/>
+      <property name="Manufacturer" value="Nexperia"/>
+      <property name="MPN" value="2N7002,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="N-Channel Switching MOSFET"/>
@@ -2177,21 +2177,21 @@
       </units>
     </comp>
     <comp ref="Q7">
-      <value>2N7002</value>
+      <value>BSS138</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">2N7002-7-F</field>
+        <field name="Manufacturer">onsemi</field>
+        <field name="MPN">BSS138LT1G</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Transistor_FET" part="2N7002" description="0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="2N7002-7-F"/>
+      <libsource lib="Transistor_FET" part="BSS138" description="50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23"/>
+      <property name="Manufacturer" value="onsemi"/>
+      <property name="MPN" value="BSS138LT1G"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
-      <property name="ki_keywords" value="N-Channel Switching MOSFET"/>
+      <property name="ki_keywords" value="N-Channel MOSFET"/>
       <property name="ki_fp_filters" value="SOT?23*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>77fc5d25-1147-58c6-9b6e-235e604b3fe3</tstamps>
@@ -2264,21 +2264,21 @@
       </units>
     </comp>
     <comp ref="Q10">
-      <value>2N7002</value>
+      <value>BSS138</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">2N7002-7-F</field>
+        <field name="Manufacturer">onsemi</field>
+        <field name="MPN">BSS138LT1G</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Transistor_FET" part="2N7002" description="0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="2N7002-7-F"/>
+      <libsource lib="Transistor_FET" part="BSS138" description="50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23"/>
+      <property name="Manufacturer" value="onsemi"/>
+      <property name="MPN" value="BSS138LT1G"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
-      <property name="ki_keywords" value="N-Channel Switching MOSFET"/>
+      <property name="ki_keywords" value="N-Channel MOSFET"/>
       <property name="ki_fp_filters" value="SOT?23*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>e86ca15a-9a18-5b52-91a0-fe35f82215bf</tstamps>
@@ -2293,21 +2293,21 @@
       </units>
     </comp>
     <comp ref="Q11">
-      <value>2N7002</value>
+      <value>BSS138</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">2N7002-7-F</field>
+        <field name="Manufacturer">onsemi</field>
+        <field name="MPN">BSS138LT1G</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Transistor_FET" part="2N7002" description="0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="2N7002-7-F"/>
+      <libsource lib="Transistor_FET" part="BSS138" description="50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23"/>
+      <property name="Manufacturer" value="onsemi"/>
+      <property name="MPN" value="BSS138LT1G"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
-      <property name="ki_keywords" value="N-Channel Switching MOSFET"/>
+      <property name="ki_keywords" value="N-Channel MOSFET"/>
       <property name="ki_fp_filters" value="SOT?23*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>ceda30ff-2792-5a9a-b685-dad62d081f76</tstamps>
@@ -2322,21 +2322,21 @@
       </units>
     </comp>
     <comp ref="Q12">
-      <value>2N7002</value>
+      <value>BSS138</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">2N7002-7-F</field>
+        <field name="Manufacturer">onsemi</field>
+        <field name="MPN">BSS138LT1G</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
-      <libsource lib="Transistor_FET" part="2N7002" description="0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="2N7002-7-F"/>
+      <libsource lib="Transistor_FET" part="BSS138" description="50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23"/>
+      <property name="Manufacturer" value="onsemi"/>
+      <property name="MPN" value="BSS138LT1G"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
-      <property name="ki_keywords" value="N-Channel Switching MOSFET"/>
+      <property name="ki_keywords" value="N-Channel MOSFET"/>
       <property name="ki_fp_filters" value="SOT?23*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>ce931291-76b5-57f4-85b3-360b46a0bb68</tstamps>
@@ -3807,18 +3807,18 @@
       </units>
     </comp>
     <comp ref="R70">
-      <value>309k</value>
+      <value>280k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RT0805BRD07309KL</field>
+        <field name="MPN">RT0805BRD07280KL</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RT0805BRD07309KL"/>
+      <property name="MPN" value="RT0805BRD07280KL"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4945,6 +4945,25 @@
         <pin num="3" name="D" type="passive"/>
       </pins>
     </libpart>
+    <libpart lib="Transistor_FET" part="BSS138">
+      <description>50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23</description>
+      <docs>https://www.onsemi.com/pub/Collateral/BSS138-D.PDF</docs>
+      <footprints>
+        <fp>SOT?23*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">Q</field>
+        <field name="Value">BSS138</field>
+        <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
+        <field name="Datasheet">https://www.onsemi.com/pub/Collateral/BSS138-D.PDF</field>
+        <field name="Description">50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23</field>
+      </fields>
+      <pins>
+        <pin num="1" name="G" type="input"/>
+        <pin num="2" name="S" type="passive"/>
+        <pin num="3" name="D" type="passive"/>
+      </pins>
+    </libpart>
     <libpart lib="Transistor_FET" part="BSS84">
       <description>-0.13A Id, -50V Vds, P-Channel MOSFET, SOT-23</description>
       <docs>http://assets.nexperia.com/documents/data-sheet/BSS84.pdf</docs>
@@ -5340,7 +5359,6 @@
       <node ref="D1" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="D10" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D11" pin="1" pinfunction="A_1" pintype="passive"/>
-      <node ref="D13" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D14" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D15" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D16" pin="2" pinfunction="A_2" pintype="passive"/>
@@ -5444,215 +5462,219 @@
       <node ref="R35" pin="1" pintype="passive"/>
       <node ref="R53" pin="1" pintype="passive"/>
     </net>
-    <net code="39" name="/PWM_SYNC" class="Default">
+    <net code="39" name="/ON_DIV" class="Default">
+      <node ref="D13" pin="1" pinfunction="K_1" pintype="passive"/>
+      <node ref="R70" pin="1" pintype="passive"/>
+    </net>
+    <net code="40" name="/PWM_SYNC" class="Default">
       <node ref="J6" pin="15" pinfunction="Pin_15_15" pintype="passive"/>
       <node ref="R63" pin="1" pintype="passive"/>
       <node ref="U7" pin="19" pinfunction="PWM/SYNC_19" pintype="input"/>
     </net>
-    <net code="40" name="/PWR_ENB" class="Default">
+    <net code="41" name="/PWR_ENB" class="Default">
       <node ref="R50" pin="2" pintype="passive"/>
       <node ref="U6" pin="7" pinfunction="~{EN}_7" pintype="output"/>
     </net>
-    <net code="41" name="/PWR_INT" class="Default">
+    <net code="42" name="/PWR_INT" class="Default">
       <node ref="J6" pin="16" pinfunction="Pin_16_16" pintype="passive"/>
       <node ref="R47" pin="2" pintype="passive"/>
       <node ref="U6" pin="8" pinfunction="INT_8" pintype="output"/>
     </net>
-    <net code="42" name="/PWR_KILL" class="Default">
+    <net code="43" name="/PWR_KILL" class="Default">
       <node ref="D16" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="Q11" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R48" pin="2" pintype="passive"/>
       <node ref="U6" pin="2" pinfunction="KILL_2" pintype="input"/>
     </net>
-    <net code="43" name="/PWR_ON" class="Default">
+    <net code="44" name="/PWR_ON" class="Default">
       <node ref="C53" pin="1" pintype="passive"/>
-      <node ref="D13" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="R70" pin="2" pintype="passive"/>
       <node ref="R71" pin="1" pintype="passive"/>
       <node ref="U6" pin="1" pinfunction="ON_1" pintype="input"/>
     </net>
-    <net code="44" name="/PWR_PB" class="Default">
+    <net code="45" name="/PWR_PB" class="Default">
       <node ref="J3" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="U6" pin="5" pinfunction="PB_5" pintype="input"/>
     </net>
-    <net code="45" name="/PWR_TMR" class="Default">
+    <net code="46" name="/PWR_TMR" class="Default">
       <node ref="C37" pin="1" pintype="passive"/>
       <node ref="U6" pin="3" pinfunction="TMR_3" pintype="passive"/>
     </net>
-    <net code="46" name="/Q1_B" class="Default">
+    <net code="47" name="/Q1_B" class="Default">
       <node ref="Q1" pin="1" pinfunction="B_1" pintype="input"/>
       <node ref="R3" pin="2" pintype="passive"/>
       <node ref="R4" pin="1" pintype="passive"/>
     </net>
-    <net code="47" name="/Q4_G" class="Default">
+    <net code="48" name="/Q4_G" class="Default">
       <node ref="D5" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="Q4" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R33" pin="2" pintype="passive"/>
       <node ref="R34" pin="1" pintype="passive"/>
     </net>
-    <net code="48" name="/Q5_D" class="Default">
+    <net code="49" name="/Q5_D" class="Default">
       <node ref="Q5" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R34" pin="2" pintype="passive"/>
     </net>
-    <net code="49" name="/Q5_G" class="Default">
+    <net code="50" name="/Q5_G" class="Default">
       <node ref="D15" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="Q5" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R35" pin="2" pintype="passive"/>
       <node ref="R36" pin="1" pintype="passive"/>
     </net>
-    <net code="50" name="/Q6_G" class="Default">
+    <net code="51" name="/Q6_G" class="Default">
       <node ref="Q6" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="Q7" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R41" pin="2" pintype="passive"/>
     </net>
-    <net code="51" name="/Q8_G" class="Default">
+    <net code="52" name="/Q8_G" class="Default">
       <node ref="D12" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="Q8" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R49" pin="2" pintype="passive"/>
       <node ref="R50" pin="1" pintype="passive"/>
     </net>
-    <net code="52" name="/Q9_G" class="Default">
+    <net code="53" name="/Q9_G" class="Default">
       <node ref="Q10" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="Q9" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R51" pin="2" pintype="passive"/>
     </net>
-    <net code="53" name="/Q10_G" class="Default">
+    <net code="54" name="/Q10_G" class="Default">
       <node ref="D14" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="Q10" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R53" pin="2" pintype="passive"/>
       <node ref="R54" pin="1" pintype="passive"/>
     </net>
-    <net code="54" name="/Q12_G" class="Default">
+    <net code="55" name="/Q12_G" class="Default">
       <node ref="D17" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="Q12" pin="1" pinfunction="G_1" pintype="input"/>
       <node ref="R73" pin="2" pintype="passive"/>
       <node ref="R74" pin="1" pintype="passive"/>
     </net>
-    <net code="55" name="/RF_CS" class="Default">
+    <net code="56" name="/RF_CS" class="Default">
       <node ref="J5" pin="16" pinfunction="Pin_16_16" pintype="passive"/>
       <node ref="J8" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="R11" pin="2" pintype="passive"/>
     </net>
-    <net code="56" name="/RF_GPIO0" class="Default">
+    <net code="57" name="/RF_GPIO0" class="Default">
       <node ref="J5" pin="20" pinfunction="Pin_20_20" pintype="passive"/>
       <node ref="J8" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
     </net>
-    <net code="57" name="/RF_GPIO1" class="Default">
+    <net code="58" name="/RF_GPIO1" class="Default">
       <node ref="J6" pin="18" pinfunction="Pin_18_18" pintype="passive"/>
       <node ref="J8" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
     </net>
-    <net code="58" name="/RF_GPIO3" class="Default">
+    <net code="59" name="/RF_GPIO3" class="Default">
       <node ref="J6" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
       <node ref="J8" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="R64" pin="1" pintype="passive"/>
     </net>
-    <net code="59" name="/RF_RESET" class="Default">
+    <net code="60" name="/RF_RESET" class="Default">
       <node ref="J5" pin="15" pinfunction="Pin_15_15" pintype="passive"/>
       <node ref="J8" pin="3" pinfunction="Pin_3_3" pintype="passive"/>
       <node ref="R12" pin="1" pintype="passive"/>
     </net>
-    <net code="60" name="/RUN" class="Default">
+    <net code="61" name="/RUN" class="Default">
       <node ref="C52" pin="1" pintype="passive"/>
       <node ref="Q9" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R55" pin="1" pintype="passive"/>
       <node ref="U7" pin="2" pinfunction="RUN_2" pintype="input"/>
     </net>
-    <net code="61" name="/S12_CAP" class="Default">
+    <net code="62" name="/S12_CAP" class="Default">
       <node ref="C31" pin="1" pintype="passive"/>
       <node ref="U5" pin="11" pinfunction="CAP_11" pintype="passive"/>
     </net>
-    <net code="62" name="/S12_DGATE" class="Default">
+    <net code="63" name="/S12_DGATE" class="Default">
       <node ref="Q2" pin="4" pinfunction="G_4" pintype="input"/>
       <node ref="U5" pin="1" pinfunction="DGATE_1" pintype="output"/>
     </net>
-    <net code="63" name="/S12_DVDT" class="Default">
+    <net code="64" name="/S12_DVDT" class="Default">
       <node ref="C32" pin="1" pintype="passive"/>
       <node ref="R32" pin="2" pintype="passive"/>
     </net>
-    <net code="64" name="/S12_EN" class="Default">
+    <net code="65" name="/S12_EN" class="Default">
       <node ref="R37" pin="2" pintype="passive"/>
       <node ref="R38" pin="1" pintype="passive"/>
       <node ref="U5" pin="6" pinfunction="EN/UVLO_6" pintype="input"/>
     </net>
-    <net code="65" name="/S12_HGATE" class="Default">
+    <net code="66" name="/S12_HGATE" class="Default">
       <node ref="Q3" pin="4" pinfunction="G_4" pintype="input"/>
       <node ref="R32" pin="1" pintype="passive"/>
       <node ref="U5" pin="8" pinfunction="HGATE_8" pintype="output"/>
     </net>
-    <net code="66" name="/S12_OV" class="Default">
+    <net code="67" name="/S12_OV" class="Default">
       <node ref="R30" pin="2" pintype="passive"/>
       <node ref="R31" pin="1" pintype="passive"/>
       <node ref="U5" pin="5" pinfunction="OV_5" pintype="input"/>
     </net>
-    <net code="67" name="/S12_SW" class="Default">
+    <net code="68" name="/S12_SW" class="Default">
       <node ref="R30" pin="1" pintype="passive"/>
       <node ref="U5" pin="4" pinfunction="SW_4" pintype="passive"/>
     </net>
-    <net code="68" name="/SPI_MISO" class="Default">
+    <net code="69" name="/SPI_MISO" class="Default">
       <node ref="J5" pin="19" pinfunction="Pin_19_19" pintype="passive"/>
       <node ref="J9" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="U1" pin="2" pinfunction="SO_2" pintype="output"/>
     </net>
-    <net code="69" name="/SPI_MOSI" class="Default">
+    <net code="70" name="/SPI_MOSI" class="Default">
       <node ref="J5" pin="17" pinfunction="Pin_17_17" pintype="passive"/>
       <node ref="J7" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
       <node ref="J9" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="U1" pin="5" pinfunction="SI_5" pintype="input"/>
     </net>
-    <net code="70" name="/SPI_SCK" class="Default">
+    <net code="71" name="/SPI_SCK" class="Default">
       <node ref="J7" pin="1" pinfunction="Pin_1_1" pintype="passive"/>
       <node ref="J9" pin="6" pinfunction="Pin_6_6" pintype="passive"/>
       <node ref="R18" pin="2" pintype="passive"/>
       <node ref="U1" pin="6" pinfunction="SCK_6" pintype="input"/>
     </net>
-    <net code="71" name="/SPI_SCK_DEVKIT" class="Default">
+    <net code="72" name="/SPI_SCK_DEVKIT" class="Default">
       <node ref="J5" pin="18" pinfunction="Pin_18_18" pintype="passive"/>
       <node ref="R18" pin="1" pintype="passive"/>
     </net>
-    <net code="72" name="/SW_CISZA" class="Default">
+    <net code="73" name="/SW_CISZA" class="Default">
       <node ref="J6" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="R16" pin="2" pintype="passive"/>
       <node ref="R9" pin="2" pintype="passive"/>
     </net>
-    <net code="73" name="/SW_COM" class="Default">
+    <net code="74" name="/SW_COM" class="Default">
       <node ref="R16" pin="1" pintype="passive"/>
       <node ref="SW5" pin="2" pinfunction="B_2" pintype="passive"/>
     </net>
-    <net code="74" name="/USB_CC1" class="Default">
+    <net code="75" name="/USB_CC1" class="Default">
       <node ref="J4" pin="A5" pinfunction="CC1_A5" pintype="bidirectional"/>
       <node ref="R65" pin="1" pintype="passive"/>
     </net>
-    <net code="75" name="/USB_CC2" class="Default">
+    <net code="76" name="/USB_CC2" class="Default">
       <node ref="J4" pin="B5" pinfunction="CC2_B5" pintype="bidirectional"/>
       <node ref="R66" pin="1" pintype="passive"/>
     </net>
-    <net code="76" name="/USB_DN" class="Default">
+    <net code="77" name="/USB_DN" class="Default">
       <node ref="J4" pin="A7" pinfunction="D-_A7" pintype="bidirectional"/>
       <node ref="J4" pin="B7" pinfunction="D-_B7" pintype="bidirectional"/>
       <node ref="J6" pin="20" pinfunction="Pin_20_20" pintype="passive"/>
       <node ref="U8" pin="3" pinfunction="I/O2_3" pintype="passive"/>
       <node ref="U8" pin="4" pinfunction="I/O2_4" pintype="passive"/>
     </net>
-    <net code="77" name="/USB_DP" class="Default">
+    <net code="78" name="/USB_DP" class="Default">
       <node ref="J4" pin="A6" pinfunction="D+_A6" pintype="bidirectional"/>
       <node ref="J4" pin="B6" pinfunction="D+_B6" pintype="bidirectional"/>
       <node ref="J6" pin="19" pinfunction="Pin_19_19" pintype="passive"/>
       <node ref="U8" pin="1" pinfunction="I/O1_1" pintype="passive"/>
       <node ref="U8" pin="6" pinfunction="I/O1_6" pintype="passive"/>
     </net>
-    <net code="78" name="/USB_LAPTOP" class="Default">
+    <net code="79" name="/USB_LAPTOP" class="Default">
       <node ref="J5" pin="13" pinfunction="Pin_13_13" pintype="passive"/>
       <node ref="Q12" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R75" pin="2" pintype="passive"/>
     </net>
-    <net code="79" name="/USB_VBUS" class="Default">
+    <net code="80" name="/USB_VBUS" class="Default">
       <node ref="J4" pin="A4" pinfunction="VBUS_A4" pintype="passive"/>
       <node ref="J4" pin="A9" pinfunction="VBUS_A9" pintype="passive"/>
       <node ref="J4" pin="B4" pinfunction="VBUS_B4" pintype="passive"/>
       <node ref="J4" pin="B9" pinfunction="VBUS_B9" pintype="passive"/>
       <node ref="R73" pin="1" pintype="passive"/>
     </net>
-    <net code="80" name="/V12_F" class="Default">
+    <net code="81" name="/V12_F" class="Default">
+      <node ref="D13" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D4" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D5" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="F1" pin="2" pintype="passive"/>
@@ -5661,16 +5683,15 @@
       <node ref="Q2" pin="3" pinfunction="S_3" pintype="passive"/>
       <node ref="Q4" pin="2" pinfunction="S_2" pintype="passive"/>
       <node ref="R33" pin="1" pintype="passive"/>
-      <node ref="R70" pin="1" pintype="passive"/>
       <node ref="U5" pin="2" pinfunction="A_2" pintype="passive"/>
     </net>
-    <net code="81" name="/V12_FLT" class="Default">
+    <net code="82" name="/V12_FLT" class="Default">
       <node ref="C35" pin="1" pintype="passive"/>
       <node ref="D10" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="D9" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="R46" pin="2" pintype="passive"/>
     </net>
-    <net code="82" name="/V12_MID" class="Default">
+    <net code="83" name="/V12_MID" class="Default">
       <node ref="C30" pin="1" pintype="passive"/>
       <node ref="C31" pin="2" pintype="passive"/>
       <node ref="Q2" pin="5" pinfunction="D_5" pintype="passive"/>
@@ -5686,15 +5707,15 @@
       <node ref="U5" pin="12" pinfunction="C_12" pintype="passive"/>
       <node ref="U5" pin="3" pinfunction="VSNS_3" pintype="passive"/>
     </net>
-    <net code="83" name="/V12_SW" class="Default">
+    <net code="84" name="/V12_SW" class="Default">
       <node ref="Q4" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R37" pin="1" pintype="passive"/>
     </net>
-    <net code="84" name="/VAA_SW" class="Default">
+    <net code="85" name="/VAA_SW" class="Default">
       <node ref="Q6" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R44" pin="1" pintype="passive"/>
     </net>
-    <net code="85" name="/VCTL" class="Default">
+    <net code="86" name="/VCTL" class="Default">
       <node ref="C36" pin="1" pintype="passive"/>
       <node ref="D12" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="D8" pin="1" pinfunction="K_1" pintype="passive"/>
@@ -5704,7 +5725,7 @@
       <node ref="R49" pin="1" pintype="passive"/>
       <node ref="U6" pin="6" pinfunction="VIN_6" pintype="power_in"/>
     </net>
-    <net code="86" name="/VSYS" class="Default">
+    <net code="87" name="/VSYS" class="Default">
       <node ref="C40" pin="1" pintype="passive"/>
       <node ref="C41" pin="1" pintype="passive"/>
       <node ref="C46" pin="1" pintype="passive"/>
@@ -5719,75 +5740,75 @@
       <node ref="U7" pin="13" pinfunction="VIN_13" pintype="power_in"/>
       <node ref="U7" pin="17" pinfunction="PVIN_17" pintype="power_in"/>
     </net>
-    <net code="87" name="/V_12_ADC" class="Default">
+    <net code="88" name="/V_12_ADC" class="Default">
       <node ref="C33" pin="1" pintype="passive"/>
       <node ref="D6" pin="3" pinfunction="COM_3" pintype="passive"/>
       <node ref="J5" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="R38" pin="2" pintype="passive"/>
       <node ref="R39" pin="1" pintype="passive"/>
     </net>
-    <net code="88" name="/V_AA_ADC" class="Default">
+    <net code="89" name="/V_AA_ADC" class="Default">
       <node ref="C34" pin="1" pintype="passive"/>
       <node ref="D11" pin="3" pinfunction="COM_3" pintype="passive"/>
       <node ref="J5" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="R44" pin="2" pintype="passive"/>
       <node ref="R45" pin="1" pintype="passive"/>
     </net>
-    <net code="89" name="unconnected-(J4-SBU1-PadA8)" class="Default">
+    <net code="90" name="unconnected-(J4-SBU1-PadA8)" class="Default">
       <node ref="J4" pin="A8" pinfunction="SBU1_A8" pintype="bidirectional+no_connect"/>
     </net>
-    <net code="90" name="unconnected-(J4-SBU2-PadB8)" class="Default">
+    <net code="91" name="unconnected-(J4-SBU2-PadB8)" class="Default">
       <node ref="J4" pin="B8" pinfunction="SBU2_B8" pintype="bidirectional+no_connect"/>
     </net>
-    <net code="91" name="unconnected-(J5-Pin_3-Pad3)" class="Default">
+    <net code="92" name="unconnected-(J5-Pin_3-Pad3)" class="Default">
       <node ref="J5" pin="3" pinfunction="Pin_3_3" pintype="passive+no_connect"/>
     </net>
-    <net code="92" name="unconnected-(J5-Pin_21-Pad21)" class="Default">
+    <net code="93" name="unconnected-(J5-Pin_21-Pad21)" class="Default">
       <node ref="J5" pin="21" pinfunction="Pin_21_21" pintype="passive+no_connect"/>
     </net>
-    <net code="93" name="unconnected-(J6-Pin_2-Pad2)" class="Default">
+    <net code="94" name="unconnected-(J6-Pin_2-Pad2)" class="Default">
       <node ref="J6" pin="2" pinfunction="Pin_2_2" pintype="passive+no_connect"/>
     </net>
-    <net code="94" name="unconnected-(J6-Pin_3-Pad3)" class="Default">
+    <net code="95" name="unconnected-(J6-Pin_3-Pad3)" class="Default">
       <node ref="J6" pin="3" pinfunction="Pin_3_3" pintype="passive+no_connect"/>
     </net>
-    <net code="95" name="unconnected-(J6-Pin_10-Pad10)" class="Default">
+    <net code="96" name="unconnected-(J6-Pin_10-Pad10)" class="Default">
       <node ref="J6" pin="10" pinfunction="Pin_10_10" pintype="passive+no_connect"/>
     </net>
-    <net code="96" name="unconnected-(J6-Pin_11-Pad11)" class="Default">
+    <net code="97" name="unconnected-(J6-Pin_11-Pad11)" class="Default">
       <node ref="J6" pin="11" pinfunction="Pin_11_11" pintype="passive+no_connect"/>
     </net>
-    <net code="97" name="unconnected-(J6-Pin_12-Pad12)" class="Default">
+    <net code="98" name="unconnected-(J6-Pin_12-Pad12)" class="Default">
       <node ref="J6" pin="12" pinfunction="Pin_12_12" pintype="passive+no_connect"/>
     </net>
-    <net code="98" name="unconnected-(J6-Pin_13-Pad13)" class="Default">
+    <net code="99" name="unconnected-(J6-Pin_13-Pad13)" class="Default">
       <node ref="J6" pin="13" pinfunction="Pin_13_13" pintype="passive+no_connect"/>
     </net>
-    <net code="99" name="unconnected-(J6-Pin_14-Pad14)" class="Default">
+    <net code="100" name="unconnected-(J6-Pin_14-Pad14)" class="Default">
       <node ref="J6" pin="14" pinfunction="Pin_14_14" pintype="passive+no_connect"/>
     </net>
-    <net code="100" name="unconnected-(J8-Pin_6-Pad6)" class="Default">
+    <net code="101" name="unconnected-(J8-Pin_6-Pad6)" class="Default">
       <node ref="J8" pin="6" pinfunction="Pin_6_6" pintype="passive+no_connect"/>
     </net>
-    <net code="101" name="unconnected-(J8-Pin_7-Pad7)" class="Default">
+    <net code="102" name="unconnected-(J8-Pin_7-Pad7)" class="Default">
       <node ref="J8" pin="7" pinfunction="Pin_7_7" pintype="passive+no_connect"/>
     </net>
-    <net code="102" name="unconnected-(J9-Pin_1-Pad1)" class="Default">
+    <net code="103" name="unconnected-(J9-Pin_1-Pad1)" class="Default">
       <node ref="J9" pin="1" pinfunction="Pin_1_1" pintype="passive+no_connect"/>
     </net>
-    <net code="103" name="unconnected-(J9-Pin_7-Pad7)" class="Default">
+    <net code="104" name="unconnected-(J9-Pin_7-Pad7)" class="Default">
       <node ref="J9" pin="7" pinfunction="Pin_7_7" pintype="passive+no_connect"/>
     </net>
-    <net code="104" name="unconnected-(SW5-C-Pad3)" class="Default">
+    <net code="105" name="unconnected-(SW5-C-Pad3)" class="Default">
       <node ref="SW5" pin="3" pinfunction="C_3" pintype="passive+no_connect"/>
     </net>
-    <net code="105" name="unconnected-(U3-CT-Pad5)" class="Default">
+    <net code="106" name="unconnected-(U3-CT-Pad5)" class="Default">
       <node ref="U3" pin="5" pinfunction="CT_5" pintype="passive+no_connect"/>
     </net>
-    <net code="106" name="unconnected-(U3-MR-Pad4)" class="Default">
+    <net code="107" name="unconnected-(U3-MR-Pad4)" class="Default">
       <node ref="U3" pin="4" pinfunction="MR_4" pintype="input+no_connect"/>
     </net>
-    <net code="107" name="unconnected-(U5-RTN-Pad13)" class="Default">
+    <net code="108" name="unconnected-(U5-RTN-Pad13)" class="Default">
       <node ref="U5" pin="13" pinfunction="RTN_13" pintype="passive+no_connect"/>
     </net>
   </nets>

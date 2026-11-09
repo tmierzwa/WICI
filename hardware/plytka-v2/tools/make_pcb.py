@@ -65,7 +65,7 @@ AT_EDGE = {'J4'}                        # may overhang the bottom edge towards t
 # so seen from the top the two rows swap sides.
 SOCKETS = {
     'J6': (86.0, 9.0, 0), 'J5': (86.0 + 22.86, 9.0, 0),          # DevKitC J3 / J1, row spacing as v1.1
-    'J9': (142.4, 67.4, 0), 'J8': (142.4 + 15.24, 67.4, 0),      # Wio J2 / J1, spacing from the Seeed drawing
+    'J9': (142.4, 67.4, 0), 'J8': (142.4 + 15.24, 67.4, 0),      # Wio J2 / J1, 15.24 mm (Seeed STEP model)
 }
 # Packing regions per block: (side, x0, y0, x1, y1, start, refs). The first part goes as close as possible to
 # the start point, every next one as close as possible to that first part (the IC of the block);
@@ -267,8 +267,10 @@ def main():
 
     for ref, (x, y, rot) in SOCKETS.items():
         fix(ref, x, y, rot, 'B', 'pin1')
-    # Bodies of the modules hanging under the sockets (DevKitC 25.4 x 62.7 mm, Wio 17.5 x 21 mm).
-    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.0, 2.0)):
+    # Bodies of the modules hanging under the sockets, 0.5 mm wider than the module on each side:
+    # DevKitC 25.4 x 62.7 mm; Wio 17.78 x 21.44 mm, pin 1 2.92 mm from its short edge (Seeed STEP model
+    # 2024-09-23). The 2.2 mm hole of the Wio lies on its axis 0.84 mm beyond the pin-1 row, inside the body.
+    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.44, 2.92)):
         p1 = [footprints[r].Pads()[0].GetPosition() for r in (left, right)]
         xs = sorted(pcbnew.ToMM(p.x) for p in p1)
         y0 = min(pcbnew.ToMM(p.y) for p in p1) - margin

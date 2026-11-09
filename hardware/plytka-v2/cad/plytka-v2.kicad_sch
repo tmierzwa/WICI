@@ -4750,6 +4750,240 @@
         (effects
           (font
             (size 1.27 1.27)))))
+    (symbol "Transistor_FET:BSS138"
+      (pin_names
+        (offset 0)
+        (hide yes))
+      (exclude_from_sim no)
+      (in_bom yes)
+      (on_board yes)
+      (in_pos_files yes)
+      (duplicate_pin_numbers_are_jumpers no)
+      (symbol "BSS138_0_1"
+        (polyline
+          (pts
+            (xy 0.254 1.905)
+            (xy 0.254 -1.905))
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0.254 0)
+            (xy -2.54 0))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0.762 2.286)
+            (xy 0.762 1.27))
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0.762 0.508)
+            (xy 0.762 -0.508))
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0.762 -1.27)
+            (xy 0.762 -2.286))
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0.762 -1.778)
+            (xy 3.302 -1.778)
+            (xy 3.302 1.778)
+            (xy 0.762 1.778))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 1.016 0)
+            (xy 2.032 0.381)
+            (xy 2.032 -0.381)
+            (xy 1.016 0))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type outline)))
+        (circle
+          (center 1.651 0)
+          (radius 2.794)
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 2.54 2.54)
+            (xy 2.54 1.778))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (circle
+          (center 2.54 1.778)
+          (radius 0.254)
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type outline)))
+        (circle
+          (center 2.54 -1.778)
+          (radius 0.254)
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type outline)))
+        (polyline
+          (pts
+            (xy 2.54 -2.54)
+            (xy 2.54 0)
+            (xy 0.762 0))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 2.921 0.381)
+            (xy 3.683 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 3.302 0.381)
+            (xy 2.921 -0.254)
+            (xy 3.683 -0.254)
+            (xy 3.302 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none))))
+      (symbol "BSS138_1_1"
+        (pin input line
+          (at -5.08 0 0)
+          (length 2.54)
+          (name "G"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "1"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at 2.54 -5.08 90)
+          (length 2.54)
+          (name "S"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "2"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at 2.54 5.08 270)
+          (length 2.54)
+          (name "D"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "3"
+            (effects
+              (font
+                (size 1.27 1.27))))))
+      (embedded_fonts no)
+      (property "Reference" "Q"
+        (at 5.08 1.905 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))
+          (justify left)))
+      (property "Value" "BSS138"
+        (at 5.08 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))
+          (justify left)))
+      (property "Footprint" "Package_TO_SOT_SMD:SOT-23"
+        (at 5.08 -1.905 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27)
+            (italic yes))
+          (justify left)))
+      (property "Datasheet" "https://www.onsemi.com/pub/Collateral/BSS138-D.PDF"
+        (at 5.08 -3.81 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))
+          (justify left)))
+      (property "Description" "50V Vds, 0.22A Id, N-Channel MOSFET, SOT-23"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_keywords" "N-Channel MOSFET"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_fp_filters" "SOT?23*"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27)))))
     (symbol "Transistor_FET:BSS84"
       (pin_names
         (hide yes))
@@ -8126,7 +8360,7 @@
       (justify left))
     (uuid "42e93132-38c0-5784-81b7-8f6109355173"))
   (symbol
-    (lib_id "Transistor_FET:2N7002")
+    (lib_id "Transistor_FET:BSS138")
     (at 411.47999999999996 416.56 0)
     (unit 1)
     (exclude_from_sim no)
@@ -8139,7 +8373,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "2N7002"
+    (property "Value" "BSS138"
       (at 411.47999999999996 408.94 0)
       (effects
         (font
@@ -8156,13 +8390,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "onsemi"
       (at 411.47999999999996 416.56 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "2N7002-7-F"
+    (property "MPN" "BSS138LT1G"
       (at 411.47999999999996 416.56 0)
       (effects
         (font
@@ -14062,13 +14296,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "Nexperia"
       (at 106.68 132.08 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "2N7002-7-F"
+    (property "MPN" "2N7002,215"
       (at 106.68 132.08 0)
       (effects
         (font
@@ -14718,7 +14952,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "BAT54S"
+    (property "Value" "BAV199"
       (at 106.68 309.88 0)
       (effects
         (font
@@ -14735,13 +14969,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "onsemi"
+    (property "Manufacturer" "Nexperia"
       (at 106.68 314.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BAT54SLT1G"
+    (property "MPN" "BAV199,215"
       (at 106.68 314.96 0)
       (effects
         (font
@@ -15231,7 +15465,7 @@
       (justify left))
     (uuid "0c0061a5-544c-564c-bbbf-a4683f93aa37"))
   (symbol
-    (lib_id "Transistor_FET:2N7002")
+    (lib_id "Transistor_FET:BSS138")
     (at 182.88 147.32 0)
     (unit 1)
     (exclude_from_sim no)
@@ -15244,7 +15478,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "2N7002"
+    (property "Value" "BSS138"
       (at 182.88 139.7 0)
       (effects
         (font
@@ -15261,13 +15495,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "onsemi"
       (at 182.88 147.32 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "2N7002-7-F"
+    (property "MPN" "BSS138LT1G"
       (at 182.88 147.32 0)
       (effects
         (font
@@ -15671,7 +15905,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "BAT54S"
+    (property "Value" "BAV199"
       (at 182.88 259.08 0)
       (effects
         (font
@@ -15688,13 +15922,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "onsemi"
+    (property "Manufacturer" "Nexperia"
       (at 182.88 264.16 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BAT54SLT1G"
+    (property "MPN" "BAV199,215"
       (at 182.88 264.16 0)
       (effects
         (font
@@ -16433,6 +16667,88 @@
       (justify left))
     (uuid "9a5636b0-cb37-5fdb-8175-b61e5aa99260"))
   (symbol
+    (lib_id "Device:D")
+    (at 259.08 182.88 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "ceaf1a8c-a98b-5a0f-8183-a12ac774cd1f")
+    (property "Reference" "D13"
+      (at 259.08 175.26 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "BAS116H"
+      (at 259.08 177.8 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Diode_SMD:D_SOD-123F"
+      (at 259.08 182.88 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 259.08 182.88 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Nexperia"
+      (at 259.08 182.88 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "BAS116H,115"
+      (at 259.08 182.88 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "7f5de8ac-758c-58d1-9803-95541707cf57"))
+    (pin "2"
+      (uuid "2ae59467-f52c-51ba-bdd4-47dbeb70f6e5"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "D13")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 255.27 182.88)
+      (xy 250.19 182.88))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "f2c4b43f-2929-5c16-aa14-3689e3564c67"))
+  (label "ON_DIV"
+    (at 250.19 182.88 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "782125b0-480e-5e51-a86a-b7bdd399db46"))
+  (wire
+    (pts
+      (xy 262.89 182.88)
+      (xy 267.97 182.88))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "a73a8b51-0843-5199-bd74-6547c4375e02"))
+  (label "V12_F"
+    (at 267.97 182.88 0)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "21c53452-7ffb-5e11-9e06-e8457e047649"))
+  (symbol
     (lib_id "Device:R")
     (at 259.08 114.3 0)
     (unit 1)
@@ -16446,7 +16762,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "309k"
+    (property "Value" "280k"
       (at 259.08 107.95 0)
       (effects
         (font
@@ -16469,7 +16785,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RT0805BRD07309KL"
+    (property "MPN" "RT0805BRD07280KL"
       (at 259.08 114.3 0)
       (effects
         (font
@@ -16492,7 +16808,7 @@
       (width 0)
       (type default))
     (uuid "a543833f-ce96-5f3c-8ea5-8b7e99153982"))
-  (label "V12_F"
+  (label "ON_DIV"
     (at 259.08 105.41 90)
     (effects
       (font
@@ -16678,88 +16994,6 @@
         (size 1.27 1.27))
       (justify left))
     (uuid "a288747f-8716-5f11-92c7-dc428445cc13"))
-  (symbol
-    (lib_id "Device:D_Schottky")
-    (at 259.08 182.88 0)
-    (unit 1)
-    (exclude_from_sim no)
-    (in_bom yes)
-    (on_board yes)
-    (dnp no)
-    (uuid "ceaf1a8c-a98b-5a0f-8183-a12ac774cd1f")
-    (property "Reference" "D13"
-      (at 259.08 175.26 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Value" "BAT54H"
-      (at 259.08 177.8 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Footprint" "Diode_SMD:D_SOD-323"
-      (at 259.08 182.88 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "Datasheet" ""
-      (at 259.08 182.88 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "Manufacturer" "onsemi"
-      (at 259.08 182.88 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "MPN" "BAT54HT1G"
-      (at 259.08 182.88 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (pin "1"
-      (uuid "7f5de8ac-758c-58d1-9803-95541707cf57"))
-    (pin "2"
-      (uuid "2ae59467-f52c-51ba-bdd4-47dbeb70f6e5"))
-    (instances
-      (project "plytka-v2"
-        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "D13")
-          (unit 1)))))
-  (wire
-    (pts
-      (xy 255.27 182.88)
-      (xy 250.19 182.88))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "f2c4b43f-2929-5c16-aa14-3689e3564c67"))
-  (label "PWR_ON"
-    (at 250.19 182.88 180)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify right))
-    (uuid "782125b0-480e-5e51-a86a-b7bdd399db46"))
-  (wire
-    (pts
-      (xy 262.89 182.88)
-      (xy 267.97 182.88))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "a73a8b51-0843-5199-bd74-6547c4375e02"))
-  (label "GND"
-    (at 267.97 182.88 0)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify left))
-    (uuid "21c53452-7ffb-5e11-9e06-e8457e047649"))
   (symbol
     (lib_id "Device:C")
     (at 259.08 91.44 0)
@@ -17516,7 +17750,7 @@
       (justify left))
     (uuid "a3ee4d80-2fee-509a-943d-b775acd2d252"))
   (symbol
-    (lib_id "Transistor_FET:2N7002")
+    (lib_id "Transistor_FET:BSS138")
     (at 259.08 391.16 0)
     (unit 1)
     (exclude_from_sim no)
@@ -17529,7 +17763,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "2N7002"
+    (property "Value" "BSS138"
       (at 259.08 383.54 0)
       (effects
         (font
@@ -17546,13 +17780,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "onsemi"
       (at 259.08 391.16 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "2N7002-7-F"
+    (property "MPN" "BSS138LT1G"
       (at 259.08 391.16 0)
       (effects
         (font
@@ -17878,7 +18112,7 @@
       (justify left))
     (uuid "eeda52ed-6940-5731-b4c1-deb96ef887ce"))
   (symbol
-    (lib_id "Transistor_FET:2N7002")
+    (lib_id "Transistor_FET:BSS138")
     (at 411.47999999999996 91.44 0)
     (unit 1)
     (exclude_from_sim no)
@@ -17891,7 +18125,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "2N7002"
+    (property "Value" "BSS138"
       (at 411.47999999999996 83.82 0)
       (effects
         (font
@@ -17908,13 +18142,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "onsemi"
       (at 411.47999999999996 91.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "2N7002-7-F"
+    (property "MPN" "BSS138LT1G"
       (at 411.47999999999996 91.44 0)
       (effects
         (font
