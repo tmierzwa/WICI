@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Granice, role i model komunikacji systemu WICI.">
-  <title>Model i zakres systemu — Specyfikacja WICI 0.49</title>
+  <title>Model i zakres systemu — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Model i zakres systemu</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#obraz-calosci">Obraz całości</a>
@@ -76,7 +76,7 @@
       <p>WICI używa jednego typu stacji radiowej. Jej zadanie wynika z konfiguracji.</p>
       <ul>
         <li><strong>Stacja WICI</strong> tworzy lub przekazuje wiadomości i trzyma konfigurację, klucze, kolejkę oraz stan zgłoszeń w <a href="system-wici-slownik.html#fram">FRAM</a>. Może działać bez laptopa.</li>
-        <li><strong>Komputer stanowiska</strong> uruchamia aplikację odbiorcy. Aktywny komputer przechowuje bazę zgłoszeń, karty zaufanych stacji i klucz aktywnej tożsamości na nośniku stanowiska; zapasowy komputer przejmuje ten nośnik po awarii.</li>
+        <li><strong>Komputer stanowiska</strong> uruchamia aplikację stanowiska, która w protokole SA1 jest <a href="system-wici-slownik.html#odbiorca">odbiorcą</a>. Aktywny komputer przechowuje bazę zgłoszeń, karty zaufanych stacji i klucz aktywnej tożsamości na nośniku stanowiska; zapasowy komputer przejmuje ten nośnik po awarii.</li>
         <li><strong>Laptop schronienia</strong> łączy się ze stacją przez USB. Przechowuje kopię jej danych oraz własne dane mieszkańców; jego funkcje należą do etapu po pilotażu.</li>
       </ul>
       <p>Poziom 1 to sama stacja. Poziom 2 dodaje laptop z panelem gospodarza, a poziom 3 udostępnia stronę mieszkańca telefonom przez router obiektu i przewiduje tryb kiosku.</p>
@@ -146,7 +146,7 @@
       <p>Poza systemem są router Wi-Fi obiektu, telefony mieszkańców, źródła zasilania, wymienieni wyżej ludzie oraz służby przyjmujące zgłoszenia. Reticulum, Meshtastic, MeshCore i łącze IP do powiatu są poza podstawową architekturą. <a href="system-wici-decyzje.html#wici-dec-008">Decyzja o nośniku WICI-DEC-008</a> ogranicza normatywny nośnik do WICI-Link; inne nośniki wymagają osobnego opisu wymiany danych, tożsamości i potwierdzeń.</p>
       <p class="meta">Źródła modelu: <a href="../concept/slownik.html">słownik koncepcji</a>, <a href="../concept/05-projekt-koncepcyjny-komunikacji.html">model komunikacji</a>, <a href="projekt.md">poziomy zestawu</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="wici-link.md">WICI-Link</a> i <a href="transport.md">transport</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

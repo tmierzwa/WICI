@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Przedmiot, status, założenia i zasady utrzymania specyfikacji WICI.">
-  <title>Przedmiot i zasady — Specyfikacja WICI 0.49</title>
+  <title>Przedmiot i zasady — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Przedmiot i zasady</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przedmiot">Przedmiot</a>
@@ -55,6 +55,7 @@
           <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania dotyczą całych protokołów WICI, także 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie zawężają tych wymagań.</td></tr>
         </tbody>
       </table>
+      <p>Założenia WICI-ZAL-003 i WICI-ZAL-004 zależą od wyniku <a href="#warunek-d21">próby przy stole</a>. Jeśli WICI-Link jej nie zaliczy, zapasem jest Reticulum, a te założenia trzeba będzie zmienić.</p>
       <h3 id="slowa-wymagan">Słowa wymagań</h3>
       <p><strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> mają znaczenie określone w RFC 2119 i RFC 8174, tylko gdy są zapisane wielkimi literami. <a href="system-wici-o-dokumencie.html#metamodel">Przedmowa</a> określa budowę wymagania.</p>
       <p>Stopień <em>normatywny</em> oznacza obowiązujące wymaganie z ustalonym sposobem sprawdzenia. Sam stopień nie stwierdza zgodności kodu ani wyrobu. Zakres normatywny i informacyjny określa <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
@@ -64,7 +65,7 @@
         <thead><tr><th>Klasa</th><th>Zakres wymagań</th></tr></thead>
         <tbody>
           <tr><td>Stacja</td><td><a href="system-wici-model.html#urzadzenia-i-role">Role</a> schronienia, przekaźnika i roota; wymagania stacji z rozdziałów 2–7 oraz właściwe części rozdziału 8.</td></tr>
-          <tr><td>Stanowisko</td><td>Aplikacja odbiorcy na komputerze stanowiska; wymagania stanowiska z rozdziałów 2–7.</td></tr>
+          <tr><td>Stanowisko</td><td>Aplikacja na komputerze stanowiska, w protokole SA1 występująca jako <a href="system-wici-slownik.html#odbiorca">odbiorca</a>; wymagania stanowiska z rozdziałów 2–7.</td></tr>
           <tr><td>Narzędzie przygotowania</td><td>Reguły całego planu sieci z rozdziałów <a href="system-wici-model.html#granice">2</a> i <a href="system-wici-siec.html#plan-sieci">6</a>; ekrany i przebieg pracy są informacyjne.</td></tr>
           <tr><td>Wyrób poziomu 1</td><td>Stacja jako urządzenie: sprzęt, zasilanie, środowisko i badania z rozdziału 8 wraz z właściwymi wymaganiami stacji z rozdziałów 2–7.</td></tr>
         </tbody>
@@ -95,7 +96,7 @@
       <h4>Pomocnicze</h4>
       <p><a href="https://reticulum.network/manual/">Dokumentacja Reticulum 1.6.0</a>, <a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">karta SX1261/SX1262 z 7 kwietnia 2025 r.</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a> i <a href="https://meshtastic.org/docs/overview/radio-settings/">ustawienia Meshtastic</a> opisują otoczenie i źródła projektu. Nie dodają wymagań WICI.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Jedyny słownik pojęć specyfikacji WICI.">
-  <title>Słownik — Specyfikacja WICI 0.49</title>
+  <title>Słownik — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Słownik</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
     <section id="sownik-techniczny" aria-labelledby="h-sownik">
       <h2 id="h-sownik">Terminy</h2>
@@ -42,7 +42,6 @@
         <tbody>
           <tr id="beacon"><td>BEACON</td><td>Podpisane ogłoszenie trasy. Podaje root, rangę, epokę i rodzica (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
           <tr id="cisza-radiowa"><td>Cisza radiowa</td><td>Tryb, w którym stacja nie nadaje, także ruchu innych stacji. Odbiór, zapis i kolejka działają dalej; przy ciszy operacyjnej jedno zgłoszenie można wyjąć spod ciszy z panelu laptopa, po potwierdzeniu przyciskiem; przełącznik CISZA wyjątków nie dopuszcza (<a href="system-wici-siec.html#kanal">rozdział 6</a>).</td></tr>
-          <tr id="dowod-doreczenia"><td>Dowód doręczenia</td><td>Informuje stanowisko, że stacja zapisała wiadomość albo trwale ją odrzuciła. Nie potwierdza przeczytania (<a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>).</td></tr>
           <tr id="dyzurny"><td>Dyżurny</td><td>Osoba na stanowisku odbiorczym, która przyjmuje zgłoszenia, kieruje pomoc i odsyła odpowiedzi (<a href="system-wici-model.html#ludzie">rozdział 2</a>).</td></tr>
           <tr id="epoka"><td>Epoka</td><td>Trwały licznik uruchomień roota używany przy aktualizacji tras (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
           <tr id="fram"><td>FRAM</td><td>Nieulotna pamięć stacji, która zachowuje zapisane dane i stan po odłączeniu zasilania (<a href="system-wici-interfejsy.html#trwalosc">rozdział 7</a>).</td></tr>
@@ -63,8 +62,9 @@
           <tr id="nosnik-komunikacji"><td>Nośnik komunikacji</td><td>Sposób przenoszenia bajtów między końcami. Jego zdarzenie transmisji nie potwierdza przyjęcia SA1; normatywnym nośnikiem jest WICI-Link (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
           <tr id="nosnik-stanowiska"><td>Nośnik stanowiska</td><td>Dysk z bazą zgłoszeń i danymi odbiorcy, przenoszony do zapasowego komputera po awarii (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td></tr>
           <tr id="numer"><td>Numer</td><td>Wartość u16 wskazująca stację albo tożsamość odbiorcy w planie. Sam numer nie uwierzytelnia nadawcy (<a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>).</td></tr>
-          <tr id="odbiorca"><td>Odbiorca; tożsamość odbiorcy</td><td>Odbiorca to aplikacja stanowiska z kluczami na nośniku stanowiska; nie jest węzłem radiowym. Ma tożsamość główną i jednorazową zapasową. Pierwsza uwierzytelniona koperta od zapasowej trwale przełącza na nią stację (<a href="system-wici-model.html#tozsamosci-i-klucze">rozdział 2</a>).</td></tr>
+          <tr id="odbiorca"><td>Odbiorca; tożsamość odbiorcy</td><td>Stanowisko jako strona protokołu SA1: adresat zgłoszeń i nadawca odpowiedzi do stacji. Nazwy „odbiorca” używa się tylko dla tej roli, jej tożsamości i kluczy; miejsce, komputer i aplikację nazywa się „stanowiskiem”. Odbiorca nie jest węzłem radiowym, a jego klucze są na nośniku stanowiska. Ma tożsamość główną i jednorazową zapasową. Pierwsza uwierzytelniona koperta od zapasowej trwale przełącza na nią stację (<a href="system-wici-model.html#tozsamosci-i-klucze">rozdział 2</a>).</td></tr>
           <tr id="plan-sieci"><td>Plan sieci</td><td>Przygotowana lista numerów i położeń stacji oraz dróg do roota. Zawiera rodzica planowego i ewentualnego zapasowego (<a href="system-wici-siec.html#plan-sieci">rozdział 6</a>).</td></tr>
+          <tr id="pokwitowanie"><td>Pokwitowanie</td><td>Koperta rodzaju 1 od stacji do stanowiska z licznikami wiadomości, które stacja zapisała albo trwale odrzuciła. Kończy ponawianie tych wiadomości, lecz nie potwierdza przeczytania. Dawniej „dowód doręczenia”; w kodzie <em>delivery proof</em> (<a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>).</td></tr>
           <tr id="poziom"><td>Poziom zestawu</td><td>Poziom 1 to sama stacja, poziom 2 dodaje laptop schronienia przez USB, a poziom 3 stronę mieszkańca na telefonach. Poziomy 2–3 należą do etapu po pilotażu (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
           <tr id="profil"><td>Profil</td><td>Zestaw wartości parametrów dla wybranej konfiguracji, na przykład ustawień radia, czasów i progów. Pilotaż jest jednym z profili i nie zawęża wymagań protokołów (<a href="system-wici-siec.html#profil">rozdział 6</a>).</td></tr>
           <tr id="przekazane-dalej"><td>Przekazane dalej</td><td>Stan 4 obsługi zgłoszenia: skierowanie sprawy do służb. Jest niezależny od wyniku skoku „w drodze” (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
@@ -81,7 +81,7 @@
           <tr id="skok"><td>Skok</td><td>Przejście ramki WICI-Link między dwiema sąsiednimi stacjami, potwierdzane HACK; na jednym skoku mogą być ponowienia. Pole ramki dopuszcza do 15 skoków (<a href="system-wici-siec.html#przekazywanie">rozdział 6</a>).</td></tr>
           <tr id="stacja-stanowiska"><td>Stacja stanowiska</td><td>Zob. <a href="#root">Root</a>.</td></tr>
           <tr id="stacja-wici"><td>Stacja WICI</td><td>Jedyny typ urządzenia radiowego WICI. O jej roli decyduje konfiguracja; może działać bez laptopa (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
-          <tr id="stanowisko"><td>Stanowisko odbiorcze</td><td>Miejsce przyjmowania zgłoszeń schronień, kierowania pomocy i odsyłania odpowiedzi. Komputer stanowiska i root pełnią różne zadania (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
+          <tr id="stanowisko"><td>Stanowisko odbiorcze</td><td>Miejsce przyjmowania zgłoszeń schronień, kierowania pomocy i odsyłania odpowiedzi. Aplikacja na komputerze stanowiska jest podmiotem wymagań klasy „Stanowisko”; w protokole SA1 występuje jako <a href="#odbiorca">odbiorca</a>. Komputer stanowiska i root pełnią różne zadania (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
           <tr id="szew-nosnika"><td>Szew nośnika</td><td>Granica między chronioną kopertą a sposobem przenoszenia jej bajtów (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
           <tr id="tag-pary"><td>Tag pary</td><td>Znacznik uwierzytelniający jednoadresową ramkę między sąsiadami. Nie zastępuje ochrony koperty (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
           <tr id="tozsamosc"><td>Tożsamość</td><td>Ma 64-bajtowy klucz publiczny X25519 ‖ Ed25519 oraz 16-bajtowy identyfikator wyznaczany stałym wzorem WICI. Wzór i role kluczy podaje <a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>.</td></tr>
@@ -94,7 +94,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

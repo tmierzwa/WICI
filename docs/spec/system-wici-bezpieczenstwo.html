@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zagrożenia, tożsamości, uprawnienia i koperta WICI — szkic specyfikacji.">
-  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.49</title>
+  <title>Bezpieczeństwo i koperta — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Bezpieczeństwo i koperta</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
       <a href="#zagrozenia">Zagrożenia</a>
@@ -86,23 +86,23 @@
       <p>Pierwsza uwierzytelniona koperta od zapasowej tożsamości odbiorcy przełącza stację na tę tożsamość i jest normalnie przyjmowana. Wybór zapisuje się trwale w FRAM; wcześniejsza tożsamość przestaje być aktywna. Lokalne KLUCZ ZAPASOWY pozostaje drogą awaryjną. Po zmianie stacja ponawia także potwierdzone, lecz niezamknięte wpisy według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancji przyjęcia WICI-DEC-005</a>. Po odtworzeniu kopii stanowisko przyjmuje na oba klucze w okresie przejściowym, nie nadaje pod starym i wraca do nadawania przez jednorazową tożsamość zapasową albo nowe karty USB. PRZENIEŚ STACJĘ przenosi tożsamość, granice liczników i okna powtórzeń; źródłowa przestaje nadawać przed eksportem. Brak pewnej granicy blokuje ponowne użycie tożsamości. ZNISZCZ DANE usuwa tożsamość i konfigurację; przygotowanie nadaje nowe klucze i karty. Skutki dla trwałości opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</p>
 
       <h3 id="koperta-wici">Koperta WICI v1</h3>
-      <p>Każda koperta ma nagłówek 9 B i znacznik 16 B. Liczby w nagłówku są zapisane w kolejności big-endian. Bieżący rodzaj 0 niesie SA1, a rodzaj 1 niesie dowód doręczenia od stacji do odbiorcy.</p>
+      <p>Każda koperta ma nagłówek 9 B i znacznik 16 B. Liczby w nagłówku są zapisane w kolejności big-endian. Bieżący rodzaj 0 niesie SA1, a rodzaj 1 niesie pokwitowanie od stacji do odbiorcy.</p>
       <table>
         <thead><tr><th>Pole</th><th>Długość</th><th>Znaczenie</th></tr></thead>
         <tbody>
           <tr><td><code>kind</code></td><td>1 B</td><td>Bity 7–6: wersja 1; 5–4: całość (0), pierwsza albo druga część (1–2); 3–0: rodzaj 0 lub 1. Pozostałe wartości są odrzucane.</td></tr>
           <tr><td><code>src</code>, <code>dst</code></td><td>2 + 2 B</td><td>Numery końców. Wartości 0 i 65535 oraz równe numery końców są odrzucane.</td></tr>
           <tr><td><code>ctr</code></td><td>4 B</td><td>Licznik kopert danej pary i kierunku.</td></tr>
-          <tr><td>Szyfrogram</td><td>0–256 B</td><td>Zaszyfrowana treść SA1 lub lista liczników dowodu; długość pojedynczej części SA1 wynosi najwyżej 128 B.</td></tr>
+          <tr><td>Szyfrogram</td><td>0–256 B</td><td>Zaszyfrowana treść SA1 lub lista liczników pokwitowania; długość pojedynczej części SA1 wynosi najwyżej 128 B.</td></tr>
           <tr><td>Znacznik</td><td>16 B</td><td>Uwierzytelnienie ChaCha20-Poly1305 według RFC 8439.</td></tr>
         </tbody>
       </table>
       <p>Klucz kierunku A → B ma 32 B: <code>ss = X25519(sk_A, pk_B)</code>, następnie <code>HKDF-SHA-256(ikm=ss, salt=net_id ‖ 0x01, info="WICI env v1" ‖ id_A ‖ id_B ‖ pk_A ‖ pk_B, L=32)</code>. <code>net_id</code> i oba numery są u16 BE, a klucze publiczne mają po 32 B. Kierunek B → A zamienia kolejność identyfikatorów i kluczy w <code>info</code>, otrzymując inny klucz.</p>
-      <p>ChaCha20-Poly1305 używa 12-bajtowego <code>nonce = src ‖ dst ‖ kind ‖ 0x000000 ‖ ctr</code> oraz danych uwierzytelnianych <code>AAD = kind ‖ src ‖ dst ‖ ctr</code>. Odbiorca udostępnia jawny tekst dopiero po sprawdzeniu znacznika. Rezerwacja <code>ctr</code> odbywa się blokami po 64 wartości: granica jest trwale zapisana przed użyciem licznika, a po restarcie reszta bloku przepada. Po wyczerpaniu u32 para potrzebuje nowych kluczy. Błąd zapisu granicy blokuje szyfrowanie.</p>
-      <p>Odbiorca przechowuje największy przyjęty <code>ctr</code> i maskę okna 64 wartości. Przyjmuje nowy licznik lub nieużywany licznik z okna; starszy i już przyjęty pomija. Okno jest trwałe w FRAM stacji albo w bazie stanowiska. Koperta usuwa powtórkę pakietu; <a href="system-wici-sa1.html#przyjecie-na-stanowisku">SA1</a> rozpoznaje ponowienie tej samej wiadomości przy nowym liczniku koperty.</p>
+      <p>ChaCha20-Poly1305 używa 12-bajtowego <code>nonce = src ‖ dst ‖ kind ‖ 0x000000 ‖ ctr</code> oraz danych uwierzytelnianych <code>AAD = kind ‖ src ‖ dst ‖ ctr</code>. Strona odbierająca udostępnia jawny tekst dopiero po sprawdzeniu znacznika. Rezerwacja <code>ctr</code> odbywa się blokami po 64 wartości: granica jest trwale zapisana przed użyciem licznika, a po restarcie reszta bloku przepada. Po wyczerpaniu u32 para potrzebuje nowych kluczy. Błąd zapisu granicy blokuje szyfrowanie.</p>
+      <p>Strona odbierająca przechowuje największy przyjęty <code>ctr</code> i maskę okna 64 wartości. Przyjmuje nowy licznik lub nieużywany licznik z okna; starszy i już przyjęty pomija. Okno jest trwałe w FRAM stacji albo w bazie stanowiska. Koperta usuwa powtórkę pakietu; <a href="system-wici-sa1.html#przyjecie-na-stanowisku">SA1</a> rozpoznaje ponowienie tej samej wiadomości przy nowym liczniku koperty.</p>
       <p class="explain">Kandydatem jest kolejność: najpierw trwałe przyjęcie SA1, potem zapis okna. Tak działa kod stacji. <a href="wici-link.md#implementacja">Opis WICI-Link</a> uzasadnia dwa zapisy: odwrotna kolejność mogłaby zgubić wiadomość, a wspólna transakcja wiązałaby moduł łącza z magazynem stacji. Zanik między zapisami dopuszcza ponowne odszyfrowanie koperty; deduplikacja SA1 chroni przed drugim skutkiem. <a href="transport.md#licznik-i-powtórzenia">Opis transportu</a> wymaga jednak jednej transakcji. Wybór między tymi regułami pozostaje otwarty.</p>
-      <p>Gdy koperta przekracza <code>max_payload</code> nośnika, nadawca dzieli treść na dwie połowy i szyfruje je osobno z tym samym <code>ctr</code>, lecz różnym <code>kind</code> i przez to różnym nonce. Przy limicie SA1 256 B dwie części po najwyżej 128 B wymagają <code>max_payload</code> co najmniej 153 B. Odbiorca zapisuje każdą część przed potwierdzeniem skoku; SA1 i okno licznika zatwierdza po złożeniu. Części mogą nadejść w dowolnej kolejności. Sprzeczna część jest odrzucana, a czekająca wygasa po ponad 120 s lub cofnięciu zegara. Potwierdzenie jednej części nie oznacza przyjęcia SA1.</p>
-      <p>Dowód doręczenia (rodzaj 1) jest całą kopertą od stacji. Jego jawny tekst zawiera 1–16 liczników <code>ctr</code> wiadomości rozstrzygniętych przez stację, po 4 B każdy. Dowód ma własny licznik z tej samej przestrzeni co koperty SA1 stacji; odbiorca sprawdza go tym samym oknem. Dowód rozstrzyga intencję według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>: zapis lub trwałe odrzucenie przez stację, bez gwarancji przeczytania.</p>
+      <p>Gdy koperta przekracza <code>max_payload</code> nośnika, nadawca dzieli treść na dwie połowy i szyfruje je osobno z tym samym <code>ctr</code>, lecz różnym <code>kind</code> i przez to różnym nonce. Przy limicie SA1 256 B dwie części po najwyżej 128 B wymagają <code>max_payload</code> co najmniej 153 B. Strona odbierająca zapisuje każdą część przed potwierdzeniem skoku; SA1 i okno licznika zatwierdza po złożeniu. Części mogą nadejść w dowolnej kolejności. Sprzeczna część jest odrzucana, a czekająca wygasa po ponad 120 s lub cofnięciu zegara. Potwierdzenie jednej części nie oznacza przyjęcia SA1.</p>
+      <p>Pokwitowanie (rodzaj 1) jest całą kopertą od stacji. Jego jawny tekst zawiera 1–16 liczników <code>ctr</code> wiadomości rozstrzygniętych przez stację, po 4 B każdy. Pokwitowanie ma własny licznik z tej samej przestrzeni co koperty SA1 stacji; odbiorca sprawdza go tym samym oknem. Pokwitowanie rozstrzyga intencję według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>: zapis lub trwałe odrzucenie przez stację, bez gwarancji przeczytania.</p>
       <h4>Stały przykład bajtowy</h4>
       <p>Wektor <a href="../../tests/vectors/envelope.json">envelope.json</a>: <code>net_id=100</code>, <code>src=20</code>, <code>dst=2</code>, <code>ctr=7</code>, rodzaj 0, całość. Jawny tekst „WICI SA1 test vector: whole envelope” służy wyłącznie próbie koperty; nie jest wiadomością SA1.</p>
       <div class="table-scroll" role="region" aria-label="Bajty koperty z wektora" tabindex="0">
@@ -163,7 +163,7 @@
       </ol>
       <p class="meta">Źródła: <a href="transport.md">transport i koperta</a>, <a href="wici-link.md">WICI-Link i zagrożenia</a>, <a href="oprogramowanie.md">zaufanie, dane i przygotowanie</a>, <a href="stanowisko-osp.md">stanowisko</a>, <a href="odbior.md">próba „Wrogi węzeł”</a>, <a href="../concept/07-zagrozenia-i-odpornosc.html">koncepcja</a>, <a href="../../firmware/src/envelope.cpp">koperta stacji</a>, <a href="../../firmware/src/wici_destination.cpp">przyjęcie na stacji</a>, <a href="../../software/laptop/wici/envelope.py">koperta stanowiska</a>, <a href="../../software/laptop/wici/stanowisko/rekey.py">zmiana tożsamości</a> i <a href="../../tests/vectors/envelope.json">wektor bajtowy</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

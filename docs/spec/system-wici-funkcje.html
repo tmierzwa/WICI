@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.49</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -74,12 +74,12 @@
       </table>
       <p>Opis nie przewiduje w tych miejscach zapisu nazwisk, numerów telefonów, adresów IP ani MAC. Przez radio nie są przesyłane osobne pola z imieniem, numerem PESEL, danymi dokumentu ani tokenem strony. Wolny opis może mimo to zawierać dane o zdrowiu lub dane wpisane wbrew ostrzeżeniu przed nazwiskami; dane o zdrowiu mogą wynikać także z kategorii 0–1 przy małej liczbie osób. Ochronę danych na stronie mieszkańca trzeba określić przed zatwierdzeniem poziomów 2–3. Granice liczbowe zależne od profilu należą do <a href="system-wici-decyzje.html#wici-dec-006">decyzji o profilach i wymaganiach liczbowych</a>.</p>
       <h3 id="dane-stany">Wysyłka a obsługa zgłoszenia</h3>
-      <p>Trzy rzeczy mają osobne nazwy i nie wolno ich mylić: etap wysyłki w stacji, wynik próby wysłania wiadomości ze stanowiska oraz stan obsługi zgłoszenia, który ustala dyżurny. Stacja przechowuje osobno intencję wysłania najnowszej rewizji i decyzję odbiorcy.</p>
+      <p>Trzy rzeczy mają osobne nazwy i nie wolno ich mylić: etap wysyłki w stacji, wynik próby wysłania wiadomości ze stanowiska oraz stan obsługi zgłoszenia, który ustala dyżurny. Stacja przechowuje osobno intencję wysłania najnowszej rewizji i decyzję dyżurnego.</p>
       <table>
         <thead><tr><th>Gdzie</th><th>Etapy i wyniki wysyłki</th></tr></thead>
         <tbody>
-          <tr><td>Stacja</td><td>„Zapisane”: trwała intencja wysyłki. „Wysyłanie”: trwają próby. „W drodze”: następny skok przejął ramkę, RECEIVED jeszcze nie ma. „Odebrane”: przyszło potwierdzenie aplikacyjne. „Anulowane”: intencja zakończona przed pierwszym przekazaniem.</td></tr>
-          <tr><td>Stanowisko</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód doręczenia; obejmuje też trwałe odrzucenie. „W drodze”: HACK przekaźnika. „Rozesłane”: ramka wyszła rozsyłaniem, bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „w drodze” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
+          <tr><td>Stacja</td><td>„Zapisane”: trwała intencja wysyłki. „Wysyłanie”: trwają próby. „W drodze”: następny skok przejął ramkę, RECEIVED jeszcze nie ma; etap ustala dłuższe czekanie przed ponowieniem niż po nieudanej próbie. „Odebrane”: przyszło potwierdzenie aplikacyjne. „Anulowane”: intencja zakończona przed pierwszym przekazaniem.</td></tr>
+          <tr><td>Stanowisko</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej pokwitowanie; obejmuje też trwałe odrzucenie. „W drodze”: HACK przekaźnika. „Rozesłane”: ramka wyszła rozsyłaniem, bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „w drodze” i „rozesłane” intencja czeka na pokwitowanie od stacji.</td></tr>
         </tbody>
       </table>
       <p>Wyniku skoku nie pokazuje się jako osobnego napisu. Stacja pokazuje „wysyłanie” z numerem próby, a panel dyżurnego stan wiadomości „czeka” albo „rozstrzygnięta”. „W drodze” może być widoczne w diagnostyce. Nie ma związku ze stanem 4 „przekazane dalej”, który oznacza skierowanie sprawy do służb (<a href="system-wici-slownik.html#przekazane-dalej">słownik</a>).</p>
@@ -135,7 +135,7 @@
         <div class="req" id="r3-05">
           <p class="req-head"><span class="req-id">R3-05</span> roboczy · Stacja · reguła protokołu</p>
           <p class="req-text">Stacja MUSI zapisać zmianę jako nową rewizję z tym samym <code>id</code>, wyższym <code>revision</code> i pełną treścią, a do udanego zapisu zachować poprzednią rewizję.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Każda rewizja niesie pełne miejsce i treść, więc odbiorca nie potrzebuje wcześniejszych wiadomości.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Każda rewizja niesie pełne miejsce i treść, więc stanowisko nie potrzebuje wcześniejszych wiadomości.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>, próba „Zapis w stacji” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>.</p>
         </div>
         <div class="req" id="r3-06">
@@ -154,16 +154,22 @@
       <article class="record operation" id="anulowanie">
         <h4>Anulowanie wysyłki · gospodarz lub zastępca, na stacji</h4>
         <p class="when">Zgłoszenie zapisano omyłkowo, a stacja jeszcze go nie nadała.</p>
-        <div class="req" id="r3-08">
-          <p class="req-head"><span class="req-id">R3-08</span> roboczy · Stacja · reguła protokołu</p>
-          <p class="req-text">Stacja MUSI pozwolić anulować wysyłkę tylko wtedy, gdy żadna rewizja zgłoszenia nie została przekazana nośnikowi, także w ciszy radiowej; anulowanie kończy intencję, a powtórne anulowanie jest bez skutku.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Po pierwszym nadaniu stanowisko mogło już zapisać zgłoszenie, więc ciche wycofanie zostawiłoby je otwarte u dyżurnego.</p>
+        <div class="req" id="r3-08a">
+          <p class="req-head"><span class="req-id">R3-08a</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">Stacja MUSI pozwolić anulować wysyłkę, dopóki żadna rewizja zgłoszenia nie została przekazana nośnikowi, także w ciszy radiowej.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Przed pierwszym nadaniem nikt poza stacją nie zna zgłoszenia, więc wycofanie niczego nie zostawia otwartego u dyżurnego. Po pierwszej wysyłce obowiązuje R3-09.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>, <a href="instrukcja.md">instrukcja gospodarza</a>.</p>
+        </div>
+        <div class="req" id="r3-08b">
+          <p class="req-head"><span class="req-id">R3-08b</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">Stacja MUSI przy anulowaniu zakończyć intencję wysyłki, a powtórne anulowanie NIE MOŻE mieć skutku.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Polecenie z laptopa może przyjść drugi raz po utracie odpowiedzi; powtórka daje ten sam wynik.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>, próba „Protokół USB” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>, <a href="usb-protocol.md">USB</a>.</p>
         </div>
         <div class="req" id="r3-09">
           <p class="req-head"><span class="req-id">R3-09</span> roboczy · Stacja · reguła protokołu</p>
           <p class="req-text">Po pierwszej wysyłce stacja NIE MOŻE anulować zgłoszenia: menu nie pokazuje wtedy ANULUJ WYSYŁKĘ, a polecenie USB <code>cancel</code> dostaje odpowiedź <code>too_late</code>.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Zgłoszenie mogło już dotrzeć, a odbiorca nie dowiedziałby się o anulowaniu. Gospodarz tworzy wtedy rewizję „potrzeba ustała”, którą dyżurny widzi.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Zgłoszenie mogło już dotrzeć, a dyżurny nie dowiedziałby się o anulowaniu. Gospodarz tworzy wtedy rewizję „potrzeba ustała”, którą dyżurny widzi.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Protokół USB” w <a href="odbior.md">planie odbioru</a>, próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="usb-protocol.md">USB</a>.</p>
         </div>
       </article>
@@ -192,11 +198,17 @@
       <article class="record operation" id="cisza-radiowa">
         <h4>Cisza radiowa · gospodarz, na stacji</h4>
         <p class="when">Ciszę poleca wójt albo wynika ona z nakazu w stanie nadzwyczajnym; polecenie przychodzi komunikatem od odbiorcy i przez gońca. Gospodarz włącza przełącznik CISZA, a na poziomie 2 ciszę operacyjną można ustawić z panelu laptopa.</p>
-        <div class="req" id="r3-13">
-          <p class="req-head"><span class="req-id">R3-13</span> roboczy · Stacja · reguła protokołu</p>
-          <p class="req-text">W ciszy radiowej stacja NIE MOŻE nadać żadnej ramki, także cudzego ruchu, poza jednym zgłoszeniem wyjętym spod ciszy operacyjnej, a odbiór, zapis i kolejka MUSZĄ działać dalej.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Polecenie ciszy obejmuje każdą emisję, także cudzy ruch; zapis pozwala wysłać zaległą kolejkę po odwołaniu ciszy.</p>
-          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cisza radiowa” w <a href="odbior.md">planie odbioru</a> (T4, T8). <strong>Źródło:</strong> <a href="system-wici-siec.html#kanal">rozdział 6</a>.</p>
+        <div class="req" id="r3-13a">
+          <p class="req-head"><span class="req-id">R3-13a</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">W ciszy radiowej stacja NIE MOŻE nadać żadnej ramki, także cudzego ruchu, poza jednym zgłoszeniem wyjętym spod ciszy operacyjnej.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Polecenie ciszy obejmuje każdą emisję, także cudzy ruch.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> pomiar emisji w próbie „Cisza radiowa” w <a href="odbior.md">planie odbioru</a> (T4, T8). <strong>Źródło:</strong> <a href="system-wici-siec.html#kanal">rozdział 6</a>.</p>
+        </div>
+        <div class="req" id="r3-13b">
+          <p class="req-head"><span class="req-id">R3-13b</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">W ciszy radiowej stacja MUSI dalej odbierać ramki, zapisywać zgłoszenia i utrzymywać kolejkę.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Zapis pozwala wysłać zaległą kolejkę po odwołaniu ciszy.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cisza radiowa” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="system-wici-siec.html#kanal">rozdział 6</a>.</p>
         </div>
         <div class="req" id="r3-14">
           <p class="req-head"><span class="req-id">R3-14</span> roboczy · Stacja · wymaganie funkcji</p>
@@ -302,13 +314,13 @@
         <div class="req" id="r3-28">
           <p class="req-head"><span class="req-id">R3-28</span> roboczy · Stanowisko · reguła protokołu</p>
           <p class="req-text">Stanowisko MUSI zachować intencję REPLY do ponowienia po błędzie zapisu albo wysyłki.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Błąd zapisu albo wysyłki nie jest dowodem od stacji, więc odpowiedź nadal czeka na rozstrzygnięcie.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Błąd zapisu albo wysyłki nie jest pokwitowaniem stacji, więc odpowiedź nadal czeka na rozstrzygnięcie.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> test <code>test_retries_after_failed_as_the_station</code> (błąd wysyłki); błąd zapisu: test (do dodania). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
         </div>
         <div class="req" id="r3-29">
           <p class="req-head"><span class="req-id">R3-29</span> roboczy · Stacja · reguła protokołu</p>
           <p class="req-text">Stacja NIE MOŻE utworzyć drugiej odpowiedzi z duplikatu REPLY o tym samym <code>event</code>.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Stanowisko ponawia REPLY do czasu dowodu.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Stanowisko ponawia REPLY do czasu pokwitowania.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>.</p>
         </div>
       </article>
@@ -317,20 +329,26 @@
         <p class="when">Dyżurny wysyła jeden komunikat do wybranych stacji.</p>
         <div class="req" id="r3-30">
           <p class="req-head"><span class="req-id">R3-30</span> roboczy · Stanowisko · reguła protokołu</p>
-          <p class="req-text">Stanowisko MUSI nadać BULLETIN-owi własne <code>id</code> i <code>event</code> i wysyłać go osobno do każdej stacji docelowej, tak aby brak dowodu od jednej stacji nie zmieniał wyniku dla pozostałych.</p>
+          <p class="req-text">Stanowisko MUSI nadać BULLETIN-owi własne <code>id</code> i <code>event</code> i wysyłać go osobno do każdej stacji docelowej, tak aby brak pokwitowania od jednej stacji nie zmieniał wyniku dla pozostałych.</p>
           <p class="req-why"><strong>Uzasadnienie.</strong> Stacje są osiągalne w różnym czasie.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> test <code>test_bulletin_goes_to_every_trusted_station</code>. <strong>Źródło:</strong> <a href="stanowisko-osp.md">stanowisko</a>.</p>
         </div>
         <div class="req" id="r3-31">
           <p class="req-head"><span class="req-id">R3-31</span> roboczy · Stanowisko · wymaganie funkcji</p>
           <p class="req-text">Stanowisko MUSI pokazywać w panelu dla każdej stacji, czy odpowiedź albo komunikat czeka, czy jest rozstrzygnięty, i NIE MOŻE nazywać tego dostarczeniem.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Dowód stacji nie oznacza przeczytania.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Pokwitowanie stacji nie oznacza przeczytania.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Panel dyżurnego” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
         </div>
-        <div class="req" id="r3-32">
-          <p class="req-head"><span class="req-id">R3-32</span> roboczy · Stacja · wymaganie funkcji</p>
-          <p class="req-text">Stacja NIE MOŻE uruchamiać działań automatycznych na podstawie BULLETIN, a powtórka tego samego <code>id</code> i <code>event</code> NIE MOŻE wrócić do skrzynki.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Komunikat jest informacją dla ludzi; ciszę radiową włącza gospodarz. Poprawka komunikatu ma nowe <code>id</code>.</p>
+        <div class="req" id="r3-32a">
+          <p class="req-head"><span class="req-id">R3-32a</span> roboczy · Stacja · wymaganie funkcji</p>
+          <p class="req-text">Stacja NIE MOŻE uruchamiać działań automatycznych na podstawie BULLETIN.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Komunikat jest informacją dla ludzi; ciszę radiową włącza gospodarz.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>.</p>
+        </div>
+        <div class="req" id="r3-32b">
+          <p class="req-head"><span class="req-id">R3-32b</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">Powtórka BULLETIN z tym samym <code>id</code> i <code>event</code> NIE MOŻE wrócić do skrzynki stacji.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Stanowisko ponawia komunikat do pokwitowania, więc ta sama wiadomość może przyjść kilka razy. Poprawka komunikatu ma nowe <code>id</code>.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cykl życia zgłoszenia” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="oprogramowanie.md">oprogramowanie</a>.</p>
         </div>
       </article>
@@ -360,10 +378,22 @@
           <p class="req-why"><strong>Uzasadnienie.</strong> Przełączenie dociera do stacji z pierwszą kopertą od zapasowej tożsamości, także do stacji bez obsługi; sam numer nadawcy go nie wywołuje. Powrót wymaga nowej konfiguracji przez USB.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> test (do dodania); próba „Zaufanie” w <a href="odbior.md">planie odbioru</a> do dostosowania, bo opisuje dziś tylko przełączenie z menu (<a href="system-wici-decyzje.html#wici-inv-059">WICI-INV-059</a>). <strong>Źródło:</strong> <a href="system-wici-decyzje.html#wici-dec-014">przełączenie WICI-DEC-014</a>.</p>
         </div>
-        <div class="req" id="r3-36">
-          <p class="req-head"><span class="req-id">R3-36</span> roboczy · Stacja · reguła protokołu</p>
-          <p class="req-text">Po zmianie tożsamości odbiorcy stacja MUSI ponowić najnowszą rewizję każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code>, skasować potwierdzenia i znaczniki odczytu poprzedniej tożsamości oraz liczyć alarm od pierwszego nadania do nowej.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Nowa tożsamość może nie mieć bazy z ostatnimi zgłoszeniami; ostatnia decyzja zostaje widoczna.</p>
+        <div class="req" id="r3-36a">
+          <p class="req-head"><span class="req-id">R3-36a</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">Po zmianie tożsamości odbiorcy stacja MUSI ponowić najnowszą rewizję każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code>.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Nowa tożsamość może nie mieć bazy z ostatnimi zgłoszeniami.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> test (do dodania). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
+        </div>
+        <div class="req" id="r3-36b">
+          <p class="req-head"><span class="req-id">R3-36b</span> roboczy · Stacja · reguła protokołu</p>
+          <p class="req-text">Po zmianie tożsamości odbiorcy stacja MUSI skasować potwierdzenia i znaczniki odczytu poprzedniej tożsamości, zachowując widoczną ostatnią decyzję.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Potwierdzenie poprzedniej tożsamości nie mówi nic o zapisie u nowej; gospodarz nadal widzi, co ostatnio postanowiono.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> test (do dodania). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
+        </div>
+        <div class="req" id="r3-36c">
+          <p class="req-head"><span class="req-id">R3-36c</span> roboczy · Stacja · wymaganie funkcji</p>
+          <p class="req-text">Po zmianie tożsamości odbiorcy stacja MUSI liczyć alarm braku potwierdzenia od pierwszego nadania do nowej tożsamości.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Alarm ma mierzyć brak odpowiedzi nowej tożsamości, tak jak alarm TEST; progi według pilności się nie zmieniają.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> test (do dodania). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
         </div>
         <div class="req" id="r3-37">
@@ -382,11 +412,17 @@
       <article class="record operation" id="powrot-nadawania">
         <h4>Powrót nadawania po odtworzeniu kopii bazy · osoba uprawniona do przejęcia stanowiska, obsługa stanowiska</h4>
         <p class="when">Baza stanowiska wróciła z kopii; polecenie wydaje osoba uprawniona do przejęcia stanowiska, dziś wójt.</p>
-        <div class="req" id="r3-39">
-          <p class="req-head"><span class="req-id">R3-39</span> roboczy · Stanowisko · reguła protokołu</p>
-          <p class="req-text">Po odtworzeniu kopii stanowisko NIE MOŻE nadawać kopert pod starą tożsamością i do przełączenia stacji na nową tożsamość MUSI przyjmować koperty na oba klucze.</p>
+        <div class="req" id="r3-39a">
+          <p class="req-head"><span class="req-id">R3-39a</span> roboczy · Stanowisko · reguła protokołu</p>
+          <p class="req-text">Po odtworzeniu kopii stanowisko NIE MOŻE nadawać kopert pod starą tożsamością.</p>
           <p class="req-why"><strong>Uzasadnienie.</strong> Kopia mogła cofnąć liczniki koperty; nadawanie pod starym kluczem groziłoby powtórzeniem nonce.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> test <code>test_no_sending_until_the_recovery_ends_then_a_new_copy_first</code>, próba „Stanowisko odbiorcze” w <a href="odbior.md">planie odbioru</a> (T2). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
+        </div>
+        <div class="req" id="r3-39b">
+          <p class="req-head"><span class="req-id">R3-39b</span> roboczy · Stanowisko · reguła protokołu</p>
+          <p class="req-text">Po odtworzeniu kopii stanowisko MUSI przyjmować koperty na oba klucze, dopóki stacje nie przełączą się na nową tożsamość.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Stacje, które jeszcze się nie przełączyły, wysyłają na starą tożsamość, a ich zgłoszenia nie mogą przepaść.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> test (do dodania). <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
         </div>
         <div class="req" id="r3-40">
           <p class="req-head"><span class="req-id">R3-40</span> roboczy · Stanowisko · reguła protokołu</p>
@@ -444,7 +480,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

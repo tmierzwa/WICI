@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wiadomości, walidacja, stany i ponawianie SA1.">
-  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.49</title>
+  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Protokół aplikacyjny SA1</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#typy-i-uklad">Typy i układ</a>
@@ -147,7 +147,7 @@
         </tbody>
       </table>
       <p class="explain">WICI-DEC-005 rozstrzyga tę różnicę: stacja już przyjmuje wyższy <code>event</code> po stanie 6, stanowisko nadal go blokuje, a kod referencyjny także odmawia. Obie strony mają stosować <a href="#rozstrzygniecia-dec-005">jedną regułę dla całego <code>id</code></a>; wdrożenie pozostaje <a href="system-wici-decyzje.html#wici-inv-019">luką</a>.</p>
-      <p>Kluczem odbioru jest nadawca, <code>id</code> i <code>revision</code>; zapisany skrót kanonicznej treści rozstrzyga, czy kolejna wiadomość jest powtórką, czy konfliktem. Kolejka stacji wysyła najpierw REQUEST z pilnością 2, potem pozostałe REQUEST według czasu zapisu, na końcu TEST. Stanowisko wysyła RECEIVED i STATUS przed REPLY i BULLETIN. Nowszy STATUS zastępuje niewysłany STATUS tej samej rewizji; REPLY dla jednego <code>id</code> idą kolejno po dowodzie poprzedniej.</p>
+      <p>Kluczem odbioru jest nadawca, <code>id</code> i <code>revision</code>; zapisany skrót kanonicznej treści rozstrzyga, czy kolejna wiadomość jest powtórką, czy konfliktem. Kolejka stacji wysyła najpierw REQUEST z pilnością 2, potem pozostałe REQUEST według czasu zapisu, na końcu TEST. Stanowisko wysyła RECEIVED i STATUS przed REPLY i BULLETIN. Nowszy STATUS zastępuje niewysłany STATUS tej samej rewizji; REPLY dla jednego <code>id</code> idą kolejno po pokwitowaniu poprzedniej.</p>
       <h3 id="komunikat-ogolny-na-stacji">Komunikat ogólny na stacji</h3>
       <p>BULLETIN ma własne <code>id</code> i <code>event</code>. Stacja przechowuje 64 ostatnie pary (<code>id</code>, <code>event</code>) oraz dolną granicę <code>bulletin_floor</code>. Pomija powtórzoną parę, zdarzenie nie wyższe od granicy oraz zdarzenie starsze od najwyższego przyjętego <code>event</code> o 86 400 lub więcej. Po zapełnieniu pamięci usuwa parę z najmniejszym <code>event</code> i podnosi do niego dolną granicę. Usunięcie komunikatu ze skrzynki nie przywraca możliwości przyjęcia jego powtórki. Poprawka komunikatu ma nowe <code>id</code>.</p>
       <h3 id="przypadki-sprawdzajace-stan">Przypadki sprawdzające stan</h3>
@@ -194,7 +194,7 @@
         <li><strong>Odtworzenie kopii.</strong> Po odtworzeniu kopii stanowisko przyjmuje zgłoszenia i nie nadaje kopert pod starym kluczem. Nadawanie wraca przez jednorazową tożsamość zapasową. Stanowisko wysyła krótką wiadomość każdej zaufanej stacji, w odstępach jak TEST po starcie; pierwsza uwierzytelniona koperta od tej tożsamości przełącza stację. Lokalna usługa KLUCZ ZAPASOWY pozostaje drogą awaryjną. Gdy tożsamość zapasowa została już użyta, nadawanie wraca po wgraniu nowych kart przez USB. Polecenie wydaje ta sama osoba co przy przejęciu stanowiska (dziś wójt). W okresie przejściowym stanowisko przyjmuje zgłoszenia na oba klucze. Do odnowienia po zdarzeniu zapasu nie ma. Odrzucono sam objazd z kartami USB i skok licznika koperty. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>.</li>
         <li><strong>Czas ponawiania.</strong> Żadna intencja nie wygasa samoczynnie. Kończy ją dowód od adresata albo zamknięcie zdarzenia; decyzja człowieka wstrzymuje wysyłkę do stacji. Gdy próby do stacji zawodzą, stanowisko ponawia tylko jedną jej intencję, najpierw krótkie RECEIVED i STATUS, a pozostałe wznawia po kontakcie. Po 6 godzinach bez potwierdzenia dyżurny dostaje alarm. Czas 6 h jest parametrem profilu (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>); stacja schronienia działa bez zmian. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-016">WICI-INV-016</a>.</li>
         <li><strong>HACK następnego skoku.</strong> Potwierdzenie następnego skoku oznacza tylko przekazanie ramki na tym skoku. Stacja nie pokazuje go gospodarzowi jako doręczenia i ponawia aż do RECEIVED, STATUS lub REPLY. Wynik nazywa się „w drodze” (zmiana nazwy z „przekazane”: <a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>); kod i pole <code>stage</code> nadal używają „dostarczone” lub <code>delivered</code> (<a href="system-wici-decyzje.html#wici-inv-017">WICI-INV-017</a>). Czas oczekiwania po przekazaniu (dziś 10 min) i odstęp ponowień (dziś 30–60 min) są parametrami profilu. D21 sprawdzi, czy 10 min w szczycie W10 tworzy zbędne kopie; wtedy naturalnym kandydatem jest 15 min.</li>
-        <li><strong>REPLY i BULLETIN.</strong> Dowód od stacji oznacza, że stacja rozstrzygnęła wiadomość, zapisując ją albo trwale odrzucając. Nie oznacza przeczytania. Panel pokazuje dla każdej odpowiedzi i komunikatu, czy czeka, czy została rozstrzygnięta, i nie nazywa tego dostarczeniem. Nie dodaje się znacznika odrzucenia do dowodu ani osobnego potwierdzenia SA1. Obecne etykiety panelu wymagają zmiany (<a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>).</li>
+        <li><strong>REPLY i BULLETIN.</strong> Pokwitowanie od stacji oznacza, że stacja rozstrzygnęła wiadomość, zapisując ją albo trwale odrzucając. Nie oznacza przeczytania. Panel pokazuje dla każdej odpowiedzi i komunikatu, czy czeka, czy została rozstrzygnięta, i nie nazywa tego dostarczeniem. Nie dodaje się znacznika odrzucenia do pokwitowania ani osobnego potwierdzenia SA1. Obecne etykiety panelu wymagają zmiany (<a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>).</li>
         <li><strong>Powtórne działanie dyżurnego.</strong> Panel nie wysyła drugiego działania, dopóki nie dostanie odpowiedzi na pierwsze. Po błędzie lub utracie odpowiedzi nie zachęca do powtórzenia, lecz każe sprawdzić stan na liście. Powtórzone działanie tworzy nowe zdarzenie i nie może zmienić stanu inaczej niż pierwsze. Nie wprowadza się klucza działania w panelu. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>.</li>
         <li><strong>Decyzja po stanie 6.</strong> Dyżurny może wydać nową decyzję także po stanie 6, po potwierdzeniu i z wpisem w dzienniku działań. Decyzje mają jeden rosnący numer dla całego zgłoszenia, a stacja pokazuje decyzję o najwyższym numerze. Stanowisko i stacja stosują tę samą regułę. Odpowiedź i stan 5 zapisują się w jednej transakcji. Powrót do stanu 1 jest wykluczony; niższy numer lub ten sam z innym stanem jest odrzucany. Wpis zwolniony ze stacji przy pełnym rejestrze pomija poprawkę; sprawa przechodzi drugim kanałem. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-019">WICI-INV-019</a> i <a href="system-wici-decyzje.html#wici-inv-020">WICI-INV-020</a>.</li>
         <li><strong>Formularz mieszkańca.</strong> Formularz mieszkańca niesie losowy klucz nadany przy jego wyświetleniu. Powtórne wysłanie z tym samym kluczem i tą samą treścią zwraca istniejący wpis i jego numer, bez nowego wpisu. Ten sam klucz z inną treścią jest konfliktem. Gospodarz może nadal łączyć wpisy ręcznie. Porównywanie samych treści na serwerze jest wykluczone, bo łączyłoby zgłoszenia różnych osób. Strona pozostaje funkcją po pilotażu (<a href="system-wici-decyzje.html#wici-inv-011">WICI-INV-011</a>).</li>
@@ -204,7 +204,7 @@
       </ol>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości SA1, cykl życia i ponawianie</a>, <a href="stanowisko-osp.md">przyjęcie i wysyłka stanowiska</a>, <a href="transport.md">szew nośnika</a>, <a href="../../firmware/src/sa1.cpp">kodek C++</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/reference/reference.py">kodek referencyjny</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">ponawianie</a> i <a href="../../tests/test_sa1_unicode.py">próby Unicode</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

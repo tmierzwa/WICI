@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.49</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.50</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -79,7 +79,7 @@
           <tr><td>BEACON</td><td>2</td><td><code>root</code>, <code>rank</code>, <code>epoch</code>, <code>parent</code> (u16), flagi, podpis epoki roota i podpis nadawcy; 156 B, bez tagu pary.</td></tr>
         </tbody>
       </table>
-      <p><strong>Reguła protokołu.</strong> Odbiorca odrzuca nieznaną wersję lub typ, niezerowe <code>opts</code> lub bit 2, błędne numery, <code>hops &gt; TTL</code>, zły MAC lub tag pary, rozsyłaną DATA z ACKREQ oraz rozsyłaną DATA bez DOWN. Wersja 2 jest nieznana dla dekodera v3. Koperta w jednoadresowej DATA ma najwyżej 228 B, bo ramka LoRa ma najwyżej 255 B. Nadający rezerwuje <code>seq</code> trwale blokami po 64; po restarcie pomija resztę bloku.</p>
+      <p><strong>Reguła protokołu.</strong> Stacja odbierająca ramkę odrzuca nieznaną wersję lub typ, niezerowe <code>opts</code> lub bit 2, błędne numery, <code>hops &gt; TTL</code>, zły MAC lub tag pary, rozsyłaną DATA z ACKREQ oraz rozsyłaną DATA bez DOWN. Wersja 2 jest nieznana dla dekodera v3. Koperta w jednoadresowej DATA ma najwyżej 228 B, bo ramka LoRa ma najwyżej 255 B. Nadający rezerwuje <code>seq</code> trwale blokami po 64; po restarcie pomija resztę bloku.</p>
       <h4>Przykład bajtowy kodeka</h4>
       <p>Wektor z <a href="../../tests/native/wici_link_check.cpp">kodeka C++</a> i <a href="../../tests/test_envelope_cross_language.py">próby międzyjęzykowej</a>: <code>ifac=000102030405060708090a0b0c0d0e0f</code> (w kodzie: klucz sieci), sieć 100, DATA z ACKREQ od 4 do 1, <code>hops=0</code>, <code>TTL=7</code>, <code>seq=0x1234</code>, ładunek <code>00…18</code> (25 B). Ten ładunek służy tylko próbie kodeka; nie jest kopertą SA1.</p>
       <table>
@@ -139,13 +139,13 @@
       <p><strong>Reguła protokołu.</strong> Stanowisko ogranicza rozsyłanie budżetem zależnym od liczby stacji. Po jego wyczerpaniu wiadomość idzie znaną drogą albo czeka; limity na węzeł pozostają bez zmian. Wartość budżetu jest <a href="#rozstrzygniecia-dec-009">kandydatem profilu</a>.</p>
       <p><strong>Stan obrazu.</strong> Przekaźnik uczy się dziś tylko drogi do sąsiada. Nauka dalszego numeru wymaga wpisu <code>behind</code>, lecz konfiguracja dopuszcza go tylko u roota. Przy znanej drodze rozsyłana ramka może zostać zamieniona na jednoadresową. Stanowisko i root nie przeplatają prób rozsyłaniem z drogą i nie mają budżetu rozsyłania. Brak postępu nie zmienia rodzica, a HACK lub BEACON może przywrócić rodzica z planu bez blokady (<a href="system-wici-decyzje.html#wici-inv-036">WICI-INV-036</a>–<a href="system-wici-decyzje.html#wici-inv-038">038</a>).</p>
 
-      <h3 id="potwierdzenia">HACK i dowód doręczenia</h3>
+      <h3 id="potwierdzenia">HACK i pokwitowanie</h3>
       <table>
         <thead><tr><th>Wynik</th><th>Co potwierdza</th><th>Skutek dla intencji</th></tr></thead>
         <tbody>
-          <tr><td>HACK przekaźnika</td><td>Trwałe przejęcie ramki na jednym skoku.</td><td>„W drodze”; intencja czeka na dowód od stacji.</td></tr>
+          <tr><td>HACK przekaźnika</td><td>Trwałe przejęcie ramki na jednym skoku.</td><td>„W drodze”; intencja czeka na pokwitowanie od stacji.</td></tr>
           <tr><td>HACK stacji docelowej</td><td>Rozstrzygnięcie całej koperty, trwałe przyjęcie części albo trwałe odrzucenie. Za ramkę nie do przyjęcia od przekaźnika może wyjść bez zapisu.</td><td>Po rozstrzygnięciu wszystkich części może zamknąć próbę do stacji; samo HACK nie oznacza przeczytania.</td></tr>
-          <tr><td>Dowód rodzaju 1</td><td>Stacja wymienia liczniki kopert zapisanych lub trwale odrzuconych.</td><td>Stanowisko zamyka intencje; panel pokazuje „rozstrzygnięta”, bez domniemania przeczytania (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
+          <tr><td>Pokwitowanie (koperta rodzaju 1)</td><td>Stacja wymienia liczniki kopert zapisanych lub trwale odrzuconych.</td><td>Stanowisko zamyka intencje; panel pokazuje „rozstrzygnięta”, bez domniemania przeczytania (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
           <tr><td>RECEIVED (SA1)</td><td>Przyjęcie zgłoszenia przez aplikację stanowiska.</td><td>Kończy ponawianie zgłoszenia według <a href="system-wici-sa1.html#ponawianie-wiadomosci">rozdziału 4</a>.</td></tr>
         </tbody>
       </table>
@@ -156,7 +156,7 @@
       <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Wynik następnego skoku nazywa się „w drodze” (<a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>, wcześniej „przekazane”). Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
 
       <h3 id="kolejki">Kolejki i przeciążenie</h3>
-      <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Tag poświadcza bieżący skok, więc ruch dalszej stacji dzieli gniazdo jej sąsiada (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Następne ramki tego sąsiada trafiają do K2. Dowód rodzaju 1 i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
+      <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Tag poświadcza bieżący skok, więc ruch dalszej stacji dzieli gniazdo jej sąsiada (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Następne ramki tego sąsiada trafiają do K2. Pokwitowania i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
       <p><strong>Reguła protokołu.</strong> Przyjęta ramka zostaje w FRAM, także po restarcie. Po HACK następnego skoku lub 30 min bez doręczenia trafia do pierścienia przekazanych; ten zatrzymuje powtórne przekazanie przez godzinę, lecz cel nadal chroni własne okno koperty. Ponowienie tej samej ramki może dostać HACK bez drugiego zapisu. Niepewny trwały rekord kolejki blokuje start łącza. Brak drogi i możliwości rozsyłania, odmowa radia lub zablokowany sąsiad zostawiają ramkę do następnej próby; po seriach trzech niepowodzeń sąsiad jest wstrzymywany na 2–300 s. Własna intencja SA1 ponawia po utracie z kolejki.</p>
       <p><strong>Parametr profilu.</strong> Dziennik FRAM zlicza w oknie co najmniej 3600 s koszt <code>13 × czas TX</code> tranzytu i BEACON-ów. Ich wspólna pula to 60% czasu kanału; BEACON-y mają ponadto 2% czasu nadawania. Przy czekającym K1 ramka K2 wychodzi tylko, dopóki łączny koszt tranzytu i BEACON-ów nie przekroczy 25% czasu kanału. Własne ramki K0 nie należą do tej puli; ogranicza je dług ciszy. Wspólna pula zostawia im co najmniej 40% czasu kanału. Koszt jest zapisany przed nadaniem; odmowa po zapisie go nie cofa. Liczby i gniazda ograniczają zalew opisany w <a href="system-wici-bezpieczenstwo.html#zagrozenia">rozdziale 5</a>, ale nie potwierdzają przepustowości 15-skokowego łańcucha.</p>
 
@@ -269,7 +269,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
