@@ -11,8 +11,9 @@ Hammond STEP model 1599KBKBAT.stp:
   socket reaches the bottom wall and a notch leaves room for the back of the EN3 socket in that wall;
 - panel items at the positions of hardware/obudowa/zalozenia.py (PANEL, CONNECTORS);
 - DevKitC and Wio in sockets on the bottom side (decision 2026-10-31), away from the AA holder zone;
-- mounting holes on the board bosses of the Box (grid x 20/80/140/200, y 30/110 on the front), on 4.5 mm spacers;
-  the two bosses under the display window are ground off.
+- mounting holes on the board bosses of the Box (grid x 20/80/140/200, y 30/110 on the front), on 6 mm spacers;
+  the two bosses under the display window are ground off;
+- SMD pads at least 2.5 mm from the pads of THT parts (hand or selective soldering of the THT parts, JLC).
 Small parts are packed automatically into the region of their block; the script stops if one does not fit.
 """
 from pathlib import Path
@@ -35,19 +36,23 @@ NS = uuid.UUID('4d0c3a2e-8b1f-4f7e-9a51-6c2b7e0d9f31')   # as make_schematic.py,
 DISPLAY_CENTER = (42.0, 32.0)          # window centre (52, 42) on the front
 DISPLAY_OUTLINE = (62.8, 42.82)
 PANEL_POWER = (175.0, 90.0)            # PV6 main switch in the front (185, 100), wired to J3
-# Mounting holes on the board bosses of the Box (STEP: 8 bosses 4.75 mm, 4.5 mm high, 2.36 mm hole for a #4
-# thread-forming screw). Bosses (20, 30) and (80, 30) on the front lie under the display window and are ground off.
-# Spacers 4.5 mm put the board top 9.05 mm from the inner face of the front; screw ST2.9 / #4 x 9.5 mm, at most
-# 10.5 mm (board 1.6 + spacer 4.5 + boss hole 4.6, under it 2.9 mm of front wall). H5 is 15.6 mm from SW6.
+# Mounting holes on the board bosses of the Box (STEP: 8 bosses 4.75 mm, 4.5 mm high, 2.36 mm hole 4.6 mm deep for
+# a #4 thread-forming screw). Bosses (20, 30) and (80, 30) on the front lie under the display window and are ground
+# off. Spacers 6 mm (inner 3.2, outer <= 6 mm) put the board top 10.5 mm from the inner face of the front; screw
+# #4 x 7/16" (11.1 mm) type B, blunt point: 3.5 mm in the boss, 1.1 mm above the hole bottom; at most 12.0 mm
+# (board 1.6 + spacer 6 + hole 4.6 - 0.2), under the hole only 2.9 mm of front wall. Holes 3.5 mm take up the
+# position tolerance of six moulded bosses (+-0.3 mm around the screw). H5 is 15.6 mm from SW6.
 HOLES = {'H1': (130.0, 20.0), 'H2': (190.0, 20.0), 'H3': (10.0, 100.0), 'H4': (70.0, 100.0), 'H5': (130.0, 100.0),
          'H6': (190.0, 100.0)}
 HOLE_KEEP = 4.0                        # half side of the free square: spacer <= 6 mm on top, screw head 5.6 mm below
 # Bottom wall: inner face at the board plane is 6.3 mm beyond the board edge (STEP, wall draft 3.7-3.9 mm).
-# USB-C J4 face 0.5-0.65 mm behind the inner wall face, on a tongue of the board.
-USB_TONGUE = (44.0, 120.0, 56.0, 125.0)
+# USB-C J4 face 0.5-0.65 mm behind the inner wall face, on a tongue of the board. The wall is 3.8 mm thick, so the
+# plug overmold (<= 12.5 x 6.6 mm) passes through an opening in it; the tongue ends 1.1 mm behind the J4 face so the
+# overmold of a fully inserted plug clears the board edge.
+USB_TONGUE = (44.0, 120.0, 56.0, 124.5)
 J4_AT = (50.0, 125.6 - 3.65, 0)        # footprint origin; the body front is 3.65 mm from it
 # EN3 receptacle (Switchcraft bulletin 602) behind the inner wall face: flange 20.6 mm x 3 mm, body 14 mm x 4.5 mm,
-# solder cups 5.6 mm, so 13.1 mm; axis about 2 mm below the board (z -16.5 of the STEP), so the body and the cups
+# solder cups 5.6 mm, so 13.1 mm; axis 0.8 mm below the board bottom (z -16.5 of the STEP), so the body and the cups
 # cross the board plane. Notch for body, cups and 5 mm of soldered wire with heat shrink; J2 sits beside it.
 EN3_NOTCH = (91.5, 108.0, 108.5, 120.0)
 # Board outline: corner points (x, y, fillet radius) clockwise; sharp inner corners are cut by the router bit.
@@ -57,13 +62,19 @@ OUTLINE = [(NOTCH, 0, RADIUS), (W - NOTCH, 0, RADIUS), (W - NOTCH, NOTCH, 0), (W
            (EN3_NOTCH[0], H, 1.0), (USB_TONGUE[2], H, 0), (USB_TONGUE[2], USB_TONGUE[3], 1.0),
            (USB_TONGUE[0], USB_TONGUE[3], 1.0), (USB_TONGUE[0], H, 0), (NOTCH, H, RADIUS), (NOTCH, H - NOTCH, 0),
            (0, H - NOTCH, RADIUS), (0, NOTCH, RADIUS), (NOTCH, NOTCH, 0)]
+# Hole under the PV6 main switch: M16 thread 16.5 mm and terminals to 20 mm behind the panel (E-Switch PV6), the
+# board 13.5 mm behind it; the switch passes through, its terminals and wires to J3 lie under the board.
+PV6_HOLE = 20.0
 CUTS = [(0, 0, NOTCH, NOTCH), (W - NOTCH, 0, W, NOTCH), (0, H - NOTCH, NOTCH, H), (W - NOTCH, H - NOTCH, W, H),
-        EN3_NOTCH]
+        EN3_NOTCH, (PANEL_POWER[0] - PV6_HOLE / 2, PANEL_POWER[1] - PV6_HOLE / 2, PANEL_POWER[0] + PV6_HOLE / 2,
+                    PANEL_POWER[1] + PV6_HOLE / 2)]
+SMD_THT_GAP = 2.5                       # mm, SMD pad to THT pad of another part
 # Zones kept free (hardware/r02/obudowa.md, "Płyta bazowa"): (side, x0, y0, x1, y1, name, parts allowed inside);
 # side 'T' top, 'B' bottom, 'TB' both sides.
 # 'B' AA holder BH4AAW 61.25 x 57 x 14.57 mm on the battery door of the Lid, under the board: the door spans front
-# x 0.7-67.4, y 40.5-99.5 and the holder top lies 7.8 mm below the board (STEP); only the solder tails of THT parts
-# there. 'B' the back of the SMA bulkhead socket (axis about 7 mm below the board) and its cable to the Wio.
+# x 0.7-67.4, y 40.5-99.5 and the holder top lies 6.3 mm below the board, 4.8 mm if it rests on the raised rim of
+# the door (STEP); only the solder tails of THT parts there. 'B' the back of the SMA bulkhead socket (axis 6.3 mm
+# below the board) and its cable to the Wio. 'B' the PV6 terminals and wires under the board.
 # 'T' the display (64 x 45 mm), the PV6 body, the CISZA guard (30 x 40 mm), the navigation buttons (22 mm) and
 # 10 mm around the preparation button seen through the hole under the sticker. A spacer (<= 6 mm) may stand in the
 # corner of a button square when it stays outside the 22 mm circle. 'TB' spacer and screw head.
@@ -78,6 +89,7 @@ ZONES = [
     ('T', 10.0, 9.5, 74.0, 54.5, 'ekran Sharp', set()),
     ('B', 0.5, 30.0, 58.0, 90.0, 'koszyk ogniw 4 × AA', set()),
     ('B', 152.0, 104.0, 168.0, 119.5, 'tył gniazda SMA', set()),
+    ('B', 164.0, 79.0, 186.0, 101.0, 'zaciski PV6 wyłącznika', set()),
     ('T', 164.0, 79.0, 186.0, 101.0, 'przycisk PV6 wyłącznika', spacers_clear(*PANEL_POWER)),
     ('T', 160.0, 28.0, 190.0, 68.0, 'osłona CISZY', {'SW5'}),
     ('T', 130.0, 102.0, 150.0, 122.0, 'otwór przygotowania', {'SW6', 'H5'}),
@@ -90,9 +102,10 @@ ZONES = [
 FIXED = {
     'SW4': (20.0, 88.0, 0, 'T'), 'SW1': (52.0, 88.0, 0, 'T'), 'SW2': (84.0, 88.0, 0, 'T'), 'SW3': (116.0, 88.0, 0, 'T'),
     'D1': (175.0, 12.0, 0, 'T'), 'SW5': (175.0, 48.0, 0, 'T'), 'SW6': (140.0, 112.0, 0, 'T'),
-    'J3': (194.0, 90.0, 90, 'T'),        # clear of the spacer of H6
-    'J2': (116.0, 115.0, 0, 'T'),        # wires to the EN3 socket (bottom wall, front x 110), beside its notch
-    'J1': (68.0, 115.0, 0, 'T'),         # wires to the AA holder
+    # JST XH with the plug is 9.8 mm high: the wire connectors are on the bottom, where the wires come from.
+    'J3': (194.0, 90.0, 90, 'B'),        # wires to the PV6 terminals under the board; clear of the spacer of H6
+    'J2': (116.0, 115.0, 0, 'B'),        # wires to the EN3 socket (bottom wall, front x 110), beside its notch
+    'J1': (68.0, 115.0, 0, 'B'),         # wires to the AA holder on the battery door
     'BZ1': (150.0, 20.0, 0, 'T'),        # >= 20 mm from the radio
     'F1': (114.0, 103.0, 0, 'B'), 'C50': (132.0, 84.0, 0, 'B'),
     'JP3': (172.0, 74.0, 90, 'T'),      # outside the CISZA guard zone
@@ -178,6 +191,17 @@ def is_tht(fp):
     return any(p.GetAttribute() in (pcbnew.PAD_ATTRIB_PTH, pcbnew.PAD_ATTRIB_NPTH) for p in fp.Pads())
 
 
+def pad_box(pad):
+    bb = pad.GetBoundingBox()
+    return (pcbnew.ToMM(bb.GetX()), pcbnew.ToMM(bb.GetY()), pcbnew.ToMM(bb.GetRight()), pcbnew.ToMM(bb.GetBottom()))
+
+
+def box_distance(a, b):
+    dx = max(b[0] - a[2], a[0] - b[2], 0.0)
+    dy = max(b[1] - a[3], a[1] - b[3], 0.0)
+    return (dx * dx + dy * dy) ** 0.5
+
+
 def overlaps(a, b, gap=GAP):
     return not (a[2] + gap <= b[0] or b[2] + gap <= a[0] or a[3] + gap <= b[1] or b[3] + gap <= a[1])
 
@@ -221,6 +245,12 @@ def outline(board):
         edge(pcbnew.SHAPE_T_ARC, start, toward(centre, c, r), end)
     for a, b in segs:
         edge(pcbnew.SHAPE_T_SEGMENT, a, b)
+    hole = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_CIRCLE)
+    hole.SetCenter(pcbnew.VECTOR2I(mm(PANEL_POWER[0]), mm(PANEL_POWER[1])))
+    hole.SetEnd(pcbnew.VECTOR2I(mm(PANEL_POWER[0] + PV6_HOLE / 2), mm(PANEL_POWER[1])))
+    hole.SetLayer(pcbnew.Edge_Cuts)
+    hole.SetWidth(mm(0.1))
+    board.Add(hole)
 
 
 def zone_marks(board):
@@ -277,6 +307,7 @@ def main():
     zone_marks(board)
     parts = {p['ref']: p for p in PARTS}
     placed = []                          # (side, box) of every placed body; THT parts block both sides
+    tht_pads = []                        # boxes of the plated through-hole pads placed so far
     footprints = {}
 
     def add(ref, fp):
@@ -294,12 +325,15 @@ def main():
         sides = ('T', 'B') if is_tht(fp) else ('B' if fp.IsFlipped() else 'T',)
         for s in sides:
             placed.append((s, box))
+        tht_pads.extend(pad_box(p) for p in fp.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_PTH)
 
-    def free(ref, box, sides, own, edge=False):
+    def free(ref, box, sides, own, edge=False, smd=False):
         """Body fits on the board, clear of bodies on the given sides and of the zones on its own side;
-        the solder tails of a THT part under a zone (<= 3 mm over the AA holder) are allowed."""
+        the solder tails of a THT part under a zone (<= 3 mm over the AA holder) are allowed. The body of an SMD
+        part keeps SMD_THT_GAP from the THT pads (its pads lie inside the body box, so this is on the safe side)."""
         return ((edge or inside_board(box)) and not any(s in sides and overlaps(box, b) for s, b in placed)
-                and not any(own in z[0] and ref not in z[6] and overlaps(box, z[1:5]) for z in ZONES))
+                and not any(own in z[0] and ref not in z[6] and overlaps(box, z[1:5]) for z in ZONES)
+                and not (smd and any(box_distance(box, t) < SMD_THT_GAP for t in tht_pads)))
 
     def fix(ref, x, y, rot, side, anchor='body'):
         fp = load(board, footprint_dir, parts[ref]['footprint'])
@@ -344,7 +378,8 @@ def main():
                     x = x0
                     while x + w <= x1:
                         cost = (x + w / 2 - goal[0]) ** 2 + (y + h / 2 - goal[1]) ** 2
-                        if (best is None or cost < best[0]) and free(ref, (x, y, x + w, y + h), sides, side):
+                        if (best is None or cost < best[0]) and free(ref, (x, y, x + w, y + h), sides, side,
+                                                                     smd=not is_tht(fp)):
                             best = (cost, x + w / 2, y + h / 2, rot)
                         x += 0.5
                     y += 0.5
@@ -355,6 +390,19 @@ def main():
                 target = (best[1], best[2])
     missing = sorted(set(parts) - set(footprints))
     assert not missing, ('not placed', missing)
+    for a, fa in footprints.items():          # SMD pads keep SMD_THT_GAP from the THT pads of other parts
+        for b, fb in footprints.items():
+            if a == b:
+                continue
+            for p in fa.Pads():
+                if p.GetAttribute() != pcbnew.PAD_ATTRIB_SMD:
+                    continue
+                for q in fb.Pads():
+                    if q.GetAttribute() == pcbnew.PAD_ATTRIB_PTH:
+                        d = box_distance(pad_box(p), pad_box(q))
+                        if d < SMD_THT_GAP - 1e-6:
+                            sys.exit(f'{a} pad {p.GetNumber()} is {d:.2f} mm from THT pad {b}.{q.GetNumber()}, '
+                                     f'limit {SMD_THT_GAP:g} mm')
     for a, b, limit in CLOSE:
         d = min(((pcbnew.ToMM(p.GetPosition().x - q.GetPosition().x)) ** 2
                  + (pcbnew.ToMM(p.GetPosition().y - q.GetPosition().y)) ** 2) ** 0.5

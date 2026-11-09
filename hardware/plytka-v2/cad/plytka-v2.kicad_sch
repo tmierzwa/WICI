@@ -20843,12 +20843,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 208.28 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 213.36 0)
       (effects
         (font
@@ -20891,12 +20891,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 226.06 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 231.14 0)
       (effects
         (font
@@ -20939,12 +20939,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 243.84 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 248.92 0)
       (effects
         (font
@@ -20987,12 +20987,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 261.62 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 266.7 0)
       (effects
         (font
@@ -21035,12 +21035,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 279.4 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 284.48 0)
       (effects
         (font
@@ -21083,12 +21083,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "ST2.9"
+    (property "Value" "#4"
       (at 792.4800000000001 297.18 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "MountingHole:MountingHole_3.2mm_M3"
+    (property "Footprint" "MountingHole:MountingHole_3.5mm"
       (at 792.4800000000001 302.26 0)
       (effects
         (font
