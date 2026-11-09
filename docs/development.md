@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (z kotwicami: w stronach HTML według `id`, w plikach Markdown według nagłówków, tak jak tworzy je GitHub), zgodność wydruków PDF w `output/pdf/` z ich źródłami, składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (z kotwicami: w stronach HTML według `id`, w plikach Markdown według nagłówków, tak jak tworzy je GitHub), zgodność wydruków PDF w `output/pdf/` z ich źródłami, składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie i nie uruchamia KiCad.
 
 ## Oprogramowanie układowe
 
