@@ -88,7 +88,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-W zgłoszeniu zmiany (PR) użyj `python3 tools/verify_repository.py --pull-request` ([szczegóły](CONTRIBUTING.md#kontrole-przed-pr)). Środowisko CAD opisuje [docs/development.md](docs/development.md).
+Te same kontrole uruchamia się przed zgłoszeniem zmiany (PR); szczegóły są w [CONTRIBUTING.md](CONTRIBUTING.md#kontrole-przed-pr). Środowisko CAD opisuje [docs/development.md](docs/development.md).
 
 ## Kto za tym stoi
 

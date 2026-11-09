@@ -6,7 +6,7 @@ body:
     id: module
     attributes:
       label: Moduł
-      description: stacja R02 (wykonanie A/B), tor RF, zasilanie stacji AA/12 V, ekran i przyciski, FRAM, stanowisko R01.3, wejścia A/B, przetwornica, ładowarka, antena
+      description: płytka v1/v1.1 prototypu (hardware/dev-bench), płytka v2 stacji pilotażowej (hardware/plytka-v2), zasilanie z ogniw AA i 12 V, płytka testowa przetwornicy 3,3 V, ekran i przyciski, FRAM, obudowa, antena, radia testowe lub RNode
     validations:
       required: true
   - type: textarea
