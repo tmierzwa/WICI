@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wiadomości, walidacja, stany i ponawianie SA1.">
-  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.48</title>
+  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.49</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Protokół aplikacyjny SA1</h1>
-      <p><span class="status">Projekt 0.48</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#typy-i-uklad">Typy i układ</a>
@@ -123,7 +123,7 @@
         <thead><tr><th>Zdarzenie</th><th>Warunek</th><th>Zmiana wpisu</th></tr></thead>
         <tbody>
           <tr><td>Nowe zgłoszenie</td><td>Wolny wpis i miejsce w kolejce.</td><td><code>r_max</code> = 0, etap „zapisane”, intencja wysyłki; potwierdzenie lokalne po trwałym zapisie.</td></tr>
-          <tr><td>Przekazanie do nośnika i jego wynik</td><td>Intencja czeka na próbę.</td><td>Etap „wysyłanie” i trwały znacznik pierwszego przekazania. Wynik nośnika „dostarczone” ustawia dziś taki etap bez <code>r_rcv</code>; docelowa nazwa to „w drodze”; porażka zostawia intencję do ponowienia.</td></tr>
+          <tr><td>Przekazanie do nośnika i jego wynik</td><td>Intencja czeka na próbę.</td><td>Etap „wysyłanie” i trwały znacznik pierwszego przekazania. Wynik nośnika ustawia etap „w drodze” bez <code>r_rcv</code> (stan kodu: <a href="system-wici-decyzje.html#wici-inv-017">WICI-INV-017</a>); porażka zostawia intencję do ponowienia.</td></tr>
           <tr><td>RECEIVED</td><td>Aktywna tożsamość odbiorcy, znane <code>id</code>, <code>revision</code> ≤ <code>r_max</code>; wpis nieanulowany.</td><td><code>r_rcv</code> rośnie do większej wartości. Gdy potwierdzono <code>r_max</code>, etap „odebrane” kończy ponowienia tej rewizji. Potwierdzenie starszej rewizji nie kończy nowszej intencji.</td></tr>
           <tr><td>STATUS</td><td>Jak dla RECEIVED oraz <code>event</code> &gt; <code>status_hi</code> i <code>state</code> 2–6.</td><td><code>status_hi</code> i decyzja przyjmują nowe wartości; wiadomość działa też jak RECEIVED swojej rewizji. Decyzja z największym <code>event</code> pozostaje widoczna niezależnie od rewizji.</td></tr>
           <tr><td>REPLY</td><td>Jak dla RECEIVED oraz <code>event</code> &gt; <code>reply_hi</code>.</td><td><code>reply_hi</code> rośnie, tekst trafia do skrzynki; wiadomość działa też jak RECEIVED swojej rewizji. Licznik REPLY jest niezależny od STATUS.</td></tr>
@@ -186,7 +186,7 @@
         </tbody>
       </table>
       <p>Stacja nie uruchamia dwóch prób tej samej intencji równolegle. RECEIVED, STATUS lub REPLY kończy ponawianie danej rewizji; nowa rewizja zastępuje starszą. Żadna intencja nie wygasa samoczynnie; kończy ją dowód adresata albo zamknięcie zdarzenia, a decyzja człowieka wstrzymuje wysyłkę do stacji. Bez potwierdzenia stacja pokazuje alarm: dla pilności 2 po 15 min, dla 1 po godzinie, dla 0 po 6 h od zapisu; dla TEST po 30 min od pierwszego nadania. Po zmianie tożsamości odbiorcy czas alarmu liczy od pierwszego nadania do nowej tożsamości. Przy pilności 2 brak STATUS przez 30 min po RECEIVED uruchamia osobny alarm.</p>
-      <p class="explain">W ścieżce WICI-Link HACK następnego skoku potwierdza tylko przekazanie. Kod nadal nazywa ten etap „dostarczone” i używa 10 min oczekiwania. Nazwę rozstrzyga <a href="#rozstrzygniecia-dec-005">WICI-DEC-005</a>; czasy pozostają parametrami profilu w <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
+      <p class="explain">W ścieżce WICI-Link HACK następnego skoku potwierdza tylko przekazanie; ten etap nazywa się „w drodze” (<a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>). Stan kodu opisuje <a href="system-wici-decyzje.html#wici-inv-017">WICI-INV-017</a>; czasy pozostają parametrami profilu w <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
       <h3 id="rozstrzygniecia-dec-005">Rozstrzygnięcia <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a></h3>
       <ol>
         <li><strong>RECEIVED.</strong> RECEIVED oznacza, że treść jest trwale zapisana na nośniku stanowiska. Przetrwa zanik zasilania oraz awarię aplikacji i komputera. Nie gwarantuje odzyskania treści po utracie nośnika, przeczytania zgłoszenia ani pomocy. Przed RECEIVED nie ma drugiego zapisu na dysku komputera; odrzucono tę dodatkową ścieżkę odzyskiwania oraz warunkową gwarancję.</li>
@@ -204,7 +204,7 @@
       </ol>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości SA1, cykl życia i ponawianie</a>, <a href="stanowisko-osp.md">przyjęcie i wysyłka stanowiska</a>, <a href="transport.md">szew nośnika</a>, <a href="../../firmware/src/sa1.cpp">kodek C++</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/reference/reference.py">kodek referencyjny</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">ponawianie</a> i <a href="../../tests/test_sa1_unicode.py">próby Unicode</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.48 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

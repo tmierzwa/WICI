@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.48</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.49</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.48</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -153,7 +153,7 @@
       <p><strong>Parametry profilu.</strong> HACK kończy się do 200 ms od DATA; tor radia odmawia go, gdy decyzja po odbiorze trwa ponad 93 ms. Ponowny HACK jest ograniczony do jednego na 5 s na węzeł, z wyjątkiem pierwszego ponowienia identycznej nowo przyjętej ramki. Spóźnienie oznacza brak HACK.</p>
       <p><strong>Reguła protokołu.</strong> Nadawca ponawia te same bajty i <code>seq</code>. Brak HACK po serii prób przesuwa rodzica. Przekaźnik trzyma ramkę do HACK następnego skoku albo wygaśnięcia; root może zwrócić laptopowi odmowę KISS 0x01 bez nadania.</p>
       <p><strong>Parametr profilu.</strong> Nadawca czeka 600 ms po nadaniu; ponawia po długu ciszy i losowych 0,5–2 s, najwyżej trzy razy na następny skok.</p>
-      <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a> wynik następnego skoku nazywa się „w drodze” (zmiana nazwy z „przekazane”: <a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>). Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
+      <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Wynik następnego skoku nazywa się „w drodze” (<a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>, wcześniej „przekazane”). Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
 
       <h3 id="kolejki">Kolejki i przeciążenie</h3>
       <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Tag poświadcza bieżący skok, więc ruch dalszej stacji dzieli gniazdo jej sąsiada (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Następne ramki tego sąsiada trafiają do K2. Dowód rodzaju 1 i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
@@ -269,7 +269,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.48 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.48</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.49</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.48</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.49</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -168,7 +168,7 @@
         <article class="record" id="wici-inv-017">
           <h4>WICI-INV-017</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd>HACK następnego skoku ma nazwę <code>delivered</code> lub „dostarczone” w kodzie, polu <code>stage</code> USB i opisie źródłowym.</dd></div>
+            <div><dt>Stan zastany</dt><dd>HACK następnego skoku ma nazwę <code>delivered</code> lub „dostarczone” w kodzie, polu <code>stage</code> USB i opisie źródłowym. Po nim stacja czeka 10 min przed ponowieniem.</dd></div>
             <div><dt>Luka</dt><dd><a href="../../firmware/src/station.cpp">Stacja</a>, <a href="oprogramowanie.md">opis</a>, <a href="usb-protocol.md">USB</a>; decyzja ustala nazwę „w drodze” (pierwotnie „przekazane”, zmienione w WICI-DEC-015), bez zmiany znaczenia RECEIVED.</dd></div>
           </dl>
         </article>
@@ -457,7 +457,7 @@
           <h4>WICI-INV-059</h4>
           <dl>
             <div><dt>Stan kodu</dt><dd>Na ścieżce WICI-Link kopertę od nieaktywnej tożsamości odbiorcy odrzuca <a href="../../firmware/src/wici_destination.cpp"><code>Destination::receive</code></a> przed otwarciem koperty: bez skutku SA1, bez okna powtórzeń i bez dowodu, więc stanowisko ponowi ją po przełączeniu. Od przekaźnika może wrócić HACK w limicie powtórzeń. Sprawdzenie nadawcy w <code>Station::receivedEnvelope</code> jest drugą osłoną. Na ścieżce Reticulum <a href="../../firmware/src/station.cpp"><code>Station::received</code></a> także odrzuca taką wiadomość bez dowodu. Żadna ścieżka nie przełącza stacji automatycznie; istnieje lokalna usługa <code>switchBackup</code>.</dd></div>
-            <div><dt>Luka</dt><dd>Pierwsza uwierzytelniona koperta od zapasowej tożsamości ma zapisać jednokierunkowy wybór w FRAM, zostać przyjęta i pokazać gospodarzowi nowy klucz (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Przełączenie może nastąpić dopiero po udanym otwarciu koperty kluczem zapasowej tożsamości, czyli po uwierzytelnieniu, a nie przy samym numerze nadawcy. Nie jest to warunek próby D21.</dd></div>
+            <div><dt>Luka</dt><dd>Pierwsza uwierzytelniona koperta od zapasowej tożsamości ma zapisać jednokierunkowy wybór w FRAM, zostać przyjęta i pokazać gospodarzowi nowy klucz (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Przełączenie może nastąpić dopiero po udanym otwarciu koperty kluczem zapasowej tożsamości, czyli po uwierzytelnieniu, a nie przy samym numerze nadawcy. Próba „Zaufanie” w <a href="odbior.md">planie odbioru</a> opisuje tylko przełączenie z menu i intencje bez RECEIVED; trzeba ją dostosować do przełączenia radiem i ponowienia wpisów z RECEIVED. Nie jest to warunek próby D21.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-060">
@@ -536,6 +536,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.49</td><td>Przegląd przed czytaniem właściciela. Rozdział 3: dane i stany wysyłki przed operacjami; zamknięcie zdarzenia także poleceniem USB potwierdzonym przyciskiem; anulowanie po pierwszej wysyłce opisane dla menu i USB; alarm TEST jako wymaganie funkcji z czasem z profilu; panel w wymaganiach jako „Stanowisko”; uczciwsze sprawdzenia (część testów sprawdza tylko fragment wymagania); poprawione uzasadnienia przełączenia tożsamości i ponowienia REPLY. Słownik: intencję kończy dowód adresata albo zamknięcie zdarzenia, decyzja człowieka tylko wstrzymuje wysyłkę; wyjątek od ciszy tylko z panelu przy ciszy operacyjnej. Zdania o stanie kodu w rozdziałach 4, 6 i 7 zastąpione odnośnikami do inwentaryzacji; WICI-INV-059 obejmuje próbę „Zaufanie” do dostosowania. Prostszy język w przedmowie, rozdziale 2 i słowniku.</td></tr>
           <tr><td>0.48</td><td>Przedmowa zna czwarty rodzaj wymagania, „wymaganie funkcji”, z krótką definicją wszystkich czterech rodzajów; zapisano to w WICI-DEC-015. W rejestrze zgodności wiersze ciszy radiowej i wstrzymania wysyłki mają rodzaj funkcji.</td></tr>
           <tr><td>0.47</td><td>Rozdział 3 jako próbka kształtu wymagań: 42 wymagania robocze R3-01–R3-42 z podmiotem, rodzajem, uzasadnieniem, sprawdzeniem i źródłem; operacje laptopa pozostają informacyjne. Zaproponowano rodzaj „wymaganie funkcji”.</td></tr>
           <tr><td>0.46</td><td>Zapisano WICI-DEC-015: wynik następnego skoku nazywa się „w drodze” zamiast „przekazane”; zmieniono nazwę w rozdziałach 3, 4, 6, słowniku i inwentaryzacji.</td></tr>
@@ -584,7 +585,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.48 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.49 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
