@@ -2,7 +2,7 @@
 
 ## Model i kontrola źródeł
 
-Python 3.12 lub nowszy (CI: 3.12), Git. Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
+Python 3.12 lub nowszy, Git. CI sprawdza zgodność z 3.12, a testy i kontrolę repozytorium uruchamia na 3.14.8 (wersja z `software/laptop/build/runtimes.json`). Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie i nie uruchamia KiCad.
 
 ## Oprogramowanie układowe
 
