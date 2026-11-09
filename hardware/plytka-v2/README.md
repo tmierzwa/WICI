@@ -6,7 +6,7 @@
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
-| [bom.csv](bom.csv) | lista części z producentami i numerami, tam gdzie są już wybrane |
+| [bom.csv](bom.csv) | lista części z producentami, numerami i numerami LCSC, tam gdzie są już wybrane |
 | `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb` | projekt KiCad 10.0.6: schemat i płytka z rozmieszczeniem wstępnym, bez ścieżek |
 | `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC rozmieszczenia (tylko uwagi o sitodruku i niepołączone pady) |
 | `tools/design.py` | jedyne źródło: części, piny, sieci i sprawdzenia przydziału pinów |
@@ -122,22 +122,29 @@ Schemat i rozmieszczenie odchodzą od wcześniejszej specyfikacji i założeń w
 
 Do tego dochodzą zmiany w zakresie, które specyfikacja zostawia projektowi v2: J11 (analizator), J12 i dzielnik VTEST oraz zworki JP1/JP2 wypadają według zasady „nic na zapas”. JP3 zostaje, bo specyfikacja wymaga punktu pomiaru prądu radia.
 
+## Dobór części (2026-11-09)
+
+Numery LCSC są w kolumnie „LCSC” w [bom.csv](bom.csv); stany sprawdzone 2026-11-09 w LCSC i JLC. Żadna z części toru zasilania, USB i diod nie jest w puli basic JLC (także AO4264E, wcześniej opisany jako basic), więc wszystkie idą jako extended albo, dla TVS, z puli promocyjnej.
+
+- **Q2, Q3: AO4292E (100 V) zamiast AO4264E (60 V).** Przy odwróconym impulsie wejście ma −53,3 V, a wspólny dren zostaje około VSYS − 0,6 V (dioda podłożowa Q3 od ogniw), więc Q2 widzi około 59,7 V. Przy dodatnim impulsie i otwartym łączniku Q3 widzi około 53 V. AO4292E: VGS ±20 V wobec napędu DGATE/HGATE 10–13 V (karta LM7480, 7.5 i 10.2.4: co najmniej 15 V), próg 1,6–2,7 V, ≤23 mΩ przy 10 V (6 mV przy 0,25 A wobec zalecanych <50 mV), Ciss 1,2 nF jak AO4264E, więc C31 100 nF nadal spełnia warunek ≥10 × (Ciss Q2 + Ciss Q3). Ta sama obudowa SOIC-8 i te same wyprowadzenia. Zapasowy BUK7Y15-60EX odpada: ma obudowę LFPAK56 i w LCSC nie ma go na stanie.
+- **D7: ROHM RB168MM-40 (Schottky „super low IR”).** Prąd wsteczny diody płynie do ogniw, gdy stację zasila 12 V. Karta Energizer L91 (EBC-8915AP-D9X) dopuszcza 2 µA, próba odbiorcza wymaga ≤1 µA. RB168MM-40: najwyżej 0,55 µA przy 40 V w 25 °C, z wykresu VR–IR przy 15 V typowo około 0,02 µA w 25 °C, 0,1 µA w 45 °C i 0,4 µA w 60 °C. Spadek przy 120 mA około 0,43 V (0,5 V w −25 °C) zamiast 0,35 V przyjętych w [projekcie zasilania](../r02/zasilanie.md#tor-ogniw), czyli około 1,3% więcej mocy z ogniw (model: około 48,4 h zamiast 49 h). IFSM 40 A wobec ≤5 A udaru z R40. Zwykłe diody Schottky'ego 1 A (SS14, PMEG4010) mają w 25 °C 20–500 µA, a dioda krzemowa (0,8–1 V) skraca pracę na ogniwach poniżej 48 h. Footprint SOD-123F jak BAS116H.
+- **F1: dwa zaciski Littelfuse 01110501Z (seria 111 501).** Pasują do obecnego footprintu (17,8 × 5,0 mm, otwory 1,17 mm), 10 A, zacisk około 7 mm nad płytką (rysunek Littelfuse). Oprawki zamknięte (Littelfuse 0PTF0078P, 11,5 mm) wymagałyby innego footprintu, a 12 V w zamkniętej obudowie nie wymaga osłony.
+- **Bez zmian:** SI2309CDS, BSS84AK, BAS116H, BZT52C15/C33/C5V1 (Diodes Incorporated), USBLC6-2SC6 i gniazdo HRO TYPE-C-31-M-12 są w LCSC na stanie (od kilku do kilkuset tysięcy sztuk). Footprint gniazda w KiCad jest dla tej właśnie części; ma cztery przewlekane nóżki obudowy, lutowane razem z SMD. Zenery mają w puli preferowanej JLC odpowiedniki SOD-123 z tymi samymi granicami upływu w kartach; zostają części Diodes Incorporated, bo przy 10 płytkach różnica kosztu jest pomijalna.
+
 ## Przed płytką drukowaną
 
 Otwarte w schemacie:
-- D7 (dioda toru ogniw): część po sprawdzeniu dopuszczalnego prądu wstecznego ogniw L91;
 - C50 (kondensator szyny VSYS): wartość i część po próbie przełączania 12 V ↔ ogniwa;
 - R32 (rezystor szeregowy C_dVdT): karta nie podaje wartości;
 - Wio: rozstaw rzędów J8/J9 i funkcje pinów J1.6, J1.7, J2.7 z rysunku i schematu Seeed (na razie niepodłączone);
-- oprawka bezpiecznika F1 i numery LCSC części spoza puli JLC (SI2309CDS, BSS84AK, BAS116H, BZT52, USBLC6-2SC6, gniazdo USB-C);
 - przyciski: rozmiar i rozstaw pod obudowę i rękawice;
-- Q2 przy odwróconym impulsie i świeżych ogniwach widzi około 59,7 V (wspólny dren trzyma około VSYS − 0,6 V przez Q3, wejście −53,3 V): tranzystor 60 V nie ma zapasu, rozważyć 80–100 V;
 - upływ U5 z C do A przy pracy z ogniw: wejście 12 V obciążają tylko dzielniki (246 kΩ równolegle z 329 kΩ, około 140 kΩ), więc EN/UVLO dojdzie do 0,3 V dopiero przy kilkunastu µA upływu; napięcie EN mierzy się na płytce przy pracy z ogniw bez 12 V;
 - upływ BAT54S (D6, D11) i BAT54H (D13) w podwyższonej temperaturze: około 1 µA na węźle ADC 12 V (około 13 kΩ) to około 0,2 V na wejściu 12 V, czyli część budżetu błędu ADC ≤2%; na węźle ON (około 27 kΩ) podnosi próg samoczynnego włączenia o około 0,3 V (próg 8,56–9,46 V bez upływu, do około 9,8 V z upływem). Do sprawdzenia w karcie wybranej diody
 - prąd w stanie wyłączonym z ogniw: typowo około 13 µA z R48 (około 4% pojemności ogniw na rok przechowywania); z wartości maksymalnych kart i upływu C50 najgorszy przypadek przekracza 20 µA (cel z projektu zasilania), mieści się w 0,1 mA ze specyfikacji;
 - zasilanie +3V3 od tyłu w stanie czekania bez 3,3 V: dzielnik 12 V zostaje podłączony (Q4), więc węzeł V_12_ADC (0,0625 × V12) przez D6 i diody ochronne GPIO5 podnosi martwą szynę 3,3 V. Przy 10–11,9 V to około 0,5 V. Przy 24–33 V bez ogniw (OVP) to około 1,3–1,8 V, a wtedy reset przy późniejszym włożeniu ogniw może nie być czysty. Pomiar +3V3 w obu stanach i 10 startów po włożeniu ogniw w stanie 24 V; gdyby zawiodły, pomiar 12 V dostaje osobny dzielnik z kluczem DIV_EN, jak ogniwa;
 - KILL przy słabych ogniwach i w 60 °C: upływ D16 i Q11 rośnie z temperaturą, a przy około 5,5 µA KILL spada do 0,8 V i stacja się wyłącza. Pomiar na ciepło przy VCTL 3,6 V;
 - ON przy odwróconym 33 V: przez D13 płynie około 107 µA, a spadek BAT54H na zimno sięga −0,3 V, granicy dla ON. Bez zapasu; rozważyć diodę o mniejszym spadku albo większy R70 (zmiana progu);
+- upływ D7 do ogniw na ciepło: z wykresu karty typowo około 0,4 µA w 60 °C, a najgorszy przypadek z wartości maksymalnej (0,55 µA w 25 °C) to kilka µA wobec 2 µA z karty L91. Pomiar prądu w gałęzi ogniw przy 12 V w 45 i 60 °C;
 - Burst Mode U7 (typowo poniżej 50 mA) przy starcie ESP32-S3, panelu i 4 V na wejściu: sprawdzić na płytce testowej razem z progiem nadzorcy FRAM 2,7 V.
 
 Poza schematem:
@@ -153,4 +160,8 @@ Poza schematem:
 - TI LM7480-Q1 (SNOSD95C): tabela 6-1 (wyprowadzenia DRR), 7.5 (prądy, progi EN/UVLO i OV), 9.3.2–9.4 (ograniczenie prądu włączania, wyłączenie, dioda podłożowa).
 - ADI LTC2955 rew. A: s. 3 (wyprowadzenia TS8), opis pinów (EN̄ podciągany do VIN przez 900 kΩ, VIN >20 V przez 1 kΩ, TMR 5,2 s/µF).
 - ADI LTC3115-1 rew. C: opis pinów FE20, prąd histerezy RUN 500 nA i filtr RUN 1000 pF.
+- AOS AO4292E rew. 1.1 (2023): VDS 100 V, VGS ±20 V, VGS(th) 1,6–2,7 V, RDS(on) ≤23/33 mΩ (10/4,5 V), Ciss 1,2 nF; AO4264E rew. 1.1 dla porównania.
+- Energizer L91 (karta EBC-8915AP-D9X): „Max Rev Current: 2 uA”, praca −40…+60 °C; nowsza karta L91GL0618 i podręcznik Li/FeS2 (12004-A) nie podają liczby, tylko zakaz ładowania.
+- ROHM RB168MM-40 (2022, rew. 003): VF ≤0,65 V przy 1 A, IR ≤0,55 µA przy 40 V (25 °C), wykresy VF–IF i VR–IR, IFSM 40 A; RB168MM-60 ma IR do 1,5 µA, więc nie jest lepsza.
+- Littelfuse, zaciski 5x20 mm do druku, seria 111 501 (rozstaw 17,8 mm, otwory 1,17 mm, do 10 A).
 - Wio SX1262 for XIAO: dwie listwy 1x7 2,54 mm (schemat KiCad strony trzeciej, [comet.bg](https://store.comet.bg/download-file.php?id=30873)); wyprowadzenia według [zlecenia L0](../l0-diagnostic/ZLECENIE.md#połączenia-wio).

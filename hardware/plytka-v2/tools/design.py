@@ -16,11 +16,11 @@ XH2 = 'Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical'
 PARTS = []
 
 
-def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', bom=True):
-    """Record one board item; nets maps pin number to net name."""
+def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', bom=True):
+    """Record one board item; nets maps pin number to net name, lcsc is the LCSC/JLC part number."""
     PARTS.append(dict(ref=ref, lib_id=lib_id, value=value, footprint=footprint,
                       nets={str(k): v for k, v in nets.items()}, mpn=mpn, manufacturer=manufacturer,
-                      spec=spec, note=note, bom=bom))
+                      spec=spec, note=note, lcsc=lcsc, bom=bom))
 
 
 def res(ref, value, a, b, note, mpn='', spec='', footprint=R0805):
@@ -35,7 +35,7 @@ def cap(ref, value, a, b, note, mpn='', manufacturer='Samsung Electro-Mechanics'
 
 def zener15(ref, cathode, anode, note):
     part(ref, 'Device:D_Zener', 'BZT52C15', 'Diode_SMD:D_SOD-123', {1: cathode, 2: anode}, mpn='BZT52C15-7-F',
-         manufacturer='Diodes Incorporated', spec='Zener 15 V, SOD-123', note=note)
+         manufacturer='Diodes Incorporated', spec='Zener 15 V, SOD-123', note=note, lcsc='C177014')
 
 
 def precise(value, mpn):
@@ -86,7 +86,8 @@ part('J4', 'Connector:USB_C_Receptacle_USB2.0_16P', 'USB-C DANE',
       'A6': 'USB_DP', 'B6': 'USB_DP', 'A7': 'USB_DN', 'B7': 'USB_DN', 'SH': 'GND',
       'A4': 'USB_VBUS', 'B4': 'USB_VBUS', 'A9': 'USB_VBUS', 'B9': 'USB_VBUS'},
      mpn='TYPE-C-31-M-12', manufacturer='Korean Hroparts Elec',
-     spec='gniazdo USB-C 16-pin, USB 2.0, SMD', note='VBUS tylko na bramkę Q12: laptop nigdy nie zasila stacji')
+     spec='gniazdo USB-C 16-pin, USB 2.0, SMD, nóżki obudowy przewlekane',
+     note='VBUS tylko na bramkę Q12: laptop nigdy nie zasila stacji', lcsc='C165948')
 res('R65', '5k1', 'USB_CC1', 'GND', 'CC1: urządzenie USB-C (bez tego laptop z USB-C nie wykryje stacji)',
     'RC0805FR-075K1L')
 res('R66', '5k1', 'USB_CC2', 'GND', 'CC2: jak R65', 'RC0805FR-075K1L')
@@ -103,7 +104,7 @@ res('R75', '100k', '+3V3', 'USB_LAPTOP', 'stan wysoki bez laptopa', 'RC0805FR-07
 part('U8', 'Power_Protection:USBLC6-2SC6', 'USBLC6-2SC6', 'Package_TO_SOT_SMD:SOT-23-6',
      {1: 'USB_DP', 2: 'GND', 3: 'USB_DN', 4: 'USB_DN', 5: '+3V3', 6: 'USB_DP'},
      mpn='USBLC6-2SC6', manufacturer='STMicroelectronics', spec='ochrona ESD 2 linii danych USB, SOT-23-6',
-     note='pin VBUS do +3V3: VBUS gniazda idzie tylko do bramki Q12, nie do szyny')
+     note='pin VBUS do +3V3: VBUS gniazda idzie tylko do bramki Q12, nie do szyny', lcsc='C7519')
 
 # --- Panel, FRAM, buttons, alarm: as v1.1 --------------------------------------------------------------
 part('J7', 'Connector_Generic_MountingPin:Conn_01x10_MountingPin', 'SHARP LS027B7DH01A',
@@ -182,32 +183,35 @@ res('R21', '1M', '+5V', 'BST_FB', 'RTOP dzielnika U2', 'RC0805FR-071ML')
 res('R22', '309k', 'BST_FB', 'GND', 'RBOT dzielnika U2', 'RC0805FR-07309KL')
 cap('C10', '100p', '+5V', 'BST_FB', 'równolegle do R21', 'CL21C101JBANNNC', spec='100 pF 50 V C0G 0805')
 
-# --- 12 V input (elektronika.md point 3): fuse, TVS, LM74800-Q1 with two 60 V MOSFETs -----------------------
-# Common drain (TI application figure): Q2 is the ideal diode (source at A), Q3 the switch to VSYS. The
+# --- 12 V input (elektronika.md point 3): fuse, TVS, LM74800-Q1 with two 100 V MOSFETs ----------------------
+# Common drain (TI application figure): Q2 is the ideal diode (source at A), Q3 the switch to VSYS. With the
+# input reversed and clamped at -53.3 V the common drain stays near VSYS - 0.6 V (Q3 body diode from the cells),
+# so Q2 sees about 59.7 V; with +53.3 V and the switch open Q3 sees about 53 V. Hence 100 V parts (AO4292E:
+# VGS +-20 V for the 10-13 V DGATE/HGATE drive, Ciss 1.2 nF like the 60 V AO4264E). The
 # common drain V12_MID is fed through the Q2 body diode even in shutdown, so it powers the button
 # controller from 12 V alone (no cells) and is where the 12 V is measured.
 part('J2', 'Connector_Generic:Conn_01x02', '12V', XH2, {1: '12V_IN', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT', note='przewód do gniazda 12 V w ściance obudowy')
 part('F1', 'Device:Fuse', 'T1A', 'Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal',
-     {1: '12V_IN', 2: 'V12_F'}, mpn='0001.2504', manufacturer='Schurter',
-     spec='bezpiecznik zwłoczny T1A 5x20 mm, 300 V DC, w oprawce na płytce',
-     note='oprawka (dwa zaciski 5x20) w BOM montażowni do dobrania; drugi: Littelfuse 0477001')
+     {1: '12V_IN', 2: 'V12_F'}, mpn='01110501Z', manufacturer='Littelfuse',
+     spec='2 zaciski bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką',
+     note='2 szt. na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)', lcsc='C151075')
 part('D4', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
      manufacturer='Vishay', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
-     note='LCSC C19077587 (pula promocyjna); zapasowo Littelfuse C83325')
+     note='pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)', lcsc='C19077587')
 part('U5', 'WICI:LM74800-Q1', 'LM74800-Q1', 'Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm',
      {1: 'S12_DGATE', 2: 'V12_F', 3: 'V12_MID', 4: 'S12_SW', 5: 'S12_OV', 6: 'S12_EN', 7: 'GND',
       8: 'S12_HGATE', 9: 'VSYS', 10: 'V12_MID', 11: 'S12_CAP', 12: 'V12_MID'},
      mpn='LM74800QDRRRQ1', manufacturer='Texas Instruments',
      spec='sterownik idealnej diody i łącznika 3–65 V, do −65 V, WSON-12 3 × 3 mm',
-     note='LCSC C3215600; pad termiczny RTN zostaje niepodłączony (karta, tabela 6-1)')
-NMOS60 = dict(mpn='AO4264E', manufacturer='Alpha & Omega', spec='N-MOSFET 60 V, 9,8 mΩ, SOIC-8')
-part('Q2', 'WICI:NMOS_SO8', 'AO4264E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
+     note='pad termiczny RTN zostaje niepodłączony (karta, tabela 6-1)', lcsc='C3215600')
+NMOS100 = dict(mpn='AO4292E', manufacturer='Alpha & Omega', spec='N-MOSFET 100 V, 23 mΩ, VGS ±20 V, SOIC-8')
+part('Q2', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'V12_F', 2: 'V12_F', 3: 'V12_F', 4: 'S12_DGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
-      8: 'V12_MID'}, note='idealna dioda (DGATE); LCSC C334232 (pula basic); zapasowo BUK7Y15-60EX', **NMOS60)
-part('Q3', 'WICI:NMOS_SO8', 'AO4264E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
+      8: 'V12_MID'}, note='idealna dioda (DGATE); przy odwrotnym impulsie około 59,7 V', lcsc='C176743', **NMOS100)
+part('Q3', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'VSYS', 2: 'VSYS', 3: 'VSYS', 4: 'S12_HGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
-      8: 'V12_MID'}, note='łącznik do VSYS (HGATE), odcina przy OVP i UV', **NMOS60)
+      8: 'V12_MID'}, note='łącznik do VSYS (HGATE), odcina przy OVP i UV', lcsc='C176743', **NMOS100)
 cap('C30', '100n', 'V12_MID', 'GND', 'VS U5 (karta: 100 nF)', 'CL21B104KCFNNNE', spec='100 nF 100 V X7R 0805')
 cap('C31', '100n', 'S12_CAP', 'V12_MID', 'pompa ładunkowa U5, CAP–VS (karta: 100 nF)', 'CL21B104KBCNNNC',
     spec='100 nF 50 V X7R 0805')
@@ -231,11 +235,11 @@ res('R32', '1k', 'S12_HGATE', 'S12_DVDT', 'R1 z rysunku 9-3 karty (szybsze wył�
 # (10.58-11.24 V). The same ladder gives the ADC tap: 0.0625 x V12, 36 V -> 2.25 V.
 part('Q4', 'Transistor_FET:BSS84', 'SI2309CDS', SOT23, {1: 'Q4_G', 2: 'V12_F', 3: 'V12_SW'},
      mpn='SI2309CDS-T1-GE3', manufacturer='Vishay', spec='P-MOSFET −60 V, SOT-23',
-     note='podłącza dzielnik 12 V tylko przy włączonej stacji; impuls 53,3 V wymaga ≥60 V')
+     note='podłącza dzielnik 12 V tylko przy włączonej stacji; impuls 53,3 V wymaga ≥60 V', lcsc='C10493')
 res('R33', '100k', 'V12_F', 'Q4_G', 'bramka Q4 do źródła', 'RC0805FR-07100KL')
 part('D5', 'Device:D_Zener', 'BZT52C15', 'Diode_SMD:D_SOD-123', {1: 'V12_F', 2: 'Q4_G'},
      mpn='BZT52C15-7-F', manufacturer='Diodes Incorporated', spec='Zener 15 V, SOD-123',
-     note='|VGS| Q4 ≤15 V przy 33 V ciągle i impulsie')
+     note='|VGS| Q4 ≤15 V przy 33 V ciągle i impulsie', lcsc='C177014')
 res('R34', '100k', 'Q4_G', 'Q5_D', 'bramka Q4 do klucza Q5', 'RC0805FR-07100KL')
 part('Q5', 'Transistor_FET:2N7002', '2N7002', SOT23, {1: 'Q5_G', 2: 'GND', 3: 'Q5_D'},
      mpn='2N7002-7-F', manufacturer='Diodes Incorporated', spec='N-MOSFET 60 V, SOT-23', note='klucz Q4 z szyny ON')
@@ -255,12 +259,17 @@ part('J1', 'Connector_Generic:Conn_01x02', 'OGNIWA 4xAA', XH2, {1: 'BAT_IN', 2: 
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT', note='przewód do koszyka 4 × AA z kluczowaniem')
 res('R40', '1R', 'BAT_IN', 'BAT_R', 'ogranicza udar przy wkładaniu ogniw do ≤5 A (Z13); napięcie mierzone przed nim',
     'RC2512FK-071RL', spec='1 Ω 1% 2512, 1 W, impulsowy', footprint='Resistor_SMD:R_2512_6332Metric')
-part('D7', 'Device:D_Schottky', 'Schottky 40V', 'Diode_SMD:D_SMA', {1: 'VSYS', 2: 'BAT_R'},
-     spec='Schottky VR ≥30 V, spadek ≤0,4 V przy 120 mA, impuls ≥5 A, mały prąd wsteczny przy 16 V i 45 °C',
-     note='część do wyboru po sprawdzeniu dopuszczalnego prądu wstecznego ogniw L91 (zasilanie.md, „Otwarte”)')
+# D7 reverse current flows into the primary lithium cells while 12 V runs the station: the Energizer L91 data
+# sheet (EBC-8915AP-D9X) allows 2 uA, acceptance asks <= 1 uA. RB168MM-40 (ROHM "super low IR"): 0.55 uA max
+# at 40 V and 25 C; from the VR-IR curves about 0.02 uA at 25 C, 0.1 uA at 45 C, 0.4 uA at 60 C (15 V, typical).
+# Forward drop about 0.43 V at 120 mA (0.5 V at -25 C), IFSM 40 A. A standard 1 A Schottky leaks 20-500 uA
+# at 25 C; a silicon diode (0.8-1 V) would cut the cell runtime below 48 h.
+part('D7', 'Device:D_Schottky', 'RB168MM-40', 'Diode_SMD:D_SOD-123F', {1: 'VSYS', 2: 'BAT_R'},
+     mpn='RB168MM-40TR', manufacturer='ROHM', spec='Schottky 40 V 1 A, IR ≤0,55 µA przy 40 V, PMDU (SOD-123FL)',
+     note='prąd wsteczny do ogniw L91 ≤2 µA (karta L91): typowo około 0,4 µA w 60 °C', lcsc='C509936')
 part('Q6', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q6_G', 2: 'BAT_IN', 3: 'VAA_SW'},
-     mpn='BSS84AK', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23',
-     note='podłącza dzielnik ogniw tylko na czas pomiaru (DIV_EN)')
+     mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23',
+     note='podłącza dzielnik ogniw tylko na czas pomiaru (DIV_EN)', lcsc='C127273')
 res('R41', '100k', 'BAT_IN', 'Q6_G', 'Q6 wyłączony bez sterowania', 'RC0805FR-07100KL')
 part('Q7', 'Transistor_FET:2N7002', '2N7002', SOT23, {1: 'DIV_EN', 2: 'GND', 3: 'Q6_G'},
      mpn='2N7002-7-F', manufacturer='Diodes Incorporated', spec='N-MOSFET 60 V, SOT-23', note='klucz Q6 z MCU')
@@ -275,17 +284,17 @@ part('D11', 'Diode:BAT54S', 'BAT54S', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_AA_ADC'
 # --- Power button controller: LTC2955-2 on the diode sum of the cells and 12 V --------------------------
 # 12 V side through 1 kOhm / 1 uF (data sheet: VIN > 20 V through 1 kOhm) and a 33 V Zener, because the
 # common drain follows the input up to 33 V and the TVS clamp (53.3 V); LTC2955 works to 36 V.
-part('D8', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'VCTL', 2: 'BAT_R'}, mpn='BAS116H',
-     manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F', note='suma diodowa od strony ogniw')
-part('D9', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'VCTL', 2: 'V12_FLT'}, mpn='BAS116H',
-     manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F', note='suma diodowa od strony 12 V')
+part('D8', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'VCTL', 2: 'BAT_R'}, mpn='BAS116H,115',
+     manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F', note='suma diodowa od strony ogniw', lcsc='C74210')
+part('D9', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'VCTL', 2: 'V12_FLT'}, mpn='BAS116H,115',
+     manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F', note='suma diodowa od strony 12 V', lcsc='C74210')
 res('R46', '1k', 'V12_MID', 'V12_FLT', 'filtr 12 V przed sumą (Z14); ze wspólnego drenu, więc działa z samego 12 V; '
     '2512, bo przy ograniczeniu 53,3 V traci około 0,4 W', 'RC2512FK-071KL', spec='1 kΩ 1% 2512, 1 W',
     footprint='Resistor_SMD:R_2512_6332Metric')
 cap('C35', '1u', 'V12_FLT', 'GND', 'filtr 12 V przed sumą (Z14)', 'CL21B105KBFNNNE', spec='1 µF 50 V X7R 0805')
 part('D10', 'Device:D_Zener', 'BZT52C33', 'Diode_SMD:D_SOD-123', {1: 'V12_FLT', 2: 'GND'},
      mpn='BZT52C33-7-F', manufacturer='Diodes Incorporated', spec='Zener 33 V (31–35 V), SOD-123',
-     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi')
+     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi', lcsc='C260938')
 cap('C36', '100n', 'VCTL', 'GND', 'VIN U6', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 part('U6', 'WICI:LTC2955-2', 'LTC2955ITS8-2', 'Package_TO_SOT_SMD:TSOT-23-8',
      {1: 'PWR_ON', 2: 'PWR_KILL', 3: 'PWR_TMR', 4: 'GND', 5: 'PWR_PB', 6: 'VCTL', 7: 'PWR_ENB', 8: 'PWR_INT'},
@@ -311,7 +320,7 @@ part('J3', 'Connector_Generic:Conn_01x02', 'WYLACZNIK', XH2, {1: 'PWR_PB', 2: 'G
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT', note='przewód do przycisku zasilania w panelu')
 res('R47', '10k', '+3V3', 'PWR_INT', 'podciągnięcie INT (otwarty dren)', 'RC0805FR-0710KL')
 part('Q8', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q8_G', 2: 'VCTL', 3: 'ON'},
-     mpn='BSS84AK', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='szyna ON z sumy diodowej')
+     mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='szyna ON z sumy diodowej', lcsc='C127273')
 res('R49', '1M', 'VCTL', 'Q8_G', 'bramka Q8 do źródła; wyłączony EN̄ i tak wisi na VIN przez 900 kΩ w U6', 'RC0805FR-071ML')
 res('R50', '100k', 'Q8_G', 'PWR_ENB', 'EN̄ do bramki Q8: |VGS| = 91% VCTL, około 3 V przy ogniwach 4 V', 'RC0805FR-07100KL')
 zener15('D12', 'VCTL', 'Q8_G', '|VGS| Q8 ≤15 V przy VCTL do około 35 V')
@@ -326,7 +335,7 @@ zener15('D12', 'VCTL', 'Q8_G', '|VGS| Q8 ≤15 V przy VCTL do około 35 V')
 # and up to about 5 uA from the cells while the station is off.
 res('R48', '470k', 'VCTL', 'PWR_KILL', 'KILL wysoki z VCTL, niezależnie od 3V3, szyny ON i MCU', 'RC0805FR-07470KL')
 part('D16', 'Device:D_Zener', 'BZT52C5V1', 'Diode_SMD:D_SOD-123', {1: 'PWR_KILL', 2: 'GND'}, mpn='BZT52C5V1-7-F',
-     manufacturer='Diodes Incorporated', spec='Zener 5,1 V, SOD-123', note='KILL ≤6 V (karta) przy VCTL do około 35 V')
+     manufacturer='Diodes Incorporated', spec='Zener 5,1 V, SOD-123', note='KILL ≤6 V (karta) przy VCTL do około 35 V', lcsc='C151588')
 part('Q11', 'Transistor_FET:2N7002', '2N7002', SOT23, {1: 'KILL_MCU', 2: 'GND', 3: 'PWR_KILL'},
      mpn='2N7002-7-F', manufacturer='Diodes Incorporated', spec='N-MOSFET 60 V, SOT-23',
      note='MCU wyłącza stację; GPIO nie widzi napięcia KILL, więc nie zasila MCU przez diody ochronne')
@@ -336,7 +345,7 @@ res('R72', '100k', 'KILL_MCU', 'GND', 'Q11 wyłączony przy resecie i bez zasila
 # from ON, which follows the 12 V side even when the switch is open. The 0.5 uA RUN hysteresis current
 # times R55 gives 0.11 V, below the RUN threshold, so the converter does switch off.
 part('Q9', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q9_G', 2: 'VSYS', 3: 'RUN'},
-     mpn='BSS84AK', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='RUN przetwornicy z VSYS')
+     mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='RUN przetwornicy z VSYS', lcsc='C127273')
 res('R51', '1M', 'VSYS', 'Q9_G', 'Q9 wyłączony bez sterowania', 'RC0805FR-071ML')
 part('Q10', 'Transistor_FET:2N7002', '2N7002', SOT23, {1: 'Q10_G', 2: 'GND', 3: 'Q9_G'},
      mpn='2N7002-7-F', manufacturer='Diodes Incorporated', spec='N-MOSFET 60 V, SOT-23', note='klucz Q9 z szyny ON')
@@ -357,9 +366,9 @@ part('U7', 'WICI:LTC3115-1', 'LTC3115-1', 'WICI:LTC3115-1_FE20_CA',
       10: 'GND', 11: 'GND', 12: 'CONV_VCC', 13: 'VSYS', 14: 'CONV_VCC', 15: 'CONV_BST2', 16: 'CONV_BST1',
       17: 'VSYS', 18: 'CONV_SW1', 19: 'PWM_SYNC', 20: 'GND', 21: 'GND'},
      mpn='LTC3115EFE-1#PBF', manufacturer='Analog Devices', spec='przetwornica podwyższająco-obniżająca 2,7–40 V, TSSOP-20 EP',
-     note='LCSC C580689 (pula extended); footprint z generatora płytki testowej; czeka na pomiar sprawności (Z11)')
+     note='footprint z generatora płytki testowej; czeka na pomiar sprawności (Z11)', lcsc='C580689')
 part('L2', 'Device:L', '15u', 'WICI:L_Bourns_SRP1038A', {1: 'CONV_SW2', 2: 'CONV_SW1'}, mpn='SRP1038A-150M',
-     manufacturer='Bourns', spec='15 µH, Isat ≥2 A, 40/45 mΩ', note='LCSC C780183')
+     manufacturer='Bourns', spec='15 µH, Isat ≥2 A, 40/45 mΩ', lcsc='C780183')
 for ref in ('C40', 'C41'):
     cap(ref, '10u', 'VSYS', 'GND', 'wejście U7', 'CC1210KKX7R9BB106', manufacturer='Yageo',
         spec='10 µF 50 V X7R 1210', footprint=C1210)
@@ -391,7 +400,7 @@ EXTRAS = [
     ('ekran w J7', 1, 'Sharp', 'LS027B7DH01A', 'panel pamięciowy LCD 2,7 cala, 400 × 240', 'ekranem do góry'),
     ('J8, J9', 1, 'Seeed', '102010611 (Wio z zestawu)', 'moduł Wio SX1262 z listwami 1x7', 'antena przez u.FL i przewód do SMA'),
     ('J5, J6', 1, 'Espressif', 'ESP32-S3-DevKitC-1-N8R8', 'płytka MCU v1.1', 'zasilana przez piny 3V3'),
-    ('F1', 1, 'Schurter', '0001.2504', 'bezpiecznik T1A 5x20 mm', 'wkładany do oprawki F1'),
+    ('F1', 1, 'Schurter', '0001.2504', 'bezpiecznik T1A 5x20 mm', 'wkładany w zaciski F1; drugi: Littelfuse 0477001'),
 ]
 
 FLAGS = ['GND', '+3V3', 'VSYS', 'V12_MID', 'VCTL', '+3V3_RF']
