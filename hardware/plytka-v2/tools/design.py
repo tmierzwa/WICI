@@ -258,7 +258,7 @@ res('R37', '221k', 'V12_SW', 'S12_EN', 'dzielnik UV: włączenie 11,94 V (11,59�
     **precise('221 kΩ', 'RT0805BRD07221KL'))
 res('R38', '10k', 'S12_EN', 'V_12_DIV', 'dzielnik UV i pomiaru 12 V', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
 res('R39', '15k4', 'V_12_DIV', 'GND', 'pomiar 12 V: 0,0625 × V12', **precise('15,4 kΩ', 'RT0805BRD0715K4L'))
-cap('C33', '100n', 'V_12_DIV', 'GND', 'filtr wejścia ADC 12 V', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+cap('C33', '100n', 'V_12_ADC', 'GND', 'filtr wejścia ADC 12 V za R76 (karta ESP32-S3, 5.5: 100 nF przy ADC)', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 # BAV199 instead of BAT54S: <= 80 nA up to 150 C, so leakage moves the ADC 12 V reading by <= 0.02 V (BAT54S:
 # no hot maximum; about 0.7 uA per diode at 60 C typical). Same SOT-23 pins (1 A1, 2 K2, 3 K1/A2). The negative
 # clamp is about -0.6...-0.9 V instead of -0.3 V, at most 0.23 mA with 12 V reversed (to be measured).
@@ -267,13 +267,17 @@ BAV199 = dict(mpn='BAV199,215', manufacturer='Nexperia', spec='podwójna dioda o
               lcsc='C40919')
 part('D6', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_12_DIV'},
      note='ogranicza wejście ADC przy odwrotnym 12 V; upływ nie zmienia pomiaru 12 V', **BAV199)
-# R76/R77 between the filtered divider node and the GPIO: with 12 V or the cells reversed the divider pulls the
-# node down (about 0.14 mA at -33 V, 0.23 mA at the -53.3 V pulse, also with the station off). BAV199 clamps only
-# at -0.6...-0.9 V, so without them the ESP32-S3 protection diodes (about -0.5 V; current not specified) would
-# carry most of it. Through 10 kOhm at most (0.9 - 0.5) V / 10 kOhm = 40 uA reaches the pin. The 100 nF stays on
-# the node, so the ADC samples from it: the sampling charge sees 10 kOhm into a few pF (tens of ns), and pin
-# leakage of tens of nA moves the reading by < 1 mV at the pin.
-res('R76', '10k', 'V_12_DIV', 'V_12_ADC', 'szeregowo do GPIO5: prąd do pinu przy odwrotnym 12 V ≤40 µA',
+# R76/R77 between the divider node (clamped by BAV199) and the ADC side: with 12 V or the cells reversed the
+# divider pulls the node down (0.137 mA at -33 V, 0.224 mA at the -53.3 V pulse through 231 kOhm, also with the
+# station off, through the Q4 body diode; cells -7.2 V: about 0.15 mA through 39 kOhm and the Q6 body diode).
+# BAV199 clamps only at about -0.6...-0.9 V, so without R76/R77 the ESP32-S3 protection diodes (about -0.5 V;
+# current not specified in the data sheet) would carry most of it. Through 10 kOhm at most (0.9 - 0.5) V /
+# 10 kOhm = 40 uA reaches the pin. C33/C34 sit after the resistors, at the ADC side, as in the data sheet ADC
+# characterisation (5.5: 100 nF at the ADC), so sampling draws its charge from 100 nF and not through 10 kOhm.
+# Pin input current <= 50 nA at 25 C (5.4; no hot value) x 10 kOhm = 0.5 mV at the pin. Cells: Q6 switches the divider only for a
+# measurement, and the filter now settles with (7.96 + 10) kOhm x 100 nF = 1.8 ms, so the program waits >= 20 ms
+# after DIV_EN (12 bits need 8.3 tau = 15 ms).
+res('R76', '10k', 'V_12_DIV', 'V_12_ADC', 'szeregowo do GPIO5 (przed C33): prąd do pinu przy odwrotnym 12 V ≤40 µA',
     'RC0805FR-0710KL')
 
 # --- AA cells: 1 Ohm pulse resistor and Schottky diode to VSYS (decision Z7) -------------------------------
@@ -284,6 +288,8 @@ res('R40', '1R', 'BAT_IN', 'BAT_R', 'ogranicza udar przy wkładaniu ogniw do ≤
 # D7 reverse current flows into the primary lithium cells while 12 V runs the station: the Energizer L91 data
 # sheet (EBC-8915AP-D9X) allows 2 uA, acceptance asks <= 1 uA. RB168MM-40 (ROHM "super low IR"): 0.55 uA max
 # at 40 V and 25 C; from the VR-IR curves about 0.02 uA at 25 C, 0.1 uA at 45 C, 0.4 uA at 60 C (15 V, typical).
+# No hot maximum in the data sheet: 0.55 uA (25 C, 40 V) scaled by the curves gives for the worst unit at 15 V
+# about 0.8 uA at 40 C, 1.8 uA at 50 C and 4.1 uA at 60 C, so 2 uA holds to about 50 C (station indoors).
 # Forward drop about 0.43 V at 120 mA (0.5 V at -25 C), IFSM 40 A. A standard 1 A Schottky leaks 20-500 uA
 # at 25 C; a silicon diode (0.8-1 V) would cut the cell runtime below 48 h.
 part('D7', 'Device:D_Schottky', 'RB168MM-40', 'Diode_SMD:D_SOD-123F', {1: 'VSYS', 2: 'BAT_R'},
@@ -299,10 +305,10 @@ res('R43', '100k', 'DIV_EN', 'GND', 'DIV_EN niski do startu MCU; GPIO46 musi by�
     'RC0805FR-07100KL')
 res('R44', '39k', 'VAA_SW', 'V_AA_DIV', 'pomiar ogniw: 7,3 V → 1,49 V (zakres ATTEN2)', **precise('39,0 kΩ', 'RT0805BRD0739KL'))
 res('R45', '10k', 'V_AA_DIV', 'GND', 'pomiar ogniw', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
-cap('C34', '100n', 'V_AA_DIV', 'GND', 'filtr wejścia ADC ogniw', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+cap('C34', '100n', 'V_AA_ADC', 'GND', 'filtr wejścia ADC ogniw za R77 (jak C33)', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 part('D11', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_AA_DIV'},
      note='ogranicza wejście ADC przy ogniwach odwrotnie', **BAV199)
-res('R77', '10k', 'V_AA_DIV', 'V_AA_ADC', 'szeregowo do GPIO4: prąd do pinu przy ogniwach odwrotnie ≤40 µA (jak R76)',
+res('R77', '10k', 'V_AA_DIV', 'V_AA_ADC', 'szeregowo do GPIO4 (przed C34): prąd do pinu przy ogniwach odwrotnie ≤40 µA; pomiar ≥20 ms po DIV_EN',
     'RC0805FR-0710KL')
 
 # --- Power button controller: LTC2955-2 on the diode sum of the cells and 12 V --------------------------

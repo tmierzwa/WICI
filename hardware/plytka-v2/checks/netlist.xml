@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-09T19:11:34</date>
+    <date>2026-11-09T19:15:36</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -5797,22 +5797,22 @@
       <node ref="U7" pin="17" pinfunction="PVIN_17" pintype="power_in"/>
     </net>
     <net code="88" name="/V_12_ADC" class="Default">
+      <node ref="C33" pin="1" pintype="passive"/>
       <node ref="J5" pin="5" pinfunction="Pin_5_5" pintype="passive"/>
       <node ref="R76" pin="2" pintype="passive"/>
     </net>
     <net code="89" name="/V_12_DIV" class="Default">
-      <node ref="C33" pin="1" pintype="passive"/>
       <node ref="D6" pin="3" pinfunction="COM_3" pintype="passive"/>
       <node ref="R38" pin="2" pintype="passive"/>
       <node ref="R39" pin="1" pintype="passive"/>
       <node ref="R76" pin="1" pintype="passive"/>
     </net>
     <net code="90" name="/V_AA_ADC" class="Default">
+      <node ref="C34" pin="1" pintype="passive"/>
       <node ref="J5" pin="4" pinfunction="Pin_4_4" pintype="passive"/>
       <node ref="R77" pin="2" pintype="passive"/>
     </net>
     <net code="91" name="/V_AA_DIV" class="Default">
-      <node ref="C34" pin="1" pintype="passive"/>
       <node ref="D11" pin="3" pinfunction="COM_3" pintype="passive"/>
       <node ref="R44" pin="2" pintype="passive"/>
       <node ref="R45" pin="1" pintype="passive"/>

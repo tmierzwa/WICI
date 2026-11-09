@@ -2597,7 +2597,7 @@
 			(size 1 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "V_12_DIV")
+			(net "V_12_ADC")
 			(uuid "44671697-572d-5525-b3f6-079a05fb1763")
 		)
 		(pad "2" smd roundrect
@@ -2745,7 +2745,7 @@
 			(size 1 1.45)
 			(layers "F.Cu" "F.Mask" "F.Paste")
 			(roundrect_rratio 0.25)
-			(net "V_AA_DIV")
+			(net "V_AA_ADC")
 			(uuid "bd4757eb-022d-5533-b702-8ba6bc0b5be1")
 		)
 		(pad "2" smd roundrect

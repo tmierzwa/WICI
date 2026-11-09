@@ -14916,7 +14916,7 @@
       (width 0)
       (type default))
     (uuid "02fb9268-4512-57ac-b7a6-1b5d70622ba8"))
-  (label "V_12_DIV"
+  (label "V_12_ADC"
     (at 106.68 283.21 90)
     (effects
       (font
@@ -15951,7 +15951,7 @@
       (width 0)
       (type default))
     (uuid "099a0de4-1695-54e8-85c9-292ae136b031"))
-  (label "V_AA_DIV"
+  (label "V_AA_ADC"
     (at 182.88 232.41 90)
     (effects
       (font

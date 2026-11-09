@@ -26,8 +26,8 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BTN_BACK | GPIO2 (J6.5) | WSTECZ | SW4.1, R8.2 |
 | SW_CISZA | GPIO1 (J6.4) | CISZA | R9.2, R16.2 |
 | BTN_PREP | GPIO6 (J5.6) | przygotowanie | SW6.1, R10.2 |
-| V_AA_ADC | GPIO4 (J5.4) | nowy: napięcie ogniw (ADC1) | R77.2 |
-| V_12_ADC | GPIO5 (J5.5) | nowy: napięcie 12 V (ADC1; dawniej VTEST) | R76.2 |
+| V_AA_ADC | GPIO4 (J5.4) | nowy: napięcie ogniw (ADC1) | C34.1, R77.2 |
+| V_12_ADC | GPIO5 (J5.5) | nowy: napięcie 12 V (ADC1; dawniej VTEST) | C33.1, R76.2 |
 | DIV_EN | GPIO46 (J5.14) | nowy: klucz dzielnika ogniw | Q7.1, R43.1 |
 | PWM_SYNC | GPIO45 (J6.15) | nowy: PWM przetwornicy na czas TX | U7.19, R63.1 |
 | PWR_INT | GPIO48 (J6.16) | nowy: INT sterownika przycisku | U6.8, R47.2 |
@@ -127,7 +127,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | VAA_SW | Q6.3, R44.1 |
 | VCTL | D8.1, D9.1, C36.1, U6.6, Q8.2, R49.1, D12.1, R48.1 |
 | VSYS | U5.9, Q3.1, Q3.2, Q3.3, D7.1, Q9.2, R51.1, C50.1, U7.13, U7.17, C40.1, C41.1, C46.1 |
-| V_12_ADC | J5.5, R76.2 |
-| V_12_DIV | R38.2, R39.1, C33.1, D6.3, R76.1 |
-| V_AA_ADC | J5.4, R77.2 |
-| V_AA_DIV | R44.2, R45.1, C34.1, D11.3, R77.1 |
+| V_12_ADC | J5.5, C33.1, R76.2 |
+| V_12_DIV | R38.2, R39.1, D6.3, R76.1 |
+| V_AA_ADC | J5.4, C34.1, R77.2 |
+| V_AA_DIV | R44.2, R45.1, D11.3, R77.1 |
