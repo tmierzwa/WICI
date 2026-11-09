@@ -139,15 +139,28 @@ cap('C12', '100n', '+3V3', 'GND', 'przy nadzorcy U3', 'CL21B104KBCNNNC', spec='1
 cap('C13', '100u', '+3V3', 'GND', 'podtrzymanie +3V3 przez czas reakcji U3 (budżet z v1.1)', 'LMK325ABJ107MM-P',
     manufacturer='Taiyo Yuden', spec='100 µF 10 V X5R 1210', footprint=C1210)
 
-BUTTONS = [('SW1', 'GÓRA', 'BTN_UP'), ('SW2', 'DÓŁ', 'BTN_DOWN'), ('SW3', 'OK', 'BTN_OK'),
-           ('SW4', 'WSTECZ', 'BTN_BACK')]
-for ref, label, net in BUTTONS:
-    part(ref, 'Switch:SW_Push', label, 'Button_Switch_THT:SW_SPST_Omron_B3F-40xx', {1: net, 2: 'GND'},
-         mpn='B3F-4055', manufacturer='Omron', spec='przycisk 12x12 mm, nasadka B32-1310',
-         note='rozmiar i rozstaw przycisków pod obudowę i rękawice: do ustalenia z obudową')
-part('SW5', 'Switch:SW_SPDT', 'CISZA', 'WICI:Toggle_ESwitch_100SP1T1B4M2QE', {1: 'GND', 2: 'SW_COM'},
-     mpn='100SP1T1B4M2QE', manufacturer='E-Switch', spec='przełącznik dźwigienkowy SPDT ON-NONE-ON',
-     note='1-2 = cisza radiowa (SW_CISZA = L)')
+# Panel (front variant 2, 2026-11-09): GÓRA, DÓŁ, OK, WSTECZ are E-Switch PV6 in the front, like the main switch,
+# wired to J10; CISZA is a panel toggle under the GT-4R guard, wired to J11. Every line from a panel wire passes the
+# ESD array U9 at the connector, then 1 kOhm in series and 100 nF at the MCU pin (with the 10 kOhm pull-up:
+# 0.1 ms on press, 1.1 ms on release; pressed the pin sits at 0.3 V).
+BUTTONS = [('GÓRA', 'BTN_UP'), ('DÓŁ', 'BTN_DOWN'), ('OK', 'BTN_OK'), ('WSTECZ', 'BTN_BACK')]
+part('J10', 'Connector_Generic:Conn_01x05', 'PRZYCISKI', 'Connector_JST:JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical',
+     {**{i + 1: net + '_IN' for i, (_, net) in enumerate(BUTTONS)}, 5: 'GND'}, mpn='B5B-XH-A(LF)(SN)',
+     manufacturer='JST', spec='złącze 5-pin, 2,5 mm, THT',
+     note='wiązka do czterech przycisków PV6 w panelu: 1 GÓRA, 2 DÓŁ, 3 OK, 4 WSTECZ, 5 masa wspólna')
+part('J11', 'Connector_Generic:Conn_01x02', 'CISZA', XH2, {1: 'SW_COM', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
+     manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT',
+     note='przewód do przełącznika CISZA w panelu: 1 styk wspólny, 2 styk położenia „cisza” (masa)')
+part('U9', 'Power_Protection:ESDA6V1-5SC6', 'ESDA6V1-5SC6', 'Package_TO_SOT_SMD:SOT-23-6',
+     {1: 'BTN_UP_IN', 2: 'GND', 3: 'BTN_DOWN_IN', 4: 'BTN_OK_IN', 5: 'BTN_BACK_IN', 6: 'SW_COM'},
+     mpn='ESDA6V1-5SC6', manufacturer='STMicroelectronics', spec='ochrona ESD 5 linii, SOT-23-6, IR <1 µA',
+     note='przy J10; linia CISZY z J11 też przez U9; zapasowo TECH PUBLIC ESDA6V1-5SC6 (LCSC C2827672), ten sam układ wyprowadzeń',
+     lcsc='C6650')
+for (label, net), r, c in zip(BUTTONS, ('R80', 'R81', 'R82', 'R83'), ('C60', 'C61', 'C62', 'C63')):
+    res(r, '1k', net + '_IN', net, f'{label}: filtr RC i ograniczenie prądu od ESD', 'RC0805FR-071KL')
+    cap(c, '100n', net, 'GND', f'{label}: filtr RC przy pinie MCU', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+cap('C64', '100n', 'SW_CISZA', 'GND', 'CISZA: filtr RC z R16 przy pinie MCU', 'CL21B104KBCNNNC',
+    spec='100 nF 50 V X7R 0805')
 part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x',
      {1: 'BTN_PREP', 2: 'GND'}, mpn='B3F-1000', manufacturer='Omron', spec='przycisk 6x6 mm',
      note='pod naklejką serwisową')
@@ -445,7 +458,15 @@ for ref in HOLES:
 
 EXTRAS = [
     ('JP3', 1, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'założona w pracy; zdjęta przy pomiarze prądu radia'),
-    ('SW1-SW4', 4, 'Omron', 'B32-1310', 'nasadka przycisku B3F, czarna', ''),
+    ('J10', 4, 'E-Switch', 'PV6F240SS', 'przycisk panelowy GÓRA, DÓŁ, OK, WSTECZ: Ø16 mm, SPST-NO, IP65, bez podświetlenia',
+     'we froncie, przewody do wtyku JST XHP-5'),
+    ('J3', 1, 'E-Switch', 'PV6F240SS', 'wyłącznik główny, panelowy: Ø16 mm, SPST-NO, IP65', 'we froncie, przewody do wtyku XHP-2'),
+    ('J11', 1, 'E-Switch', '100SP1T8B13M1QEH', 'przełącznik CISZA: SPDT ON-ON, tulejka 15/32-32, końcówki lutowane',
+     'we froncie pod osłoną GT-4R, przewody do wtyku XHP-2'),
+    ('J11', 1, 'CW Industries', 'GT-4R', 'osłona przełącznika, czerwona', 'na tulei przełącznika CISZA'),
+    ('J10', 1, 'JST', 'XHP-5', 'obudowa wtyku 5-pin', 'wiązka przycisków'),
+    ('J1, J2, J3, J11', 4, 'JST', 'XHP-2', 'obudowa wtyku 2-pin', 'koszyk, 12 V, wyłącznik, CISZA'),
+    ('J1-J3, J10, J11', 13, 'JST', 'SXH-001T-P0.6', 'styk zaciskany do XHP, 28-22 AWG', ''),
     ('ekran w J7', 1, 'Sharp', 'LS027B7DH01A', 'panel pamięciowy LCD 2,7 cala, 400 × 240', 'ekranem do góry'),
     ('J8, J9', 1, 'Seeed', '102010611 (Wio z zestawu)', 'moduł Wio SX1262 z listwami 1x7', 'antena przez u.FL i przewód do SMA'),
     ('J5, J6', 1, 'Espressif', 'ESP32-S3-DevKitC-1-N8R8', 'płytka MCU v1.1', 'zasilana przez piny 3V3'),

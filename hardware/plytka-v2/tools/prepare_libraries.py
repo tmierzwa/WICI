@@ -3,13 +3,12 @@
 
 usage: prepare_libraries.py   (run with the KiCad Python, it needs pcbnew)
 KiCad library footprints are referenced from the KiCad 10.0.6 installation; nothing is vendored until the
-PCB exists. Own footprints (WICI) are taken from the boards that already define them: the toggle from
-hardware/dev-bench, the LTC3115-1 and SRP1038A land patterns from the JLC test board (hardware/przetwornica-3v3).
+PCB exists. Own footprints (WICI) are taken from the boards that already define them: the LTC3115-1 and SRP1038A land
+patterns from the JLC test board (hardware/przetwornica-3v3).
 """
 import json
 from pathlib import Path
 import re
-import shutil
 import uuid
 
 import pcbnew
@@ -27,7 +26,6 @@ def main():
     cad = ROOT / 'cad'
     wici = cad / 'footprints' / 'WICI.pretty'
     wici.mkdir(parents=True, exist_ok=True)
-    shutil.copy(HW / 'dev-bench/cad/footprints/WICI.pretty/Toggle_ESwitch_100SP1T1B4M2QE.kicad_mod', wici)
     board = pcbnew.LoadBoard(str(HW / 'przetwornica-3v3/cad/przetwornica-3v3.kicad_pcb'))
     for fp in board.GetFootprints():
         name = OWN_FROM_TEST_BOARD.get(fp.GetReference())

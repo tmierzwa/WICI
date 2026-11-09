@@ -794,6 +794,174 @@
               (font
                 (size 1.27 1.27))))))
       (embedded_fonts no))
+    (symbol "Connector_Generic:Conn_01x05"
+      (pin_names
+        (offset 1.016)
+        (hide yes))
+      (exclude_from_sim no)
+      (in_bom yes)
+      (on_board yes)
+      (in_pos_files yes)
+      (duplicate_pin_numbers_are_jumpers no)
+      (property "Reference" "J"
+        (at 0 7.62 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Value" "Conn_01x05"
+        (at 0 -7.62 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Footprint" ""
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Datasheet" ""
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Description" "Generic connector, single row, 01x05, script generated (kicad-library-utils/schlib/autogen/connector/)"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_keywords" "connector"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_fp_filters" "Connector*:*_1x??_*"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (symbol "Conn_01x05_1_1"
+        (rectangle
+          (start -1.27 6.35)
+          (end 1.27 -6.35)
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type background)))
+        (rectangle
+          (start -1.27 5.207)
+          (end 0 4.953)
+          (stroke
+            (width 0.1524)
+            (type default))
+          (fill
+            (type none)))
+        (rectangle
+          (start -1.27 2.667)
+          (end 0 2.413)
+          (stroke
+            (width 0.1524)
+            (type default))
+          (fill
+            (type none)))
+        (rectangle
+          (start -1.27 0.127)
+          (end 0 -0.127)
+          (stroke
+            (width 0.1524)
+            (type default))
+          (fill
+            (type none)))
+        (rectangle
+          (start -1.27 -2.413)
+          (end 0 -2.667)
+          (stroke
+            (width 0.1524)
+            (type default))
+          (fill
+            (type none)))
+        (rectangle
+          (start -1.27 -4.953)
+          (end 0 -5.207)
+          (stroke
+            (width 0.1524)
+            (type default))
+          (fill
+            (type none)))
+        (pin passive line
+          (at -5.08 5.08 0)
+          (length 3.81)
+          (name "Pin_1"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "1"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at -5.08 2.54 0)
+          (length 3.81)
+          (name "Pin_2"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "2"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at -5.08 0 0)
+          (length 3.81)
+          (name "Pin_3"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "3"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at -5.08 -2.54 0)
+          (length 3.81)
+          (name "Pin_4"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "4"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at -5.08 -5.08 0)
+          (length 3.81)
+          (name "Pin_5"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "5"
+            (effects
+              (font
+                (size 1.27 1.27))))))
+      (embedded_fonts no))
     (symbol "Connector_Generic:Conn_01x07"
       (pin_names
         (offset 1.016)
@@ -3603,6 +3771,315 @@
         (effects
           (font
             (size 1.27 1.27)))))
+    (symbol "Power_Protection:ESDA6V1-5SC6"
+      (pin_names
+        (hide yes))
+      (exclude_from_sim no)
+      (in_bom yes)
+      (on_board yes)
+      (in_pos_files yes)
+      (duplicate_pin_numbers_are_jumpers no)
+      (property "Reference" "D"
+        (at -5.08 -3.81 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))
+          (justify right)))
+      (property "Value" "ESDA6V1-5SC6"
+        (at 2.54 -3.81 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (effects
+          (font
+            (size 1.27 1.27))
+          (justify left)))
+      (property "Footprint" "Package_TO_SOT_SMD:SOT-23-6"
+        (at 17.78 -6.35 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Datasheet" "www.st.com/resource/en/datasheet/esda6v1-5sc6.pdf"
+        (at 0 0 90)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "Description" "Quintuple bidirectional transil, Suppressor for ESD protection, 6V1 Breakdown, SOT-23-6"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_keywords" "ESD protection suppression transient"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (property "ki_fp_filters" "SOT?23*"
+        (at 0 0 0)
+        (show_name no)
+        (do_not_autoplace no)
+        (hide yes)
+        (effects
+          (font
+            (size 1.27 1.27))))
+      (symbol "ESDA6V1-5SC6_0_0"
+        (pin passive line
+          (at 0 -5.08 90)
+          (length 2.54)
+          (name "GND"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "2"
+            (effects
+              (font
+                (size 1.27 1.27))))))
+      (symbol "ESDA6V1-5SC6_0_1"
+        (rectangle
+          (start -7.62 2.54)
+          (end 7.62 -2.54)
+          (stroke
+            (width 0.254)
+            (type default))
+          (fill
+            (type background)))
+        (polyline
+          (pts
+            (xy -5.715 0.635)
+            (xy -4.445 0.635)
+            (xy -4.445 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -5.715 -0.635)
+            (xy -4.445 -0.635)
+            (xy -5.08 0.635)
+            (xy -5.715 -0.635))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -5.08 2.54)
+            (xy -5.08 -1.905)
+            (xy 5.08 -1.905)
+            (xy 5.08 2.54))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -3.175 0.635)
+            (xy -1.905 0.635)
+            (xy -1.905 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -3.175 -0.635)
+            (xy -1.905 -0.635)
+            (xy -2.54 0.635)
+            (xy -3.175 -0.635))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -2.54 2.54)
+            (xy -2.54 -1.905))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (circle
+          (center -2.54 -1.905)
+          (radius 0.127)
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -0.635 0.635)
+            (xy 0.635 0.635)
+            (xy 0.635 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy -0.635 -0.635)
+            (xy 0.635 -0.635)
+            (xy 0 0.635)
+            (xy -0.635 -0.635))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 0 2.54)
+            (xy 0 -2.54))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (circle
+          (center 0 -1.905)
+          (radius 0.127)
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 1.905 0.635)
+            (xy 3.175 0.635)
+            (xy 3.175 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 1.905 -0.635)
+            (xy 3.175 -0.635)
+            (xy 2.54 0.635)
+            (xy 1.905 -0.635))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 2.54 2.54)
+            (xy 2.54 -1.905))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (circle
+          (center 2.54 -1.905)
+          (radius 0.127)
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 4.445 0.635)
+            (xy 5.715 0.635)
+            (xy 5.715 0.381))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none)))
+        (polyline
+          (pts
+            (xy 4.445 -0.635)
+            (xy 5.715 -0.635)
+            (xy 5.08 0.635)
+            (xy 4.445 -0.635))
+          (stroke
+            (width 0)
+            (type default))
+          (fill
+            (type none))))
+      (symbol "ESDA6V1-5SC6_1_1"
+        (pin passive line
+          (at -5.08 5.08 270)
+          (length 2.54)
+          (name "IO1"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "1"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at -2.54 5.08 270)
+          (length 2.54)
+          (name "IO2"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "3"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at 0 5.08 270)
+          (length 2.54)
+          (name "IO3"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "4"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at 2.54 5.08 270)
+          (length 2.54)
+          (name "IO4"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "5"
+            (effects
+              (font
+                (size 1.27 1.27)))))
+        (pin passive line
+          (at 5.08 5.08 270)
+          (length 2.54)
+          (name "IO5"
+            (effects
+              (font
+                (size 1.27 1.27))))
+          (number "6"
+            (effects
+              (font
+                (size 1.27 1.27))))))
+      (embedded_fonts no))
     (symbol "Power_Protection:USBLC6-2SC6"
       (pin_names
         (hide yes))
@@ -4205,138 +4682,6 @@
               (font
                 (size 1.27 1.27))))
           (number "2"
-            (effects
-              (font
-                (size 1.27 1.27))))))
-      (embedded_fonts no))
-    (symbol "Switch:SW_SPDT"
-      (pin_names
-        (offset 0)
-        (hide yes))
-      (exclude_from_sim no)
-      (in_bom yes)
-      (on_board yes)
-      (in_pos_files yes)
-      (duplicate_pin_numbers_are_jumpers no)
-      (property "Reference" "SW"
-        (at 0 5.08 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (property "Value" "SW_SPDT"
-        (at 0 -5.08 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (property "Footprint" ""
-        (at 0 0 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (hide yes)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (property "Datasheet" ""
-        (at 0 -7.62 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (hide yes)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (property "Description" "Switch, single pole double throw"
-        (at 0 0 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (hide yes)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (property "ki_keywords" "switch single-pole double-throw spdt ON-ON"
-        (at 0 0 0)
-        (show_name no)
-        (do_not_autoplace no)
-        (hide yes)
-        (effects
-          (font
-            (size 1.27 1.27))))
-      (symbol "SW_SPDT_0_1"
-        (circle
-          (center -2.032 0)
-          (radius 0.4572)
-          (stroke
-            (width 0)
-            (type default))
-          (fill
-            (type none)))
-        (polyline
-          (pts
-            (xy -1.651 0.254)
-            (xy 1.651 2.286))
-          (stroke
-            (width 0)
-            (type default))
-          (fill
-            (type none)))
-        (circle
-          (center 2.032 2.54)
-          (radius 0.4572)
-          (stroke
-            (width 0)
-            (type default))
-          (fill
-            (type none)))
-        (circle
-          (center 2.032 -2.54)
-          (radius 0.4572)
-          (stroke
-            (width 0)
-            (type default))
-          (fill
-            (type none))))
-      (symbol "SW_SPDT_1_1"
-        (rectangle
-          (start -3.175 3.81)
-          (end 3.175 -3.81)
-          (stroke
-            (width 0)
-            (type default))
-          (fill
-            (type background)))
-        (pin passive line
-          (at 5.08 2.54 180)
-          (length 2.54)
-          (name "A"
-            (effects
-              (font
-                (size 1.27 1.27))))
-          (number "1"
-            (effects
-              (font
-                (size 1.27 1.27)))))
-        (pin passive line
-          (at -5.08 0 0)
-          (length 2.54)
-          (name "B"
-            (effects
-              (font
-                (size 1.27 1.27))))
-          (number "2"
-            (effects
-              (font
-                (size 1.27 1.27)))))
-        (pin passive line
-          (at 5.08 -2.54 180)
-          (length 2.54)
-          (name "C"
-            (effects
-              (font
-                (size 1.27 1.27))))
-          (number "3"
             (effects
               (font
                 (size 1.27 1.27))))))
@@ -10172,57 +10517,78 @@
       (justify left))
     (uuid "81155547-d9f0-550d-b7c3-9f9a3364eb1b"))
   (symbol
-    (lib_id "Switch:SW_Push")
-    (at 716.2800000000001 40.64 0)
+    (lib_id "Connector_Generic:Conn_01x05")
+    (at 716.2800000000001 43.18 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
     (on_board yes)
     (dnp no)
-    (uuid "abaf997c-4daa-59b8-b10b-e400218abe59")
-    (property "Reference" "SW1"
+    (uuid "89b773a0-40e7-5533-a4eb-f38af384a837")
+    (property "Reference" "J10"
       (at 716.2800000000001 33.02 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "GÓRA"
+    (property "Value" "PRZYCISKI"
       (at 716.2800000000001 35.56 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "Button_Switch_THT:SW_SPST_Omron_B3F-40xx"
-      (at 716.2800000000001 40.64 0)
+    (property "Footprint" "Connector_JST:JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical"
+      (at 716.2800000000001 43.18 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 40.64 0)
+      (at 716.2800000000001 43.18 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Omron"
-      (at 716.2800000000001 40.64 0)
+    (property "Manufacturer" "JST"
+      (at 716.2800000000001 43.18 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "B3F-4055"
-      (at 716.2800000000001 40.64 0)
+    (property "MPN" "B5B-XH-A(LF)(SN)"
+      (at 716.2800000000001 43.18 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (pin "1"
-      (uuid "658f30db-ecbf-5848-a44c-fa7c32ead49e"))
+      (uuid "1f5bb6f3-8b20-5ede-b3b0-934fbf96bed0"))
     (pin "2"
-      (uuid "62dedd45-e2f4-5b4a-8a1c-597146e874b5"))
+      (uuid "1823e7d7-8750-5226-b547-74387ddd9df0"))
+    (pin "3"
+      (uuid "9039b68f-6e63-5a37-9ba8-0ba48e90cc5c"))
+    (pin "4"
+      (uuid "9e391edf-441e-5fd4-9d14-addeafc7d6a0"))
+    (pin "5"
+      (uuid "21ce2a5c-1aa8-547a-a9ad-fe92f05a07be"))
     (instances
       (project "plytka-v2"
         (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "SW1")
+          (reference "J10")
           (unit 1)))))
+  (wire
+    (pts
+      (xy 711.2 38.1)
+      (xy 706.12 38.1))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "d2df3ed0-6695-5b55-b59a-a42a02dc484f"))
+  (label "BTN_UP_IN"
+    (at 706.12 38.1 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "1e2d4083-48f4-5d29-90df-974f9662e9cf"))
   (wire
     (pts
       (xy 711.2 40.64)
@@ -10230,295 +10596,311 @@
     (stroke
       (width 0)
       (type default))
-    (uuid "be1fd6ef-1451-55b0-af61-f9fb9d2dcc01"))
-  (label "BTN_UP"
+    (uuid "1fdb2771-422d-5fc8-aff4-2b0a667510e2"))
+  (label "BTN_DOWN_IN"
     (at 706.12 40.64 180)
     (effects
       (font
         (size 1.27 1.27))
       (justify right))
-    (uuid "3350deee-e998-5ccb-ac77-38c628ff5ddf"))
+    (uuid "3ca1b857-ab83-52a8-895d-e9892328ccb5"))
   (wire
     (pts
-      (xy 721.36 40.64)
-      (xy 726.44 40.64))
+      (xy 711.2 43.18)
+      (xy 706.12 43.18))
     (stroke
       (width 0)
       (type default))
-    (uuid "7299ff50-ec02-5a18-baf5-bb91256df778"))
-  (label "GND"
-    (at 726.44 40.64 0)
+    (uuid "fa4f1dd8-6eb8-5c23-8548-613d0a6c4528"))
+  (label "BTN_OK_IN"
+    (at 706.12 43.18 180)
     (effects
       (font
         (size 1.27 1.27))
-      (justify left))
-    (uuid "d15c3e7d-6609-53e5-9ab9-fe3d953a4d92"))
+      (justify right))
+    (uuid "51aa1377-f239-5283-b5f4-aec80b2b944a"))
+  (wire
+    (pts
+      (xy 711.2 45.72)
+      (xy 706.12 45.72))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "c9bb077e-e4ba-599e-950b-c56d0f98d457"))
+  (label "BTN_BACK_IN"
+    (at 706.12 45.72 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "33463abe-b42d-5cdc-bcd1-000d6c242662"))
+  (wire
+    (pts
+      (xy 711.2 48.26)
+      (xy 706.12 48.26))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "bdfb7720-a5d3-5b6e-87b3-427a5808d209"))
+  (label "GND"
+    (at 706.12 48.26 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "022b6467-61d4-5654-b615-ee7da8dc66ed"))
   (symbol
-    (lib_id "Switch:SW_Push")
-    (at 716.2800000000001 58.42 0)
+    (lib_id "Connector_Generic:Conn_01x02")
+    (at 716.2800000000001 66.04 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
     (on_board yes)
     (dnp no)
-    (uuid "26bc5e3d-18b0-5a1e-ba77-0fcc02d08133")
-    (property "Reference" "SW2"
-      (at 716.2800000000001 50.8 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Value" "DÓŁ"
-      (at 716.2800000000001 53.34 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Footprint" "Button_Switch_THT:SW_SPST_Omron_B3F-40xx"
+    (uuid "20002c03-c6aa-53cd-98a7-81570c7afaef")
+    (property "Reference" "J11"
       (at 716.2800000000001 58.42 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "CISZA"
+      (at 716.2800000000001 60.96 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical"
+      (at 716.2800000000001 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 58.42 0)
+      (at 716.2800000000001 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Omron"
-      (at 716.2800000000001 58.42 0)
+    (property "Manufacturer" "JST"
+      (at 716.2800000000001 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "B3F-4055"
-      (at 716.2800000000001 58.42 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (pin "1"
-      (uuid "acb851fa-22d4-5460-bae4-cd3d23dca07e"))
-    (pin "2"
-      (uuid "8f1c323c-17ef-52f1-b18d-e3437caa441a"))
-    (instances
-      (project "plytka-v2"
-        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "SW2")
-          (unit 1)))))
-  (wire
-    (pts
-      (xy 711.2 58.42)
-      (xy 706.12 58.42))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "ea883510-a0cb-568b-bdf1-07e1f9dff267"))
-  (label "BTN_DOWN"
-    (at 706.12 58.42 180)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify right))
-    (uuid "3f98e5b7-18c2-512a-bbae-caeffec9aceb"))
-  (wire
-    (pts
-      (xy 721.36 58.42)
-      (xy 726.44 58.42))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "f5f87156-45a9-5f21-9ed8-292468149f24"))
-  (label "GND"
-    (at 726.44 58.42 0)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify left))
-    (uuid "30f3a884-80fc-5432-9db7-64318c38da4e"))
-  (symbol
-    (lib_id "Switch:SW_Push")
-    (at 716.2800000000001 76.2 0)
-    (unit 1)
-    (exclude_from_sim no)
-    (in_bom yes)
-    (on_board yes)
-    (dnp no)
-    (uuid "e3676dea-2faa-5f3a-9b3a-41db5e61f612")
-    (property "Reference" "SW3"
-      (at 716.2800000000001 68.58 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Value" "OK"
-      (at 716.2800000000001 71.12 0)
-      (effects
-        (font
-          (size 1.27 1.27))))
-    (property "Footprint" "Button_Switch_THT:SW_SPST_Omron_B3F-40xx"
-      (at 716.2800000000001 76.2 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "Datasheet" ""
-      (at 716.2800000000001 76.2 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "Manufacturer" "Omron"
-      (at 716.2800000000001 76.2 0)
-      (effects
-        (font
-          (size 1.27 1.27))
-        (hide yes)))
-    (property "MPN" "B3F-4055"
-      (at 716.2800000000001 76.2 0)
+    (property "MPN" "B2B-XH-A(LF)(SN)"
+      (at 716.2800000000001 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (pin "1"
-      (uuid "f3812ea8-7b67-584d-8cec-a5ed93fc7f0d"))
+      (uuid "45aa9f8c-6b37-5d70-b4e4-793d3c49b8b8"))
     (pin "2"
-      (uuid "776703f8-b73b-5842-9bc4-87a60e991d15"))
+      (uuid "10ee7564-edca-561d-a3ad-5a958d24d6d0"))
     (instances
       (project "plytka-v2"
         (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "SW3")
+          (reference "J11")
           (unit 1)))))
   (wire
     (pts
-      (xy 711.2 76.2)
-      (xy 706.12 76.2))
+      (xy 711.2 66.04)
+      (xy 706.12 66.04))
     (stroke
       (width 0)
       (type default))
-    (uuid "26baa490-5cde-56f2-9e6c-1bc4b12316f1"))
-  (label "BTN_OK"
-    (at 706.12 76.2 180)
+    (uuid "84f8c873-d7c8-52e1-8b5f-2e841a683fd9"))
+  (label "SW_COM"
+    (at 706.12 66.04 180)
     (effects
       (font
         (size 1.27 1.27))
       (justify right))
-    (uuid "b22905ce-119e-5257-bff0-c8064168a0ca"))
+    (uuid "113e9454-b269-5577-9d60-d1582b842063"))
   (wire
     (pts
-      (xy 721.36 76.2)
-      (xy 726.44 76.2))
+      (xy 711.2 68.58)
+      (xy 706.12 68.58))
     (stroke
       (width 0)
       (type default))
-    (uuid "77b460e7-e6aa-59c9-9dac-3b832a7dbdd8"))
+    (uuid "ee10ebfb-b5f1-56ab-9e73-4e1b1e7cb969"))
   (label "GND"
-    (at 726.44 76.2 0)
+    (at 706.12 68.58 180)
     (effects
       (font
         (size 1.27 1.27))
-      (justify left))
-    (uuid "fa2e3953-eb20-514d-b68e-45a61fa143e2"))
+      (justify right))
+    (uuid "999b0561-9d8a-597a-a721-3d65fd831cac"))
   (symbol
-    (lib_id "Switch:SW_Push")
-    (at 716.2800000000001 93.98 0)
+    (lib_id "Power_Protection:ESDA6V1-5SC6")
+    (at 716.2800000000001 88.9 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
     (on_board yes)
     (dnp no)
-    (uuid "22419d7a-8962-5717-99db-27365fddc9e1")
-    (property "Reference" "SW4"
-      (at 716.2800000000001 86.36 0)
+    (uuid "7383244e-98b0-536c-bdd7-269950ed7752")
+    (property "Reference" "U9"
+      (at 716.2800000000001 78.74 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "WSTECZ"
+    (property "Value" "ESDA6V1-5SC6"
+      (at 716.2800000000001 81.28 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Package_TO_SOT_SMD:SOT-23-6"
       (at 716.2800000000001 88.9 0)
       (effects
         (font
-          (size 1.27 1.27))))
-    (property "Footprint" "Button_Switch_THT:SW_SPST_Omron_B3F-40xx"
-      (at 716.2800000000001 93.98 0)
-      (effects
-        (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 93.98 0)
+      (at 716.2800000000001 88.9 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Omron"
-      (at 716.2800000000001 93.98 0)
+    (property "Manufacturer" "STMicroelectronics"
+      (at 716.2800000000001 88.9 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "B3F-4055"
-      (at 716.2800000000001 93.98 0)
+    (property "MPN" "ESDA6V1-5SC6"
+      (at 716.2800000000001 88.9 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (pin "1"
-      (uuid "09917f76-1442-53bb-8f1d-4c7265b9336a"))
+      (uuid "27a1b9d7-8f48-5cd3-85aa-682d7dc60a90"))
     (pin "2"
-      (uuid "4d215c98-2f63-516a-acd8-3fc6291bb64f"))
+      (uuid "bfda69ed-ee7f-5c60-acd2-90bdc5f237c6"))
+    (pin "3"
+      (uuid "592c26f9-7081-5aff-8b55-8cc56ac6f519"))
+    (pin "4"
+      (uuid "258668d8-66b8-531f-a648-802308f2845f"))
+    (pin "5"
+      (uuid "ff7e74f3-19f6-5b97-ad09-79edac713074"))
+    (pin "6"
+      (uuid "0b3c1e75-ff02-5349-8c0b-580e64268fbe"))
     (instances
       (project "plytka-v2"
         (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "SW4")
+          (reference "U9")
           (unit 1)))))
   (wire
     (pts
-      (xy 711.2 93.98)
-      (xy 706.12 93.98))
+      (xy 716.28 93.98)
+      (xy 716.28 99.06))
     (stroke
       (width 0)
       (type default))
-    (uuid "b7a4d096-1240-5c5c-accf-790c43f98ddf"))
-  (label "BTN_BACK"
-    (at 706.12 93.98 180)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify right))
-    (uuid "be2854c7-b9d0-5720-b2ba-32f616ac05ff"))
-  (wire
-    (pts
-      (xy 721.36 93.98)
-      (xy 726.44 93.98))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "a69e34f4-2b60-55f1-af02-1d9d38b45636"))
+    (uuid "98aab91d-310a-50ab-af78-c44bb52bbc1e"))
   (label "GND"
-    (at 726.44 93.98 0)
+    (at 716.28 99.06 270)
     (effects
       (font
         (size 1.27 1.27))
       (justify left))
-    (uuid "0376f298-09ae-51fd-baf4-d57fe6067102"))
+    (uuid "52e67846-926c-545d-bed6-00edf77fbb1a"))
+  (wire
+    (pts
+      (xy 711.2 83.82)
+      (xy 711.2 78.74))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "5d00c0e6-3bb6-5dd2-bcfb-3a81372f9c21"))
+  (label "BTN_UP_IN"
+    (at 711.2 78.74 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "5450a2b1-164a-553f-893c-4358633da6dd"))
+  (wire
+    (pts
+      (xy 713.74 83.82)
+      (xy 713.74 78.74))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "82b6e831-3963-5fd4-bbea-46456b9d2a6d"))
+  (label "BTN_DOWN_IN"
+    (at 713.74 78.74 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "cdd6e615-ed81-581b-ac57-4a0dcc63443c"))
+  (wire
+    (pts
+      (xy 716.28 83.82)
+      (xy 716.28 78.74))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "207d9eb0-50a0-5bc4-b943-3614914de54e"))
+  (label "BTN_OK_IN"
+    (at 716.28 78.74 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "cfa8b684-9b44-5e83-bad1-6e2e2f69d0df"))
+  (wire
+    (pts
+      (xy 718.82 83.82)
+      (xy 718.82 78.74))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "78b9f441-6bec-54c3-916c-986bbb0e8f0c"))
+  (label "BTN_BACK_IN"
+    (at 718.82 78.74 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "7302101f-69ff-5d41-8b5f-36deb7b6ecbd"))
+  (wire
+    (pts
+      (xy 721.36 83.82)
+      (xy 721.36 78.74))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "b9719935-6f13-556b-a4cb-2f0a7bd1d83c"))
+  (label "SW_COM"
+    (at 721.36 78.74 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "ffc47c87-825f-5ef2-b542-4461f132eca3"))
   (symbol
-    (lib_id "Switch:SW_SPDT")
+    (lib_id "Device:R")
     (at 716.2800000000001 111.76 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
     (on_board yes)
     (dnp no)
-    (uuid "a7c56f11-db68-5cc7-92d3-edd3a26b75b0")
-    (property "Reference" "SW5"
-      (at 716.2800000000001 104.14 0)
+    (uuid "60f07272-9ec5-5527-b843-ae76825361e0")
+    (property "Reference" "R80"
+      (at 716.2800000000001 102.87 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "CISZA"
-      (at 716.2800000000001 106.68 0)
+    (property "Value" "1k"
+      (at 716.2800000000001 105.41 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "WICI:Toggle_ESwitch_100SP1T1B4M2QE"
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
       (at 716.2800000000001 111.76 0)
       (effects
         (font
@@ -10530,65 +10912,716 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "E-Switch"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 111.76 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "100SP1T1B4M2QE"
+    (property "MPN" "RC0805FR-071KL"
       (at 716.2800000000001 111.76 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (pin "1"
-      (uuid "41f25980-c442-555a-b916-e86dd3be2b84"))
+      (uuid "c5325e0b-442f-57b4-b1d9-474f272106e9"))
     (pin "2"
-      (uuid "8dd8d361-be72-5c26-8f89-8e78203c91e9"))
-    (pin "3"
-      (uuid "b53d1d17-737c-521e-866c-f08ee4c7f93b"))
+      (uuid "0daf78e3-7f6f-59d8-8314-005bc6887805"))
     (instances
       (project "plytka-v2"
         (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
-          (reference "SW5")
+          (reference "R80")
           (unit 1)))))
   (wire
     (pts
-      (xy 721.36 109.22)
-      (xy 726.44 109.22))
+      (xy 716.28 107.95)
+      (xy 716.28 102.87))
     (stroke
       (width 0)
       (type default))
-    (uuid "76eec512-0e51-5949-ae14-cc5441977bd4"))
-  (label "GND"
-    (at 726.44 109.22 0)
-    (effects
-      (font
-        (size 1.27 1.27))
-      (justify left))
-    (uuid "b8870322-fdb9-5abb-9e64-0f23cf5a8215"))
-  (wire
-    (pts
-      (xy 711.2 111.76)
-      (xy 706.12 111.76))
-    (stroke
-      (width 0)
-      (type default))
-    (uuid "02753516-4b53-52c2-b68e-5a83635c2640"))
-  (label "SW_COM"
-    (at 706.12 111.76 180)
+    (uuid "3c84a7a0-909a-518f-9166-6b91a21c4d34"))
+  (label "BTN_UP_IN"
+    (at 716.28 102.87 90)
     (effects
       (font
         (size 1.27 1.27))
       (justify right))
-    (uuid "89040ef8-cc50-55b3-ade4-95068a980dab"))
-  (no_connect
-    (at 721.36 114.3)
-    (uuid "60210f6c-5c73-55d7-a359-5cf38e7125a6"))
+    (uuid "ab566bb1-d3b5-5e76-9348-35158adc6961"))
+  (wire
+    (pts
+      (xy 716.28 115.57)
+      (xy 716.28 120.65))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "36c0e0d2-81eb-5107-a6f5-777c2ccd1cc0"))
+  (label "BTN_UP"
+    (at 716.28 120.65 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "01fb9ff4-27fa-54b5-bdf8-e68086fb5c4e"))
+  (symbol
+    (lib_id "Device:C")
+    (at 716.2800000000001 203.2 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "85289190-9dd5-52ce-85ea-f0bc1c37b3e7")
+    (property "Reference" "C60"
+      (at 716.2800000000001 194.31 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 716.2800000000001 196.85 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 716.2800000000001 203.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 203.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 716.2800000000001 203.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KBCNNNC"
+      (at 716.2800000000001 203.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "e816c975-c634-5517-80ab-739bb1c80c8b"))
+    (pin "2"
+      (uuid "8b21121e-7d76-56d3-85f9-dbb4a3445119"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C60")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 199.39)
+      (xy 716.28 194.31))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "d39c75ae-32f4-57b7-a7d2-d0d5c374af54"))
+  (label "BTN_UP"
+    (at 716.28 194.31 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "3dad8c45-e8d1-53dc-a707-8a4447d780b4"))
+  (wire
+    (pts
+      (xy 716.28 207.01)
+      (xy 716.28 212.09))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "1c3094de-5523-51b3-8206-d514072f8c1c"))
+  (label "GND"
+    (at 716.28 212.09 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "3acc7b94-a261-531c-86bb-2f0f7fdc83fb"))
+  (symbol
+    (lib_id "Device:R")
+    (at 716.2800000000001 134.62 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "6172a901-60fc-5b16-b031-dccc1eed1f56")
+    (property "Reference" "R81"
+      (at 716.2800000000001 125.73 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "1k"
+      (at 716.2800000000001 128.27 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 716.2800000000001 134.62 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 134.62 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 716.2800000000001 134.62 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-071KL"
+      (at 716.2800000000001 134.62 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "0ab1aa97-9e87-5a21-a769-024451978cd7"))
+    (pin "2"
+      (uuid "04e75d64-e476-5b34-9186-a6821575c6de"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R81")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 130.81)
+      (xy 716.28 125.73))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "daf4dc82-f64e-5d3f-82ba-48d52d4b7501"))
+  (label "BTN_DOWN_IN"
+    (at 716.28 125.73 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "6a7cc492-101f-533a-bf0f-94e453b11354"))
+  (wire
+    (pts
+      (xy 716.28 138.43)
+      (xy 716.28 143.51))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "b66af2df-d858-5793-8268-e35921ab31e8"))
+  (label "BTN_DOWN"
+    (at 716.28 143.51 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "b40ea1e4-aab0-5562-bda5-c6112c5967f9"))
+  (symbol
+    (lib_id "Device:C")
+    (at 716.2800000000001 226.06 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "057e6ec5-43b2-5881-87d5-a45ca4e16f80")
+    (property "Reference" "C61"
+      (at 716.2800000000001 217.17 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 716.2800000000001 219.71 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 716.2800000000001 226.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 226.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 716.2800000000001 226.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KBCNNNC"
+      (at 716.2800000000001 226.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "675e9ad1-dd26-500c-8365-532f73c0e165"))
+    (pin "2"
+      (uuid "57f7f79d-4f96-5295-ab8b-994f9cd2c0c4"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C61")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 222.25)
+      (xy 716.28 217.17))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "ffbf76df-94ad-53a4-bfd3-ba2b48903590"))
+  (label "BTN_DOWN"
+    (at 716.28 217.17 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "d10432f5-a9f9-52d6-9afb-7a2354ffdf0a"))
+  (wire
+    (pts
+      (xy 716.28 229.87)
+      (xy 716.28 234.95))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "9cf19fc5-ce15-5374-8947-adef1972005e"))
+  (label "GND"
+    (at 716.28 234.95 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "c0e07473-f9cd-5522-bae8-b098554ecc6d"))
+  (symbol
+    (lib_id "Device:R")
+    (at 716.2800000000001 157.48 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "d8dde6a8-9541-56ad-91e5-84280d123302")
+    (property "Reference" "R82"
+      (at 716.2800000000001 148.59 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "1k"
+      (at 716.2800000000001 151.13 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 716.2800000000001 157.48 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 157.48 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 716.2800000000001 157.48 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-071KL"
+      (at 716.2800000000001 157.48 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "2c0e9713-784d-5ef7-9e8d-c12d28c93fd8"))
+    (pin "2"
+      (uuid "1df8a7fb-8d7f-549a-ab21-f62b902dc48d"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R82")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 153.67)
+      (xy 716.28 148.59))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "5ac6dfe9-0df4-5003-8ea8-be2ecc7fc7ad"))
+  (label "BTN_OK_IN"
+    (at 716.28 148.59 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "4a7bc0fb-1c48-542b-91ba-52458bba7059"))
+  (wire
+    (pts
+      (xy 716.28 161.29)
+      (xy 716.28 166.37))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "070a45f8-a632-5802-b138-b4364635013c"))
+  (label "BTN_OK"
+    (at 716.28 166.37 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "2febb277-4264-5241-962a-90ab4deadd28"))
+  (symbol
+    (lib_id "Device:C")
+    (at 716.2800000000001 248.92000000000002 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "695340c6-45db-5246-983b-d31a48b6299c")
+    (property "Reference" "C62"
+      (at 716.2800000000001 240.03 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 716.2800000000001 242.57 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 716.2800000000001 248.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 248.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 716.2800000000001 248.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KBCNNNC"
+      (at 716.2800000000001 248.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "8fefa39f-8f05-5333-9fea-da924353d635"))
+    (pin "2"
+      (uuid "0d84746e-0c77-5140-980d-e7cfc7e67b29"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C62")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 245.11)
+      (xy 716.28 240.03))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "40e7d664-66a2-5d52-be44-bb9cf825a523"))
+  (label "BTN_OK"
+    (at 716.28 240.03 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "365d28a2-676a-5f0f-935a-8747a261b53e"))
+  (wire
+    (pts
+      (xy 716.28 252.73)
+      (xy 716.28 257.81))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "5dd38036-0554-53ce-ba8d-f5128e12fdbd"))
+  (label "GND"
+    (at 716.28 257.81 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "d87510d5-f9de-5761-9786-887f40a7e5a4"))
+  (symbol
+    (lib_id "Device:R")
+    (at 716.2800000000001 180.34 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "f8b88d3d-aafc-557b-b578-74893a4e8843")
+    (property "Reference" "R83"
+      (at 716.2800000000001 171.45 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "1k"
+      (at 716.2800000000001 173.99 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 716.2800000000001 180.34 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 180.34 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 716.2800000000001 180.34 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-071KL"
+      (at 716.2800000000001 180.34 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "8ffd8220-8d65-5d5a-b68c-495b5e5021be"))
+    (pin "2"
+      (uuid "6d126a21-8f54-5267-ab97-05861254429b"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R83")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 176.53)
+      (xy 716.28 171.45))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "c9c8a41e-9b32-5849-9a4f-25291b377e92"))
+  (label "BTN_BACK_IN"
+    (at 716.28 171.45 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "eac39bba-8fd2-5c76-a2dc-649557ee0c5d"))
+  (wire
+    (pts
+      (xy 716.28 184.15)
+      (xy 716.28 189.23))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "a90230c8-5489-5382-ac16-a04ad4681ecb"))
+  (label "BTN_BACK"
+    (at 716.28 189.23 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "af54c382-d660-5f86-b0c6-91916f161b33"))
+  (symbol
+    (lib_id "Device:C")
+    (at 716.2800000000001 271.78000000000003 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "f7d5cc3f-1b23-500d-a2e8-5ede65c216a1")
+    (property "Reference" "C63"
+      (at 716.2800000000001 262.89 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 716.2800000000001 265.43 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 716.2800000000001 271.78 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 271.78 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 716.2800000000001 271.78 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KBCNNNC"
+      (at 716.2800000000001 271.78 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "d09be898-8642-593f-bdcf-456e485dab7f"))
+    (pin "2"
+      (uuid "c5ba85de-d893-5f02-8439-55dc6df13c67"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C63")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 267.97)
+      (xy 716.28 262.89))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "3111c831-f5f6-5dbb-835a-2590917da95c"))
+  (label "BTN_BACK"
+    (at 716.28 262.89 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "97f3766c-2258-58e3-8724-9f2d961606c5"))
+  (wire
+    (pts
+      (xy 716.28 275.59)
+      (xy 716.28 280.67))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "a9099c1d-c575-5491-a031-3027b14fed42"))
+  (label "GND"
+    (at 716.28 280.67 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "2c01c839-b7fa-5dd7-8ae5-dbe703362a4c"))
+  (symbol
+    (lib_id "Device:C")
+    (at 716.2800000000001 294.64 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "c7e7ca79-5db3-54d5-beb5-a352bc0da61c")
+    (property "Reference" "C64"
+      (at 716.2800000000001 285.75 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 716.2800000000001 288.29 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 716.2800000000001 294.64 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 716.2800000000001 294.64 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 716.2800000000001 294.64 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KBCNNNC"
+      (at 716.2800000000001 294.64 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "f482c3da-3def-5486-86eb-6ad8bdc86c5c"))
+    (pin "2"
+      (uuid "84fbc06d-c373-5423-9424-2a5b5e593239"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C64")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 716.28 290.83)
+      (xy 716.28 285.75))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "bc360453-20ce-5027-81f7-1d67e616ce2a"))
+  (label "SW_CISZA"
+    (at 716.28 285.75 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "633e7f59-adda-5cb0-b3c3-c6468b5d29c4"))
+  (wire
+    (pts
+      (xy 716.28 298.45)
+      (xy 716.28 303.53))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "ccd629f8-fed4-53ed-8a7e-6dc9aaff0fe3"))
+  (label "GND"
+    (at 716.28 303.53 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "eb43447b-7165-5969-972d-b856e16a2740"))
   (symbol
     (lib_id "Switch:SW_Push")
-    (at 716.2800000000001 132.08 0)
+    (at 716.2800000000001 314.96 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10596,35 +11629,35 @@
     (dnp no)
     (uuid "6c5aef1c-f4db-5075-96df-2d094308b39f")
     (property "Reference" "SW6"
-      (at 716.2800000000001 124.46 0)
+      (at 716.2800000000001 307.34 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "PRZYGOTOWANIE"
-      (at 716.2800000000001 127.0 0)
+      (at 716.2800000000001 309.88 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x"
-      (at 716.2800000000001 132.08 0)
+      (at 716.2800000000001 314.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 132.08 0)
+      (at 716.2800000000001 314.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Omron"
-      (at 716.2800000000001 132.08 0)
+      (at 716.2800000000001 314.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "B3F-1000"
-      (at 716.2800000000001 132.08 0)
+      (at 716.2800000000001 314.96 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10640,14 +11673,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 711.2 132.08)
-      (xy 706.12 132.08))
+      (xy 711.2 314.96)
+      (xy 706.12 314.96))
     (stroke
       (width 0)
       (type default))
     (uuid "382e9527-11ca-5cfe-9acd-9941ba69c8b5"))
   (label "BTN_PREP"
-    (at 706.12 132.08 180)
+    (at 706.12 314.96 180)
     (effects
       (font
         (size 1.27 1.27))
@@ -10655,14 +11688,14 @@
     (uuid "60c9923f-c1c5-502d-926a-81127d3f9734"))
   (wire
     (pts
-      (xy 721.36 132.08)
-      (xy 726.44 132.08))
+      (xy 721.36 314.96)
+      (xy 726.44 314.96))
     (stroke
       (width 0)
       (type default))
     (uuid "8506a0ad-56ef-5962-b207-1c4825ef2276"))
   (label "GND"
-    (at 726.44 132.08 0)
+    (at 726.44 314.96 0)
     (effects
       (font
         (size 1.27 1.27))
@@ -10670,7 +11703,7 @@
     (uuid "57dd5bab-43bd-503e-a8cf-6ee662264650"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 152.4 0)
+    (at 716.2800000000001 335.28000000000003 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10678,35 +11711,35 @@
     (dnp no)
     (uuid "adcfae24-5728-5983-bc86-676a9ddccdcd")
     (property "Reference" "R5"
-      (at 716.2800000000001 143.51 0)
+      (at 716.2800000000001 326.39 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 146.05 0)
+      (at 716.2800000000001 328.93 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 152.4 0)
+      (at 716.2800000000001 335.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 152.4 0)
+      (at 716.2800000000001 335.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 152.4 0)
+      (at 716.2800000000001 335.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 152.4 0)
+      (at 716.2800000000001 335.28 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10722,14 +11755,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 148.59)
-      (xy 716.28 143.51))
+      (xy 716.28 331.47)
+      (xy 716.28 326.39))
     (stroke
       (width 0)
       (type default))
     (uuid "b0fab0d6-0bc7-54d1-b59a-280a56c12331"))
   (label "+3V3"
-    (at 716.28 143.51 90)
+    (at 716.28 326.39 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10737,14 +11770,14 @@
     (uuid "48b0cf61-1d18-5a4e-8c62-d7e38c89930f"))
   (wire
     (pts
-      (xy 716.28 156.21)
-      (xy 716.28 161.29))
+      (xy 716.28 339.09)
+      (xy 716.28 344.17))
     (stroke
       (width 0)
       (type default))
     (uuid "d9d55ec2-2da3-539c-a229-081a5e038844"))
   (label "BTN_UP"
-    (at 716.28 161.29 270)
+    (at 716.28 344.17 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10752,7 +11785,7 @@
     (uuid "3a431c20-edb8-53f0-a888-dd2d0aed6d77"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 175.26 0)
+    (at 716.2800000000001 358.14 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10760,35 +11793,35 @@
     (dnp no)
     (uuid "2fb98518-ba51-51ef-8db0-2ee806ab9b11")
     (property "Reference" "R6"
-      (at 716.2800000000001 166.37 0)
+      (at 716.2800000000001 349.25 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 168.91 0)
+      (at 716.2800000000001 351.79 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 175.26 0)
+      (at 716.2800000000001 358.14 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 175.26 0)
+      (at 716.2800000000001 358.14 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 175.26 0)
+      (at 716.2800000000001 358.14 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 175.26 0)
+      (at 716.2800000000001 358.14 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10804,14 +11837,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 171.45)
-      (xy 716.28 166.37))
+      (xy 716.28 354.33)
+      (xy 716.28 349.25))
     (stroke
       (width 0)
       (type default))
     (uuid "2f1efeeb-de52-5927-8327-d3ce6a66fe18"))
   (label "+3V3"
-    (at 716.28 166.37 90)
+    (at 716.28 349.25 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10819,14 +11852,14 @@
     (uuid "c7cbe96d-a2ba-5d7f-aa47-2fa373681ca2"))
   (wire
     (pts
-      (xy 716.28 179.07)
-      (xy 716.28 184.15))
+      (xy 716.28 361.95)
+      (xy 716.28 367.03))
     (stroke
       (width 0)
       (type default))
     (uuid "257f7322-b104-5644-9391-721cb58e56f2"))
   (label "BTN_DOWN"
-    (at 716.28 184.15 270)
+    (at 716.28 367.03 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10834,7 +11867,7 @@
     (uuid "6d9d7b7e-b3e5-56e5-be40-ff44250179a0"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 198.12 0)
+    (at 716.2800000000001 381.0 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10842,35 +11875,35 @@
     (dnp no)
     (uuid "75f7d3e7-d316-5633-8399-a0c2a3e35dd6")
     (property "Reference" "R7"
-      (at 716.2800000000001 189.23 0)
+      (at 716.2800000000001 372.11 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 191.77 0)
+      (at 716.2800000000001 374.65 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 198.12 0)
+      (at 716.2800000000001 381.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 198.12 0)
+      (at 716.2800000000001 381.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 198.12 0)
+      (at 716.2800000000001 381.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 198.12 0)
+      (at 716.2800000000001 381.0 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10886,14 +11919,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 194.31)
-      (xy 716.28 189.23))
+      (xy 716.28 377.19)
+      (xy 716.28 372.11))
     (stroke
       (width 0)
       (type default))
     (uuid "9e262c4c-84a2-5676-8c37-ca31fb93e042"))
   (label "+3V3"
-    (at 716.28 189.23 90)
+    (at 716.28 372.11 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10901,14 +11934,14 @@
     (uuid "827377b9-e67d-52b9-a819-02c9b89d4fdb"))
   (wire
     (pts
-      (xy 716.28 201.93)
-      (xy 716.28 207.01))
+      (xy 716.28 384.81)
+      (xy 716.28 389.89))
     (stroke
       (width 0)
       (type default))
     (uuid "3e53f350-6cda-5b3d-a018-0adbf016e5af"))
   (label "BTN_OK"
-    (at 716.28 207.01 270)
+    (at 716.28 389.89 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10916,7 +11949,7 @@
     (uuid "9c305ded-2caa-56a8-8204-4741fcc06d4c"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 220.98 0)
+    (at 716.2800000000001 403.86 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -10924,35 +11957,35 @@
     (dnp no)
     (uuid "35952ee0-f9e3-5e48-9b52-d0973fbe7ca2")
     (property "Reference" "R8"
-      (at 716.2800000000001 212.09 0)
+      (at 716.2800000000001 394.97 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 214.63 0)
+      (at 716.2800000000001 397.51 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 220.98 0)
+      (at 716.2800000000001 403.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 220.98 0)
+      (at 716.2800000000001 403.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 220.98 0)
+      (at 716.2800000000001 403.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 220.98 0)
+      (at 716.2800000000001 403.86 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -10968,14 +12001,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 217.17)
-      (xy 716.28 212.09))
+      (xy 716.28 400.05)
+      (xy 716.28 394.97))
     (stroke
       (width 0)
       (type default))
     (uuid "1698d3b3-0769-560d-aeb8-a61842557e51"))
   (label "+3V3"
-    (at 716.28 212.09 90)
+    (at 716.28 394.97 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -10983,14 +12016,14 @@
     (uuid "394ad33a-468a-54cc-b78b-ea809aeae5ca"))
   (wire
     (pts
-      (xy 716.28 224.79)
-      (xy 716.28 229.87))
+      (xy 716.28 407.67)
+      (xy 716.28 412.75))
     (stroke
       (width 0)
       (type default))
     (uuid "dba24086-2e40-52d2-882e-7ea10f361339"))
   (label "BTN_BACK"
-    (at 716.28 229.87 270)
+    (at 716.28 412.75 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -10998,7 +12031,7 @@
     (uuid "b061e499-406d-5bbc-8d53-478be16fdd1e"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 243.84 0)
+    (at 716.2800000000001 426.72 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -11006,35 +12039,35 @@
     (dnp no)
     (uuid "9988feb0-0b51-5fbd-9825-3cdcc0fb6750")
     (property "Reference" "R9"
-      (at 716.2800000000001 234.95 0)
+      (at 716.2800000000001 417.83 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 237.49 0)
+      (at 716.2800000000001 420.37 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 243.84 0)
+      (at 716.2800000000001 426.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 243.84 0)
+      (at 716.2800000000001 426.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 243.84 0)
+      (at 716.2800000000001 426.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 243.84 0)
+      (at 716.2800000000001 426.72 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -11050,14 +12083,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 240.03)
-      (xy 716.28 234.95))
+      (xy 716.28 422.91)
+      (xy 716.28 417.83))
     (stroke
       (width 0)
       (type default))
     (uuid "8685c7e0-3119-5336-88fb-d6d25f42ab86"))
   (label "+3V3"
-    (at 716.28 234.95 90)
+    (at 716.28 417.83 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -11065,14 +12098,14 @@
     (uuid "df86f086-858c-5b19-b626-e7188255a6ac"))
   (wire
     (pts
-      (xy 716.28 247.65)
-      (xy 716.28 252.73))
+      (xy 716.28 430.53)
+      (xy 716.28 435.61))
     (stroke
       (width 0)
       (type default))
     (uuid "a1d1b5b4-b656-576b-aa83-19710206e481"))
   (label "SW_CISZA"
-    (at 716.28 252.73 270)
+    (at 716.28 435.61 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -11080,7 +12113,7 @@
     (uuid "bd9a41b8-1902-5e3a-99c2-36ea8c3a9a59"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 266.7 0)
+    (at 716.2800000000001 449.58 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -11088,35 +12121,35 @@
     (dnp no)
     (uuid "3c2e756a-5b55-5d37-a7c1-b73cf0e877ca")
     (property "Reference" "R10"
-      (at 716.2800000000001 257.81 0)
+      (at 716.2800000000001 440.69 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "10k"
-      (at 716.2800000000001 260.35 0)
+      (at 716.2800000000001 443.23 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 266.7 0)
+      (at 716.2800000000001 449.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 266.7 0)
+      (at 716.2800000000001 449.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 266.7 0)
+      (at 716.2800000000001 449.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-0710KL"
-      (at 716.2800000000001 266.7 0)
+      (at 716.2800000000001 449.58 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -11132,14 +12165,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 262.89)
-      (xy 716.28 257.81))
+      (xy 716.28 445.77)
+      (xy 716.28 440.69))
     (stroke
       (width 0)
       (type default))
     (uuid "46e9448d-067f-5473-bf94-2a56e64bb26e"))
   (label "+3V3"
-    (at 716.28 257.81 90)
+    (at 716.28 440.69 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -11147,14 +12180,14 @@
     (uuid "62a294a3-7cb3-58ae-a78b-44815ee28055"))
   (wire
     (pts
-      (xy 716.28 270.51)
-      (xy 716.28 275.59))
+      (xy 716.28 453.39)
+      (xy 716.28 458.47))
     (stroke
       (width 0)
       (type default))
     (uuid "4e4db35d-4f50-5400-8568-d34a651b6375"))
   (label "BTN_PREP"
-    (at 716.28 275.59 270)
+    (at 716.28 458.47 270)
     (effects
       (font
         (size 1.27 1.27))
@@ -11162,7 +12195,7 @@
     (uuid "52222a7d-3c51-5e9f-813f-b184ea8a3259"))
   (symbol
     (lib_id "Device:R")
-    (at 716.2800000000001 289.56 0)
+    (at 716.2800000000001 472.44 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -11170,35 +12203,35 @@
     (dnp no)
     (uuid "83b89455-6b8c-5569-a5fe-4910d65e8a3f")
     (property "Reference" "R16"
-      (at 716.2800000000001 280.67 0)
+      (at 716.2800000000001 463.55 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "1k"
-      (at 716.2800000000001 283.21 0)
+      (at 716.2800000000001 466.09 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
-      (at 716.2800000000001 289.56 0)
+      (at 716.2800000000001 472.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 716.2800000000001 289.56 0)
+      (at 716.2800000000001 472.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" "Yageo"
-      (at 716.2800000000001 289.56 0)
+      (at 716.2800000000001 472.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" "RC0805FR-071KL"
-      (at 716.2800000000001 289.56 0)
+      (at 716.2800000000001 472.44 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -11214,14 +12247,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 716.28 285.75)
-      (xy 716.28 280.67))
+      (xy 716.28 468.63)
+      (xy 716.28 463.55))
     (stroke
       (width 0)
       (type default))
     (uuid "d1fddc4c-5763-529a-82fb-a19aa6c7f1c8"))
   (label "SW_COM"
-    (at 716.28 280.67 90)
+    (at 716.28 463.55 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -11229,14 +12262,14 @@
     (uuid "1a5c9d2e-563d-5299-ba8b-e5bcdb4bbd7d"))
   (wire
     (pts
-      (xy 716.28 293.37)
-      (xy 716.28 298.45))
+      (xy 716.28 476.25)
+      (xy 716.28 481.33))
     (stroke
       (width 0)
       (type default))
     (uuid "f38e5458-57e1-5353-aff0-0b30b2d3a9f4"))
   (label "SW_CISZA"
-    (at 716.28 298.45 270)
+    (at 716.28 481.33 270)
     (effects
       (font
         (size 1.27 1.27))

@@ -133,18 +133,18 @@ rrect(164, 11, 42, 118, 3); g.fillStyle = ZONE; g.fill();
 // display window frame
 const [ww, wh] = U.display.window, [wcx, wcy] = U.display.window_center;
 rrect(wcx - ww / 2 - 3.5, wcy - wh / 2 - 3.5, ww + 7, wh + 7, 2.5); g.fillStyle = INK; g.fill();
-text("OK = TAK      WSTECZ = NIE", wcx, wcy + wh / 2 + 10, 3.2, 700, "#3b3f45");
+text("OK = TAK      WSTECZ = NIE", ...U.foil.hint, 3.2, 700, "#3b3f45");
 
-// logo and name
+// logo and name, centred between the window and the side column
 if (window.LOGO) {
   const img = new Image();
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(window.LOGO);
   await img.decode();
-  const lh = 11, lw = lh * img.width / img.height;
-  g.drawImage(img, fx(97), fy(15), lw * S, lh * S);
+  const [lu, lv] = U.foil.logo.xy, lh = U.foil.logo.height, lw = lh * img.width / img.height;
+  g.drawImage(img, fx(lu - lw / 2), fy(lv), lw * S, lh * S);
 }
-text("STACJA ŁĄCZNOŚCI AWARYJNEJ", 97, 33, 3.0, 800, INK, "left");
-text("СТАНЦІЯ АВАРІЙНОГО ЗВ'ЯЗКУ · EMERGENCY RADIO", 97, 37.6, 2.2, 600, "#4a4f57", "left");
+text("STACJA ŁĄCZNOŚCI AWARYJNEJ", ...U.foil.brand, 3.0, 800);
+text("СТАНЦІЯ АВАРІЙНОГО ЗВ'ЯЗКУ · EMERGENCY RADIO", U.foil.brand[0], U.foil.brand[1] + 4.6, 2.2, 600, "#4a4f57");
 
 // navigation buttons: printed ring, symbol, trilingual label
 function symbol(kind, u, v) {
@@ -166,14 +166,18 @@ for (const b of U.panel) {
     text(`${b.uk} · ${b.en}`, u, v + 21.6, 2.5, 700, "#4a4f57");
   }
   if (b.kind === "led") {
-    text("ALARM", u, v + 9.5, 3.6, 900, RED);
+    text("ALARM", ...b.label_xy, 3.6, 900, RED);   // under the LED and the grille, above the hinge of the guard
+  }
+  if (b.kind === "grille") {
+    g.fillStyle = "#101214";
+    for (const [hu, hv] of b.holes) { g.beginPath(); g.arc(fx(hu), fy(hv), b.hole / 2 * S, 0, 2 * Math.PI); g.fill(); }
   }
   if (b.kind === "guard") {
-    text("CISZA RADIOWA", u, v + 25.5, 3.3, 900);
+    text("CISZA RADIOWA", u, v + 19, 3.3, 900);
   }
   if (b.kind === "power") {
-    text("WYŁĄCZNIK", u, v + 18.5, 3.4, 900);
-    text("WYŁĄCZ: TRZYMAJ 2 s", u, v + 22.6, 2.3, 700, "#4a4f57");
+    text("WYŁĄCZNIK", u, v + 17, 3.4, 900);
+    text("WYŁĄCZ: TRZYMAJ 2 s", u, v + 21.4, 3.2, 700, "#4a4f57");
   }
   if (b.kind === "seal") {
     text("SERWIS", u, v - b.size[1] / 2 - 1.6, 2.4, 800, "#4a4f57");
@@ -213,27 +217,29 @@ add(new THREE.PlaneGeometry(FW, FH), mat("#ffffff", { map: foilTex, roughness: 0
 for (const p of U.panel) {
   const [u, v] = p.xy, x = px(u), y = py(v);
   if (p.kind === "nav" || p.kind === "power") {
-    let base = FRONT;
-    if (p.kind === "power") {  // collar keeps the power button ~3 mm below its rim
-      const ring = new THREE.Shape(); ring.absarc(0, 0, 13, 0, Math.PI * 2);
-      const h = new THREE.Path(); h.absarc(0, 0, 10.2, 0, Math.PI * 2, true); ring.holes.push(h);
-      add(new THREE.ExtrudeGeometry(ring, { depth: 5.5, bevelEnabled: true, bevelSize: 0.6, bevelThickness: 0.6, curveSegments: 64 }),
-          mat("#2e3236", { roughness: 0.7 }), x, y, FRONT);
-    }
-    add(cylZ(9.6, 9.8, 2.2), STEEL, x, y, base + 1.1, FACE);
-    add(cylZ(6.5, 6.5, 2.8), p.kind === "power" ? mat("#2f7d3a", { metalness: 0.5, roughness: 0.35 }) : STEEL_DARK, x, y, base + 1.4, FACE);
+    // PV6F240SS: stainless bezel 18 x 1.5 mm on the foil, flat actuator 11.8 mm flush with the bezel
+    add(cylZ(9, 9, 1.5), STEEL, x, y, FRONT + 0.75, FACE);
+    add(cylZ(5.9, 5.9, 1.45), STEEL_DARK, x, y, FRONT + 0.8, FACE);
   }
   if (p.kind === "led") {
     add(cylZ(4.2, 4.4, 1.6), STEEL, x, y, FRONT + 0.8, FACE);
     const dome = add(new THREE.SphereGeometry(2.7, 48, 24), mat("#ff3b2f", { emissive: "#ff2010", emissiveIntensity: 0.9, roughness: 0.25 }), x, y, FRONT + 1.6);
     dome.scale.set(1, 1, 0.9);
   }
-  if (p.kind === "guard") {  // footprint and height of GT-4R are measurements; this is a stand-in
-    add(new RoundedBoxGeometry(20, 38, 3, 4, 1.2), mat("#1d1f22"), x, y, FRONT + 1.5);
-    add(new RoundedBoxGeometry(16, 33, 15, 5, 3.5),
-        new THREE.MeshPhysicalMaterial({ color: "#c62a22", roughness: 0.3, transparent: true, opacity: 0.88, clearcoat: 0.6 }),
-        x, y - 1, FRONT + 3 + 7.5);
-    add(new THREE.CylinderGeometry(1.6, 1.6, 18, 32), STEEL, x, y + 16.5, FRONT + 4, [0, 0, Math.PI / 2]);
+  if (p.kind === "guard") {  // GT-4R (drawing GT-4X): plate 40.5 x 17 x 0.8, hole 27 mm from the hinge end; cover
+    // 16.2 wide, 27.65 high closed; hinge at the top. The real shape and height are a measurement.
+    const y0 = y + 27;
+    add(new RoundedBoxGeometry(17, 40.5, 0.8, 2, 0.3), mat("#0e0f10", { roughness: 0.25, metalness: 0.4 }), x, y0 - 20.25, FRONT + 0.4);
+    const prof = new THREE.Shape();
+    prof.moveTo(1, 0); prof.lineTo(1, 6);
+    prof.splineThru([new THREE.Vector2(5, 10.5), new THREE.Vector2(13, 18.5), new THREE.Vector2(21, 26), new THREE.Vector2(27.5, 27.65),
+                     new THREE.Vector2(33.5, 24.5), new THREE.Vector2(37.8, 13), new THREE.Vector2(39.3, 2)]);
+    prof.lineTo(39.5, 0); prof.closePath();
+    const geo = new THREE.ExtrudeGeometry(prof, { depth: 16.2, bevelEnabled: true, bevelSize: 0.8, bevelThickness: 0.8, bevelSegments: 4, curveSegments: 48 });
+    geo.translate(0, 0, -8.1);
+    geo.applyMatrix4(new THREE.Matrix4().set(0, 0, -1, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1));  // profile x down the panel, y up from it
+    add(geo, new THREE.MeshPhysicalMaterial({ color: "#c8261d", roughness: 0.32, clearcoat: 0.5 }), x, y0, FRONT + 0.8);
+    add(cylZ(2.2, 2.2, 18.5, 32), STEEL, x, y0 - 4, FRONT + 3.0, [0, 0, Math.PI / 2]);
   }
   if (p.kind === "seal") {  // numbered VOID sticker over the preparation button hole
     const [sw, sh] = p.size, k = 40;
@@ -298,7 +304,7 @@ if (VIEW === "materialy") {
     "Antena zewnętrzna 868 MHz na przewodzie, złącze USB-C do podłączenia laptopa.";
 } else {
   document.querySelector("#caption b").textContent =
-    VIEW === "front" ? "WICI – koncepcja stacji (założenia na 2026-10-11)" : "WICI – złącza na dolnej ściance (koncepcja)";
+    VIEW === "front" ? "WICI – koncepcja stacji (front w wariancie 2, 2026-11-09)" : "WICI – złącza na dolnej ściance (koncepcja)";
   document.querySelector("#caption span").textContent =
     `${U.enclosure.model} ${W} × ${H} × ${D} mm · układ panelu: ${U.source}. ` +
     `Brak pomiarów z przymiarki: ${U.unmeasured.length}. Umowne są: wnętrze, linia podziału, wysokości złączy i kształt osłony CISZY. Przycisk przygotowania pod naklejką VOID (F113).`;
