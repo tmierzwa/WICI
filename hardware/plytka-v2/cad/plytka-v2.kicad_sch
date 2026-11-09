@@ -17668,6 +17668,88 @@
       (justify left))
     (uuid "ca1e5d1f-a143-5231-b687-7dba6460d4a8"))
   (symbol
+    (lib_id "Device:R")
+    (at 259.08 533.4 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "c1ebfff1-2614-5868-bb95-b400137af5f9")
+    (property "Reference" "R78"
+      (at 259.08 524.51 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100k"
+      (at 259.08 527.05 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 259.08 533.4 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 259.08 533.4 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 259.08 533.4 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-07100KL"
+      (at 259.08 533.4 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "226691e1-3552-55e5-bc38-730a3fbfdc95"))
+    (pin "2"
+      (uuid "e898187c-8c24-5df1-8561-9ad379e1c6e5"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R78")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 259.08 529.59)
+      (xy 259.08 524.51))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "3bcdc46b-f876-5fc5-bd0b-8527db9bb45d"))
+  (label "ON"
+    (at 259.08 524.51 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "21d92766-929c-588c-b1f9-4b1be289400f"))
+  (wire
+    (pts
+      (xy 259.08 537.21)
+      (xy 259.08 542.29))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "9a619b87-a8a6-59d0-ae10-cd32039ce8c6"))
+  (label "GND"
+    (at 259.08 542.29 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "c178b998-f125-5c00-92cc-a7220df127fd"))
+  (symbol
     (lib_id "Device:D_Zener")
     (at 259.08 513.08 0)
     (unit 1)
@@ -18207,7 +18289,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "1M"
+    (property "Value" "220k"
       (at 411.47999999999996 59.69 0)
       (effects
         (font
@@ -18230,7 +18312,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "RC0805FR-07220KL"
       (at 411.47999999999996 66.04 0)
       (effects
         (font

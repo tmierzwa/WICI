@@ -82,9 +82,9 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 - **Ogniwa:** 4 × AA → rezystor 1 Ω impulsowy (2512) → dioda Schottky’ego → VSYS (decyzja Z7).
   - Rezystor ogranicza udar do ≤5 A (Z13).
   - Napięcie ogniw mierzy się przed rezystorem, więc progi 4,4 i 4,0 V się nie przesuwają.
-- **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek ≤0,5 V przy 120 mA w całym zakresie temperatur (koszt w energii niżej), impuls ≥5 A.
+- **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek przy 120 mA możliwie mały, cel około 0,5 V w całym zakresie temperatur (koszt w energii niżej), impuls ≥5 A.
   - Gdy stacja pracuje z 12 V, VSYS jest wyższe od ogniw, a prąd wsteczny diody płynie do pierwotnych ogniw litowych. Diodę wybiera się więc o małym upływie; karta Energizer L91 (EBC-8915AP-D9X) dopuszcza 2 µA.
-  - Płytka v2 ma ROHM RB168MM-40: typowo około 0,4 µA w 60 °C, spadek przy 120 mA typowo około 0,43 V w 25 °C i około 0,5 V w −25 °C ([dobór części](../plytka-v2/README.md#dobór-części-2026-11-09)). Drugi producent do znalezienia.
+  - Płytka v2 ma ROHM RB168MM-40: typowo około 0,4 µA w 60 °C, spadek przy 120 mA typowo około 0,43 V w 25 °C i około 0,5 V w −25 °C. To wartości typowe z wykresu, nie gwarancja: karta gwarantuje tylko ≤0,65 V przy 1 A. Najgorsza sztuka może mieć około 0,05 V więcej, co w modelu daje około 47,9 h w 20 °C, czyli trochę poniżej 48 h; rozstrzyga pomiar T6 ([dobór części](../plytka-v2/README.md#dobór-części-2026-11-09)). Drugi producent do znalezienia.
 - **Koszt w energii:** spadek 0,35 V przy 6 V zwiększa moc pobieraną z ogniw o około 6%. Model energii liczy go jawnie:
   - nRF52840: 91 h na komplecie ogniw;
   - ESP32-S3 z MCU 30 mA: 49 h, czyli nadal ≥48 h;

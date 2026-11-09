@@ -80,20 +80,23 @@ REGIONS = [
                                        'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
     ('T', 80, 96, 122, 113, (100, 108), ['D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32']),
     ('T', 124, 92, 162, 106, (134, 100), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
-                                         'C33', 'D6', 'R76']),
-    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77']),
+                                         'D6']),
+    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
     ('T', 146, 102, 188, 119, (160, 112), ['U6', 'C36', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35',
-                                          'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12']),
+                                          'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78']),
     ('T', 140, 84, 164, 94, (150, 89), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
     ('T', 26, 98, 60, 113, (50, 109), ['U8', 'R65', 'R66', 'R73', 'R74', 'D17', 'Q12', 'R75']),
+    # ADC filters at GPIO4/GPIO5 (J5.4, J5.5), top side between the DevKitC rows; the dividers stay in their blocks.
+    ('T', 92, 10, 106, 30, (104, 18), ['C33', 'R76', 'C34', 'R77']),
 ]
-# Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm).
+# Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm); 'J5.5' is one pad.
 CLOSE = [
     ('U8', 'J4', 10.0), ('D4', 'J2', 10.0),                      # ESD and TVS at their connectors (obudowa.md)
     ('C44', 'U7', 5.0), ('C45', 'U7', 5.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 6.0), ('C41', 'U7', 6.0), ('C42', 'U7', 6.0), ('C43', 'U7', 6.0),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
     ('C36', 'U6', 5.0), ('C11', 'U4', 5.0),
+    ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
 def mm(v):
     return pcbnew.FromMM(v)
@@ -314,7 +317,8 @@ def main():
     for a, b, limit in CLOSE:
         d = min(((pcbnew.ToMM(p.GetPosition().x - q.GetPosition().x)) ** 2
                  + (pcbnew.ToMM(p.GetPosition().y - q.GetPosition().y)) ** 2) ** 0.5
-                for p in footprints[a].Pads() for q in footprints[b].Pads())
+                for p in footprints[a].Pads() for q in footprints[b.split('.')[0]].Pads()
+                if '.' not in b or q.GetNumber() == b.split('.')[1])
         if d > limit:
             sys.exit(f'{a} is {d:.1f} mm from {b}, limit {limit:g} mm')
     board.Save(str(OUT))

@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-09T19:15:36</date>
+    <date>2026-11-09T19:33:56</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -3443,18 +3443,18 @@
       </units>
     </comp>
     <comp ref="R51">
-      <value>1M</value>
+      <value>220k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="MPN">RC0805FR-07220KL</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
       <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="MPN" value="RC0805FR-07220KL"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4021,6 +4021,34 @@
       <property name="ki_fp_filters" value="R_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>a5de0e84-9443-524c-b9e7-25cecea9f6cb</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="R78">
+      <value>100k</value>
+      <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="R" description="Resistor"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <property name="ki_fp_filters" value="R_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>c1ebfff1-2614-5868-bb95-b400137af5f9</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -5464,6 +5492,7 @@
       <node ref="R71" pin="2" pintype="passive"/>
       <node ref="R72" pin="2" pintype="passive"/>
       <node ref="R74" pin="2" pintype="passive"/>
+      <node ref="R78" pin="2" pintype="passive"/>
       <node ref="SW1" pin="2" pinfunction="2_2" pintype="passive"/>
       <node ref="SW2" pin="2" pinfunction="2_2" pintype="passive"/>
       <node ref="SW3" pin="2" pinfunction="2_2" pintype="passive"/>
@@ -5517,6 +5546,7 @@
       <node ref="Q8" pin="3" pinfunction="D_3" pintype="passive"/>
       <node ref="R35" pin="1" pintype="passive"/>
       <node ref="R53" pin="1" pintype="passive"/>
+      <node ref="R78" pin="1" pintype="passive"/>
     </net>
     <net code="39" name="/ON_DIV" class="Default">
       <node ref="D13" pin="1" pinfunction="K_1" pintype="passive"/>

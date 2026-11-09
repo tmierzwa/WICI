@@ -187,9 +187,12 @@ cap('C10', '100p', '+5V', 'BST_FB', 'równolegle do R21', 'CL21C101JBANNNC', spe
 
 # --- 12 V input (elektronika.md point 3): fuse, TVS, LM74800-Q1 with two 100 V MOSFETs ----------------------
 # Common drain (TI application figure): Q2 is the ideal diode (source at A), Q3 the switch to VSYS. With the
-# input reversed and clamped at -53.3 V the common drain stays near VSYS - 0.6 V (Q3 body diode from the cells),
-# so Q2 sees about 59.7 V; with +53.3 V and the switch open Q3 sees about 53 V. Hence 100 V parts (AO4292E:
-# VGS +-20 V for the 10-13 V DGATE/HGATE drive, Ciss 1.2 nF like the 60 V AO4264E). The
+# input reversed and clamped at -53.3 V the common drain stays near VSYS - 0.6 V (Q3 body diode, VSYS held by the
+# cells or C50), so Q2 sees VSYS + 53.3 V: about 59.7 V on fresh cells, and about 70 V when the pulse comes while
+# 12 V ran the station just below the OVP threshold (VSYS up to 17.3 V); with +53.3 V and the switch open Q3 sees
+# about 53 V. Hence 100 V parts (AO4292E: VGS +-20 V for the 10-13 V DGATE/HGATE drive, Ciss 1.2 nF like the
+# 60 V AO4264E). The same corner exceeds the LM74800 limit for OUT, C and VSNS (data sheet 7.1: <= 70 V + V(A),
+# 16.7 V at V(A) = -53.3 V) by up to 0.6 V on OUT; at VSYS <= 16.7 V it holds (README, open points). The
 # common drain V12_MID is fed through the Q2 body diode even in shutdown, so it powers the button
 # controller from 12 V alone (no cells) and is where the 12 V is measured.
 part('J2', 'Connector_Generic:Conn_01x02', '12V', XH2, {1: '12V_IN', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
@@ -211,7 +214,7 @@ part('U5', 'WICI:LM74800-Q1', 'LM74800-Q1', 'Package_SON:WSON-12-1EP_3x3mm_P0.5m
 NMOS100 = dict(mpn='AO4292E', manufacturer='Alpha & Omega', spec='N-MOSFET 100 V, 23 mΩ, VGS ±20 V, SOIC-8')
 part('Q2', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'V12_F', 2: 'V12_F', 3: 'V12_F', 4: 'S12_DGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
-      8: 'V12_MID'}, note='idealna dioda (DGATE); przy odwrotnym impulsie około 59,7 V', lcsc='C176743', **NMOS100)
+      8: 'V12_MID'}, note='idealna dioda (DGATE); przy odwrotnym impulsie do około 70 V', lcsc='C176743', **NMOS100)
 part('Q3', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'VSYS', 2: 'VSYS', 3: 'VSYS', 4: 'S12_HGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
       8: 'V12_MID'}, note='łącznik do VSYS (HGATE), odcina przy OVP i UV', lcsc='C176743', **NMOS100)
@@ -342,7 +345,7 @@ part('U6', 'WICI:LTC2955-2', 'LTC2955ITS8-2', 'Package_TO_SOT_SMD:TSOT-23-8',
 part('D13', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'ON_DIV', 2: 'V12_F'}, mpn='BAS116H,115',
      manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F',
      note='blokuje odwrotne 12 V na wejściu ON (zamiast zacisku BAT54H)', lcsc='C74210')
-res('R70', '280k', 'ON_DIV', 'PWR_ON', 'samoczynne włączenie przy podłączeniu i powrocie 12 V: około 8,3–9,5 V (szacunek)',
+res('R70', '280k', 'ON_DIV', 'PWR_ON', 'samoczynne włączenie przy podłączeniu i powrocie 12 V: około 8,2–9,6 V (szacunek)',
     lcsc='C865351', **precise('280 kΩ', 'RT0805BRD07280KL'))
 res('R71', '30k1', 'PWR_ON', 'GND', 'dolny rezystor dzielnika ON', **precise('30,1 kΩ', 'RT0805BRD0730K1L'))
 cap('C53', '470n', 'PWR_ON', 'GND', 'filtr ON (około 13 ms) przeciw zakłóceniom z przewodu 12 V', 'CL21B474KBFNNNE',
@@ -356,6 +359,13 @@ part('Q8', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q8_G', 2: 'VCTL', 3: '
      mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='szyna ON z sumy diodowej', lcsc='C127273')
 res('R49', '1M', 'VCTL', 'Q8_G', 'bramka Q8 do źródła; wyłączony EN̄ i tak wisi na VIN przez 900 kΩ w U6', 'RC0805FR-071ML')
 res('R50', '100k', 'Q8_G', 'PWR_ENB', 'EN̄ do bramki Q8: |VGS| = 91% VCTL, około 3 V przy ogniwach 4 V', 'RC0805FR-07100KL')
+# R78 holds the ON rail down while the station is off. Without it only the gate dividers load the rail
+# (1.1 MOhm || 1.1 MOhm = 550 kOhm), and the drain leakage of Q8 (BSS84AK: <= 1 uA at 25 C, <= 2 uA at 150 C,
+# about 1.2 uA at 60 C estimated) would lift ON to about 0.66 V and the gates of Q5 and Q10 to about 0.6 V, close
+# to the BSS138 threshold (0.5-1.5 V at 1 mA in data sheet rev. 8, about 70 mV lower at 60 C): Q10 could then pull
+# Q9 on and start the converter of a station that is off. With 100 kOhm (85 kOhm in total) ON stays <= 0.1 V.
+# Costs 60 uA from the cells and about 0.13 mA from 12 V (up to 0.33 mA at the 33 V clamp) only while ON is high.
+res('R78', '100k', 'ON', 'GND', 'szyna ON przy wyłączonej stacji ≤0,1 V mimo upływu Q8 na gorąco', 'RC0805FR-07100KL')
 zener15('D12', 'VCTL', 'Q8_G', '|VGS| Q8 ≤15 V przy VCTL do około 35 V')
 # KILL is held high from VCTL, the supply of U6, and not from 3V3 or the ON rail: when 3V3 is lost (12 V below
 # the UV threshold without cells), the controller stays on and the station starts by itself as soon as 12 V is
@@ -380,7 +390,11 @@ res('R72', '100k', 'KILL_MCU', 'GND', 'Q11 wyłączony przy resecie i bez zasila
 # times R55 gives 0.11 V, below the RUN threshold, so the converter does switch off.
 part('Q9', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q9_G', 2: 'VSYS', 3: 'RUN'},
      mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='RUN przetwornicy z VSYS', lcsc='C127273')
-res('R51', '1M', 'VSYS', 'Q9_G', 'Q9 wyłączony bez sterowania', 'RC0805FR-071ML')
+# R51 220k (not 1M): the off-state leakage of Q10 (BSS138LT1G, <= 0.5 uA at 25 C, about 1 uA at 60 C estimated)
+# gives at most about 0.22 V on the gate of Q9 against its 1.1 V minimum threshold (BSS84AK, 25 C). Costs up to
+# 80 uA (17.3 V) only while the station is on.
+res('R51', '220k', 'VSYS', 'Q9_G', 'Q9 wyłączony bez sterowania; upływ Q10 w 60 °C daje ≤0,22 V na bramce Q9',
+    'RC0805FR-07220KL')
 part('Q10', 'Transistor_FET:BSS138', 'BSS138', SOT23, {1: 'Q10_G', 2: 'GND', 3: 'Q9_G'},
      mpn='BSS138LT1G', manufacturer='onsemi', spec='N-MOSFET 50 V, IDSS ≤0,5 µA, SOT-23', note='klucz Q9 z szyny ON', lcsc='C82045')
 res('R53', '100k', 'ON', 'Q10_G', 'ON na bramkę Q10', 'RC0805FR-07100KL')
