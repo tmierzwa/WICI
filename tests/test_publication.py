@@ -169,26 +169,41 @@ class SourceArchiveScopeTests(unittest.TestCase):
                          {"media/film/wici_film.py", "media/film/plakat.jpg", "docs/x.mp4"})
 
 
-class ManifestModeTests(unittest.TestCase):
-    """Pull requests skip manifest hashes; the full check still rejects them."""
+class ReleaseTests(unittest.TestCase):
+    """The manifest exists only for a release: inside the source ZIP and next to it."""
 
-    def test_pull_request_mode_tolerates_stale_manifest_only(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            (root / "a.md").write_text("new", encoding="utf-8")
-            (root / "manifest.json").write_text(
-                '{"format": 2, "project": "WICI", "version": "0.5-prototype-design", "board": "R02",'
-                ' "files": {"a.md": "0"}}', encoding="utf-8")
-            subprocess.run(["git", "add", "a.md", "manifest.json"], cwd=root, check=True)
-            old = release.ROOT
-            release.ROOT = root
-            try:
-                with self.assertRaises(ValueError):
-                    release.check_manifest()
-                self.assertEqual(set(release.check_manifest(strict=False)), {"a.md", "manifest.json"})
-            finally:
-                release.ROOT = old
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "repo"
+        self.root.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        (self.root / "a.md").write_text("tekst", encoding="utf-8")
+        (self.root / "media/film").mkdir(parents=True)
+        (self.root / "media/film/film.mp4").write_bytes(b"video")
+        subprocess.run(["git", "add", "a.md", "media/film/film.mp4"], cwd=self.root, check=True)
+        old = release.ROOT
+        release.ROOT = self.root
+        self.addCleanup(setattr, release, "ROOT", old)
+
+    def test_archive_carries_manifest_of_its_files(self):
+        target = Path(self.temp.name) / "dist/WICI-0.6-source.zip"
+        beside = release.build_release("0.6", target)
+        self.assertEqual(beside.name, "WICI-0.6-source-manifest.json")
+        data = json.loads(beside.read_text(encoding="utf-8"))
+        self.assertEqual((data["project"], data["version"]), ("WICI", "0.6"))
+        self.assertEqual(data["files"], {"a.md": hashlib.sha256(b"tekst").hexdigest()})
+        with ZipFile(target) as bundle:
+            self.assertEqual(set(bundle.namelist()), {"a.md", "manifest.json"})
+            self.assertEqual(bundle.read("manifest.json").decode("utf-8"), beside.read_text(encoding="utf-8"))
+
+    def test_manifest_in_index_or_bad_version_rejected(self):
+        with self.assertRaises(ValueError):
+            release.build_release("v0.6", Path(self.temp.name) / "x.zip")
+        (self.root / "manifest.json").write_text("{}", encoding="utf-8")
+        subprocess.run(["git", "add", "manifest.json"], cwd=self.root, check=True)
+        with self.assertRaises(ValueError):
+            release.published_files()
 
 
 if __name__ == "__main__":
