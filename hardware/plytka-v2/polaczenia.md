@@ -49,7 +49,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BST_FB | U2.4, R21.2, R22.1, C10.2 |
 | BST_SW | U2.1, L1.2 |
 | BTN_BACK | J6.5, R83.2, C63.1, R8.2 |
-| BTN_BACK_IN | J10.4, U9.5, R83.1 |
+| BTN_BACK_IN | J10.4, U9.6, R83.1 |
 | BTN_DOWN | J6.8, R81.2, C61.1, R6.2 |
 | BTN_DOWN_IN | J10.2, U9.3, R81.1 |
 | BTN_OK | J6.9, R82.2, C62.1, R7.2 |
@@ -74,7 +74,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | FRAM_CS | J5.12, U4.1, R20.2 |
 | FRAM_CS_U1 | U1.1, U4.4 |
 | FRAM_GUARD | U3.1, U4.2 |
-| GND | J5.22, J6.1, J6.21, J6.22, J9.2, C1.2, C2.2, R12.2, R64.2, J4.A1, J4.A12, J4.B1, J4.B12, J4.SH, R65.2, R66.2, R74.2, D17.2, Q12.2, U8.2, J7.9, J7.10, J7.MP, R13.2, R19.2, C4.2, C6.2, C7.2, U1.4, U3.3, U4.3, C3.2, C11.2, C12.2, C13.2, J10.5, J11.2, U9.2, C60.2, C61.2, C62.2, C63.2, C64.2, SW6.2, D1.1, Q1.2, R4.2, U2.2, C8.2, C9.2, R22.2, J2.2, D4.2, U5.7, C30.2, R31.2, C32.2, Q5.2, R36.2, D15.2, R39.2, C33.2, D6.1, J1.2, Q7.2, R43.2, R45.2, C34.2, D11.1, C35.2, D10.2, C36.2, U6.4, R71.2, C53.2, C37.2, J3.2, R78.2, D16.2, Q11.2, R72.2, Q10.2, R54.2, D14.2, R55.2, C52.2, C50.2, U7.1, U7.5, U7.6, U7.10, U7.11, U7.20, U7.21, C40.2, C41.2, C42.2, C43.2, C46.2, C47.2, R60.2, R62.2, R63.2 |
+| GND | J5.22, J6.1, J6.21, J6.22, J9.2, C1.2, C2.2, R12.2, R64.2, J4.A1, J4.A12, J4.B1, J4.B12, J4.SH, R65.2, R66.2, R74.2, D17.2, Q12.2, U8.2, J7.9, J7.10, J7.MP, R13.2, R19.2, C4.2, C6.2, C7.2, U1.4, U3.3, U4.3, C3.2, C11.2, C12.2, C13.2, J10.5, J11.2, U9.2, C60.2, C61.2, C62.2, C63.2, D19.2, C64.2, SW6.2, D1.1, Q1.2, R4.2, U2.2, C8.2, C9.2, R22.2, J2.2, D4.2, U5.7, C30.2, R31.2, C32.2, Q5.2, R36.2, D15.2, R39.2, C33.2, D6.1, J1.2, Q7.2, R43.2, R45.2, C34.2, D11.1, C35.2, D10.2, C36.2, U6.4, R71.2, C53.2, C37.2, J3.2, D18.2, C65.2, R78.2, D16.2, Q11.2, R72.2, Q10.2, R54.2, D14.2, R55.2, C52.2, C50.2, U7.1, U7.5, U7.6, U7.10, U7.11, U7.20, U7.21, C40.2, C41.2, C42.2, C43.2, C46.2, C47.2, R60.2, R62.2, R63.2 |
 | KILL_MCU | J6.17, Q11.1, R72.1 |
 | LCD_CS | J5.7, J7.3, R13.1 |
 | LCD_DISP | J5.9, J7.5, R19.1, C7.1 |
@@ -88,7 +88,8 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | PWR_INT | J6.16, U6.8, R47.2 |
 | PWR_KILL | U6.2, R48.2, D16.1, Q11.3 |
 | PWR_ON | U6.1, R70.2, R71.1, C53.1 |
-| PWR_PB | U6.5, J3.1 |
+| PWR_PB | U6.5, R84.2, C65.1 |
+| PWR_PB_IN | J3.1, D18.1, R84.1 |
 | PWR_TMR | U6.3, C37.1 |
 | Q10_G | Q10.1, R53.2, R54.1, D14.1 |
 | Q12_G | R73.2, R74.1, D17.1, Q12.1 |
@@ -117,7 +118,7 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | SPI_SCK | R18.2, J9.6, J7.1, U1.6 |
 | SPI_SCK_DEVKIT | J5.18, R18.1 |
 | SW_CISZA | J6.4, C64.1, R9.2, R16.2 |
-| SW_COM | J11.1, U9.6, R16.1 |
+| SW_COM | J11.1, D19.1, R16.1 |
 | USB_CC1 | J4.A5, R65.1 |
 | USB_CC2 | J4.B5, R66.1 |
 | USB_DN | J6.20, J4.A7, J4.B7, U8.3, U8.4 |

@@ -44,7 +44,8 @@ DISPLAY = {
 # Front variant 2 (owner's choice 2026-11-09, hardware/plytka-v2/README.md): the side column holds the alarm LED with
 # the buzzer grille beside it, CISZA under its guard and the main switch in line with the navigation row.
 # kind: nav = E-Switch PV6F240SS (hole 16 mm), flush with the foil; power = the same PV6, in line with the navigation
-# row; guard = toggle 100SP1T8B13M1QEH under the flip guard CW Industries GT-4R (hinge up, hole 12.2 mm);
+# row, set apart by a black printed ring and the power symbol; guard = toggle 100SP1T8B13M1QEH under the flip guard
+# CW Industries GT-4R (hinge up; front hole 11.91 mm with a 1.65 x 0.79 mm key for the bushing keyway);
 # led = 5 mm alarm LED, label beside the grille (label_xy); grille = 1.5 mm holes over the buzzer;
 # seal = hole over the preparation button covered by a numbered VOID sticker (F113;
 # replaces the sealed service cover of obudowa.md for the pilot).
@@ -57,7 +58,7 @@ PANEL = [
     {"id": "BRZĘCZYK", "kind": "grille", "xy": (191.5, 20.0), "hole": 1.5,
      "holes": [(191.5, 20.0), (194.5, 20.0), (193.0, 22.598), (190.0, 22.598), (188.5, 20.0), (190.0, 17.402),
                (193.0, 17.402)]},
-    {"id": "CISZA", "kind": "guard", "xy": (185.0, 62.0), "hole": 12.2},
+    {"id": "CISZA", "kind": "guard", "xy": (185.0, 62.0), "hole": 11.91},
     {"id": "WYŁĄCZNIK", "kind": "power", "xy": (185.0, 98.0), "hole": 16.0},
     {"id": "SERWIS", "kind": "seal", "xy": (151.0, 116.0), "hole": 4.0, "size": (22.0, 12.0)},
 ]

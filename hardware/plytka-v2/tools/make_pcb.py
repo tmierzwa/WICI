@@ -111,7 +111,9 @@ FIXED = {
     # Under the grille of seven 1.5 mm holes, front (191.5, 20); clear of the Lid screw notch and the H2 spacer.
     'BZ1': (180.5, 9.0, 0, 'T'),
     'F1': (114.0, 103.0, 0, 'B'), 'C50': (132.0, 84.0, 0, 'B'),
-    'JP3': (172.0, 74.0, 90, 'T'),      # outside the CISZA guard zone
+    # 2 mm further from the main switch than a 22 mm nut needs (no PV6 nut in the data sheet; M16 x 1 nuts are
+    # 19-22 mm across flats, so up to 12.7 mm to a corner).
+    'JP3': (172.0, 70.0, 90, 'T'),
     **{ref: (x, y, 0, 'T') for ref, (x, y) in HOLES.items()},
 }
 # FPC connector placed by its footprint origin, 13.8 mm below the panel glass as on v1.1
@@ -131,9 +133,12 @@ REGIONS = [
     ('T', 112, 8, 146, 40, (120, 20), ['U1', 'C3', 'R20', 'U4', 'C11>U4', 'U3', 'C12>U3', 'C13', 'R18']),
     ('T', 136, 56, 172, 86, (150.0, 75.0), ['C1', 'C2', 'R11', 'R12', 'R64']),
     ('T', 54, 56, 80, 78, (60, 66), ['U2', 'L1', 'C4', 'C6', 'C7', 'R13', 'R19', 'C8', 'C9', 'R21', 'R22', 'C10']),
-    ('T', 10, 70, 130, 81, (10, 72), ['R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16', 'C64']),
+    ('T', 10, 70, 130, 81, (10, 72), ['R5', 'R6', 'R7', 'R8', 'R9', 'R10']),
     # ESD array at the button harness J10 and the RC filters of the four buttons, between the DÓŁ and OK holes.
     ('T', 88, 64, 112, 83, (100, 80), ['U9', 'R80', 'R81', 'R82', 'R83', 'C60', 'C61', 'C62', 'C63']),
+    # ESD and RC filter of CISZA at J11 and of the main switch at J3, right of the panel holes.
+    ('T', 186, 34, 199, 66, (192, 60), ['D19', 'R16', 'C64']),
+    ('T', 186, 66, 199, 96, (193, 80), ['D18', 'R84', 'C65']),
     ('T', 154, 8, 166, 40, (160, 12), ['Q1', 'R1', 'R2', 'D2', 'R3', 'R4']),
     ('T', 112, 42, 146, 74, (124, 54), ['U7', 'C44', 'C45', 'C46', 'C47', 'L2', 'C43', 'C42', 'C41', 'C40', 'R60',
                                        'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
@@ -151,6 +156,10 @@ REGIONS = [
 # Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm); 'J5.5' is one pad.
 CLOSE = [
     ('U8', 'J4', 10.0), ('D4', 'J2', 10.0), ('U9', 'J10', 10.0),  # ESD and TVS at their connectors (obudowa.md)
+    ('D19', 'J11', 10.0), ('D18', 'J3', 10.0),
+    ('R80', 'J10', 10.0), ('R81', 'J10', 10.0), ('R82', 'J10', 10.0), ('R83', 'J10', 10.0),   # filters at the wires
+    ('C60', 'J10', 15.0), ('C61', 'J10', 15.0), ('C62', 'J10', 15.0), ('C63', 'J10', 15.0),
+    ('R16', 'J11', 10.0), ('C64', 'J11', 10.0), ('R84', 'J3', 10.0), ('C65', 'J3', 10.0),
     ('C44', 'U7', 5.0), ('C45', 'U7', 5.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 6.0), ('C41', 'U7', 6.0), ('C42', 'U7', 6.0), ('C43', 'U7', 6.0),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows

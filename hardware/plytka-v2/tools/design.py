@@ -140,9 +140,10 @@ cap('C13', '100u', '+3V3', 'GND', 'podtrzymanie +3V3 przez czas reakcji U3 (bud�
     manufacturer='Taiyo Yuden', spec='100 µF 10 V X5R 1210', footprint=C1210)
 
 # Panel (front variant 2, 2026-11-09): GÓRA, DÓŁ, OK, WSTECZ are E-Switch PV6 in the front, like the main switch,
-# wired to J10; CISZA is a panel toggle under the GT-4R guard, wired to J11. Every line from a panel wire passes the
-# ESD array U9 at the connector, then 1 kOhm in series and 100 nF at the MCU pin (with the 10 kOhm pull-up:
-# 0.1 ms on press, 1.1 ms on release; pressed the pin sits at 0.3 V).
+# wired to J10; CISZA is a panel toggle under the GT-4R guard, wired to J11. Every line from a panel wire has its ESD
+# protection, 1 kOhm in series and a capacitor to ground within 10 mm of its connector (obudowa.md): U9 with
+# R80-R83 and C60-C63 at J10, D19 with R16 and C64 at J11, D18 with R84 and C65 at J3. With the 10 kOhm pull-up the
+# button filter has 0.1 ms on press and 1.1 ms on release; pressed, the line sits at 0.3 V.
 BUTTONS = [('GÓRA', 'BTN_UP'), ('DÓŁ', 'BTN_DOWN'), ('OK', 'BTN_OK'), ('WSTECZ', 'BTN_BACK')]
 part('J10', 'Connector_Generic:Conn_01x05', 'PRZYCISKI', 'Connector_JST:JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical',
      {**{i + 1: net + '_IN' for i, (_, net) in enumerate(BUTTONS)}, 5: 'GND'}, mpn='B5B-XH-A(LF)(SN)',
@@ -150,16 +151,23 @@ part('J10', 'Connector_Generic:Conn_01x05', 'PRZYCISKI', 'Connector_JST:JST_XH_B
      note='wiązka do czterech przycisków PV6 w panelu: 1 GÓRA, 2 DÓŁ, 3 OK, 4 WSTECZ, 5 masa wspólna')
 part('J11', 'Connector_Generic:Conn_01x02', 'CISZA', XH2, {1: 'SW_COM', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT',
-     note='przewód do przełącznika CISZA w panelu: 1 styk wspólny, 2 styk położenia „cisza” (masa)')
-part('U9', 'Power_Protection:ESDA6V1-5SC6', 'ESDA6V1-5SC6', 'Package_TO_SOT_SMD:SOT-23-6',
-     {1: 'BTN_UP_IN', 2: 'GND', 3: 'BTN_DOWN_IN', 4: 'BTN_OK_IN', 5: 'BTN_BACK_IN', 6: 'SW_COM'},
-     mpn='ESDA6V1-5SC6', manufacturer='STMicroelectronics', spec='ochrona ESD 5 linii, SOT-23-6, IR <1 µA',
-     note='przy J10; linia CISZY z J11 też przez U9; zapasowo TECH PUBLIC ESDA6V1-5SC6 (LCSC C2827672), ten sam układ wyprowadzeń',
-     lcsc='C6650')
+     note='przewód do przełącznika CISZA: 1 końcówka środkowa (wspólna), 2 masa na końcówkę najdalej od zawiasu GT-4R; '
+          'dźwignia do zawiasu = cisza (SW_CISZA = L)')
+# TPD4E1U06 (TI SLLSEB0): 1 D1+, 2 GND, 3 D2+, 4 D2-, 5 NC, 6 D1-, four lines to ground; KiCad has no symbol for it,
+# so the ESDA6V1-5SC6 symbol with the same pins 1-4 and 6 stands in, pin 5 (NC) left open.
+part('U9', 'Power_Protection:ESDA6V1-5SC6', 'TPD4E1U06DCKR', 'Package_TO_SOT_SMD:SOT-363_SC-70-6',
+     {1: 'BTN_UP_IN', 2: 'GND', 3: 'BTN_DOWN_IN', 4: 'BTN_OK_IN', 6: 'BTN_BACK_IN'},
+     mpn='TPD4E1U06DCKR', manufacturer='Texas Instruments',
+     spec='ochrona ESD 4 linii, SC-70-6, VRWM 5,5 V, upływ ≤10 nA przy 2,5 V, IEC 61000-4-2 ±15 kV',
+     note='przy J10; symbol ESDA6V1-5SC6 (te same piny 1-4 i 6), pin 5 NC wolny', lcsc='C194628')
 for (label, net), r, c in zip(BUTTONS, ('R80', 'R81', 'R82', 'R83'), ('C60', 'C61', 'C62', 'C63')):
     res(r, '1k', net + '_IN', net, f'{label}: filtr RC i ograniczenie prądu od ESD', 'RC0805FR-071KL')
-    cap(c, '100n', net, 'GND', f'{label}: filtr RC przy pinie MCU', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
-cap('C64', '100n', 'SW_CISZA', 'GND', 'CISZA: filtr RC z R16 przy pinie MCU', 'CL21B104KBCNNNC',
+    cap(c, '100n', net, 'GND', f'{label}: filtr RC przy J10', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+TVS_1LINE = dict(mpn='TPD1E10B09DPYR', manufacturer='Texas Instruments', lcsc='C88031',
+                 spec='ochrona ESD 1 linii, dwukierunkowa, VRWM ±9 V, upływ ≤100 nA przy 5 V, IEC 61000-4-2 ±20 kV')
+part('D19', 'Power_Protection:TPD1E05U06DPY', 'TPD1E10B09', 'Package_SON:Texas_DPY0002A_0.6x1mm_P0.65mm',
+     {1: 'SW_COM', 2: 'GND'}, note='przy J11', **TVS_1LINE)
+cap('C64', '100n', 'SW_CISZA', 'GND', 'CISZA: filtr RC z R16 przy J11', 'CL21B104KBCNNNC',
     spec='100 nF 50 V X7R 0805')
 part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x',
      {1: 'BTN_PREP', 2: 'GND'}, mpn='B3F-1000', manufacturer='Omron', spec='przycisk 6x6 mm',
@@ -167,7 +175,7 @@ part('SW6', 'Switch:SW_Push', 'PRZYGOTOWANIE', 'Button_Switch_THT:SW_TH_Tactile_
 for ref, net in (('R5', 'BTN_UP'), ('R6', 'BTN_DOWN'), ('R7', 'BTN_OK'), ('R8', 'BTN_BACK'),
                  ('R9', 'SW_CISZA'), ('R10', 'BTN_PREP')):
     res(ref, '10k', '+3V3', net, 'podciągnięcie wejścia', 'RC0805FR-0710KL')
-res('R16', '1k', 'SW_COM', 'SW_CISZA', 'SW_CISZA przez 1 kΩ', 'RC0805FR-071KL')
+res('R16', '1k', 'SW_COM', 'SW_CISZA', 'CISZA: filtr RC i ograniczenie prądu od ESD, przy J11', 'RC0805FR-071KL')
 
 part('D1', 'Device:LED', 'ALARM', 'LED_THT:LED_D5.0mm', {1: 'GND', 2: 'LED_A'}, mpn='WP7113ID',
      manufacturer='Kingbright', spec='LED 5 mm czerwona, rozproszona',
@@ -366,8 +374,15 @@ cap('C53', '470n', 'PWR_ON', 'GND', 'filtr ON (około 13 ms) przeciw zakłóceni
     spec='470 nF 50 V X7R 0805')
 cap('C37', '2u2', 'PWR_TMR', 'GND', 'wymuszone wyłączenie po 5,2–19 s przytrzymania', 'CL21B225KAFNNNE',
     spec='2,2 µF 25 V X7R 0805')
-part('J3', 'Connector_Generic:Conn_01x02', 'WYLACZNIK', XH2, {1: 'PWR_PB', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
+part('J3', 'Connector_Generic:Conn_01x02', 'WYLACZNIK', XH2, {1: 'PWR_PB_IN', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT', note='przewód do przycisku zasilania w panelu')
+# PB of U6 (LTC2955 rev. A): 900 kOhm pull-up to its LDO, open circuit 3.0-5.5 V, threshold 0.6-1.0 V, range -36...36 V,
+# ESD +-25 kV HBM only. A 9 V TVS stays off at 5.5 V (<=100 nA, 0.09 V on 900 kOhm); 1 kOhm and 10 nF at J3 cut the
+# fast edge of a discharge (the data sheet uses the same pair at VIN against transients); pressed, PB sees 5 mV more.
+part('D18', 'Power_Protection:TPD1E05U06DPY', 'TPD1E10B09', 'Package_SON:Texas_DPY0002A_0.6x1mm_P0.65mm',
+     {1: 'PWR_PB_IN', 2: 'GND'}, note='przy J3', **TVS_1LINE)
+res('R84', '1k', 'PWR_PB_IN', 'PWR_PB', 'wyłącznik: filtr RC i ograniczenie prądu od ESD, przy J3', 'RC0805FR-071KL')
+cap('C65', '10n', 'PWR_PB', 'GND', 'wyłącznik: filtr RC przy J3', 'CL21B103KBANNNC', spec='10 nF 50 V X7R 0805')
 res('R47', '10k', '+3V3', 'PWR_INT', 'podciągnięcie INT (otwarty dren)', 'RC0805FR-0710KL')
 part('Q8', 'Transistor_FET:BSS84', 'BSS84AK', SOT23, {1: 'Q8_G', 2: 'VCTL', 3: 'ON'},
      mpn='BSS84AK,215', manufacturer='Nexperia', spec='P-MOSFET −50 V, SOT-23', note='szyna ON z sumy diodowej', lcsc='C127273')
@@ -454,10 +469,14 @@ res('R63', '100k', 'PWM_SYNC', 'GND', 'Burst Mode do startu MCU; GPIO45 musi by�
 HOLES = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 for ref in HOLES:
     part(ref, 'Mechanical:MountingHole', '#4', 'MountingHole:MountingHole_3.5mm', {}, bom=False,
-         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 6 mm, wkręt #4 × 7/16" typ B')
+         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 6 mm, wkręt #4 × 7/16" typ B (EXTRAS)')
 
 EXTRAS = [
     ('JP3', 1, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'założona w pracy; zdjęta przy pomiarze prądu radia'),
+    ('H1-H6', 6, 'Harwin', 'R30-6700694', 'tulejka dystansowa nylonowa 6,00 mm, otwór 3,2 mm, średnica 5,0 mm',
+     'na słupku skrzynki pod płytką; nie calowa 1/4" (6,35 mm)'),
+    ('H1-H6', 6, '', 'wkręt #4 × 7/16" typ B', 'wkręt samogwintujący do tworzyw #4 (2,84 mm) × 11,1 mm, łeb walcowy '
+     'krzyżowy, tępy koniec typu B (ASME B18.6.4)', 'numer do wyboru; nie dłuższy niż 12,0 mm pod łbem'),
     ('J10', 4, 'E-Switch', 'PV6F240SS', 'przycisk panelowy GÓRA, DÓŁ, OK, WSTECZ: Ø16 mm, SPST-NO, IP65, bez podświetlenia',
      'we froncie, przewody do wtyku JST XHP-5'),
     ('J3', 1, 'E-Switch', 'PV6F240SS', 'wyłącznik główny, panelowy: Ø16 mm, SPST-NO, IP65', 'we froncie, przewody do wtyku XHP-2'),
@@ -467,6 +486,7 @@ EXTRAS = [
     ('J10', 1, 'JST', 'XHP-5', 'obudowa wtyku 5-pin', 'wiązka przycisków'),
     ('J1, J2, J3, J11', 4, 'JST', 'XHP-2', 'obudowa wtyku 2-pin', 'koszyk, 12 V, wyłącznik, CISZA'),
     ('J1-J3, J10, J11', 13, 'JST', 'SXH-001T-P0.6', 'styk zaciskany do XHP, 28-22 AWG', ''),
+    ('koszyk ogniw', 1, '', 'taśma dwustronna ≤0,3 mm', 'taśma dwustronna cienka, około 60 × 55 mm', 'zamiast podkładki z kompletu BH4AAW; odstęp końcówek przycisków od koszyka'),
     ('ekran w J7', 1, 'Sharp', 'LS027B7DH01A', 'panel pamięciowy LCD 2,7 cala, 400 × 240', 'ekranem do góry'),
     ('J8, J9', 1, 'Seeed', '102010611 (Wio z zestawu)', 'moduł Wio SX1262 z listwami 1x7', 'antena przez u.FL i przewód do SMA'),
     ('J5, J6', 1, 'Espressif', 'ESP32-S3-DevKitC-1-N8R8', 'płytka MCU v1.1', 'zasilana przez piny 3V3'),

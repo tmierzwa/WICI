@@ -175,7 +175,12 @@ for (const b of U.panel) {
   if (b.kind === "guard") {
     text("CISZA RADIOWA", u, v + 19, 3.3, 900);
   }
-  if (b.kind === "power") {
+  if (b.kind === "power") {  // same PV6 as the navigation row: a black printed ring and the power symbol set it apart
+    g.beginPath(); g.arc(fx(u), fy(v), 12 * S, 0, 2 * Math.PI); g.fillStyle = INK; g.fill();
+    { const x = fx(u - 16.5), y = fy(v), r = 2.6 * S;
+      g.strokeStyle = INK; g.lineWidth = 0.9 * S; g.lineCap = "round";
+      g.beginPath(); g.arc(x, y, r, -Math.PI / 2 + 0.6, 3 * Math.PI / 2 - 0.6); g.stroke();
+      g.beginPath(); g.moveTo(x, y - r * 1.25); g.lineTo(x, y - r * 0.15); g.stroke(); }
     text("WYŁĄCZNIK", u, v + 17, 3.4, 900);
     text("WYŁĄCZ: TRZYMAJ 2 s", u, v + 21.4, 3.2, 700, "#4a4f57");
   }
