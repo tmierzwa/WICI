@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Jedyny słownik pojęć specyfikacji WICI.">
-  <title>Słownik — Specyfikacja WICI 0.44</title>
+  <title>Słownik — Specyfikacja WICI 0.45</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Słownik</h1>
-      <p><span class="status">Projekt 0.44</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.45</span> · 9 listopada 2026 r.</p>
     </header>
     <section id="sownik-techniczny" aria-labelledby="h-sownik">
       <h2 id="h-sownik">Terminy</h2>
@@ -56,6 +56,8 @@
           <tr id="klucz-planu"><td>Klucz planu</td><td>Publiczny klucz Ed25519 zapisany w konfiguracji jako zaczep dla późniejszych podpisanych poleceń planu. Pierwsza wersja normatywna nie obsługuje takich poleceń (<a href="system-wici-siec.html#plan-sieci">rozdział 6</a>).</td></tr>
           <tr id="klucz-sieci"><td>Klucz sieci</td><td>Wspólny klucz stacji WICI-Link używany do ochrony ramki sieciowej. Nie zastępuje klucza pary ani ochrony koperty (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
           <tr id="koperta-wici"><td>Koperta WICI</td><td>Chroni wiadomość SA1 między stacją a odbiorcą, niezależnie od kolejnych skoków radiowych (<a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>).</td></tr>
+          <tr id="kwarantanna"><td>Kwarantanna</td><td>Miejsce na stanowisku dla wiadomości od nieznanego nadawcy. Wiadomość czeka na decyzję dyżurnego; bez przyjęcia z kwarantanny nie wychodzi RECEIVED. Przyjęcie jednej wiadomości nie dodaje stacji do zaufanych (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
+          <tr id="lista-zaufanych"><td>Lista zaufanych</td><td>Stacje, których karty stanowisko przyjęło przy przygotowaniu. Ich zgłoszenia są przyjmowane bez kwarantanny; usunięcie stacji z listy wstrzymuje też wysyłkę do niej (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
           <tr id="lora"><td>LoRa</td><td>Technika radiowa używana do nadawania ramek WICI-Link (<a href="system-wici-siec.html#profil">rozdział 6</a>).</td></tr>
           <tr id="net-id"><td><code>net_id</code></td><td>Numer identyfikujący konkretną sieć stacji systemu WICI; sam nie uwierzytelnia nadawcy (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
           <tr id="nosnik-komunikacji"><td>Nośnik komunikacji</td><td>Sposób przenoszenia bajtów między końcami. Jego zdarzenie transmisji nie potwierdza przyjęcia SA1; normatywnym nośnikiem jest WICI-Link (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
@@ -92,7 +94,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.44 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.45 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
