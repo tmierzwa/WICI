@@ -12752,7 +12752,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Vishay"
+    (property "Manufacturer" "Hongjiacheng (R+O)"
       (at 30.48 81.28 0)
       (effects
         (font
@@ -14767,7 +14767,7 @@
       (width 0)
       (type default))
     (uuid "622d1119-d936-5c12-849b-43e5b03ff05a"))
-  (label "V_12_ADC"
+  (label "V_12_DIV"
     (at 106.68 255.27 270)
     (effects
       (font
@@ -14834,7 +14834,7 @@
       (width 0)
       (type default))
     (uuid "8d154b11-f6f9-5d3b-b046-be1201d812ad"))
-  (label "V_12_ADC"
+  (label "V_12_DIV"
     (at 106.68 260.35 90)
     (effects
       (font
@@ -14916,7 +14916,7 @@
       (width 0)
       (type default))
     (uuid "02fb9268-4512-57ac-b7a6-1b5d70622ba8"))
-  (label "V_12_ADC"
+  (label "V_12_DIV"
     (at 106.68 283.21 90)
     (effects
       (font
@@ -15030,13 +15030,95 @@
       (width 0)
       (type default))
     (uuid "c4cee572-4e42-56b8-a0a2-0f803b084026"))
-  (label "V_12_ADC"
+  (label "V_12_DIV"
     (at 106.68 325.12 270)
     (effects
       (font
         (size 1.27 1.27))
       (justify left))
     (uuid "6256d3e6-3d3f-5613-8dcc-f72417ed9a6b"))
+  (symbol
+    (lib_id "Device:R")
+    (at 106.68 340.36 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "ea4aee67-fe01-56f8-8005-bdbd61c1b9c4")
+    (property "Reference" "R76"
+      (at 106.68 331.47 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "10k"
+      (at 106.68 334.01 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 106.68 340.36 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 106.68 340.36 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 106.68 340.36 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-0710KL"
+      (at 106.68 340.36 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "1eb1e8b2-dba5-562d-90da-ae82dd8a5b4d"))
+    (pin "2"
+      (uuid "10f833c8-0a1f-5dd0-b97f-36d800605a62"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R76")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 106.68 336.55)
+      (xy 106.68 331.47))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "62eb92b9-783b-5faa-bd7b-2136376e629f"))
+  (label "V_12_DIV"
+    (at 106.68 331.47 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "39360e92-ca9a-5a8a-af23-e29926d0e544"))
+  (wire
+    (pts
+      (xy 106.68 344.17)
+      (xy 106.68 349.25))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "43d68de8-d228-5a23-adc9-687f4823e96d"))
+  (label "V_12_ADC"
+    (at 106.68 349.25 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "19da72b0-f68c-5cf7-99e3-93561805cb87"))
   (symbol
     (lib_id "Connector_Generic:Conn_01x02")
     (at 182.88 40.64 0)
@@ -15720,7 +15802,7 @@
       (width 0)
       (type default))
     (uuid "4aebd61d-cb60-57c1-a7b6-bd40ae3decd5"))
-  (label "V_AA_ADC"
+  (label "V_AA_DIV"
     (at 182.88 204.47 270)
     (effects
       (font
@@ -15787,7 +15869,7 @@
       (width 0)
       (type default))
     (uuid "02dd899c-d43e-5d1d-96e3-d789c1ff5b91"))
-  (label "V_AA_ADC"
+  (label "V_AA_DIV"
     (at 182.88 209.55 90)
     (effects
       (font
@@ -15869,7 +15951,7 @@
       (width 0)
       (type default))
     (uuid "099a0de4-1695-54e8-85c9-292ae136b031"))
-  (label "V_AA_ADC"
+  (label "V_AA_DIV"
     (at 182.88 232.41 90)
     (effects
       (font
@@ -15983,13 +16065,95 @@
       (width 0)
       (type default))
     (uuid "1322733a-93b5-5a00-9512-5ff7a3b0a5ac"))
-  (label "V_AA_ADC"
+  (label "V_AA_DIV"
     (at 182.88 274.32 270)
     (effects
       (font
         (size 1.27 1.27))
       (justify left))
     (uuid "c758a949-c398-5f82-aec7-4e47c3191745"))
+  (symbol
+    (lib_id "Device:R")
+    (at 182.88 289.56 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "a5de0e84-9443-524c-b9e7-25cecea9f6cb")
+    (property "Reference" "R77"
+      (at 182.88 280.67 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "10k"
+      (at 182.88 283.21 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+      (at 182.88 289.56 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 182.88 289.56 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Yageo"
+      (at 182.88 289.56 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "RC0805FR-0710KL"
+      (at 182.88 289.56 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "ddeb676b-892c-5f84-9288-1d71fca7cfec"))
+    (pin "2"
+      (uuid "39c8d8c4-66a8-5ee8-b4c5-f63c060b6dbc"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "R77")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 182.88 285.75)
+      (xy 182.88 280.67))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "88400500-f01f-531b-9e7e-5beaf632fe90"))
+  (label "V_AA_DIV"
+    (at 182.88 280.67 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "a389ccda-d7f9-558e-8f50-a65104548ad2"))
+  (wire
+    (pts
+      (xy 182.88 293.37)
+      (xy 182.88 298.45))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "f9839e28-705e-53db-8e35-3c6926069f77"))
+  (label "V_AA_ADC"
+    (at 182.88 298.45 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "46206c8a-ca7f-5aa3-8cd9-e3f2b9c5019b"))
   (symbol
     (lib_id "Device:D")
     (at 259.08 200.66 0)
@@ -18622,7 +18786,7 @@
     (uuid "21f79280-7490-5238-8483-28b1188f4ccc"))
   (symbol
     (lib_id "Device:C_Polarized")
-    (at 182.88 289.56 0)
+    (at 182.88 312.42 0)
     (unit 1)
     (exclude_from_sim no)
     (in_bom yes)
@@ -18630,35 +18794,35 @@
     (dnp no)
     (uuid "07f997f0-2601-5872-99ff-62e8a18dd805")
     (property "Reference" "C50"
-      (at 182.88 280.67 0)
+      (at 182.88 303.53 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Value" "100u 25V"
-      (at 182.88 283.21 0)
+      (at 182.88 306.07 0)
       (effects
         (font
           (size 1.27 1.27))))
     (property "Footprint" "Capacitor_THT:CP_Radial_D8.0mm_P3.50mm"
-      (at 182.88 289.56 0)
+      (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Datasheet" ""
-      (at 182.88 289.56 0)
+      (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "Manufacturer" ""
-      (at 182.88 289.56 0)
+      (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
     (property "MPN" ""
-      (at 182.88 289.56 0)
+      (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
@@ -18674,14 +18838,14 @@
           (unit 1)))))
   (wire
     (pts
-      (xy 182.88 285.75)
-      (xy 182.88 280.67))
+      (xy 182.88 308.61)
+      (xy 182.88 303.53))
     (stroke
       (width 0)
       (type default))
     (uuid "b4e44282-004e-5974-9311-65f660319737"))
   (label "VSYS"
-    (at 182.88 280.67 90)
+    (at 182.88 303.53 90)
     (effects
       (font
         (size 1.27 1.27))
@@ -18689,14 +18853,14 @@
     (uuid "54507c73-45d1-5ca8-810a-cdb04abec2fd"))
   (wire
     (pts
-      (xy 182.88 293.37)
-      (xy 182.88 298.45))
+      (xy 182.88 316.23)
+      (xy 182.88 321.31))
     (stroke
       (width 0)
       (type default))
     (uuid "0adb7040-2e58-5e0a-8566-3fe872eea183"))
   (label "GND"
-    (at 182.88 298.45 270)
+    (at 182.88 321.31 270)
     (effects
       (font
         (size 1.27 1.27))

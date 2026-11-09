@@ -80,8 +80,8 @@ REGIONS = [
                                        'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
     ('T', 80, 96, 122, 113, (100, 108), ['D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32']),
     ('T', 124, 92, 162, 106, (134, 100), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
-                                         'C33', 'D6']),
-    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11']),
+                                         'C33', 'D6', 'R76']),
+    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77']),
     ('T', 146, 102, 188, 119, (160, 112), ['U6', 'C36', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35',
                                           'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12']),
     ('T', 140, 84, 164, 94, (150, 89), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
@@ -270,8 +270,9 @@ def main():
     # Bodies of the modules hanging under the sockets. Across the rows the module edge lies 1.27 mm beyond the
     # row axis on both modules; 1.77 mm keeps 0.5 mm clearance for the module seated off-centre in the sockets.
     # DevKitC 25.4 x 62.7 mm; Wio 17.78 x 21.44 mm, pin 1 2.92 mm from its short edge (Seeed STEP model
-    # 2024-09-23). The 2.2 mm hole of the Wio lies on its axis 0.84 mm beyond the pin-1 row, inside the body.
-    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.44, 2.92)):
+    # 2024-09-23); along the rows 0.5 mm is added at both ends, as across. The 2.2 mm hole of the Wio lies on
+    # its axis 0.84 mm beyond the pin-1 row, inside the body.
+    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.44 + 1.0, 2.92 + 0.5)):
         p1 = [footprints[r].Pads()[0].GetPosition() for r in (left, right)]
         xs = sorted(pcbnew.ToMM(p.x) for p in p1)
         y0 = min(pcbnew.ToMM(p.y) for p in p1) - margin

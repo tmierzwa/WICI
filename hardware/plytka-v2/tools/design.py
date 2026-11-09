@@ -16,11 +16,12 @@ XH2 = 'Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical'
 PARTS = []
 
 
-def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', bom=True):
-    """Record one board item; nets maps pin number to net name, lcsc is the LCSC/JLC part number."""
+def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True):
+    """Record one board item; nets maps pin number to net name, lcsc is the LCSC/JLC part number and qty the
+    number of pieces bought for this item (two clips for one fuse holder)."""
     PARTS.append(dict(ref=ref, lib_id=lib_id, value=value, footprint=footprint,
                       nets={str(k): v for k, v in nets.items()}, mpn=mpn, manufacturer=manufacturer,
-                      spec=spec, note=note, lcsc=lcsc, bom=bom))
+                      spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom))
 
 
 def res(ref, value, a, b, note, mpn='', spec='', footprint=R0805, lcsc=''):
@@ -195,10 +196,11 @@ part('J2', 'Connector_Generic:Conn_01x02', '12V', XH2, {1: '12V_IN', 2: 'GND'}, 
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT', note='przewód do gniazda 12 V w ściance obudowy')
 part('F1', 'Device:Fuse', 'T1A', 'Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal',
      {1: '12V_IN', 2: 'V12_F'}, mpn='01110501Z', manufacturer='Littelfuse',
-     spec='2 zaciski bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką',
-     note='2 szt. na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)', lcsc='C151075')
+     spec='zacisk bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką',
+     note='2 zaciski na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)', lcsc='C151075',
+     qty=2)
 part('D4', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
-     manufacturer='Vishay', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
+     manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
      note='pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)', lcsc='C19077587')
 part('U5', 'WICI:LM74800-Q1', 'LM74800-Q1', 'Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm',
      {1: 'S12_DGATE', 2: 'V12_F', 3: 'V12_MID', 4: 'S12_SW', 5: 'S12_OV', 6: 'S12_EN', 7: 'GND',
@@ -224,10 +226,11 @@ res('R31', '8k06', 'S12_OV', 'GND', 'dolny rezystor progu OVP', **precise('8,06 
 # Inrush (data sheet equation 2): 55 uA / 250 mA x about 120 uF on VSYS = 26 nF.
 cap('C32', '27n', 'S12_DVDT', 'GND', 'C_dVdT: prąd włączania około 250 mA przy około 120 µF na VSYS',
     'CL21B273KBANNNC', spec='27 nF 50 V X7R 0805')
-# R32 (R1 of data sheet figure 9-3, faster turn-off): with 1 kOhm C32 discharges at <= 14.5 mA against >= 168 mA
-# HGATE sink (data sheet 7.5), and the 39-75 uA source drops only 75 mV on it; tau 27 us. TI EVM-CD uses 100 Ohm
-# with 10 nF; 100 Ohm here would let C32 draw up to 145 mA of the sink current.
-res('R32', '1k', 'S12_HGATE', 'S12_DVDT', 'R1 z rysunku 9-3 karty (szybsze wyłączenie): C32 ≤14,5 mA wobec ≥168 mA HGATE',
+# R32 (R1 of data sheet figure 9-3, faster turn-off): with 1 kOhm C32 adds at most 14.5 mA (14.5 V gate drive)
+# to what HGATE must sink, and the 39-75 uA source drops only 75 mV on it; tau 27 us. The data sheet (7.5) gives
+# the HGATE sink only for overvoltage (>= 168 mA); for turn-off through EN/UVLO it gives no current. TI EVM-CD
+# uses 100 Ohm with 10 nF; 100 Ohm here would let C32 add up to 145 mA.
+res('R32', '1k', 'S12_HGATE', 'S12_DVDT', 'R1 z rysunku 9-3 karty (szybsze wyłączenie): C32 dokłada ≤14,5 mA do prądu HGATE',
     'RC0805FR-071KL')
 
 # UV with hysteresis from the U5 EN/UVLO comparator (1.231 V rising, 1.132 V falling), on a ladder that is
@@ -253,17 +256,25 @@ res('R36', '1M', 'Q5_G', 'GND', 'Q5 wyłączony bez ON; 91% ON na bramce także 
 zener15('D15', 'Q5_G', 'GND', 'VGS Q5 ≤15 V przy ON do około 35 V')
 res('R37', '221k', 'V12_SW', 'S12_EN', 'dzielnik UV: włączenie 11,94 V (11,59–12,29 V), wyłączenie 10,98 V (10,58–11,24 V)',
     **precise('221 kΩ', 'RT0805BRD07221KL'))
-res('R38', '10k', 'S12_EN', 'V_12_ADC', 'dzielnik UV i pomiaru 12 V', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
-res('R39', '15k4', 'V_12_ADC', 'GND', 'pomiar 12 V: 0,0625 × V12', **precise('15,4 kΩ', 'RT0805BRD0715K4L'))
-cap('C33', '100n', 'V_12_ADC', 'GND', 'filtr wejścia ADC 12 V', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+res('R38', '10k', 'S12_EN', 'V_12_DIV', 'dzielnik UV i pomiaru 12 V', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
+res('R39', '15k4', 'V_12_DIV', 'GND', 'pomiar 12 V: 0,0625 × V12', **precise('15,4 kΩ', 'RT0805BRD0715K4L'))
+cap('C33', '100n', 'V_12_DIV', 'GND', 'filtr wejścia ADC 12 V', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 # BAV199 instead of BAT54S: <= 80 nA up to 150 C, so leakage moves the ADC 12 V reading by <= 0.02 V (BAT54S:
 # no hot maximum; about 0.7 uA per diode at 60 C typical). Same SOT-23 pins (1 A1, 2 K2, 3 K1/A2). The negative
 # clamp is about -0.6...-0.9 V instead of -0.3 V, at most 0.23 mA with 12 V reversed (to be measured).
 # KiCad 10 has no BAV199 symbol; the BAT54S symbol has the same pins (1 A, 2 K, 3 COM).
-BAV199 = dict(mpn='BAV199,215', manufacturer='Nexperia', spec='podwójna dioda o małym upływie 85 V, ≤5 nA, SOT-23',
+BAV199 = dict(mpn='BAV199,215', manufacturer='Nexperia', spec='podwójna dioda o małym upływie 75 V (szczyt 85 V), ≤5 nA, SOT-23',
               lcsc='C40919')
-part('D6', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_12_ADC'},
+part('D6', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_12_DIV'},
      note='ogranicza wejście ADC przy odwrotnym 12 V; upływ nie zmienia pomiaru 12 V', **BAV199)
+# R76/R77 between the filtered divider node and the GPIO: with 12 V or the cells reversed the divider pulls the
+# node down (about 0.14 mA at -33 V, 0.23 mA at the -53.3 V pulse, also with the station off). BAV199 clamps only
+# at -0.6...-0.9 V, so without them the ESP32-S3 protection diodes (about -0.5 V; current not specified) would
+# carry most of it. Through 10 kOhm at most (0.9 - 0.5) V / 10 kOhm = 40 uA reaches the pin. The 100 nF stays on
+# the node, so the ADC samples from it: the sampling charge sees 10 kOhm into a few pF (tens of ns), and pin
+# leakage of tens of nA moves the reading by < 1 mV at the pin.
+res('R76', '10k', 'V_12_DIV', 'V_12_ADC', 'szeregowo do GPIO5: prąd do pinu przy odwrotnym 12 V ≤40 µA',
+    'RC0805FR-0710KL')
 
 # --- AA cells: 1 Ohm pulse resistor and Schottky diode to VSYS (decision Z7) -------------------------------
 part('J1', 'Connector_Generic:Conn_01x02', 'OGNIWA 4xAA', XH2, {1: 'BAT_IN', 2: 'GND'}, mpn='B2B-XH-A(LF)(SN)',
@@ -286,11 +297,13 @@ part('Q7', 'Transistor_FET:BSS138', 'BSS138', SOT23, {1: 'DIV_EN', 2: 'GND', 3: 
      mpn='BSS138LT1G', manufacturer='onsemi', spec='N-MOSFET 50 V, IDSS ≤0,5 µA, SOT-23', note='klucz Q6 z MCU', lcsc='C82045')
 res('R43', '100k', 'DIV_EN', 'GND', 'DIV_EN niski do startu MCU; GPIO46 musi być niski przy resecie',
     'RC0805FR-07100KL')
-res('R44', '39k', 'VAA_SW', 'V_AA_ADC', 'pomiar ogniw: 7,3 V → 1,49 V (zakres ATTEN2)', **precise('39,0 kΩ', 'RT0805BRD0739KL'))
-res('R45', '10k', 'V_AA_ADC', 'GND', 'pomiar ogniw', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
-cap('C34', '100n', 'V_AA_ADC', 'GND', 'filtr wejścia ADC ogniw', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
-part('D11', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_AA_ADC'},
+res('R44', '39k', 'VAA_SW', 'V_AA_DIV', 'pomiar ogniw: 7,3 V → 1,49 V (zakres ATTEN2)', **precise('39,0 kΩ', 'RT0805BRD0739KL'))
+res('R45', '10k', 'V_AA_DIV', 'GND', 'pomiar ogniw', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
+cap('C34', '100n', 'V_AA_DIV', 'GND', 'filtr wejścia ADC ogniw', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
+part('D11', 'Diode:BAT54S', 'BAV199', SOT23, {1: 'GND', 2: '+3V3', 3: 'V_AA_DIV'},
      note='ogranicza wejście ADC przy ogniwach odwrotnie', **BAV199)
+res('R77', '10k', 'V_AA_DIV', 'V_AA_ADC', 'szeregowo do GPIO4: prąd do pinu przy ogniwach odwrotnie ≤40 µA (jak R76)',
+    'RC0805FR-0710KL')
 
 # --- Power button controller: LTC2955-2 on the diode sum of the cells and 12 V --------------------------
 # 12 V side through 1 kOhm / 1 uF (data sheet: VIN > 20 V through 1 kOhm) and a 33 V Zener, because the
@@ -323,7 +336,7 @@ part('U6', 'WICI:LTC2955-2', 'LTC2955ITS8-2', 'Package_TO_SOT_SMD:TSOT-23-8',
 part('D13', 'Device:D', 'BAS116H', 'Diode_SMD:D_SOD-123F', {1: 'ON_DIV', 2: 'V12_F'}, mpn='BAS116H,115',
      manufacturer='Nexperia', spec='dioda 75 V, ≤5 nA, SOD-123F',
      note='blokuje odwrotne 12 V na wejściu ON (zamiast zacisku BAT54H)', lcsc='C74210')
-res('R70', '280k', 'ON_DIV', 'PWR_ON', 'samoczynne włączenie przy podłączeniu i powrocie 12 V: około 8,3–9,5 V',
+res('R70', '280k', 'ON_DIV', 'PWR_ON', 'samoczynne włączenie przy podłączeniu i powrocie 12 V: około 8,3–9,5 V (szacunek)',
     lcsc='C865351', **precise('280 kΩ', 'RT0805BRD07280KL'))
 res('R71', '30k1', 'PWR_ON', 'GND', 'dolny rezystor dzielnika ON', **precise('30,1 kΩ', 'RT0805BRD0730K1L'))
 cap('C53', '470n', 'PWR_ON', 'GND', 'filtr ON (około 13 ms) przeciw zakłóceniom z przewodu 12 V', 'CL21B474KBFNNNE',
