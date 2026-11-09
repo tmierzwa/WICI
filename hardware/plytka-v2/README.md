@@ -1,6 +1,6 @@
 # WICI: płytka v2, schemat wstępny
 
-**Status 2026-10-31: schemat i rozmieszczenie wstępne, bez ścieżek. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne i opierają się na założeniach obudowy ([Rozmieszczenie wstępne](#rozmieszczenie-wstępne)). Ścieżki czekają na model Hammonda, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-ścieżkami-i-zamówieniem)).
+**Status 2026-10-31: schemat i rozmieszczenie wstępne, bez ścieżek. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Ścieżki czekają na przymiarkę, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-ścieżkami-i-zamówieniem)).
 
 | Plik | Zawartość |
 |---|---|
@@ -58,24 +58,24 @@ Wszystkie inne piny DevKitC są zajęte, dlatego użyto pinów konfiguracji star
 
 ## Rozmieszczenie wstępne
 
-Płytka ma obrys i rozmieszczenie wszystkich 155 elementów, bez ścieżek. Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
+Płytka ma obrys i rozmieszczenie wszystkich 157 elementów, bez ścieżek. Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
 - ESD U8 ≤10 mm od USB-C J4, TVS D4 ≤10 mm od J2 (zasada z [obudowy R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia));
 - kondensatory wejściowe i wyjściowe przetwornicy ≤5–6 mm od U7;
 - C1 i C2 ≤8 mm od gniazda Wio, C36 ≤5 mm od U6, C11 ≤5 mm od U4.
 
 Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. DRC zgłasza tylko uwagi o sitodruku i niepołączone pady, bo ścieżek jeszcze nie ma. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1), wolny styk 3 przełącznika SW5 i piny 4 i 5 U3, których schemat nie używa.
 
-Założenia, do sprawdzenia na modelu STEP Hammonda i na przymiarce:
+Nazwy stron obudowy są jak u Hammonda: **skrzynka** („Box”) ma front ze wgłębieniem na folię panelu, a **pokrywa** („Lid”) to tył z klapką ogniw, przykręcany do skrzynki od tyłu. Współrzędne obudowy liczy się od zewnętrznego lewego górnego narożnika frontu, patrząc od frontu. Założenia (liczby z modelu STEP Hammonda, do potwierdzenia na przymiarce):
 
-- **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar pokrywy Hammond 1599KBAT x 10–210 mm i y 10–130 mm ([obudowa R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia)), więc współrzędne płytki to współrzędne pokrywy minus 10 mm.
-- **Panel od strony pokrywy:** środek okna ekranu, rząd WSTECZ–GÓRA–DÓŁ–OK w rozstawie 32 mm, dioda alarmu, CISZA i przycisk przygotowania leżą na pozycjach z [założeń obudowy](../obudowa/zalozenia.py) (`PANEL`). Wyłącznik główny PV6 jest w pokrywie i łączy się przewodem z J3, więc pod nim płytka ma wolną strefę Ø22 mm. Złącze FPC J7 leży 13,8 mm pod krawędzią panelu, jak na v1.1.
-- **Strefy panelu od góry:** okno ekranu 64 × 45 mm; strefa 22 × 22 mm wokół każdego przycisku rzędu; osłona CISZA 30 × 40 mm (tylko SW5); bez padów w promieniu 10 mm od otworu przycisku przygotowania (tylko SW6 i otwór H4 w jej skraju).
-- **Złącza na dolnej krawędzi:** USB-C J4 pod otworem w ścianie (pokrywa x 60). EN3 (x 110) i SMA (x 170) są w ścianie: EN3 łączy się przewodem z J2, a SMA krótkim przewodem koncentrycznym z u.FL Wio.
+- **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar frontu Hammond 1599KBAT x 10–210 mm i y 10–130 mm ([obudowa R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia)), więc współrzędne płytki to współrzędne frontu minus 10 mm. W płaszczyźnie płytki ściany są 6,3 mm dalej. Pod USB-C płytka ma język 12 × 5 mm do ściany, a pod gniazdem EN3 wycięcie 17 × 12 mm (x 91,5–108,5, y 108–120).
+- **Panel od strony frontu:** środek okna ekranu, rząd WSTECZ–GÓRA–DÓŁ–OK w rozstawie 32 mm, dioda alarmu, CISZA i przycisk przygotowania leżą na pozycjach z [założeń obudowy](../obudowa/zalozenia.py) (`PANEL`). Wyłącznik główny PV6 jest we froncie i łączy się przewodem z J3, więc pod nim płytka ma wolną strefę Ø22 mm. Złącze FPC J7 leży 13,8 mm pod krawędzią panelu, jak na v1.1.
+- **Strefy panelu od góry:** okno ekranu 64 × 45 mm; strefa 22 × 22 mm wokół każdego przycisku rzędu (tulejka otworu może stać w jej narożniku, jeśli zostaje poza kołem Ø22 mm); osłona CISZA 30 × 40 mm (tylko SW5); bez padów w promieniu 10 mm od otworu przycisku przygotowania (tylko SW6 i otwór H5 w jej skraju, bez miedzi).
+- **Złącza na dolnej krawędzi:** USB-C J4 na języku płytki, czołem 0,5–0,65 mm za wewnętrzną powierzchnią ściany (wymaganie 0–1 mm), oś około 1,6 mm nad płytką od strony frontu; otwór w ścianie pod frontem x 60. EN3 (x 110) i SMA (x 170) są w ścianie. EN3 łączy się przewodem z J2 obok wycięcia, a SMA krótkim przewodem koncentrycznym z u.FL Wio pod płytką. Wymiary EN3 z biuletynu Switchcraft 602: za ścianą kołnierz Ø20,6 × 3 mm, korpus Ø14 × 4,5 mm i kubki lutownicze 5,6 mm, razem 13,1 mm. Oś EN3 leży około 2 mm pod spodem płytki (od strony pokrywy), więc korpus i kubki przechodzą przez płaszczyznę płytki w wycięciu; wycięcie mieści jeszcze 5 mm przewodu z lutem i koszulką. Oś SMA leży około 7 mm pod spodem płytki, a nakrętka (9,2 mm po narożach) zostawia do płytki około 2 mm; pod tyłem SMA od spodu jest wolna strefa.
 - **Moduły od spodu (decyzja 6):** DevKitC i Wio siedzą w gniazdach od spodu płytki. Patrząc z góry, rzędy gniazd zamieniają się stronami (J6 po lewej, J5 po prawej), żeby moduł widziany od spodu stał jak na v1.1. Rozstaw rzędów Wio 15,24 mm i obrys modułu 17,78 × 21,44 mm (pin 1 2,92 mm od krótkiej krawędzi) z modelu STEP Seeed. Zworka pomiarowa JP3 leży od góry tuż obok gniazd Wio.
 - **Tylko THT od spodu:** wszystkie elementy SMD są od góry, więc montaż SMT jest jednostronny (jeden szablon, jeden przebieg pieca). Od spodu są tylko gniazda modułów, F1 i C50, lutowane ręcznie albo na fali.
-- **Strefa koszyka ogniw:** BH4AAW leży w podstawie pod płytką (x 10–72, y 58–116), około 19 mm pod nią. Od spodu w tej strefie są tylko końcówki wyprowadzeń THT i otwór H3.
-- **Wysokości od góry:** płytka około 12 mm za frontem. Elementy górne poza panelem mają do około 9 mm (brzęczyk CEM-1203 do sprawdzenia). Wysoki kondensator C50 i oprawka bezpiecznika F1 są od spodu, poza strefą koszyka.
-- **Otwory montażowe:** H1 i H2 przy górnej krawędzi w rozstawie 80 mm. H3 leży nad koszykiem ogniw, więc łeb śruby albo tuleja od spodu mogą mieć najwyżej około 3 mm. H4 jest 12 mm od przycisku przygotowania, na skraju jego strefy. Właściwe położenia daje model STEP.
+- **Strefa koszyka ogniw:** BH4AAW leży na klapce pokrywy, pod płytką. Klapka leży (w rzucie na front) w x 0,7–67,4 i y 40,5–99,5, więc strefa od spodu płytki to x 0,5–58, y 30–90 (cała klapka, bo miejsce przyklejenia koszyka ustala się przy montażu). Wierzch koszyka leży 7,8 mm pod spodem płytki. Od spodu w tej strefie są tylko końcówki wyprowadzeń THT. Pokrywę zakłada się klapką po lewej (patrząc od frontu); obrócona o 180° postawiłaby koszyk pod Wio i C50.
+- **Wysokości:** słupki skrzynki mają 4,5 mm, a płytka leży na tulejkach 4,5 mm, więc jej wierzch jest 9,05 mm od wewnętrznej powierzchni frontu i 12,05 mm od dna wgłębienia na folię. Najwyższe elementy górne poza panelem, brzęczyk BZ1 i zworka JP3, zostawiają do frontu około 0,5 mm. Od spodu do wewnętrznej powierzchni pokrywy jest 22,35 mm, a do wierzchu słupków pokrywy 17,85 mm; DevKitC w gniazdach sięga około 15,9 mm. Wysoki kondensator C50 i zaciski bezpiecznika F1 są od spodu, poza strefą koszyka.
+- **Otwory montażowe:** sześć otworów Ø3,2 mm na słupkach skrzynki: H1 (130, 20), H2 (190, 20), H3 (10, 100), H4 (70, 100), H5 (130, 100) i H6 (190, 100). Skrzynka ma osiem słupków w siatce x 20/80/140/200 i y 30/110 na froncie; dwa pod oknem ekranu, (20, 30) i (80, 30), szlifuje się przy obróbce skrzynki na równo z frontem. H5 jest 15,6 mm od przycisku przygotowania (wymaganie ≤25 mm). Każdy otwór ma po obu stronach wolny kwadrat 8 × 8 mm na tulejkę (od góry) i łeb wkrętu (od spodu); wkręt wkręca się od spodu, a pod otworem nie ma wysokich elementów, więc wkrętak sięga prosto. Mocowanie: tulejka dystansowa 4,5 mm (otwór ≥3,2 mm, średnica zewnętrzna ≤6 mm), wkręt samogwintujący do tworzyw ST2,9 × 9,5 mm (ISO 7049) albo #4 × 3/8". Otwór w słupku ma Ø2,36 mm i 4,6 mm głębokości, a pod nim front ma tylko 2,9 mm. Wkręt może więc mieć najwyżej 10,5 mm pod łbem (płytka 1,6 + tulejka 4,5 + otwór 4,6, bez 0,2 mm zapasu); dłuższy wypchnie albo przebije front pod folią.
 
 ## Decyzje (2026-10-31)
 
@@ -116,11 +116,29 @@ Schemat i rozmieszczenie odchodzą od wcześniejszej specyfikacji i założeń w
 
    Odrzucony wariant: rozpoznawanie laptopa tylko w programie (TinyUSB). Nie wymaga części, ale uśpiony MCU może nie odpowiedzieć laptopowi przy pierwszym połączeniu, a poprawka po zamówieniu płytek jest droga.
 
-6. **DevKitC i Wio od spodu płytki.** Panel Sharp leży kilka milimetrów za pokrywą, a DevKitC w gniazdach sięga około 16 mm nad płytkę (gniazdo 8,5 mm, listwa 2,5 mm, płytka modułu i WROOM). Moduły od spodu wiszą w głębi skrzynki (33 mm wnętrza), a pokrywa zostaje płaska.
+6. **DevKitC i Wio od spodu płytki.** Panel Sharp leży kilka milimetrów za frontem, a DevKitC w gniazdach sięga około 16 mm nad płytkę (gniazdo 8,5 mm, listwa 2,5 mm, płytka modułu i WROOM). Moduły od spodu wiszą w głębi skrzynki (33 mm wnętrza), a front zostaje płaski.
 
-   Odrzucony wariant: moduły od góry, jak na v1.1. Prostszy dostęp do modułów, ale pokrywa potrzebuje garbu nad DevKitC albo wgłębionego okna ekranu ([obudowa](../obudowa/README.md#co-jest-znane-a-co-trzeba-zmierzyć)). Kosztem wybranego wariantu jest dostęp do DevKitC i jego micro USB dopiero po wyjęciu płytki; program wgrywa się i tak przez USB-C stacji.
+   Odrzucony wariant: moduły od góry, jak na v1.1. Prostszy dostęp do modułów, ale front potrzebuje garbu nad DevKitC albo wgłębionego okna ekranu ([obudowa](../obudowa/README.md#co-jest-znane-a-co-trzeba-zmierzyć)). Kosztem wybranego wariantu jest dostęp do DevKitC i jego micro USB dopiero po wyjęciu płytki; program wgrywa się i tak przez USB-C stacji.
 
 Do tego dochodzą zmiany w zakresie, które specyfikacja zostawia projektowi v2: J11 (analizator), J12 i dzielnik VTEST oraz zworki JP1/JP2 wypadają według zasady „nic na zapas”. JP3 zostaje, bo specyfikacja wymaga punktu pomiaru prądu radia.
+
+## Dopasowanie do obudowy (2026-11-09)
+
+Płytkę z rozmieszczeniem wstępnym porównano z modelem STEP i rysunkiem Hammond 1599KBAT oraz rysunkiem koszyka BH4AAW. Otwory nie trafiały w słupki, słupki okazały się niższe (4,5 mm zamiast około 12 mm), złącza kończyły się 6,3 mm przed ścianą, a strefa koszyka leżała w innym miejscu. Poprawki:
+- otwory na sześciu słupkach skrzynki z tulejkami 4,5 mm (wyżej, „Otwory montażowe”). Bez tulejek płytka leżałaby 4,45 mm od frontu, a brzęczyk, złącza, U1 i przyciski wchodziłyby we front;
+- elementy na miejscach słupków (U1 i R20, D11 i R44, D5, D15 i Q4) i J3 przy H6 przesunięto; bloki układa skrypt jak dotąd, a wszystkie sprawdzenia odległości (`CLOSE`) i strefy panelu zostały;
+- strefa koszyka według klapki z modelu;
+- język pod USB-C i wycięcie pod EN3; J2 przeniesiono z x 100 na prawo od wycięcia (x 116), a TVS D4 leży przy nim.
+
+Sprawdzenie: płytkę z `kicad-cli pcb export step` złożono z modelem obudowy razem z bryłami zastępczymi koszyka, EN3, SMA, tulejek, łbów wkrętów i wkrętaka. Kolizji nie ma, poza diodą alarmu D1, która ma wchodzić w otwór Ø5 mm we froncie. Elementy bez modelu 3D sprawdzono bryłami o przyjętej wysokości: przyciski B3F 7,3 mm, USB-C 3,26 mm, F1 10 mm, moduły w gniazdach. SW5 nie ma bryły, więc jego wysokości nie sprawdzono.
+
+Odrzucone warianty:
+- płytka powiększona do około 211 × 131 mm, żeby wszystkie krawędzie sięgały ścian: zmienia układ współrzędnych całej płytki i panelu, a przy pochyleniu ścian zostawia około 0,8 mm luzu wszędzie. Przy ścianie musi być tylko USB-C, więc wystarcza język;
+- EN3 nad płytką (od frontu): między płytką a frontem jest 9 mm, a kołnierz ma Ø20,6 mm;
+- EN3 cały pod płytką: otwór Ø15,5 mm sięgałby w miejsce, gdzie pokrywa zachodzi na skrzynkę (wpust 3,4–5,4 mm pod tylną krawędzią ściany);
+- EN3 na płytce zamiast w ścianie: biuletyn 602 ma wersje kątowe do druku, ale gniazdo w ścianie przenosi siły od przewodu na obudowę, a nie na luty;
+- przesunięcie ekranu, żeby ominąć dwa słupki pod oknem: koliduje z rzędem przycisków i J7;
+- podparcie lewego górnego narożnika tulejkami ze słupków pokrywy (17,85 mm pod płytką): płytka byłaby ściśnięta między skrzynką a pokrywą z tolerancją obu. W lewym górnym rogu nie ma nic, co się naciska ani wpina, a ekran trzyma się frontu, więc sześć otworów wystarcza.
 
 ## Dobór części (2026-11-09)
 
@@ -141,7 +159,7 @@ Numery LCSC są w kolumnie „LCSC” w [bom.csv](bom.csv); stany sprawdzone 202
 
 Do rozstrzygnięcia przed ścieżkami i pierwszym zamówieniem płytki:
 - przyciski: rozmiar i rozstaw pod obudowę i rękawice;
-- obudowa (pomiary z przymiarki, model Hammond 1599KBAT): potwierdzenie obrysu, otworów, wysokości złączy na dolnej krawędzi i odstępu do ściany (dziś płytka kończy się około 7 mm przed ścianą, a złącza mają leżeć 0–1 mm od niej); zwrot Wio i położenie u.FL. Na obrazku Seeed od strony elementów J1 leży po lewej, pin 1 przy otworze Ø 2,2 mm, a u.FL przy pinie 7 J2. Gniazda (z góry J9 po lewej, J8 po prawej, piny 1 przy y 67,4) pasują, gdy listwy wychodzą od strony bez elementów, czyli moduł wisi elementami w dół; potwierdzić przymiarką;
+- obudowa, przymiarka z prawdziwą skrzynką (obrys, otwory i wysokości są już dopasowane do modelu STEP, [Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)): mocowanie i położenie koszyka BH4AAW na klapce; wysokość przycisków B3F z nasadkami pod PV6 i wysokość SW5 pod osłoną CISZY; stos ekranu (szybka, światłowód, panel, pianka) między frontem a płytką i długość taśmy do J7; oś USB-C w otworze ściany i czoło gniazda 0–1 mm od niej; oś EN3 około 2 mm pod płytką, mieszczenie się korpusu i przewodów w wycięciu; oś SMA i przewód do u.FL; szlifowanie dwóch słupków pod oknem ekranu; tulejki i wkręty (długość ≤10,5 mm); zwrot Wio i położenie u.FL. Na obrazku Seeed od strony elementów J1 leży po lewej, pin 1 przy otworze Ø 2,2 mm, a u.FL przy pinie 7 J2. Gniazda (z góry J9 po lewej, J8 po prawej, piny 1 przy y 67,4) pasują, gdy listwy wychodzą od strony bez elementów, czyli moduł wisi elementami w dół; potwierdzić przymiarką;
 - ścieżki po potwierdzeniu rozmieszczenia: tor RF krótko od Wio, przetwornica z dala od ekranu, ESD i TVS ≤10 mm od złączy;
 - wnioski z kroku 4 i decyzja: moduły wpinane czy przylutowany ESP32-S3 i układ radiowy;
 - program stacji: piny GPIO3, GPIO4, GPIO5 i GPIO45–48, ADC ogniw i 12 V, KILL i INT, [czuwanie](../../docs/spec/oprogramowanie.md#czuwanie);

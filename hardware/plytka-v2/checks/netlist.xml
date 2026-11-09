@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-09T19:33:56</date>
+    <date>2026-11-09T21:25:47</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -1483,7 +1483,7 @@
       </units>
     </comp>
     <comp ref="H1">
-      <value>M3</value>
+      <value>ST2.9</value>
       <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
       <fields>
         <field name="Manufacturer"/>
@@ -1509,7 +1509,7 @@
       </units>
     </comp>
     <comp ref="H2">
-      <value>M3</value>
+      <value>ST2.9</value>
       <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
       <fields>
         <field name="Manufacturer"/>
@@ -1535,7 +1535,7 @@
       </units>
     </comp>
     <comp ref="H3">
-      <value>M3</value>
+      <value>ST2.9</value>
       <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
       <fields>
         <field name="Manufacturer"/>
@@ -1561,7 +1561,7 @@
       </units>
     </comp>
     <comp ref="H4">
-      <value>M3</value>
+      <value>ST2.9</value>
       <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
       <fields>
         <field name="Manufacturer"/>
@@ -1580,6 +1580,58 @@
       <property name="ki_fp_filters" value="MountingHole*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>441573f7-e972-5d7d-a346-1546ba5fcf30</tstamps>
+      <units>
+        <unit name="A">
+          <pins/>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="H5">
+      <value>ST2.9</value>
+      <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
+      <fields>
+        <field name="Manufacturer"/>
+        <field name="MPN"/>
+        <field name="Footprint">MountingHole:MountingHole_3.2mm_M3</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
+      <property name="Manufacturer" value=""/>
+      <property name="MPN" value=""/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="exclude_from_bom"/>
+      <property name="ki_keywords" value="mounting hole"/>
+      <property name="ki_fp_filters" value="MountingHole*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>1f6715bf-80aa-58c5-9ec4-a6d1e992af0c</tstamps>
+      <units>
+        <unit name="A">
+          <pins/>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="H6">
+      <value>ST2.9</value>
+      <footprint>MountingHole:MountingHole_3.2mm_M3</footprint>
+      <fields>
+        <field name="Manufacturer"/>
+        <field name="MPN"/>
+        <field name="Footprint">MountingHole:MountingHole_3.2mm_M3</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Mechanical" part="MountingHole" description="Mounting Hole without connection"/>
+      <property name="Manufacturer" value=""/>
+      <property name="MPN" value=""/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="exclude_from_bom"/>
+      <property name="ki_keywords" value="mounting hole"/>
+      <property name="ki_fp_filters" value="MountingHole*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f4bbd127-78aa-51b5-8b51-42190b3500e0</tstamps>
       <units>
         <unit name="A">
           <pins/>

@@ -17,7 +17,7 @@ Render pokazuje założenia z [projektu obudowy płytki R02](../r02/obudowa.md) 
 
 ## Co jest znane, a co trzeba zmierzyć
 
-Znane wartości mają źródło w repozytorium: obrys płytki v1 (170 × 100 mm), 9 otworów montażowych, położenia części, wymiary panelu Sharp i układ panelu z projektu R02. Pomiary są w `zalozenia.py` (`MEASUREMENTS`) i mają wartość `None`, dopóki ktoś ich nie wykona:
+Znane wartości mają źródło w repozytorium: obrys płytki v1 (170 × 100 mm), 9 otworów montażowych, położenia części, wymiary panelu Sharp i układ panelu z projektu R02. Pomiary są w `zalozenia.py` (`MEASUREMENTS`) i mają wartość `None`, dopóki ktoś ich nie wykona. Wysokość słupków skrzynki Hammonda, grubość frontu pod nimi, tulejka 4,5 mm i najdłuższy wkręt 10,5 mm są wpisane z modelu STEP. Nazwy stron jak u Hammonda: skrzynka („Box”) z frontem i pokrywa („Lid”) z klapką ogniw z tyłu.
 
 | Pomiar | Skąd |
 |---|---|
@@ -27,11 +27,11 @@ Znane wartości mają źródło w repozytorium: obrys płytki v1 (170 × 100 mm)
 | długość wolnej taśmy FPC | przymiarka z panelem |
 | położenie i wysokość Wio z adapterem, wyjście u.FL | po montażu prototypu |
 | położenie gniazda USB/OTG DevKitC | po wpięciu DevKitC |
-| słupki i śruby pokrywy Hammond 1599KBAT | model STEP albo próbka |
+| słupki skrzynki Hammond 1599KBAT, tulejka i wkręt płytki | model STEP (wpisane 2026-11-09), potwierdzenie na próbce |
 | płytka v2 stacji pilotażowej | projekt v2 po kroku 4 |
 | obrys i wysokość osłony GT-4R | karta i próbka |
 
-Największe ryzyko obudowy prototypu to różnica wysokości: panel leży około 2,5 mm nad płytką v1, a DevKitC w gniazdach 8,5 mm sięga znacznie wyżej. Pokrywa potrzebuje więc wgłębionego, fazowanego okna albo garbu nad DevKitC. Wybór zapadnie dopiero po pomiarze.
+Największe ryzyko obudowy prototypu to różnica wysokości: panel leży około 2,5 mm nad płytką v1, a DevKitC w gniazdach 8,5 mm sięga znacznie wyżej. Front potrzebuje więc wgłębionego, fazowanego okna albo garbu nad DevKitC. Wybór zapadnie dopiero po pomiarze.
 
 ## Następne kroki
 
@@ -39,7 +39,7 @@ Stan 2026-10-11: przed testami i pomiarami nic więcej w obudowie się nie proje
 
 | Kiedy | Krok |
 |---|---|
-| teraz, decyzja opiekuna projektu | jeden komplet próbek do przymiarki (około 100–150 USD): Hammond 1599KBAT, cztery przyciski PV6, osłona GT-4R z przełącznikiem GTS, gniazdo EN3 z wtykiem, koszyk BH4AAW; sprawdza obsługę w rękawicach przy rozstawie 32 mm, wysokość osłony CISZY, słupki i śruby pokrywy oraz miejsce na koszyk; nie zależy od projektu płytki v2 ([obudowa R02](../r02/obudowa.md) ma status „nie zamawiać”, więc zakup wymaga decyzji) |
+| teraz, decyzja opiekuna projektu | jeden komplet próbek do przymiarki (około 100–150 USD): Hammond 1599KBAT, cztery przyciski PV6, osłona GT-4R z przełącznikiem GTS, gniazdo EN3 z wtykiem, koszyk BH4AAW; sprawdza obsługę w rękawicach przy rozstawie 32 mm, wysokość osłony CISZY, słupki skrzynki i mocowanie koszyka na klapce pokrywy; nie zależy od projektu płytki v2 ([obudowa R02](../r02/obudowa.md) ma status „nie zamawiać”, więc zakup wymaga decyzji) |
 | po dostawie prototypów, przed lutowaniem | przymiarka 1:1 ([przed produkcją](../dev-bench/przed-produkcja.md#zamówienie-2026-10-10-l0)) i wpisanie pomiarów do `MEASUREMENTS` w `zalozenia.py`: wysokości DevKitC, nasadki przycisku i szkła panelu, długość taśmy FPC, położenie Wio z u.FL i gniazda USB/OTG |
 | po komplecie pomiarów prototypu | generator `build.py` (build123d): drukowana obudowa prototypu z PETG albo ASA, szablon wiercenia 1:1, test zgodności otworów z płytką v1; wybór między wgłębionym oknem a garbem nad DevKitC |
 | przy projekcie płytki v2 (krok 6; w `zalozenia.py` pozycja `pilot_board`) | obrys i otwory v2 pod skrzynkę, wkład montażowy, obróbka frontu (szablon albo CNC), folia panelu PL/UK/EN; jedna sztuka, próba montażu i T8, potem 8 sztuk |

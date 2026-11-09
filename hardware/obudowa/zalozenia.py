@@ -24,7 +24,8 @@ N1_POSITIONS = ROOT / "hardware/dev-bench/fabrication/N1/assembly/positions.csv"
 LAYOUT_JSON = HERE / "render/uklad.json"
 
 # --- CONCEPT: hardware/r02/obudowa.md, sections "Obudowa", "Okno ekranu", "Układ panelu" ---
-# Millimetres from the outer top-left corner of the lid; x to the right, y down.
+# Millimetres from the outer top-left corner of the front, seen from the front; x to the right, y down.
+# Hammond names: the front is the bottom of the "Box", the back with the battery door is the "Lid".
 ENCLOSURE = {
     "model": "Hammond 1599KBAT",
     "outer": (220.0, 140.0, 40.0),
@@ -83,10 +84,17 @@ MEASUREMENTS = {
                      "po montażu adaptera Wio w L0", None),
     "usb_otg_position": ("Położenie gniazda USB/OTG DevKitC względem obrysu N1 (x, y, wysokość osi) [mm]",
                          "po wpięciu DevKitC", None),
-    "hammond_bosses": ("Położenie i wysokość słupków pokrywy Hammond 1599KBAT [mm]",
-                       "model STEP Hammonda albo próbka", None),
-    "hammond_lid_screws": ("Położenie śrub pokrywy Hammond 1599KBAT (od frontu czy od spodu)",
-                           "model STEP Hammonda albo próbka", None),
+    # Hammond 1599KBAT from the STEP model 1599KBKBAT.stp (2017-11-14); to be confirmed on a sample. The Lid is
+    # screwed on from the back (4 x M3 x 12 flat head into brass inserts), so the front stays smooth. Board bosses
+    # of the Box: 8 x 4.75 mm on the grid x 20/80/140/200, y 30/110 from the front corner, hole 2.36 mm, 4.6 mm deep.
+    "hammond_boss_height": ("Wysokość słupków płytki w skrzynce (Box) nad wewnętrzną powierzchnią frontu [mm]",
+                            "model STEP Hammonda 1599KBKBAT.stp; potwierdzić na próbce", 4.5),
+    "hammond_front_under_boss": ("Grubość frontu pod otworem słupka płytki [mm]",
+                                 "model STEP Hammonda 1599KBKBAT.stp; potwierdzić na próbce", 2.9),
+    "board_spacer": ("Tulejka dystansowa między słupkiem skrzynki a płytką v2 [mm]; wierzch płytki 9,05 mm od frontu",
+                     "dobór na modelu STEP (hardware/plytka-v2/README.md); potwierdzić na przymiarce", 4.5),
+    "board_screw_max": ("Największa długość wkrętu ST2,9 / #4 pod łbem: płytka 1,6 + tulejka 4,5 + otwór 4,6 [mm]",
+                        "model STEP; dłuższy wchodzi we front pod folią", 10.5),
     "pilot_board": ("Płytka v2 stacji pilotażowej: obrys, otwory, położenie złącza anteny i gniazda USB-C",
                     "projekt v2 (elektronika.md, stacja pilotażowa)", None),
     "guard_footprint": ("Obrys podstawy i wysokość klapki GT-4R z przełącznikiem GTS [mm]",

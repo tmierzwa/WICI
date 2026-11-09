@@ -163,8 +163,6 @@
   "fpc_free_length",
   "wio_position",
   "usb_otg_position",
-  "hammond_bosses",
-  "hammond_lid_screws",
   "pilot_board",
   "guard_footprint"
  ]

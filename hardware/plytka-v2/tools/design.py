@@ -437,10 +437,10 @@ cap('C51', '82p', 'CONV_FB', 'CONV_CMP2', 'kompensacja: C_FF', 'CL21C820JBANNNC'
 res('R68', '20k', 'CONV_CMP2', '+3V3', 'kompensacja: R_FF', 'RC0805FR-0720KL')
 res('R63', '100k', 'PWM_SYNC', 'GND', 'Burst Mode do startu MCU; GPIO45 musi być niski przy resecie', 'RC0805FR-07100KL')
 
-HOLES = ['H1', 'H2', 'H3', 'H4']
+HOLES = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 for ref in HOLES:
-    part(ref, 'Mechanical:MountingHole', 'M3', 'MountingHole:MountingHole_3.2mm_M3', {}, bom=False,
-         note='położenie i liczba z obudowy (Hammond 1599KBAT, pomiar)')
+    part(ref, 'Mechanical:MountingHole', 'ST2.9', 'MountingHole:MountingHole_3.2mm_M3', {}, bom=False,
+         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 4,5 mm, wkręt ST2,9 lub #4 × 9,5 mm')
 
 EXTRAS = [
     ('JP3', 1, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'założona w pracy; zdjęta przy pomiarze prądu radia'),
