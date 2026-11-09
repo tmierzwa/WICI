@@ -11,7 +11,7 @@ Katalog zawiera sprzęt i programy do kroków planu z [rozdziału 08 koncepcji](
 | 3. Pomiar ogólny | radia RNode | do zrobienia |
 | 4. Prototyp na płytce v1 | stacja na płytce v1 ([dev-bench](dev-bench/README.md)), odbiór programem diagnostycznym ([l0-diagnostic](l0-diagnostic/README.md)), program stacji z [firmware](../firmware/README.md) | 2 prototypy w montażu u wykonawcy |
 | 5. Pomiar w gminie | radia RNode | wymaga gminy pilotażowej i kroku 3 |
-| 6. Stacje pilotażowe na płytce v2 | płytka v2 ([elektronika](../docs/spec/elektronika.md#stacja-pilotażowa)), obudowa ([obudowa](obudowa/README.md)), zasilanie z ogniw i 12 V (materiał w [r02](r02/README.md)) | projekt v2 po kroku 4 |
+| 6. Stacje pilotażowe na płytce v2 | płytka v2 ([elektronika](../docs/spec/elektronika.md#stacja-pilotażowa)), obudowa ([obudowa](obudowa/README.md)), zasilanie z ogniw i 12 V (materiał w [r02](r02/README.md)) | projekt v2 po kroku 4; potem 2 z 8 stacji jako prototypy v2 z pomiarami i próbami T6 ([na pierwszych sztukach v2](plytka-v2/README.md)), decyzja o poprawkach, pozostałe 6 i badania zgodności (D20) na wersji ostatecznej |
 | 7. Pilotaż | 8 stacji pilotażowych | po kroku 6 |
 | 8. Wyrób | stacja WICI; materiał do wydania w [r02](r02/README.md) | decyzja po pilotażu |
 

@@ -44,7 +44,7 @@ Zakres prototypu (przygotowany do wyceny, dziś podstawa zlecenia montażu) i za
 | 3. Pomiar ogólny | zasięg na własnym terenie, SF7 i SF8, 13 dBm | do zrobienia |
 | 4. Prototyp na płytce v1 | odbiór, program stacji, interfejs LoRa, zgodność z RNode, próby 1–8 rdzenia | w montażu |
 | 5. Pomiar w gminie | trzy połączenia, dzień i wieczór | wymaga gminy i kroku 3 |
-| 6. Stacje pilotażowe na płytce v2 | projekt v2, 8 stacji, badania zgodności | po kroku 4 |
+| 6. Stacje pilotażowe na płytce v2 | projekt v2, 8 stacji (pierwsze 2 jako prototypy v2), badania zgodności na wersji ostatecznej | po kroku 4 |
 | 7. Pilotaż | ćwiczenie przy stole, potem ≥3 miesiące pracy | po kroku 6 |
 | 8. Wyrób | stacja WICI | decyzja po pilotażu |
 
