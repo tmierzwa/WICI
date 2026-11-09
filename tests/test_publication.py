@@ -2,6 +2,8 @@
 """Regression cases for invalid source archives and read-only checks."""
 
 from pathlib import Path
+import hashlib
+import json
 import subprocess
 import sys
 import tempfile
@@ -14,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from tools.archives import verify_archive, write_archive
 
 sys.path.insert(0, str(ROOT / "tools"))
-from verify_repository import check_links
+from verify_repository import check_links, check_printed_pdfs
 from build_pages import build
 import release
 
@@ -72,7 +74,7 @@ class ArchiveTests(unittest.TestCase):
 
 
 class DocumentLinkTests(unittest.TestCase):
-    """Reject broken local links and anchors in HTML documents."""
+    """Reject broken local links and anchors in HTML and Markdown documents."""
 
     def test_html_links_and_anchors(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -87,6 +89,45 @@ class DocumentLinkTests(unittest.TestCase):
                 page.write_text(broken, encoding="utf-8")
                 with self.assertRaises(ValueError):
                     check_links(page, "a.html")
+
+    def test_markdown_anchors_follow_github_headings(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "b.md"
+            target.write_text("# Próby według kroków\n## Krok 2: radia `RNode`\n## Krok 2: radia `RNode`\n"
+                              "```\n# nie nagłówek\n```\n<a id=\"recznie\"></a>\n", encoding="utf-8")
+            page = root / "a.md"
+            page.write_text("## Wstęp\n[a](b.md#próby-według-kroków) [b](b.md#krok-2-radia-rnode-1) "
+                            "[c](b.md#recznie) [d](#wstęp) [e](b.md#Pr%C3%B3by-wed%C5%82ug-krok%C3%B3w)",
+                            encoding="utf-8")
+            self.assertEqual(check_links(page, "a.md"), 5)
+            for broken in ("[x](b.md#nie-nagłówek)", "[x](b.md#krok-2-radia-rnode-2)", "[x](#brak)"):
+                page.write_text(broken, encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    check_links(page, "a.md")
+
+
+class PrintedPdfTests(unittest.TestCase):
+    """A PDF in output/pdf/ must come from the current version of its Markdown source."""
+
+    def test_stale_source_or_replaced_pdf_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "output/pdf").mkdir(parents=True)
+            source, pdf = root / "doc.md", root / "output/pdf/doc.pdf"
+            source.write_text("# Instrukcja", encoding="utf-8")
+            pdf.write_bytes(b"%PDF-1.4 print")
+            digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+            (root / "output/pdf/zrodla.json").write_text(json.dumps({"doc.pdf": {
+                "source": "doc.md", "source_sha256": digest(source), "pdf_sha256": digest(pdf)}}), encoding="utf-8")
+            self.assertEqual(check_printed_pdfs(root), 1)
+            source.write_text("# Instrukcja po poprawkach", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                check_printed_pdfs(root)
+            source.write_text("# Instrukcja", encoding="utf-8")
+            pdf.write_bytes(b"%PDF-1.4 other print")
+            with self.assertRaises(ValueError):
+                check_printed_pdfs(root)
 
 
 class PagesTests(unittest.TestCase):
@@ -128,26 +169,41 @@ class SourceArchiveScopeTests(unittest.TestCase):
                          {"media/film/wici_film.py", "media/film/plakat.jpg", "docs/x.mp4"})
 
 
-class ManifestModeTests(unittest.TestCase):
-    """Pull requests skip manifest hashes; the full check still rejects them."""
+class ReleaseTests(unittest.TestCase):
+    """The manifest exists only for a release: inside the source ZIP and next to it."""
 
-    def test_pull_request_mode_tolerates_stale_manifest_only(self):
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            (root / "a.md").write_text("new", encoding="utf-8")
-            (root / "manifest.json").write_text(
-                '{"format": 2, "project": "WICI", "version": "0.5-prototype-design", "board": "R02",'
-                ' "files": {"a.md": "0"}}', encoding="utf-8")
-            subprocess.run(["git", "add", "a.md", "manifest.json"], cwd=root, check=True)
-            old = release.ROOT
-            release.ROOT = root
-            try:
-                with self.assertRaises(ValueError):
-                    release.check_manifest()
-                self.assertEqual(set(release.check_manifest(strict=False)), {"a.md", "manifest.json"})
-            finally:
-                release.ROOT = old
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "repo"
+        self.root.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        (self.root / "a.md").write_text("tekst", encoding="utf-8")
+        (self.root / "media/film").mkdir(parents=True)
+        (self.root / "media/film/film.mp4").write_bytes(b"video")
+        subprocess.run(["git", "add", "a.md", "media/film/film.mp4"], cwd=self.root, check=True)
+        old = release.ROOT
+        release.ROOT = self.root
+        self.addCleanup(setattr, release, "ROOT", old)
+
+    def test_archive_carries_manifest_of_its_files(self):
+        target = Path(self.temp.name) / "dist/WICI-0.6-source.zip"
+        beside = release.build_release("0.6", target)
+        self.assertEqual(beside.name, "WICI-0.6-source-manifest.json")
+        data = json.loads(beside.read_text(encoding="utf-8"))
+        self.assertEqual((data["project"], data["version"]), ("WICI", "0.6"))
+        self.assertEqual(data["files"], {"a.md": hashlib.sha256(b"tekst").hexdigest()})
+        with ZipFile(target) as bundle:
+            self.assertEqual(set(bundle.namelist()), {"a.md", "manifest.json"})
+            self.assertEqual(bundle.read("manifest.json").decode("utf-8"), beside.read_text(encoding="utf-8"))
+
+    def test_manifest_in_index_or_bad_version_rejected(self):
+        with self.assertRaises(ValueError):
+            release.build_release("v0.6", Path(self.temp.name) / "x.zip")
+        (self.root / "manifest.json").write_text("{}", encoding="utf-8")
+        subprocess.run(["git", "add", "manifest.json"], cwd=self.root, check=True)
+        with self.assertRaises(ValueError):
+            release.published_files()
 
 
 if __name__ == "__main__":
