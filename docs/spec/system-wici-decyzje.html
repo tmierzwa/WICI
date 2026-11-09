@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.42</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.43</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -24,6 +24,7 @@
         <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
         <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
         <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+        <li><a href="system-wici-slownik.html">Słownik</a></li>
         <li><a href="system-wici-decyzje.html" aria-current="page">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -31,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.42</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -379,7 +380,7 @@
         <article class="record" id="wici-inv-047">
           <h4>WICI-INV-047</h4>
           <dl>
-            <div><dt>Praca w dokumentacji</dt><dd><a href="../concept/slownik.html">Słownik koncepcji</a> nadal wiąże SA1 z LXMF i opisuje aplikację stanowiska przez Reticulum. Ścieżka WICI-Link po PR 181 używa koperty WICI. Znaczenie terminów zostaje, lecz opis warstw w koncepcji wymaga dostosowania do jedynego <a href="system-wici-model.html#sownik-techniczny">słownika specyfikacji</a>. Praca dotyczy <code>docs/concept</code>; koncepcji nie zmieniono w tej wersji.</dd></div>
+            <div><dt>Praca w dokumentacji</dt><dd><a href="../concept/slownik.html">Słownik koncepcji</a> nadal wiąże SA1 z LXMF i opisuje aplikację stanowiska przez Reticulum. Ścieżka WICI-Link po PR 181 używa koperty WICI. Znaczenie terminów zostaje, lecz opis warstw w koncepcji wymaga dostosowania do jedynego <a href="system-wici-slownik.html#sownik-techniczny">słownika specyfikacji</a>. Praca dotyczy <code>docs/concept</code>; koncepcji nie zmieniono w tej wersji.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-048">
@@ -452,6 +453,20 @@
             <div><dt>Luka wyjaśnienia</dt><dd>Scenariusz 100 stacji z ofiarami odciętymi od roota działał źle już bez ataku i bez <a href="system-wici-siec.html#ograniczenie-zalewu">nowej reguły</a>: domknięto 1 z 20 zgłoszeń, a stacje zachowały drogi bezpośrednie. Trzeba ustalić, czy błąd tkwi w scenariuszu, czy w nauce dróg.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-059">
+          <h4>WICI-INV-059</h4>
+          <dl>
+            <div><dt>Stan kodu</dt><dd>W <a href="../../firmware/src/station.cpp"><code>Station::received</code></a> wiadomość od nieaktywnej tożsamości odbiorcy jest odrzucana bez dowodu. Ścieżka <code>Station::receivedEnvelope</code> dla WICI-Link zwraca trwałe odrzucenie z dowodem. Żadna nie przełącza stacji automatycznie; lokalna usługa <code>switchBackup</code> istnieje.</dd></div>
+            <div><dt>Luka</dt><dd>Pierwsza uwierzytelniona koperta od zapasowej tożsamości ma zapisać jednokierunkowy wybór w FRAM, zostać przyjęta i pokazać gospodarzowi nowy klucz (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Obie ścieżki odbioru wymagają uzgodnienia. Nie jest to warunek próby D21.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-060">
+          <h4>WICI-INV-060</h4>
+          <dl>
+            <div><dt>Stan kodu</dt><dd><a href="../../software/laptop/wici/stanowisko/rekey.py"><code>activate_backup</code></a> aktywuje zapasową tożsamość na pustym nośniku. Nie ma wysyłki do wszystkich zaufanych stacji po tej aktywacji; wysyłka jest osobną częścią aplikacji stanowiska (<a href="../../software/laptop/wici/stanowisko/wysylka.py">kod</a>).</dd></div>
+            <div><dt>Luka</dt><dd>Stanowisko ma wysłać krótką wiadomość od nowej tożsamości każdej zaufanej stacji, rozkładając nadania w czasie jak TEST po starcie (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Nie wymaga to nowego rodzaju wiadomości ani zmiany bajtów w eterze; nie jest warunkiem D21.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
       <p><a href="system-wici-o-dokumencie.html#zatwierdzanie">Trzy stopnie</a> to szkic, zatwierdzenie do próby i stan normatywny. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
@@ -496,22 +511,31 @@
       <table class="id-table">
         <thead><tr><th>ID</th><th>Rozstrzygnięcie i stan wdrożenia</th></tr></thead>
         <tbody>
-          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td><a href="system-wici-model.html#granice">Dziewięć rozdziałów i zakres normatywny</a> oraz <a href="system-wici-model.html#sownik-techniczny">jeden słownik</a> rozstrzygnięto 6 listopada 2026 r. Inwentaryzacja jest roboczym dodatkiem. <a href="system-wici-zgodnosc.html#wersja-normatywna">Warunki zamknięcia, termin numeracji i wektory</a> pozostają według rozstrzygnięć z 5 listopada. Dostosowanie koncepcji: <a href="#wici-inv-047">WICI-INV-047</a>.</td></tr>
+          <tr id="wici-dec-001"><td>WICI-DEC-001</td><td><a href="system-wici-model.html#granice">Dziewięć rozdziałów i zakres normatywny</a> oraz jeden słownik rozstrzygnięto 6 listopada 2026 r. <a href="#wici-dec-014">Przegląd rozdziałów 1–2 WICI-DEC-014</a> przeniósł <a href="system-wici-slownik.html#sownik-techniczny">ten słownik na osobną stronę</a>. Inwentaryzacja jest roboczym dodatkiem. <a href="system-wici-zgodnosc.html#wersja-normatywna">Warunki zamknięcia, termin numeracji i wektory</a> pozostają według rozstrzygnięć z 5 listopada. Dostosowanie koncepcji: <a href="#wici-inv-047">WICI-INV-047</a>.</td></tr>
           <tr id="wici-dec-002"><td>WICI-DEC-002</td><td><a href="system-wici-o-dokumencie.html#zatwierdzanie">Właściciel sam zatwierdza rozdziały</a> do próby albo jako normatywne; każda zmiana treści wymaga ponownego zatwierdzenia. <a href="system-wici-o-dokumencie.html#utrzymanie-zgodnosci-z-kodem">Kontrola repozytorium</a> działa od wersji normatywnej, bez ochrony gałęzi; ścieżki zostaną wtedy wybrane. Stan rozdziałów: <a href="#stan-zatwierdzen">tabela</a>.</td></tr>
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025. D21 pozostaje otwarta.</td></tr>
-          <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Zmiany kodu pozostają w WICI-INV-014–021; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
+          <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Sposób przełączenia stacji na tożsamość zapasową zmienia <a href="#wici-dec-014">przegląd rozdziałów 1–2 WICI-DEC-014</a>. Zmiany kodu pozostają w WICI-INV-014–021 oraz <a href="#wici-inv-059">WICI-INV-059</a>–<a href="#wici-inv-060">060</a>; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>. D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum pozostaje do usunięcia po D21 (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Część wdrożenia, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w <code>main</code> od <code>8968e2c</code>, a D21 pozostaje otwarta.</td></tr>
           <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Wynik emulatora doprowadził do <a href="#wici-dec-013">wyboru reguły</a>; D21 pozostaje otwarta. Stan wdrożenia i pozostałe luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
           <tr id="wici-dec-011"><td>WICI-DEC-011</td><td>Rozstrzygnięcia właściciela z 8 listopada 2026 r.: <a href="system-wici-siec.html#trasy">przygotowany z góry zapasowy root</a>, <a href="system-wici-siec.html#plan-sieci">normatywne reguły całego planu</a>, <a href="system-wici-wyrob.html#przekaznik-terenowy">informacyjny profil przekaźnika terenowego</a> oraz zaczep dla późniejszego zarządzania planem przez sieć. Luki wdrożenia i prób: <a href="#wici-inv-049">WICI-INV-049</a>–<a href="#wici-inv-053">053</a>.</td></tr>
           <tr id="wici-dec-012"><td>WICI-DEC-012</td><td>Przegląd rozdziału 1 z 8 listopada 2026 r.: <a href="system-wici-zasady.html#zaozenia-uzgodnione">obce protokoły</a> poza architekturą i <a href="system-wici-siec.html#wspolistnienie">współistnienie w kanale</a>; <a href="system-wici-o-dokumencie.html">osobna przedmowa</a> i metamodel; <a href="system-wici-zasady.html#dokumenty-powolane">dokumenty powołane</a> oraz <a href="system-wici-zasady.html#klasy-zgodnosci">klasy zgodności</a>; <a href="system-wici-o-dokumencie.html#zatwierdzanie">warunek próby wystarczalności</a> i <a href="system-wici-zasady.html#warunek-d21">prosty zapis D21</a>. Sprzeczności starszych rozstrzygnięć: <a href="#wici-inv-055">WICI-INV-055</a>.</td></tr>
           <tr id="wici-dec-013"><td>WICI-DEC-013</td><td>Rozstrzygnięcie z 8 listopada 2026 r.: <a href="system-wici-siec.html#przekazywanie">ograniczenie rozsyłania w dół do kopii od rodzica planowego, zapasowego lub bieżącego</a>. <a href="system-wici-siec.html#ograniczenie-zalewu">Emulator</a> zachował obejście przez rodzica dynamicznego i ograniczył zajętość kanału. Reguła jest w firmware od <code>f74fee5</code>, bez próby na sprzęcie (<a href="#wici-inv-042">WICI-INV-042</a>); trzy odrębne sprawy pozostają w <a href="#wici-inv-056">WICI-INV-056</a>–<a href="#wici-inv-058">058</a>.</td></tr>
+          <tr id="wici-dec-014"><td>WICI-DEC-014</td><td><strong>Przegląd rozdziałów 1–2, 9 listopada 2026 r.</strong>
+            <ol>
+              <li><a href="system-wici-slownik.html">Słownik</a> jest jedną, osobną stroną; zmienia to jego lokalizację ustaloną w WICI-DEC-001.</li>
+              <li>WICI jest nazwą systemu. <a href="system-wici-model.html#warstwy-protokolow">Protokoły WICI</a> to SA1, koperta WICI i WICI-Link; SA1 oznacza format wiadomości w wersji 1, nie skrót; pierwsze pole każdej wiadomości ma wartość 1.</li>
+              <li>Pierwsza uwierzytelniona koperta od zapasowej tożsamości odbiorcy trwale i jednokierunkowo przełącza stację w FRAM oraz jest normalnie przyjmowana. Stanowisko po aktywacji zapasu wysyła krótką wiadomość każdej zaufanej stacji, w odstępach jak TEST po starcie, bez nowego rodzaju wiadomości i bez zmiany bajtów. Stacja pokazuje zmianę gospodarzowi; lokalne KLUCZ ZAPASOWY zostaje. Powrót wymaga nowej konfiguracji USB. Skutki ponowienia i kasowania potwierdzeń pozostają jak w <a href="system-wici-funkcje.html#przelaczenie-tozsamosci">rozdziale 3</a>. To zmienia sposób przełączenia z WICI-DEC-005.</li>
+              <li>Zaakceptowano ryzyko: kradzież paczki zapasowej pozwala zdalnie przełączyć sieć, a cofnięcie wymaga wizyty z USB przy każdej stacji. Paczkę trzyma się poza stanowiskiem; aktywacją zarządza osoba uprawniona do przejęcia stanowiska, dziś wójt. Stanowisko z kluczem głównym widzi ruch do numeru zapasowego, a sam klucz główny nie wywołuje przełączenia. Odrzucono wyłącznie lokalne przełączanie i radiowe polecenie z potwierdzeniem gospodarza: oba pozostawiają bez przełączenia stacje bez obsługi.</li>
+            </ol>
+          </td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.43</td><td>Przebudowano rozdziały 1–2, przeniesiono słownik na osobną stronę i zapisano WICI-DEC-014: nazwy protokołów oraz trwałe przełączenie na zapasową tożsamość przez uwierzytelnioną kopertę. Dodano luki wdrożenia stacji i stanowiska.</td></tr>
           <tr><td>0.42</td><td>Uaktualniono stan wdrożenia i dowodów po scaleniu PR 185–188: emulator, kolejka K1, reguła rodzica i wektory SA1. Przywrócono ogólną zasadę kolorowych objaśnień, przeniesiono definicję sprzętu D21 do warunku i uzupełniono opis trasy odpowiedzi.</td></tr>
           <tr><td>0.41</td><td>Poprawki językowe przedmowy i rozdziałów 1–2, bez zmiany znaczenia. Uproszczenia HACK nie przyjęto: bez nowego zapisu może być potwierdzona także ramka zapisana wcześniej. Szkic ma umożliwiać niezależną implementację; jej wykonalność nie jest jeszcze potwierdzona.</td></tr>
           <tr><td>0.40</td><td>Dodano przykłady czytania rozdziałów 1 i 2, oznaczono D21 jako warunek zamknięcia oraz skorygowano źródła definicji SHA-256 i HMAC.</td></tr>
@@ -554,7 +578,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.42 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

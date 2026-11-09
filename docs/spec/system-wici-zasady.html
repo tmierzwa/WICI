@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Przedmiot, status, założenia i zasady utrzymania specyfikacji WICI.">
-  <title>Status i zasady — Specyfikacja WICI 0.42</title>
+  <title>Status i zasady — Specyfikacja WICI 0.43</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -14,6 +14,7 @@
       <strong>Specyfikacja WICI</strong>
       <ol>
         <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
         <li><a href="system-wici-zasady.html" aria-current="page">1. Status i zasady</a></li>
         <li><a href="system-wici-model.html">2. Model systemu</a></li>
         <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
@@ -23,6 +24,7 @@
         <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
         <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
         <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+        <li><a href="system-wici-slownik.html">Słownik</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -30,30 +32,47 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Status i zasady</h1>
-      <p><span class="status">Projekt 0.42</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
-        <a href="#zaozenia-uzgodnione">Założenia systemu</a>
-        <a href="#dokumenty-powolane">Dokumenty powołane</a>
-        <a href="#klasy-zgodnosci">Zgodność</a>
+        <a href="#przedmiot">Przedmiot</a>
+        <a href="#zaozenia-uzgodnione">Założenia</a>
+        <a href="#slowa-wymagan">Słowa wymagań</a>
+        <a href="#klasy-zgodnosci">Klasy zgodności</a>
         <a href="#warunek-d21">Warunek D21</a>
+        <a href="#dokumenty-powolane">Dokumenty powołane</a>
       </nav>
     <section id="status" aria-labelledby="h-status">
-      <h2 id="h-status">1. Przedmiot, status i zasady</h2>
-      <p class="meta">Kształt wymagań: wprowadzony. Założenia i warunek wyboru protokołu pozostają odrębnymi rodzajami zapisów.</p>
-      <p class="explain"><strong>Przykład informacyjny.</strong> Zdanie „stacja MUSI odrzucić obcą ramkę” jest <a href="system-wici-siec.html#wspolistnienie">wymaganiem wobec stacji</a>. „Podstawą komunikacji jest własny protokół WICI” (<a href="#wici-zal-003">WICI-ZAL-003</a>) jest założeniem, a próba przy stole (D21) jest warunkiem wyboru protokołu. Rozdział zatwierdzony do próby opisuje stan docelowy także wtedy, gdy kod się od niego różni. Rozbieżność zapisuje się w inwentaryzacji.</p>
-      <p>Specyfikacja ma umożliwiać budowę niezależnych, współpracujących implementacji i określać wymagane właściwości wyrobu. Obejmuje funkcje, dane, formaty, bezpieczeństwo, ograniczenia i metody sprawdzenia. Nie narzuca budowy ani organizacji kodu, chyba że od tego zależy zgodność, bezpieczeństwo lub współdziałanie.</p>
-      <p>Wyrażenia <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> odpowiadają poziomom wymagań z RFC 2119. Tylko zapisane wielkimi literami mają to znaczenie, zgodnie z RFC 8174. Budowę wymagania opisuje <a href="system-wici-o-dokumencie.html#metamodel">przedmowa</a>.</p>
-      <p>Stopień <em>normatywny</em> znaczy, że wymaganie obowiązuje i ma ustalony sposób sprawdzenia. Nie stwierdza, że kod albo wyrób są zgodne. Zakres normatywny i informacyjny podaje <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
+      <h2 id="h-status">1. Przedmiot i zasady</h2>
+      <h3 id="przedmiot">Przedmiot</h3>
+      <p>WICI to system łączności radiowej między <a href="system-wici-slownik.html#schronienie">schronieniami</a> a <a href="system-wici-slownik.html#stanowisko">stanowiskiem odbiorczym</a> gminy na czas braku zasilania i zwykłych sieci. Specyfikacja określa funkcje, dane, formaty, bezpieczeństwo, ograniczenia i sposoby sprawdzenia. Ma umożliwiać budowę niezależnych, współpracujących implementacji; nie narzuca budowy ani organizacji kodu, chyba że od tego zależy zgodność, bezpieczeństwo lub współdziałanie.</p>
       <h3 id="zaozenia-uzgodnione">Założenia systemu</h3>
       <table class="id-table">
         <thead><tr><th>ID</th><th>Założenie</th></tr></thead>
         <tbody>
-          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawowa architektura komunikacji opiera się na własnym protokole WICI, zaprojektowanym dla tego systemu.</td></tr>
-          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum, Meshtastic, MeshCore i inne obce protokoły pozostają poza architekturą podstawową. Współpracę z nimi można opisać informacyjnie jako nośnik albo bramę na <a href="system-wici-interfejsy.html#szew-nosnika">szwie nośnika</a>.</td></tr>
-          <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania określa się dla pełnego zakresu protokołu, w tym limitu 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie mogą zawężać wymagań protokołu.</td></tr>
+          <tr id="wici-zal-003"><td>WICI-ZAL-003</td><td>Podstawą komunikacji są własne protokoły WICI: <a href="system-wici-slownik.html#sa1">SA1</a>, <a href="system-wici-slownik.html#koperta-wici">koperta WICI</a> i <a href="system-wici-slownik.html#wici-link">WICI-Link</a>, zaprojektowane dla tego systemu.</td></tr>
+          <tr id="wici-zal-004"><td>WICI-ZAL-004</td><td>Reticulum, Meshtastic, MeshCore i inne obce protokoły pozostają poza podstawową architekturą. Ich ewentualną współpracę można opisać informacyjnie jako nośnik lub bramę na <a href="system-wici-slownik.html#szew-nosnika">szwie nośnika</a>.</td></tr>
+          <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania dotyczą całych protokołów WICI, także 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie zawężają tych wymagań.</td></tr>
         </tbody>
       </table>
+      <h3 id="slowa-wymagan">Słowa wymagań</h3>
+      <p><strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> mają znaczenie określone w RFC 2119 i RFC 8174, tylko gdy są zapisane wielkimi literami. <a href="system-wici-o-dokumencie.html#metamodel">Przedmowa</a> określa budowę wymagania.</p>
+      <p>Stopień <em>normatywny</em> oznacza obowiązujące wymaganie z ustalonym sposobem sprawdzenia. Sam stopień nie stwierdza zgodności kodu ani wyrobu. Zakres normatywny i informacyjny określa <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
+      <h3 id="klasy-zgodnosci">Klasy zgodności</h3>
+      <p>Deklaracja zgodności wskazuje wersję specyfikacji, profil i jedną z klas:</p>
+      <table>
+        <thead><tr><th>Klasa</th><th>Zakres wymagań</th></tr></thead>
+        <tbody>
+          <tr><td>Stacja</td><td>Role schronienia, przekaźnika i roota; wymagania stacji z rozdziałów 2–7 oraz właściwe części rozdziału 8.</td></tr>
+          <tr><td>Stanowisko</td><td>Aplikacja odbiorcy na komputerze stanowiska; wymagania stanowiska z rozdziałów 2–7.</td></tr>
+          <tr><td>Narzędzie przygotowania</td><td>Reguły całego planu sieci z rozdziałów <a href="system-wici-model.html#granice">2</a> i <a href="system-wici-siec.html#plan-sieci">6</a>; ekrany i przebieg pracy są informacyjne.</td></tr>
+          <tr><td>Wyrób poziomu 1</td><td>Stacja jako urządzenie: sprzęt, zasilanie, środowisko i badania z rozdziału 8 wraz z właściwymi wymaganiami stacji z rozdziałów 2–7.</td></tr>
+        </tbody>
+      </table>
+      <p>Implementacja zgodna przechodzi wspólne wektory. Po próbie przy stole wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu. Kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
+      <h3 id="warunek-d21">Warunek próby przy stole</h3>
+      <p><strong>Warunek zamknięcia D21.</strong> Zatwierdzenie WICI-Link wymaga zaliczenia próby przy stole na docelowym sprzęcie według <a href="system-wici-siec.html#warunek-d21-v1">ustalonych kryteriów D21</a>. Reticulum pozostaje zapasem, gdy oczekiwanych wyników nie da się osiągnąć w czasie ustalonym przez właściciela projektu. Dla wyboru protokołu „docelowy sprzęt” oznacza <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki po wyborze protokołu.</p>
+      <p class="explain">Architektura zakłada pozytywny wynik próby przy stole (<a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21 w koncepcji</a>). Decyzja pozostaje otwarta.</p>
       <h3 id="dokumenty-powolane">Dokumenty powołane</h3>
       <p>Znaczenie formatów i algorytmów ustala wskazany numer albo wersja dokumentu. Warunki prawne stosuje się według miejsca i daty oceny wyrobu.</p>
       <h4>Normatywne</h4>
@@ -75,23 +94,8 @@
       </ul>
       <h4>Pomocnicze</h4>
       <p><a href="https://reticulum.network/manual/">Dokumentacja Reticulum 1.6.0</a>, <a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">karta SX1261/SX1262 z 7 kwietnia 2025 r.</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a> i <a href="https://meshtastic.org/docs/overview/radio-settings/">ustawienia Meshtastic</a> opisują otoczenie i źródła projektu. Nie dodają wymagań WICI.</p>
-      <h3 id="klasy-zgodnosci">Zgodność</h3>
-      <p>Deklaracja zgodności wskazuje wersję specyfikacji, profil i jedną z klas:</p>
-      <table>
-        <thead><tr><th>Klasa</th><th>Zakres wymagań</th></tr></thead>
-        <tbody>
-          <tr><td>Stacja</td><td>Role schronienia, przekaźnika i roota; wymagania stacji z rozdziałów 2–7 oraz właściwe części rozdziału 8.</td></tr>
-          <tr><td>Stanowisko</td><td>Aplikacja odbiorcy na komputerze stanowiska; wymagania stanowiska z rozdziałów 2–7.</td></tr>
-          <tr><td>Narzędzie przygotowania</td><td>Reguły całego planu sieci z rozdziałów <a href="system-wici-model.html#granice">2</a> i <a href="system-wici-siec.html#plan-sieci">6</a>; ekrany i przebieg pracy są informacyjne.</td></tr>
-          <tr><td>Wyrób poziomu 1</td><td>Stacja jako urządzenie: sprzęt, zasilanie, środowisko i badania z rozdziału 8 wraz z właściwymi wymaganiami stacji z rozdziałów 2–7.</td></tr>
-        </tbody>
-      </table>
-      <p>Implementacja zgodna przechodzi wspólne wektory. Po próbie przy stole wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu. Kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
-      <h3 id="warunek-d21">Warunek próby przy stole</h3>
-      <p><strong>Warunek zamknięcia D21.</strong> Zatwierdzenie WICI-Link wymaga zaliczenia próby przy stole na docelowym sprzęcie według <a href="system-wici-siec.html#warunek-d21-v1">ustalonych kryteriów D21</a>. Reticulum pozostaje zapasem, gdy oczekiwanych wyników nie da się osiągnąć w czasie ustalonym przez właściciela projektu. Dla wyboru protokołu „docelowy sprzęt” oznacza <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki po wyborze protokołu.</p>
-      <p class="explain">Architektura zakłada pozytywny wynik próby przy stole (<a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21 w koncepcji</a>). Decyzja pozostaje otwarta.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.42 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

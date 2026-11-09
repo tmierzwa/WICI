@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.42</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.43</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -24,6 +24,7 @@
         <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
         <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
         <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+        <li><a href="system-wici-slownik.html">Słownik</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -31,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.42</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#operacje">Operacje</a>
@@ -42,7 +43,7 @@
     <section id="dane" aria-labelledby="h-dane">
       <h2 id="h-dane">3. Funkcje i dane</h2>
       <p class="meta">Kształt wymagań: dotychczasowy; metamodel zostanie wprowadzony przy przeglądzie rozdziału.</p>
-      <p>System przenosi wiadomości SA1 między schronieniem a stanowiskiem odbiorczym. Znaczenie wiadomości nie zależy od nośnika. Poniższe operacje i zakresy są kandydatami do zatwierdzenia; funkcje laptopa schronienia na poziomach 2–3 są opisem etapu po pilotażu.</p>
+      <p>System przenosi wiadomości <a href="system-wici-slownik.html#sa1">SA1</a> między schronieniem a <a href="system-wici-slownik.html#stanowisko">stanowiskiem odbiorczym</a>. Znaczenie wiadomości nie zależy od nośnika. Poniższe operacje i zakresy są kandydatami do zatwierdzenia; funkcje laptopa schronienia na poziomach 2–3 są opisem etapu po pilotażu.</p>
       <h3 id="operacje">Operacje</h3>
       <div class="record-list" aria-label="Operacje systemu WICI">
         <article class="record">
@@ -96,17 +97,17 @@
         <article class="record" id="przelaczenie-tozsamosci">
           <h4>Przełączenie tożsamości odbiorcy: gospodarz, stacja</h4>
           <dl>
-            <div><dt>Warunek</dt><dd>Polecenie poza radiem i lokalne potwierdzenie na stacji; warunki opisuje rozdział 2.</dd></div>
-            <div><dt>Wynik</dt><dd>Docelowo wraca najnowsza rewizja każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code> oraz nowym celem. Etap wraca do „wysyłanie”, a ostatnia decyzja zostaje widoczna. Potwierdzenie i znacznik odczytu poprzedniej tożsamości kasują się; alarm braku potwierdzenia liczy czas od pierwszego nadania po zmianie. Kod dziś wznawia tylko rewizje bez RECEIVED (<a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>). Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
-            <div><dt>Błąd i ponowienie</dt><dd>Stacja odrzuca wiadomości od tożsamości głównej. Powrót do niej wymaga trybu przygotowania; ponowienie nie tworzy nowej rewizji.</dd></div>
+            <div><dt>Warunek</dt><dd>Stacja odbiera pierwszą uwierzytelnioną kopertę od zapasowej tożsamości odbiorcy albo gospodarz wybiera lokalnie KLUCZ ZAPASOWY. Warunki opisuje <a href="system-wici-model.html#tozsamosci-i-klucze">rozdział 2</a>.</dd></div>
+            <div><dt>Wynik</dt><dd>Stacja zapisuje przełączenie trwale w FRAM, przyjmuje pierwszą kopertę od zapasowej tożsamości i pokazuje gospodarzowi wybór klucza. Ponawia najnowszą rewizję każdego niezamkniętego wpisu, także z RECEIVED, z tym samym <code>id</code> i <code>revision</code> oraz nowym celem. Etap wraca do „wysyłanie”, a ostatnia decyzja zostaje widoczna. Potwierdzenie i znacznik odczytu poprzedniej tożsamości kasują się; alarm braku potwierdzenia liczy czas od pierwszego nadania po zmianie. Liczniki STATUS i REPLY oraz pamięć BULLETIN zaczynają się od zera.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Po przełączeniu stacja odrzuca wiadomości od tożsamości głównej. Powrót wymaga nowej konfiguracji przez USB; ponowienie nie tworzy nowej rewizji. Lokalna usługa KLUCZ ZAPASOWY pozostaje dostępna, gdy polecenie stanowiska nie dociera.</dd></div>
           </dl>
         </article>
         <article class="record" id="powrot-nadawania">
           <h4>Powrót nadawania po odtworzeniu kopii: osoba wydająca polecenie, obsługa stanowiska</h4>
           <dl>
             <div><dt>Warunek</dt><dd>Odtworzona kopia blokuje nadawanie pod starym kluczem. Polecenie wydaje osoba uprawniona do przejęcia stanowiska, dziś wójt.</dd></div>
-            <div><dt>Wynik</dt><dd>Stanowisko aktywuje jednorazową tożsamość zapasową, przyjmuje koperty na oba klucze w okresie przejściowym i przekazuje gospodarzom polecenie przełączenia poza radiem.</dd></div>
-            <div><dt>Błąd i ponowienie</dt><dd>Po zużyciu tożsamości zapasowej nadawanie wraca dopiero po wgraniu nowych kart przez USB. Do odnowienia po zdarzeniu nie ma kolejnego zapasu. Kod obsługuje dziś aktywację tylko na pustym nośniku (<a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>).</dd></div>
+            <div><dt>Wynik</dt><dd>Stanowisko aktywuje jednorazową tożsamość zapasową i przyjmuje koperty na oba klucze w okresie przejściowym. Wysyła każdej zaufanej stacji krótką wiadomość od nowej tożsamości, rozłożoną w czasie jak TEST po starcie. Pierwsza uwierzytelniona koperta przełącza stację; nie potrzeba nowego rodzaju wiadomości ani zmiany bajtów w eterze.</dd></div>
+            <div><dt>Błąd i ponowienie</dt><dd>Po zużyciu tożsamości zapasowej nadawanie wraca dopiero po wgraniu nowych kart przez USB. Do odnowienia po zdarzeniu nie ma kolejnego zapasu. <a href="system-wici-decyzje.html#wici-inv-015">Luka aktywacji na odtworzonej bazie</a> pozostaje w inwentaryzacji.</dd></div>
           </dl>
         </article>
         <article class="record" id="wstrzymanie-wysylki">
@@ -200,7 +201,7 @@
           <tr><td>Stanowisko, WICI-Link</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód; wynik obejmuje także trwałe odrzucenie. „Przekazane”: HACK przekaźnika. „Rozesłane”: rozgłoszenie bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „przekazane” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
         </tbody>
       </table>
-      <p>Wynik skoku nie ma osobnego napisu na ekranach. Stacja pokazuje „wysyłanie” z numerem próby; docelowo panel pokazuje stan wiadomości „czeka” lub „rozstrzygnięta” (<a href="system-wici-decyzje.html#wici-inv-018">luka etykiet</a>). „Przekazane” może być widoczne w diagnostyce; stan 4 „przekazane dalej” dotyczy skierowania sprawy do służb (<a href="system-wici-model.html#sownik-techniczny">słownik</a>).</p>
+      <p>Wynik skoku nie ma osobnego napisu na ekranach. Stacja pokazuje „wysyłanie” z numerem próby; docelowo panel pokazuje stan wiadomości „czeka” lub „rozstrzygnięta” (<a href="system-wici-decyzje.html#wici-inv-018">luka etykiet</a>). „Przekazane” może być widoczne w diagnostyce; stan 4 „przekazane dalej” dotyczy skierowania sprawy do służb (<a href="system-wici-slownik.html#przekazane-dalej">słownik: przekazane dalej</a>).</p>
       <p>Stan obsługi zmieniają zdarzenia aplikacyjne:</p>
       <table>
         <thead><tr><th>Stan widoczny dla gospodarza</th><th>Zdarzenie, które go uzasadnia</th></tr></thead>
@@ -218,7 +219,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.42 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

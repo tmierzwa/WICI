@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wiadomości, walidacja, stany i ponawianie SA1.">
-  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.42</title>
+  <title>Protokół aplikacyjny SA1 — Specyfikacja WICI 0.43</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -24,6 +24,7 @@
         <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
         <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
         <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+        <li><a href="system-wici-slownik.html">Słownik</a></li>
         <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
       </ol>
     </nav>
@@ -31,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Protokół aplikacyjny SA1</h1>
-      <p><span class="status">Projekt 0.42</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#typy-i-uklad">Typy i układ</a>
@@ -46,7 +47,7 @@
     <section id="aplikacja" aria-labelledby="h-aplikacja">
       <h2 id="h-aplikacja">4. Protokół aplikacyjny</h2>
       <p class="meta">Kształt wymagań: dotychczasowy; metamodel zostanie wprowadzony przy przeglądzie rozdziału.</p>
-      <p>SA1 opisuje treść wymienianą między stacją a odbiorcą, niezależnie od nośnika. Znaczenie i zakres pól podaje <a href="system-wici-funkcje.html#dane-pola">rozdział 3</a>. Poniższe reguły są kandydatami do zatwierdzenia dla pełnego zakresu protokołu; wartości profilu rozstrzyga <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
+      <p><a href="system-wici-slownik.html#sa1">SA1</a> opisuje treść wymienianą między stacją a odbiorcą, niezależnie od nośnika. Znaczenie i zakres pól podaje <a href="system-wici-funkcje.html#dane-pola">rozdział 3</a>. Poniższe reguły są kandydatami do zatwierdzenia dla pełnego zakresu protokołu; wartości profilu rozstrzyga <a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>.</p>
       <figure>
         <svg viewBox="0 0 780 112" role="img" aria-labelledby="sa1-flow-title sa1-flow-desc">
           <title id="sa1-flow-title">Droga zgłoszenia i potwierdzenia aplikacyjnego</title>
@@ -189,8 +190,8 @@
       <h3 id="rozstrzygniecia-dec-005">Rozstrzygnięcia <a href="system-wici-decyzje.html#wici-dec-005">WICI-DEC-005</a></h3>
       <ol>
         <li><strong>RECEIVED.</strong> RECEIVED oznacza, że treść jest trwale zapisana na nośniku stanowiska. Przetrwa zanik zasilania oraz awarię aplikacji i komputera. Nie gwarantuje odzyskania treści po utracie nośnika, przeczytania zgłoszenia ani pomocy. Przed RECEIVED nie ma drugiego zapisu na dysku komputera; odrzucono tę dodatkową ścieżkę odzyskiwania oraz warunkową gwarancję.</li>
-        <li><strong>Utrata nośnika.</strong> Po zmianie tożsamości odbiorcy (nowa karta lub KLUCZ ZAPASOWY) stacja ponawia najnowszą rewizję każdego niezamkniętego wpisu, także potwierdzonego, z rozłożeniem w czasie jak TEST startowy (50 s × liczba stacji). Stanowisko rozpoznaje duplikat po nadawcy, <code>id</code> i <code>revision</code>. Decyzje wydane po ostatniej kopii odtwarza dyżurny z rejestru papierowego. Zamknięte zgłoszenia nie wracają; w ścieżce Reticulum nie ma przy odzyskaniu zmiany tożsamości, więc pozostaje procedura ludzi. Odrzucono samą procedurę ludzi dla WICI-Link, bo papier nie zawiera nieprzeczytanych treści, oraz radiowy komunikat „prześlij ponownie”. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>.</li>
-        <li><strong>Odtworzenie kopii.</strong> Po odtworzeniu kopii stanowisko przyjmuje zgłoszenia i nie nadaje kopert pod starym kluczem. Nadawanie wraca przez jednorazową tożsamość zapasową po poleceniu przekazanym słownie lub przez gońca. Gdy tożsamość zapasowa została już użyta, nadawanie wraca po wgraniu nowych kart przez USB. Polecenie wydaje ta sama osoba co przy przejęciu stanowiska (dziś wójt). W okresie przejściowym stanowisko przyjmuje zgłoszenia na oba klucze. Do odnowienia po zdarzeniu zapasu nie ma. Odrzucono sam objazd z kartami USB i skok licznika koperty. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>.</li>
+        <li><strong>Utrata nośnika.</strong> Po zmianie tożsamości odbiorcy (nowa karta, uwierzytelniona koperta od zapasowej tożsamości albo lokalne KLUCZ ZAPASOWY) stacja ponawia najnowszą rewizję każdego niezamkniętego wpisu, także potwierdzonego, z rozłożeniem w czasie jak TEST startowy (50 s × liczba stacji). Stanowisko rozpoznaje duplikat po nadawcy, <code>id</code> i <code>revision</code>. Decyzje wydane po ostatniej kopii odtwarza dyżurny z rejestru papierowego. Zamknięte zgłoszenia nie wracają; w ścieżce Reticulum nie ma przy odzyskaniu zmiany tożsamości, więc pozostaje procedura ludzi. Odrzucono samą procedurę ludzi dla WICI-Link, bo papier nie zawiera nieprzeczytanych treści, oraz radiowy komunikat „prześlij ponownie”. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-014">WICI-INV-014</a>.</li>
+        <li><strong>Odtworzenie kopii.</strong> Po odtworzeniu kopii stanowisko przyjmuje zgłoszenia i nie nadaje kopert pod starym kluczem. Nadawanie wraca przez jednorazową tożsamość zapasową. Stanowisko wysyła krótką wiadomość każdej zaufanej stacji, w odstępach jak TEST po starcie; pierwsza uwierzytelniona koperta od tej tożsamości przełącza stację. Lokalna usługa KLUCZ ZAPASOWY pozostaje drogą awaryjną. Gdy tożsamość zapasowa została już użyta, nadawanie wraca po wgraniu nowych kart przez USB. Polecenie wydaje ta sama osoba co przy przejęciu stanowiska (dziś wójt). W okresie przejściowym stanowisko przyjmuje zgłoszenia na oba klucze. Do odnowienia po zdarzeniu zapasu nie ma. Odrzucono sam objazd z kartami USB i skok licznika koperty. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-015">WICI-INV-015</a>.</li>
         <li><strong>Czas ponawiania.</strong> Żadna intencja nie wygasa samoczynnie. Kończy ją dowód od adresata albo zamknięcie zdarzenia; decyzja człowieka wstrzymuje wysyłkę do stacji. Gdy próby do stacji zawodzą, stanowisko ponawia tylko jedną jej intencję, najpierw krótkie RECEIVED i STATUS, a pozostałe wznawia po kontakcie. Po 6 godzinach bez potwierdzenia dyżurny dostaje alarm. Czas 6 h jest parametrem profilu (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>); stacja schronienia działa bez zmian. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-016">WICI-INV-016</a>.</li>
         <li><strong>HACK następnego skoku.</strong> Potwierdzenie następnego skoku oznacza tylko przekazanie ramki na tym skoku. Stacja nie pokazuje go gospodarzowi jako doręczenia i ponawia aż do RECEIVED, STATUS lub REPLY. Wynik nazywa się „przekazane”; kod i pole <code>stage</code> nadal używają „dostarczone” lub <code>delivered</code> (<a href="system-wici-decyzje.html#wici-inv-017">WICI-INV-017</a>). Czas oczekiwania po przekazaniu (dziś 10 min) i odstęp ponowień (dziś 30–60 min) są parametrami profilu. D21 sprawdzi, czy 10 min w szczycie W10 tworzy zbędne kopie; wtedy naturalnym kandydatem jest 15 min.</li>
         <li><strong>REPLY i BULLETIN.</strong> Dowód od stacji oznacza, że stacja rozstrzygnęła wiadomość, zapisując ją albo trwale odrzucając. Nie oznacza przeczytania. Panel pokazuje dla każdej odpowiedzi i komunikatu, czy czeka, czy została rozstrzygnięta, i nie nazywa tego dostarczeniem. Nie dodaje się znacznika odrzucenia do dowodu ani osobnego potwierdzenia SA1. Obecne etykiety panelu wymagają zmiany (<a href="system-wici-decyzje.html#wici-inv-018">WICI-INV-018</a>).</li>
@@ -203,7 +204,7 @@
       </ol>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości SA1, cykl życia i ponawianie</a>, <a href="stanowisko-osp.md">przyjęcie i wysyłka stanowiska</a>, <a href="transport.md">szew nośnika</a>, <a href="../../firmware/src/sa1.cpp">kodek C++</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/reference/reference.py">kodek referencyjny</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="../../software/laptop/wici/stanowisko/wysylka.py">ponawianie</a> i <a href="../../tests/test_sa1_unicode.py">próby Unicode</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.42 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.42</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.43</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -24,6 +24,7 @@
       <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
         <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
         <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+      <li><a href="system-wici-slownik.html">Słownik</a></li>
       <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
     </ol>
   </nav>
@@ -31,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.42</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -42,7 +43,7 @@
     <section id="siec" aria-labelledby="h-siec">
       <h2 id="h-siec">6. Sieć i radio</h2>
       <p class="meta">Kształt wymagań: dotychczasowy; metamodel zostanie wprowadzony przy przeglądzie rozdziału.</p>
-      <p><strong>Reguła protokołu.</strong> WICI-Link przenosi koperty między stacją a rootem stanowiska. Nie interpretuje SA1. Format i ochronę koperty opisuje <a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>; klucze łącza i tag pary opisano tam w <a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">warstwach ochrony</a>.</p>
+      <p><strong>Reguła protokołu.</strong> <a href="system-wici-slownik.html#wici-link">WICI-Link</a> przenosi koperty między stacją a <a href="system-wici-slownik.html#root">rootem</a> stanowiska. Nie interpretuje SA1. Format i ochronę koperty opisuje <a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>; klucze łącza i tag pary opisano tam w <a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">warstwach ochrony</a>.</p>
       <p>Wartości liczbowe tras, ponowień i pamięci w poniższych regułach są parametrami profilu. Format ramki, znaczenie HACK, wybór kolejnego rodzica i acykliczność planu należą do reguł protokołu. Czasy HACK i oczekiwania nadawcy są współzależne i wymagają wspólnej konfiguracji węzłów.</p>
       <table>
         <thead><tr><th>Parametry profilu v3</th><th>Wartości do weryfikacji</th></tr></thead>
@@ -268,7 +269,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.42 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Jedyny słownik pojęć specyfikacji WICI.">
+  <title>Słownik — Specyfikacja WICI 0.43</title>
+  <link rel="stylesheet" href="system-wici.css">
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<div class="layout">
+  <nav class="site-nav" aria-label="Części specyfikacji">
+      <strong>Specyfikacja WICI</strong>
+      <ol>
+        <li><a href="system-wici.html">Start</a></li>
+        <li><a href="system-wici-o-dokumencie.html">O dokumencie</a></li>
+        <li><a href="system-wici-zasady.html">1. Status i zasady</a></li>
+        <li><a href="system-wici-model.html">2. Model systemu</a></li>
+        <li><a href="system-wici-funkcje.html">3. Funkcje i dane</a></li>
+        <li><a href="system-wici-sa1.html">4. Protokół SA1</a></li>
+        <li><a href="system-wici-bezpieczenstwo.html">5. Bezpieczeństwo</a></li>
+        <li><a href="system-wici-siec.html">6. Sieć i radio</a></li>
+        <li><a href="system-wici-interfejsy.html">7. Interfejsy i trwałość</a></li>
+        <li><a href="system-wici-wyrob.html">8. Wyrób i eksploatacja</a></li>
+        <li><a href="system-wici-zgodnosc.html">9. Wersje, zgodność i dowody</a></li>
+        <li><a href="system-wici-slownik.html" aria-current="page">Słownik</a></li>
+        <li><a href="system-wici-decyzje.html">Inwentaryzacja i decyzje</a></li>
+      </ol>
+    </nav>
+  <main id="tresc">
+    <header>
+      <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
+      <h1>Słownik</h1>
+      <p><span class="status">Projekt 0.43</span> · 9 listopada 2026 r.</p>
+    </header>
+    <section id="sownik-techniczny" aria-labelledby="h-sownik">
+      <h2 id="h-sownik">Terminy</h2>
+      <p>To jedyny słownik specyfikacji WICI. <a href="../concept/slownik.html">Słownik koncepcji</a> wymaga dostosowania do tych znaczeń (<a href="system-wici-decyzje.html#wici-inv-047">luka dokumentacyjna WICI-INV-047</a>).</p>
+      <table>
+        <thead><tr><th>Termin</th><th>Znaczenie</th></tr></thead>
+        <tbody>
+          <tr id="beacon"><td>BEACON</td><td>Podpisane ogłoszenie trasy. Podaje root, rangę, epokę i rodzica (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
+          <tr id="dowod-doreczenia"><td>Dowód doręczenia</td><td>Informuje stanowisko, że stacja zapisała wiadomość albo trwale ją odrzuciła. Nie potwierdza przeczytania (<a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>).</td></tr>
+          <tr id="epoka"><td>Epoka</td><td>Trwały licznik uruchomień roota używany przy aktualizacji tras (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
+          <tr id="fram"><td>FRAM</td><td>Nieulotna pamięć stacji, która zachowuje zapisane dane i stan po odłączeniu zasilania (<a href="system-wici-interfejsy.html#trwalosc">rozdział 7</a>).</td></tr>
+          <tr id="hack"><td>HACK</td><td>Potwierdza zakończenie odpowiedzialności nadawcy za jeden skok, zwykle po trwałym zapisie u następnego węzła. Może też potwierdzać odrzucenie bez zapisu lub wcześniej zapisaną ramkę; nie dowodzi przyjęcia SA1 (<a href="system-wici-siec.html#potwierdzenia">rozdział 6</a>).</td></tr>
+          <tr id="karta-odbiorcy"><td>Karta odbiorcy</td><td>Plik z numerami i kluczami publicznymi obu tożsamości odbiorcy. Stacja otrzymuje go przy przygotowaniu, bez kluczy prywatnych (<a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>).</td></tr>
+          <tr id="karta-stacji"><td>Karta stacji</td><td>Plik z numerem i kluczem publicznym stacji, używany do ustanowienia zaufania przy przygotowaniu. Nie zawiera klucza prywatnego (<a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>).</td></tr>
+          <tr id="kiss"><td>KISS</td><td>Sposób przesyłania ramek między rootem a komputerem stanowiska przez USB (<a href="system-wici-interfejsy.html#granice">rozdział 7</a>).</td></tr>
+          <tr id="klucz-pary"><td>Klucz pary sąsiadów</td><td>Osobny klucz wyprowadzany przez dwóch sąsiadów z ich kluczy X25519. Służy do uwierzytelnienia jednoadresowej ramki na jednym skoku (<a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>).</td></tr>
+          <tr id="klucz-planu"><td>Klucz planu</td><td>Publiczny klucz Ed25519 zapisany w konfiguracji jako zaczep dla późniejszych podpisanych poleceń planu. Pierwsza wersja normatywna nie obsługuje takich poleceń (<a href="system-wici-siec.html#plan-sieci">rozdział 6</a>).</td></tr>
+          <tr id="klucz-sieci"><td>Klucz sieci</td><td>Wspólny klucz stacji WICI-Link używany do ochrony ramki sieciowej. Nie zastępuje klucza pary ani ochrony koperty (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
+          <tr id="koperta-wici"><td>Koperta WICI</td><td>Chroni wiadomość SA1 między stacją a odbiorcą, niezależnie od kolejnych skoków radiowych (<a href="system-wici-bezpieczenstwo.html#koperta-wici">rozdział 5</a>).</td></tr>
+          <tr id="lora"><td>LoRa</td><td>Technika radiowa używana do nadawania ramek WICI-Link (<a href="system-wici-siec.html#profil">rozdział 6</a>).</td></tr>
+          <tr id="net-id"><td><code>net_id</code></td><td>Numer identyfikujący konkretną sieć stacji systemu WICI; sam nie uwierzytelnia nadawcy (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
+          <tr id="nosnik-komunikacji"><td>Nośnik komunikacji</td><td>Sposób przenoszenia bajtów między końcami. Jego zdarzenie transmisji nie potwierdza przyjęcia SA1; normatywnym nośnikiem jest WICI-Link (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
+          <tr id="nosnik-stanowiska"><td>Nośnik stanowiska</td><td>Dysk z bazą zgłoszeń i danymi odbiorcy, przenoszony do zapasowego komputera po awarii (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td></tr>
+          <tr id="numer"><td>Numer</td><td>Wartość u16 wskazująca stację albo tożsamość odbiorcy w planie. Sam numer nie uwierzytelnia nadawcy (<a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>).</td></tr>
+          <tr id="plan-sieci"><td>Plan sieci</td><td>Przygotowana lista numerów i położeń stacji oraz dróg do roota. Zawiera rodzica planowego i ewentualnego zapasowego (<a href="system-wici-siec.html#plan-sieci">rozdział 6</a>).</td></tr>
+          <tr id="przekazane"><td>Przekazane</td><td>Wynik następnego skoku radiowego. Nie potwierdza odbioru zgłoszenia przez stanowisko (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
+          <tr id="przekazane-dalej"><td>Przekazane dalej</td><td>Stan 4 obsługi zgłoszenia: skierowanie sprawy do służb. Jest niezależny od wyniku radiowego „przekazane” (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
+          <tr id="przekaznik"><td>Przekaźnik</td><td>Rola stacji, która przekazuje ramki innych stacji i utrzymuje trasy oraz kolejkę (<a href="system-wici-model.html#urzadzenia-i-role">rozdział 2</a>).</td></tr>
+          <tr id="ramka"><td>Ramka WICI-Link</td><td>Jednostka transmisji między stacjami. Niesie adresy bieżącego skoku i może przenosić kopertę WICI (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
+          <tr id="ranga"><td>Ranga</td><td>Deklarowany przez stację koszt drogi do roota (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
+          <tr id="received"><td>RECEIVED</td><td>Potwierdza trwały zapis danej rewizji zgłoszenia na nośniku stanowiska (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozdział 4</a>).</td></tr>
+          <tr id="rewizja"><td>Rewizja</td><td>Pełna wersja zgłoszenia z tym samym <code>id</code> i wyższym <code>revision</code>. Każda rewizja jest potwierdzana osobno (<a href="system-wici-sa1.html#typy-i-uklad">rozdział 4</a>).</td></tr>
+          <tr id="rodzic"><td>Rodzic</td><td>Następny skok stacji w kierunku roota. Może być planowy, zapasowy albo wybrany dynamicznie (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
+          <tr id="root"><td>Root</td><td>Stacja stanowiska na początku drzewa tras WICI-Link. Root główny i zapasowy mają ten sam numer, ale różne klucze; uwierzytelnione przejęcie przez zapasowy zapisuje się trwale (<a href="system-wici-siec.html#trasy">rozdział 6</a>).</td></tr>
+          <tr id="sa1"><td>SA1</td><td>SA1 to format wiadomości WICI w wersji 1. Nazwa jest identyfikatorem formatu, nie skrótem; pierwsze pole każdej wiadomości ma wartość 1 (<a href="system-wici-sa1.html#typy-i-uklad">rozdział 4</a>).</td></tr>
+          <tr id="schronienie"><td>Schronienie</td><td>Obiekt, w którym gromadzi się ludność. WICI nie wyznacza ani nie klasyfikuje takich obiektów (<a href="system-wici-model.html#granice">rozdział 2</a>).</td></tr>
+          <tr id="stanowisko"><td>Stanowisko odbiorcze</td><td>Miejsce przyjmowania zgłoszeń schronień, kierowania pomocy i odsyłania odpowiedzi. Komputer stanowiska i root pełnią różne zadania (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
+          <tr id="szew-nosnika"><td>Szew nośnika</td><td>Granica między chronioną kopertą a sposobem przenoszenia jej bajtów (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
+          <tr id="tag-pary"><td>Tag pary</td><td>Znacznik uwierzytelniający jednoadresową ramkę między sąsiadami. Nie zastępuje ochrony koperty (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
+          <tr id="tozsamosc"><td>Tożsamość</td><td>Ma 64-bajtowy klucz publiczny X25519 ‖ Ed25519 oraz 16-bajtowy identyfikator wyznaczany stałym wzorem WICI. Wzór i role kluczy podaje <a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>.</td></tr>
+          <tr id="wici"><td>WICI</td><td>System łączności radiowej schronień ze stanowiskiem odbiorczym; jego formaty SA1, koperta WICI i WICI-Link to protokoły WICI (<a href="system-wici-zasady.html#przedmiot">rozdział 1</a>).</td></tr>
+          <tr id="wici-link"><td>WICI-Link</td><td>Normatywny nośnik koperty WICI: ramki i reguły przekazywania między stacjami przez radio (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
+          <tr id="zdarzenie-kryzysowe"><td>Zdarzenie kryzysowe</td><td>Cała sytuacja, której zamknięcie kończy ponawianie intencji przez stanowisko (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td></tr>
+          <tr id="zdarzenie-sa1"><td>Zdarzenie SA1</td><td>Wpis z numerem <code>event</code>, na przykład nowa decyzja dyżurnego (<a href="system-wici-sa1.html#typy-i-uklad">rozdział 4</a>).</td></tr>
+          <tr id="zgloszenie"><td>Zgłoszenie</td><td>Wiadomość o potrzebie ze stałym <code>id</code>; zmiana danych tworzy nową rewizję z tym samym identyfikatorem (<a href="system-wici-sa1.html#typy-i-uklad">rozdział 4</a>).</td></tr>
+        </tbody>
+      </table>
+    </section>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.43 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+  </main>
+</div>
+</body>
+</html>
