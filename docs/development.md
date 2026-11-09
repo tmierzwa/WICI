@@ -2,7 +2,7 @@
 
 ## Model i kontrola źródeł
 
-Python 3.12 lub nowszy (CI: 3.12), Git. Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
+Python 3.12 lub nowszy, Git. CI sprawdza zgodność z 3.12, a testy i kontrolę repozytorium uruchamia na 3.14.8 (wersja z `software/laptop/build/runtimes.json`). Model, testy i kontrola repozytorium używają tylko biblioteki standardowej. Uruchom z katalogu głównego:
 
 ```sh
 python3 -m unittest discover -s software/reference -v
@@ -10,11 +10,11 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (kotwice tylko w odnośnikach do stron HTML), składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola bierze pliki z indeksu Git i sprawdza lokalne odnośniki Markdown i HTML (z kotwicami: w stronach HTML według `id`, w plikach Markdown według nagłówków, tak jak tworzy je GitHub), zgodność wydruków PDF w `output/pdf/` z ich źródłami, składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie i nie uruchamia KiCad.
 
 ## Oprogramowanie układowe
 
-Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym środowisku Pythona (`python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio`, potem `pio run` w `firmware/`). Python 3.10–3.14: platforma ESP32 odrzuca Pythona 3.15 („Python version must be 3.10, 3.11, 3.12, 3.13, 3.14”), więc przy nowszym domyślnym `python3` środowisko zakłada się wprost, np. `python3.14 -m venv .venv-pio`. Wersje platformy i rdzenia są przypięte w `platformio.ini`. CI buduje w workflow `Firmware` ([.github/workflows/firmware.yml](../.github/workflows/firmware.yml)) przy każdej zmianie w `firmware/` dziesięć środowisk: `bench-a`, `bench-n1`, `bench-b`, `l0` (program stacji prototypu) i `host` na rdzeniu Reticulum stacji oraz `bench-a-port`, `bench-n1-port`, `bench-b-port`, `l0-port` i `host-port` z portem microReticulum (wyjście awaryjne do etapu rdzenia 6-5). Dla obrazów z rdzeniem, które nie są `host`, workflow uruchamia też `tools/core_boards.py` (rdzeń z kompilatorem danej płytki). Osobne zadania: próby wrogiego ruchu na rdzeniu i na porcie oraz fuzzing rdzenia. Wybór stosu opisuje [firmware/README](../firmware/README.md#wybór-stosu-port-albo-rdzeń). Wynik prób na płytce podaje się w opisie PR. Samo `pio run` buduje domyślne środowisko `bench-a`; pozostałe wybiera się przez `-e`, np. `-e l0`. Program diagnostyczny prototypu (`hardware/l0-diagnostic`) ma własne środowisko `l0`, poza tą listą. Część nagłówków jest generowana. Tablicę rejestrów CC1120 dla profilu P1 (`firmware/src/p1_registers.h`) tworzy `firmware/tools/p1_registers.py`, a tablicę S2-LP (`firmware/src/s2lp_p1_registers.h`) skrypt `firmware/tools/s2lp_p1_registers.py`. Po zmianie parametrów w skrypcie trzeba go uruchomić z `--write`; testy w `tests/` odrzucają nieaktualny nagłówek. Tak samo powstają teksty ekranu (`firmware/src/ui_texts.h` z tabel w `docs/spec/oprogramowanie.md`, skrypt `firmware/tools/ui_texts.py`; po zmianie tekstów w specyfikacji uruchomić go z `--write`) i bitmapa fontu ekranu (`firmware/src/font_glyphs.h` z `firmware/fonts/DejaVuSansMono-Bold.ttf`, skrypt `firmware/tools/font_bitmap.py`, wymaga Pillow; test regeneracji jest pomijany bez Pillow).
+Katalog [firmware/](../firmware/README.md) buduje się PlatformIO w osobnym środowisku Pythona (`python3 -m venv .venv-pio && .venv-pio/bin/pip install platformio`, potem `pio run` w `firmware/`). Python 3.10–3.14: platforma ESP32 odrzuca Pythona 3.15 („Python version must be 3.10, 3.11, 3.12, 3.13, 3.14”), więc przy nowszym domyślnym `python3` środowisko zakłada się wprost, np. `python3.14 -m venv .venv-pio`. Wersje platformy i rdzenia są przypięte w `platformio.ini`. CI buduje w workflow `Firmware` ([.github/workflows/firmware.yml](../.github/workflows/firmware.yml)) przy każdej zmianie w `firmware/` dziesięć środowisk: `bench-a`, `bench-n1`, `bench-b`, `l0` (program stacji prototypu) i `host` na rdzeniu Reticulum stacji oraz `bench-a-port`, `bench-n1-port`, `bench-b-port`, `l0-port` i `host-port` z portem microReticulum (wyjście awaryjne do etapu rdzenia 6-5). Dla obrazów z rdzeniem, które nie są `host`, workflow uruchamia też `tools/core_boards.py` (rdzeń z kompilatorem danej płytki). Osobne zadania: próby wrogiego ruchu na rdzeniu i na porcie oraz fuzzing rdzenia. Wybór stosu opisuje [firmware/README](../firmware/docs/stos.md#wybór-stosu-port-albo-rdzeń). Wynik prób na płytce podaje się w opisie PR. Samo `pio run` buduje domyślne środowisko `bench-a`; pozostałe wybiera się przez `-e`, np. `-e l0`. Program diagnostyczny prototypu (`hardware/l0-diagnostic`) ma własne środowisko `l0`, poza tą listą. Część nagłówków jest generowana. Tablicę rejestrów CC1120 dla profilu P1 (`firmware/src/p1_registers.h`) tworzy `firmware/tools/p1_registers.py`, a tablicę S2-LP (`firmware/src/s2lp_p1_registers.h`) skrypt `firmware/tools/s2lp_p1_registers.py`. Po zmianie parametrów w skrypcie trzeba go uruchomić z `--write`; testy w `tests/` odrzucają nieaktualny nagłówek. Tak samo powstają teksty ekranu (`firmware/src/ui_texts.h` z tabel w `docs/spec/oprogramowanie.md`, skrypt `firmware/tools/ui_texts.py`; po zmianie tekstów w specyfikacji uruchomić go z `--write`) i bitmapa fontu ekranu (`firmware/src/font_glyphs.h` z `firmware/fonts/DejaVuSansMono-Bold.ttf`, skrypt `firmware/tools/font_bitmap.py`, wymaga Pillow; test regeneracji jest pomijany bez Pillow).
 
 ## Symulator stacji
 
@@ -48,15 +48,15 @@ Płytki stacji projektuje się w KiCad 10.0.6: v1 (dawniej płytka nośna N1, p�
 
 ## Paczka źródłowa
 
-Po sprawdzeniu repozytorium:
+Manifest z sumami SHA-256 plików paczki (`manifest.json`) powstaje tylko przy wydaniu; między wydaniami pliki chroni Git. Przy tagu `v*` CI (`checks.yml`) buduje paczkę z manifestem i udostępnia oba pliki jako artefakt `source-archive`, a opiekun dołącza je do wydania na GitHubie. Lokalnie, po sprawdzeniu repozytorium:
 
 ```sh
-python3 tools/release.py --source-zip dist/WICI-0.5-source.zip
+python3 tools/release.py --version 0.6 --source-zip dist/WICI-0.6-source.zip
 ```
 
-Paczka zawiera źródła, dokumentację i eksporty; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Archiwum zawiera wszystkie pliki manifestu i sam manifest, ze stałymi datami i kolejnością wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
+Powstaje `dist/WICI-0.6-source.zip` z `manifest.json` w środku, a obok ten sam manifest jako `dist/WICI-0.6-source-manifest.json`. Paczka zawiera źródła, dokumentację i eksporty z indeksu Git, bez wyrenderowanych filmów; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Wpisy mają stałe daty i kolejność, a kontrola porównuje bajty każdego wpisu ze źródłem. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
 
-Manifest odświeża opiekun po scaleniu zmian i przed wydaniem, osobnym PR (na `main` nie można wysyłać zmian bezpośrednio). Przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`. CI robi to samo dla pull requestów i gałęzi `main`, a pełną kontrolę z manifestem i paczkę źródłową wykonuje tylko dla tagów `v*`; gałęzie robocze sprawdza tylko w pull requeście. Po scaleniu PR, który zmienia pliki, manifest pozostaje nieaktualny, dopóki opiekun go nie odświeży. Kontrola `main` go pomija, ale tag `v*` z nieaktualnym manifestem nie przejdzie. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
+Przed tagiem opiekun przegląda pliki zmienione od poprzedniego wydania, np. `git diff --stat v0.5.2..HEAD`.
 
 Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 
