@@ -153,13 +153,14 @@ part('J11', 'Connector_Generic:Conn_01x02', 'CISZA', XH2, {1: 'SW_COM', 2: 'GND'
      manufacturer='JST', spec='złącze 2-pin, 2,5 mm, THT',
      note='przewód do przełącznika CISZA: 1 końcówka środkowa (wspólna), 2 masa na końcówkę najdalej od zawiasu GT-4R; '
           'dźwignia do zawiasu = cisza (SW_CISZA = L)')
-# TPD4E1U06 (TI SLLSEB0): 1 D1+, 2 GND, 3 D2+, 4 D2-, 5 NC, 6 D1-, four lines to ground; KiCad has no symbol for it,
+# TPD4E1U06 (TI SLVSBQ9): 1 D1+, 2 GND, 3 D2+, 4 D2-, 5 NC, 6 D1-, four lines to ground; KiCad has no symbol for it,
 # so the ESDA6V1-5SC6 symbol with the same pins 1-4 and 6 stands in, pin 5 (NC) left open.
 part('U9', 'Power_Protection:ESDA6V1-5SC6', 'TPD4E1U06DCKR', 'Package_TO_SOT_SMD:SOT-363_SC-70-6',
      {1: 'BTN_UP_IN', 2: 'GND', 3: 'BTN_DOWN_IN', 4: 'BTN_OK_IN', 6: 'BTN_BACK_IN'},
      mpn='TPD4E1U06DCKR', manufacturer='Texas Instruments',
      spec='ochrona ESD 4 linii, SC-70-6, VRWM 5,5 V, upływ ≤10 nA przy 2,5 V, IEC 61000-4-2 ±15 kV',
-     note='przy J10; symbol ESDA6V1-5SC6 (te same piny 1-4 i 6), pin 5 NC wolny', lcsc='C194628')
+     note='przy J10; symbol ESDA6V1-5SC6 (te same piny 1-4 i 6), pin 5 NC wolny; '
+          'zamiennik TECH PUBLIC TPD4E1U06DCKR (LCSC C2987062)', lcsc='C194628')
 for (label, net), r, c in zip(BUTTONS, ('R80', 'R81', 'R82', 'R83'), ('C60', 'C61', 'C62', 'C63')):
     res(r, '1k', net + '_IN', net, f'{label}: filtr RC i ograniczenie prądu od ESD', 'RC0805FR-071KL')
     cap(c, '100n', net, 'GND', f'{label}: filtr RC przy J10', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
