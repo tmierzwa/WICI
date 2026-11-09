@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Zasady opracowania, zatwierdzania i utrzymania specyfikacji WICI.">
-  <title>O dokumencie — Specyfikacja WICI 0.47</title>
+  <title>O dokumencie — Specyfikacja WICI 0.48</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>O dokumencie</h1>
-      <p><span class="status">Projekt 0.47</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.48</span> · 9 listopada 2026 r.</p>
       <p>Przedmowa mówi, jak czytać i utrzymywać specyfikację. Nie jest numerowanym rozdziałem.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -57,7 +57,7 @@
     <section id="metamodel" aria-labelledby="h-metamodel">
       <h2 id="h-metamodel">Rodzaje zapisów</h2>
       <p>Założenie określa punkt wyjścia, a definicja znaczenie terminu. Wymaganie podaje sprawdzalne zachowanie podmiotu, a parametr profilu wartość dla wybranej konfiguracji. Decyzja opisuje wybór właściciela, a warunek zamknięcia próbę potrzebną do zakończenia etapu projektu. Wpis inwentaryzacji opisuje stan kodu i lukę, a dowód wynik sprawdzenia.</p>
-      <p>Wymaganie ma identyfikator, podmiot z <a href="system-wici-zasady.html#klasy-zgodnosci">czterech klas zgodności</a>, rodzaj (reguła protokołu, parametr profilu albo wymaganie wyrobu), jedno zdanie ze słowem <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> lub <strong>MOŻE</strong>, uzasadnienie, sposób sprawdzenia i źródło. Sprawdzeniem może być wektor, test, próba, pomiar lub przegląd. Akapity na kolorowym tle, czyli przykłady i uzasadnienia, objaśniają treść i nie ustanawiają wymagań. Stan kodu należy do inwentaryzacji, nie do treści wymagania.</p>
+      <p>Wymaganie ma identyfikator, podmiot z <a href="system-wici-zasady.html#klasy-zgodnosci">czterech klas zgodności</a>, rodzaj (reguła protokołu, wymaganie funkcji, parametr profilu albo wymaganie wyrobu), jedno zdanie ze słowem <strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> lub <strong>MOŻE</strong>, uzasadnienie, sposób sprawdzenia i źródło. Reguła protokołu dotyczy bajtów i stanów wymienianych między urządzeniami. Wymaganie funkcji dotyczy zachowania stacji albo aplikacji wobec ludzi i danych, na przykład potwierdzenia zapisu na ekranie. Parametr profilu podaje wartość dla wybranej konfiguracji, a wymaganie wyrobu właściwość urządzenia: sprzętu, zasilania albo środowiska pracy. Sprawdzeniem może być wektor, test, próba, pomiar lub przegląd. Akapity na kolorowym tle, czyli przykłady i uzasadnienia, objaśniają treść i nie ustanawiają wymagań. Stan kodu należy do inwentaryzacji, nie do treści wymagania.</p>
       <p>Nowy kształt wprowadza się rozdział po rozdziale przed zatwierdzeniem do próby. Status kształtu przy rozdziale i w <a href="system-wici-decyzje.html#stan-zatwierdzen">rejestrze</a> nie jest stopniem zatwierdzenia. Identyfikatory wymagań nadaje się po decyzjach. Do tego czasu pole jest robocze albo puste, zgodnie z <a href="system-wici-zgodnosc.html#numeracja-wymagan">decyzją o terminie numeracji</a>.</p>
       <p class="explain"><strong>Przykład informacyjny.</strong> „Stacja MUSI odrzucić obcą ramkę bez zmiany stanu protokołu”. Podmiotem jest stacja, rodzajem jest reguła protokołu, a sprawdzeniem test. Przykład pokazuje tylko formę i nie jest wymaganiem.</p>
     </section>
@@ -76,7 +76,7 @@
       <p>Każda zmiana kodu w obszarze objętym specyfikacją aktualizuje dotknięte wymagania albo zapisuje w historii specyfikacji deklarację „bez wpływu na specyfikację” wraz ze sposobem sprawdzenia. Zmiana wskazuje też dotknięte testy i wpływ na ocenę zgodności wyrobu. Automatyczna kontrola repozytorium wskazuje zmianę kodu bez takiego zapisu. Działa od wersji normatywnej. Wtedy ustala się listę ścieżek, które obejmuje. Gałęzie nie są chronione (<a href="system-wici-decyzje.html#wici-dec-002">WICI-DEC-002</a>).</p>
       <p>Przed zatwierdzeniem wymaganie musi mieć jednoznaczny zakres, źródło, sposób sprawdzenia i rozstrzygnięte sprzeczności z innymi wymaganiami.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.47 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.48 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
