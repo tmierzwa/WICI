@@ -199,6 +199,8 @@ Przerzut liczono tak: OV wyłącza bramkę w ≤5,4 µs, a w tym czasie nawet 50
 
 Wyniki tych prób są potrzebne do schematu zasilania, a same próby nie czekają na T3–T5.
 
+Stan 2026-11-09: próby się nie odbyły. Dla płytki v2 zostaje płytka testowa przetwornicy, a resztę zastępuje prototyp v2 ([płytka v2](../plytka-v2/README.md#przed-ścieżkami-i-zamówieniem)).
+
 | Próba | Płytka | Cena (DigiKey, 2026-10-08) | Co mierzyć |
 |---|---|---|---|
 | Przetwornica 3V3 | własna [płytka testowa](../przetwornica-3v3/README.md) z JLC (LTC3115-1, 3,3 V, 750 kHz, elementy z tej tabeli; DC1687B za około 230 USD ma 5 V i krzywe od 100 mA) | koszt PCB i montażu JLC, do sprawdzenia w koszyku | sprawność przy 30–60 mA z 6 V i 12,8 V w Burst Mode, Iq bez obciążenia, prąd w wyłączeniu, granica Burst Mode, przejście PWM/SYNC przy impulsie TX |
