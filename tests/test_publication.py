@@ -2,6 +2,8 @@
 """Regression cases for invalid source archives and read-only checks."""
 
 from pathlib import Path
+import hashlib
+import json
 import subprocess
 import sys
 import tempfile
@@ -14,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from tools.archives import verify_archive, write_archive
 
 sys.path.insert(0, str(ROOT / "tools"))
-from verify_repository import check_links
+from verify_repository import check_links, check_printed_pdfs
 from build_pages import build
 import release
 
@@ -72,7 +74,7 @@ class ArchiveTests(unittest.TestCase):
 
 
 class DocumentLinkTests(unittest.TestCase):
-    """Reject broken local links and anchors in HTML documents."""
+    """Reject broken local links and anchors in HTML and Markdown documents."""
 
     def test_html_links_and_anchors(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -87,6 +89,45 @@ class DocumentLinkTests(unittest.TestCase):
                 page.write_text(broken, encoding="utf-8")
                 with self.assertRaises(ValueError):
                     check_links(page, "a.html")
+
+    def test_markdown_anchors_follow_github_headings(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "b.md"
+            target.write_text("# Próby według kroków\n## Krok 2: radia `RNode`\n## Krok 2: radia `RNode`\n"
+                              "```\n# nie nagłówek\n```\n<a id=\"recznie\"></a>\n", encoding="utf-8")
+            page = root / "a.md"
+            page.write_text("## Wstęp\n[a](b.md#próby-według-kroków) [b](b.md#krok-2-radia-rnode-1) "
+                            "[c](b.md#recznie) [d](#wstęp) [e](b.md#Pr%C3%B3by-wed%C5%82ug-krok%C3%B3w)",
+                            encoding="utf-8")
+            self.assertEqual(check_links(page, "a.md"), 5)
+            for broken in ("[x](b.md#nie-nagłówek)", "[x](b.md#krok-2-radia-rnode-2)", "[x](#brak)"):
+                page.write_text(broken, encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    check_links(page, "a.md")
+
+
+class PrintedPdfTests(unittest.TestCase):
+    """A PDF in output/pdf/ must come from the current version of its Markdown source."""
+
+    def test_stale_source_or_replaced_pdf_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "output/pdf").mkdir(parents=True)
+            source, pdf = root / "doc.md", root / "output/pdf/doc.pdf"
+            source.write_text("# Instrukcja", encoding="utf-8")
+            pdf.write_bytes(b"%PDF-1.4 print")
+            digest = lambda path: hashlib.sha256(path.read_bytes()).hexdigest()
+            (root / "output/pdf/zrodla.json").write_text(json.dumps({"doc.pdf": {
+                "source": "doc.md", "source_sha256": digest(source), "pdf_sha256": digest(pdf)}}), encoding="utf-8")
+            self.assertEqual(check_printed_pdfs(root), 1)
+            source.write_text("# Instrukcja po poprawkach", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                check_printed_pdfs(root)
+            source.write_text("# Instrukcja", encoding="utf-8")
+            pdf.write_bytes(b"%PDF-1.4 other print")
+            with self.assertRaises(ValueError):
+                check_printed_pdfs(root)
 
 
 class PagesTests(unittest.TestCase):
