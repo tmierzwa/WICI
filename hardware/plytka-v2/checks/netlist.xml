@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-10-31T15:13:35</date>
+    <date>2026-11-09T18:15:45</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -1146,18 +1146,18 @@
       </units>
     </comp>
     <comp ref="D7">
-      <value>Schottky 40V</value>
-      <footprint>Diode_SMD:D_SMA</footprint>
+      <value>RB168MM-40</value>
+      <footprint>Diode_SMD:D_SOD-123F</footprint>
       <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
-        <field name="Footprint">Diode_SMD:D_SMA</field>
+        <field name="Manufacturer">ROHM</field>
+        <field name="MPN">RB168MM-40TR</field>
+        <field name="Footprint">Diode_SMD:D_SOD-123F</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D_Schottky" description="Schottky diode"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
+      <property name="Manufacturer" value="ROHM"/>
+      <property name="MPN" value="RB168MM-40TR"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode Schottky"/>
@@ -1178,14 +1178,14 @@
       <footprint>Diode_SMD:D_SOD-123F</footprint>
       <fields>
         <field name="Manufacturer">Nexperia</field>
-        <field name="MPN">BAS116H</field>
+        <field name="MPN">BAS116H,115</field>
         <field name="Footprint">Diode_SMD:D_SOD-123F</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D" description="Diode"/>
       <property name="Manufacturer" value="Nexperia"/>
-      <property name="MPN" value="BAS116H"/>
+      <property name="MPN" value="BAS116H,115"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -1206,14 +1206,14 @@
       <footprint>Diode_SMD:D_SOD-123F</footprint>
       <fields>
         <field name="Manufacturer">Nexperia</field>
-        <field name="MPN">BAS116H</field>
+        <field name="MPN">BAS116H,115</field>
         <field name="Footprint">Diode_SMD:D_SOD-123F</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D" description="Diode"/>
       <property name="Manufacturer" value="Nexperia"/>
-      <property name="MPN" value="BAS116H"/>
+      <property name="MPN" value="BAS116H,115"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -1458,15 +1458,15 @@
       <value>T1A</value>
       <footprint>Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal</footprint>
       <fields>
-        <field name="Manufacturer">Schurter</field>
-        <field name="MPN">0001.2504</field>
+        <field name="Manufacturer">Littelfuse</field>
+        <field name="MPN">01110501Z</field>
         <field name="Footprint">Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="Fuse" description="Fuse"/>
-      <property name="Manufacturer" value="Schurter"/>
-      <property name="MPN" value="0001.2504"/>
+      <property name="Manufacturer" value="Littelfuse"/>
+      <property name="MPN" value="01110501Z"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="fuse"/>
@@ -2026,18 +2026,18 @@
       </units>
     </comp>
     <comp ref="Q2">
-      <value>AO4264E</value>
+      <value>AO4292E</value>
       <footprint>Package_SO:SOIC-8_3.9x4.9mm_P1.27mm</footprint>
       <fields>
         <field name="Manufacturer">Alpha &amp; Omega</field>
-        <field name="MPN">AO4264E</field>
+        <field name="MPN">AO4292E</field>
         <field name="Footprint">Package_SO:SOIC-8_3.9x4.9mm_P1.27mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="WICI" part="NMOS_SO8" description="N-MOSFET, SOIC-8, S 1-3, G 4, D 5-8"/>
       <property name="Manufacturer" value="Alpha &amp; Omega"/>
-      <property name="MPN" value="AO4264E"/>
+      <property name="MPN" value="AO4292E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
@@ -2058,18 +2058,18 @@
       </units>
     </comp>
     <comp ref="Q3">
-      <value>AO4264E</value>
+      <value>AO4292E</value>
       <footprint>Package_SO:SOIC-8_3.9x4.9mm_P1.27mm</footprint>
       <fields>
         <field name="Manufacturer">Alpha &amp; Omega</field>
-        <field name="MPN">AO4264E</field>
+        <field name="MPN">AO4292E</field>
         <field name="Footprint">Package_SO:SOIC-8_3.9x4.9mm_P1.27mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="WICI" part="NMOS_SO8" description="N-MOSFET, SOIC-8, S 1-3, G 4, D 5-8"/>
       <property name="Manufacturer" value="Alpha &amp; Omega"/>
-      <property name="MPN" value="AO4264E"/>
+      <property name="MPN" value="AO4292E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
@@ -2152,14 +2152,14 @@
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
         <field name="Manufacturer">Nexperia</field>
-        <field name="MPN">BSS84AK</field>
+        <field name="MPN">BSS84AK,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Transistor_FET" part="BSS84" description="-0.13A Id, -50V Vds, P-Channel MOSFET, SOT-23"/>
       <property name="Manufacturer" value="Nexperia"/>
-      <property name="MPN" value="BSS84AK"/>
+      <property name="MPN" value="BSS84AK,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="P-Channel MOSFET"/>
@@ -2210,14 +2210,14 @@
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
         <field name="Manufacturer">Nexperia</field>
-        <field name="MPN">BSS84AK</field>
+        <field name="MPN">BSS84AK,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Transistor_FET" part="BSS84" description="-0.13A Id, -50V Vds, P-Channel MOSFET, SOT-23"/>
       <property name="Manufacturer" value="Nexperia"/>
-      <property name="MPN" value="BSS84AK"/>
+      <property name="MPN" value="BSS84AK,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="P-Channel MOSFET"/>
@@ -2239,14 +2239,14 @@
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
         <field name="Manufacturer">Nexperia</field>
-        <field name="MPN">BSS84AK</field>
+        <field name="MPN">BSS84AK,215</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Transistor_FET" part="BSS84" description="-0.13A Id, -50V Vds, P-Channel MOSFET, SOT-23"/>
       <property name="Manufacturer" value="Nexperia"/>
-      <property name="MPN" value="BSS84AK"/>
+      <property name="MPN" value="BSS84AK,215"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="P-Channel MOSFET"/>

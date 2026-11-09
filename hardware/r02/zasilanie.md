@@ -83,8 +83,8 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
   - Rezystor ogranicza udar do ≤5 A (Z13).
   - Napięcie ogniw mierzy się przed rezystorem, więc progi 4,4 i 4,0 V się nie przesuwają.
 - **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek ≤0,4 V przy 120 mA, impuls ≥5 A.
-  - Gdy stacja pracuje z 12 V, VSYS jest wyższe od ogniw, a prąd wsteczny diody płynie do pierwotnych ogniw litowych. Diodę wybiera się więc o małym upływie przy 16 V i 45 °C, a dopuszczalny prąd bierze z karty ogniw (Energizer L91, do sprawdzenia).
-  - Konkretne części dwóch producentów do wyboru po tym sprawdzeniu.
+  - Gdy stacja pracuje z 12 V, VSYS jest wyższe od ogniw, a prąd wsteczny diody płynie do pierwotnych ogniw litowych. Diodę wybiera się więc o małym upływie; karta Energizer L91 (EBC-8915AP-D9X) dopuszcza 2 µA.
+  - Płytka v2 ma ROHM RB168MM-40: typowo około 0,4 µA w 60 °C, spadek około 0,43 V przy 120 mA ([dobór części](../plytka-v2/README.md#dobór-części-2026-11-09)). Drugi producent do znalezienia.
 - **Koszt w energii:** spadek 0,35 V przy 6 V zwiększa moc pobieraną z ogniw o około 6%. Model energii liczy go jawnie:
   - nRF52840: 91 h na komplecie ogniw;
   - ESP32-S3 z MCU 30 mA: 49 h, czyli nadal ≥48 h;
@@ -214,7 +214,7 @@ Pomiary zapisuje się w `hardware/r02/checks/` (osoba, data, przyrządy), a wyni
 
 - Prąd z ogniw w stanie wyłączonym: najgorszy przypadek z LTC2955 wynosi około 19 µA przy celu ≤20 µA, więc rozstrzyga pomiar razem z upływem kondensatora podtrzymania.
 - Rozrzut t_TMR przy 2,2 µF (karta podaje go tylko dla 2,2 nF).
-- Dioda Schottky’ego toru ogniw: dopuszczalny prąd wsteczny ogniw Li-FeS2 i części dwóch producentów.
+- Dioda Schottky’ego toru ogniw: drugi producent obok ROHM RB168MM-40 i pomiar upływu na ciepło.
 - Zapas VSYS do progu komparatora przy zimnych ogniwach (T6).
 - Drugi producent dla:
   - sterownika wyłącznika (propozycja: STM6601 z LDO TPS70930, do próby);

@@ -12436,13 +12436,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Schurter"
+    (property "Manufacturer" "Littelfuse"
       (at 30.48 60.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "0001.2504"
+    (property "MPN" "01110501Z"
       (at 30.48 60.96 0)
       (effects
         (font
@@ -12840,7 +12840,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "AO4264E"
+    (property "Value" "AO4292E"
       (at 30.48 130.81 0)
       (effects
         (font
@@ -12863,7 +12863,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "AO4264E"
+    (property "MPN" "AO4292E"
       (at 30.48 137.16 0)
       (effects
         (font
@@ -13024,7 +13024,7 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "AO4264E"
+    (property "Value" "AO4292E"
       (at 30.48 158.75 0)
       (effects
         (font
@@ -13047,7 +13047,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "AO4264E"
+    (property "MPN" "AO4292E"
       (at 30.48 165.1 0)
       (effects
         (font
@@ -14981,12 +14981,12 @@
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Value" "Schottky 40V"
+    (property "Value" "RB168MM-40"
       (at 182.88 76.2 0)
       (effects
         (font
           (size 1.27 1.27))))
-    (property "Footprint" "Diode_SMD:D_SMA"
+    (property "Footprint" "Diode_SMD:D_SOD-123F"
       (at 182.88 81.28 0)
       (effects
         (font
@@ -14998,13 +14998,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" ""
+    (property "Manufacturer" "ROHM"
       (at 182.88 81.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" ""
+    (property "MPN" "RB168MM-40TR"
       (at 182.88 81.28 0)
       (effects
         (font
@@ -15086,7 +15086,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BSS84AK"
+    (property "MPN" "BSS84AK,215"
       (at 182.88 101.6 0)
       (effects
         (font
@@ -15793,7 +15793,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BAS116H"
+    (property "MPN" "BAS116H,115"
       (at 259.08 200.66 0)
       (effects
         (font
@@ -15875,7 +15875,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BAS116H"
+    (property "MPN" "BAS116H,115"
       (at 259.08 218.44 0)
       (effects
         (font
@@ -17043,7 +17043,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BSS84AK"
+    (property "MPN" "BSS84AK,215"
       (at 259.08 441.96 0)
       (effects
         (font
@@ -17733,7 +17733,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BSS84AK"
+    (property "MPN" "BSS84AK,215"
       (at 411.47999999999996 43.18 0)
       (effects
         (font

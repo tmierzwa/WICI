@@ -83,7 +83,7 @@ OWN_SYMBOLS = '(kicad_symbol_lib ' + ' '.join([
                 (P, 'PVCC', 14), (P, 'VCC', 12)],
                bottom=[(W, 'PGND', 1), (W, 'GND', 5), (W, 'GND', 6), (W, 'PGND', 10), (W, 'PGND', 11),
                        (W, 'PGND', 20), (W, 'PGND', 21)]),
-    # SOIC-8 single N-MOSFET (AO4264E): S 1-3, G 4, D 5-8.
+    # SOIC-8 single N-MOSFET (AO4292E): S 1-3, G 4, D 5-8.
     own_symbol('NMOS_SO8', 'N-MOSFET, SOIC-8, S 1-3, G 4, D 5-8', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
                [(I, 'G', 4)], [(P, 'D', 5), (P, 'D', 6), (P, 'D', 7), (P, 'D', 8)],
                bottom=[(P, 'S', 1), (P, 'S', 2), (P, 'S', 3)]),
@@ -264,16 +264,16 @@ def write_bom():
                            p['footprint']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'specyfikacja', 'footprint', 'uwagi'])
+        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'specyfikacja', 'footprint', 'uwagi'])
         for items in groups.values():
             p = items[0]
             notes = [i['note'] for i in items]
             note = notes[0] if len(set(notes)) == 1 else '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
             w.writerow([' '.join(i['ref'] for i in items), len(items),
                         ' / '.join(dict.fromkeys(i['value'] for i in items)), p['manufacturer'], p['mpn'],
-                        p['spec'], p['footprint'], note])
+                        p['lcsc'], p['spec'], p['footprint'], note])
         for refs, qty, manufacturer, mpn, spec, note in EXTRAS:
-            w.writerow([refs, qty, '', manufacturer, mpn, spec, 'bez footprintu', note])
+            w.writerow([refs, qty, '', manufacturer, mpn, '', spec, 'bez footprintu', note])
 
 
 def write_connections():
