@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.45</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.46</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.45</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.46</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -143,7 +143,7 @@
       <table>
         <thead><tr><th>Wynik</th><th>Co potwierdza</th><th>Skutek dla intencji</th></tr></thead>
         <tbody>
-          <tr><td>HACK przekaźnika</td><td>Trwałe przejęcie ramki na jednym skoku.</td><td>„Przekazane”; intencja czeka na dowód od stacji.</td></tr>
+          <tr><td>HACK przekaźnika</td><td>Trwałe przejęcie ramki na jednym skoku.</td><td>„W drodze”; intencja czeka na dowód od stacji.</td></tr>
           <tr><td>HACK stacji docelowej</td><td>Rozstrzygnięcie całej koperty, trwałe przyjęcie części albo trwałe odrzucenie. Za ramkę nie do przyjęcia od przekaźnika może wyjść bez zapisu.</td><td>Po rozstrzygnięciu wszystkich części może zamknąć próbę do stacji; samo HACK nie oznacza przeczytania.</td></tr>
           <tr><td>Dowód rodzaju 1</td><td>Stacja wymienia liczniki kopert zapisanych lub trwale odrzuconych.</td><td>Stanowisko zamyka intencje; panel pokazuje „rozstrzygnięta”, bez domniemania przeczytania (<a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a>).</td></tr>
           <tr><td>RECEIVED (SA1)</td><td>Przyjęcie zgłoszenia przez aplikację stanowiska.</td><td>Kończy ponawianie zgłoszenia według <a href="system-wici-sa1.html#ponawianie-wiadomosci">rozdziału 4</a>.</td></tr>
@@ -153,7 +153,7 @@
       <p><strong>Parametry profilu.</strong> HACK kończy się do 200 ms od DATA; tor radia odmawia go, gdy decyzja po odbiorze trwa ponad 93 ms. Ponowny HACK jest ograniczony do jednego na 5 s na węzeł, z wyjątkiem pierwszego ponowienia identycznej nowo przyjętej ramki. Spóźnienie oznacza brak HACK.</p>
       <p><strong>Reguła protokołu.</strong> Nadawca ponawia te same bajty i <code>seq</code>. Brak HACK po serii prób przesuwa rodzica. Przekaźnik trzyma ramkę do HACK następnego skoku albo wygaśnięcia; root może zwrócić laptopowi odmowę KISS 0x01 bez nadania.</p>
       <p><strong>Parametr profilu.</strong> Nadawca czeka 600 ms po nadaniu; ponawia po długu ciszy i losowych 0,5–2 s, najwyżej trzy razy na następny skok.</p>
-      <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a> wynik następnego skoku nazywa się „przekazane”. Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
+      <p class="explain">HACK przekaźnika i rozsyłanie nie potwierdzają dotarcia do stacji. Stacja sąsiadująca z rootem dostaje HACK również wtedy, gdy stanowisko niczego nie zapisało; dopiero ponowienie SA1 z nowym licznikiem może przynieść RECEIVED. Według <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">WICI-DEC-005</a> wynik następnego skoku nazywa się „w drodze” (zmiana nazwy z „przekazane”: <a href="system-wici-decyzje.html#wici-dec-015">WICI-DEC-015</a>). Zmienia etap intencji wysłania, lecz nie stan obsługi sprawy z rozdziału 3. Nazwa <code>delivered</code> w kodzie pozostaje <a href="system-wici-decyzje.html#wici-inv-017">luką</a>.</p>
 
       <h3 id="kolejki">Kolejki i przeciążenie</h3>
       <p><strong>Reguła protokołu.</strong> Przekaźnik ma cztery trwałe gniazda: K2 zajmuje najwyżej dwa, dwa pozostają dla K1. Jednoadresowa DATA od sąsiada z tagiem pary i kopertą do aktywnego odbiorcy lub od niego może wejść do K1; każdy sąsiad zajmuje najwyżej jedno gniazdo K1. Tag poświadcza bieżący skok, więc ruch dalszej stacji dzieli gniazdo jej sąsiada (<a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">WICI-DEC-004</a>). Następne ramki tego sąsiada trafiają do K2. Dowód rodzaju 1 i rozsyłanie są K2, własne DATA i HACK są K0. K1 wychodzi przed K2. Pełna kolejka odmawia bez HACK.</p>
@@ -238,7 +238,7 @@
         <tbody>
           <tr><td>Model</td><td><a href="../../software/reference/obliczenia.py">obliczenia.py</a>: DATA 123–419 ms, HACK 87 ms; 50 zgłoszeń przez przekaźnik przy 95% skuteczności skoku: 8,5–11,7 min, bez kolizji i odroczeń.</td><td>Nie dowodzi W10 ani pracy 3–15 skoków.</td></tr>
           <tr><td>Próby programowe</td><td>Kodeki C++ i Python, trasy, kolejka, restart i pierścienie w <a href="../../tests/test_envelope_cross_language.py">pakiecie międzyjęzykowym</a>; testy radia w <a href="../../tests/test_radio_link_host.py">torze hosta</a>.</td><td>Sprawdzają logikę, bez czasu, FRAM i zakłóceń docelowego urządzenia.</td></tr>
-          <tr><td>Próby XIAO</td><td><a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">Dwa zestawy XIAO + Wio-SX1262</a>: root i stacja w jednym skoku, ramki v3, cisza, HACK i wybrane scenariusze. Obraz trzymał stan FRAM w PSRAM.</td><td>Bez przekaźnika: kolejka K1/K2 i wynik „przekazane” były sprawdzane tylko programowo. XIAO mogą służyć do W10, próby wrogiej i czasu HACK, lecz nie do dowodu energii, zapasu RAM ani zaniku zasilania z FRAM.</td></tr>
+          <tr><td>Próby XIAO</td><td><a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">Dwa zestawy XIAO + Wio-SX1262</a>: root i stacja w jednym skoku, ramki v3, cisza, HACK i wybrane scenariusze. Obraz trzymał stan FRAM w PSRAM.</td><td>Bez przekaźnika: kolejka K1/K2 i wynik „w drodze” były sprawdzane tylko programowo. XIAO mogą służyć do W10, próby wrogiej i czasu HACK, lecz nie do dowodu energii, zapasu RAM ani zaniku zasilania z FRAM.</td></tr>
           <tr><td>Pełny zakres: 3–15 skoków i drogi w dół</td><td><a href="#sprawdzenie-pelnego-zakresu">Metoda</a> jest ustalona. W <code>main</code> od <code>8968e2c</code> są wstępne wyniki emulatora C++ z zegarem i kanałem, bez kalibracji D21 i krótkim łańcuchem fizycznym (<a href="system-wici-decyzje.html#wici-inv-039">WICI-INV-039</a>).</td><td>Wynik dotyczy modelu, nie radia. Rejestr oddzieli głębokość potwierdzoną fizycznie od sprawdzonej tylko w emulatorze.</td></tr>
           <tr><td>D21 na sprzęcie docelowym</td><td>Otwarte: według procedury stacja i przekaźnik na prototypach <code>l0</code>, root i dodatkowa stacja na XIAO; dwa RAK4631 służą do podsłuchu i roli wrogiego węzła.</td><td>Warunek: 50/50 RECEIVED w &lt;15 min przez przekaźnik; „Wrogi węzeł” 20/20 w 30 min; W23, RAM ≥30%, zimny start, zaniki, przeniesienie i rozsyłanie bez pętli oraz przekroczenia K2.</td></tr>
         </tbody>
@@ -256,7 +256,7 @@
       <p>Próba przeniesienia obejmuje transfer stacji z prototypu nr 1 na prototyp nr 2 przez USB, także z przerwanym USB. Podsłuch zalicza próbę, gdy pierwsza ramka po przeniesieniu ma licznik powyżej zarezerwowanej granicy i nie powtarza się żaden <code>nonce</code>. Próba rozsyłania awaryjnego wyłącza drogę do roota; podsłuch potwierdza, że każdy węzeł przekazuje ramkę najwyżej raz i czas K2 mieści się w limicie. Zakres 15 skoków sprawdza emulator. Próba zaniku zasilania obejmuje także stację na prototypie, w tym restart po potwierdzeniu pierwszej części. Procedura tych prób pozostaje do uzupełnienia (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</p>
       <p>Progi są bezwzględne. WICI-Link musi zostać zatwierdzony próbą przy stole według tych kryteriów. Reticulum pozostaje zapasem, gdy oczekiwanych wyników nie da się osiągnąć w czasie ustalonym przez właściciela projektu. Ryzyko niezaliczenia próby „Wrogi węzeł” dotyczy także Reticulum. Przeniesienie i rozsyłanie sprawdza się przed wyborem protokołu, nie dopiero przy odbiorze wyrobu.</p>
       <p class="explain"><strong>Uzasadnienie i ryzyko.</strong> v1 i v2 mają ten sam procesor i radio oraz prawdziwy FRAM; wynik logiki protokołu, RAM i zachowania FRAM przy zaniku można uzyskać na v1. Pobór całego DevKita obejmuje mostek USB, diodę i LDO, więc nie mierzy energii stacji. Czekanie na v2 opóźniłoby wybór protokołu i wymagałoby projektowania v2 przed tym wyborem. v2 może nie osiągnąć budżetu z przyczyn sprzętowych; zmiana protokołu tego nie naprawi. Rozbieżności wcześniejszych opisów zapisano w <a href="system-wici-decyzje.html#wici-inv-044">WICI-INV-044</a>.</p>
-      <p><strong>Plan pilotażu.</strong> Procedurę D21 i jej pełne kryteria podaje <a href="transport.md#warunek-przyjęcia">warunek przyjęcia</a>. D21 sprawdzi także, czy 10 min po „przekazane” powoduje zbędne kopie przy szczycie W10 (model: 8,5–11,7 min bez kopii); jeśli tak, kandydatem profilu jest 15 min (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Wynik jednej drogi przez przekaźnik posłuży do kalibracji <a href="#sprawdzenie-pelnego-zakresu">emulatora</a>, nie będzie dowodem 3–15 skoków. Dotkniętą część D21 trzeba powtórzyć po zmianie kodu dróg (<a href="system-wici-decyzje.html#wici-inv-040">WICI-INV-040</a>).</p>
+      <p><strong>Plan pilotażu.</strong> Procedurę D21 i jej pełne kryteria podaje <a href="transport.md#warunek-przyjęcia">warunek przyjęcia</a>. D21 sprawdzi także, czy 10 min oczekiwania po wyniku „w drodze” powoduje zbędne kopie przy szczycie W10 (model: 8,5–11,7 min bez kopii); jeśli tak, kandydatem profilu jest 15 min (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Wynik jednej drogi przez przekaźnik posłuży do kalibracji <a href="#sprawdzenie-pelnego-zakresu">emulatora</a>, nie będzie dowodem 3–15 skoków. Dotkniętą część D21 trzeba powtórzyć po zmianie kodu dróg (<a href="system-wici-decyzje.html#wici-inv-040">WICI-INV-040</a>).</p>
       <p class="meta">Próby lokalne na commicie <code>e6f4dbe</code>, 4 listopada 2026 r.: wektory koperty 2/2, pakiet międzyjęzykowy z WICI-Link 15/15, tor radia na hoście 86/86. D21 na sprzęcie docelowym pozostaje otwarta.</p>
 
       <h3 id="pytania">Pytania przed zatwierdzeniem</h3>
@@ -269,7 +269,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.45 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.46 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

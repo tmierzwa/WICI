@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.45</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.46</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.45</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.46</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -230,11 +230,11 @@
       <table>
         <thead><tr><th>Gdzie</th><th>Etapy i wyniki wysyłki</th></tr></thead>
         <tbody>
-          <tr><td>Stacja</td><td>„Zapisane”: trwała intencja wysyłki. „Wysyłanie”: trwają próby. „Przekazane”: następny skok przejął ramkę, RECEIVED jeszcze nie ma. „Odebrane”: przyszło potwierdzenie aplikacyjne. „Anulowane”: intencja zakończona przed pierwszym przekazaniem.</td></tr>
-          <tr><td>Stanowisko</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód doręczenia; obejmuje też trwałe odrzucenie. „Przekazane”: HACK przekaźnika. „Rozesłane”: ramka wyszła rozsyłaniem, bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „przekazane” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
+          <tr><td>Stacja</td><td>„Zapisane”: trwała intencja wysyłki. „Wysyłanie”: trwają próby. „W drodze”: następny skok przejął ramkę, RECEIVED jeszcze nie ma. „Odebrane”: przyszło potwierdzenie aplikacyjne. „Anulowane”: intencja zakończona przed pierwszym przekazaniem.</td></tr>
+          <tr><td>Stanowisko</td><td>„Rozstrzygnięte”: HACK samej stacji po rozstrzygnięciu wszystkich części albo jej dowód doręczenia; obejmuje też trwałe odrzucenie. „W drodze”: HACK przekaźnika. „Rozesłane”: ramka wyszła rozsyłaniem, bez potwierdzenia skoku. „Porażka”: brak skutecznego przekazania. Po „w drodze” i „rozesłane” intencja czeka na dowód od stacji.</td></tr>
         </tbody>
       </table>
-      <p>Wyniku skoku nie pokazuje się jako osobnego napisu. Stacja pokazuje „wysyłanie” z numerem próby, a panel dyżurnego stan wiadomości „czeka” albo „rozstrzygnięta”. „Przekazane” może być widoczne w diagnostyce. Nie ma związku ze stanem 4 „przekazane dalej”, który oznacza skierowanie sprawy do służb (<a href="system-wici-slownik.html#przekazane-dalej">słownik</a>).</p>
+      <p>Wyniku skoku nie pokazuje się jako osobnego napisu. Stacja pokazuje „wysyłanie” z numerem próby, a panel dyżurnego stan wiadomości „czeka” albo „rozstrzygnięta”. „W drodze” może być widoczne w diagnostyce. Nie ma związku ze stanem 4 „przekazane dalej”, który oznacza skierowanie sprawy do służb (<a href="system-wici-slownik.html#przekazane-dalej">słownik</a>).</p>
       <p>Stan obsługi zmieniają zdarzenia aplikacyjne. Decyzję o pomocy podejmuje człowiek.</p>
       <table>
         <thead><tr><th>Stan widoczny dla gospodarza</th><th>Zdarzenie, które go uzasadnia</th></tr></thead>
@@ -249,12 +249,12 @@
         </tbody>
       </table>
       <p>Stacja wyświetla decyzję z najwyższym <code>event</code> STATUS, niezależnie od rewizji. Nowa rewizja wraca do etapu „zapisane”; poprzednia decyzja pozostaje widoczna pod nim do potwierdzenia nowej rewizji. Wiadomość dla <code>id</code> spoza rejestru albo z rewizją wyższą niż najnowsza jest pomijana i nie zmienia stanu.</p>
-      <p class="explain">HACK i wynik „przekazane” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w przeciwnym razie pokazuje „wynik nieznany”. Gwarancje określają <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozstrzygnięcia o gwarancjach przyjęcia</a>.</p>
+      <p class="explain">HACK i wynik „w drodze” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w przeciwnym razie pokazuje „wynik nieznany”. Gwarancje określają <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozstrzygnięcia o gwarancjach przyjęcia</a>.</p>
       <h3 id="praca-bez-lacznosci">Praca bez łączności</h3>
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.45 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.46 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

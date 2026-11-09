@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Jedyny słownik pojęć specyfikacji WICI.">
-  <title>Słownik — Specyfikacja WICI 0.45</title>
+  <title>Słownik — Specyfikacja WICI 0.46</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Słownik</h1>
-      <p><span class="status">Projekt 0.45</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.46</span> · 9 listopada 2026 r.</p>
     </header>
     <section id="sownik-techniczny" aria-labelledby="h-sownik">
       <h2 id="h-sownik">Terminy</h2>
@@ -67,8 +67,7 @@
           <tr id="plan-sieci"><td>Plan sieci</td><td>Przygotowana lista numerów i położeń stacji oraz dróg do roota. Zawiera rodzica planowego i ewentualnego zapasowego (<a href="system-wici-siec.html#plan-sieci">rozdział 6</a>).</td></tr>
           <tr id="poziom"><td>Poziom zestawu</td><td>Poziom 1 to sama stacja, poziom 2 dodaje laptop schronienia przez USB, a poziom 3 stronę mieszkańca na telefonach. Poziomy 2–3 należą do etapu po pilotażu (<a href="system-wici-model.html#urzadzenia">rozdział 2</a>).</td></tr>
           <tr id="profil"><td>Profil</td><td>Zestaw wartości parametrów dla wybranej konfiguracji, na przykład ustawień radia, czasów i progów. Pilotaż jest jednym z profili i nie zawęża wymagań protokołów (<a href="system-wici-siec.html#profil">rozdział 6</a>).</td></tr>
-          <tr id="przekazane"><td>Przekazane</td><td>Wynik następnego skoku radiowego. Nie potwierdza odbioru zgłoszenia przez stanowisko (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
-          <tr id="przekazane-dalej"><td>Przekazane dalej</td><td>Stan 4 obsługi zgłoszenia: skierowanie sprawy do służb. Jest niezależny od wyniku radiowego „przekazane” (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
+          <tr id="przekazane-dalej"><td>Przekazane dalej</td><td>Stan 4 obsługi zgłoszenia: skierowanie sprawy do służb. Jest niezależny od wyniku skoku „w drodze” (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
           <tr id="przekaznik"><td>Przekaźnik</td><td>Rola stacji, która przekazuje ramki innych stacji i utrzymuje trasy oraz kolejkę (<a href="system-wici-model.html#urzadzenia-i-role">rozdział 2</a>).</td></tr>
           <tr id="przekaznik-terenowy"><td>Przekaźnik terenowy</td><td>Stacja bez schronienia i bez obsługi, z własnym zasilaniem, na przykład słonecznym, stawiana dla zasięgu. Jej profil wyrobu jest informacyjny (<a href="system-wici-wyrob.html#przekaznik-terenowy">rozdział 8</a>).</td></tr>
           <tr id="ramka"><td>Ramka WICI-Link</td><td>Jednostka transmisji między stacjami. Niesie adresy bieżącego skoku i może przenosić kopertę WICI (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
@@ -86,6 +85,7 @@
           <tr id="szew-nosnika"><td>Szew nośnika</td><td>Granica między chronioną kopertą a sposobem przenoszenia jej bajtów (<a href="system-wici-interfejsy.html#szew-nosnika">rozdział 7</a>).</td></tr>
           <tr id="tag-pary"><td>Tag pary</td><td>Znacznik uwierzytelniający jednoadresową ramkę między sąsiadami. Nie zastępuje ochrony koperty (<a href="system-wici-bezpieczenstwo.html#warstwy-ochrony">rozdział 5</a>).</td></tr>
           <tr id="tozsamosc"><td>Tożsamość</td><td>Ma 64-bajtowy klucz publiczny X25519 ‖ Ed25519 oraz 16-bajtowy identyfikator wyznaczany stałym wzorem WICI. Wzór i role kluczy podaje <a href="system-wici-bezpieczenstwo.html#tozsamosci-i-klucze">rozdział 5</a>.</td></tr>
+          <tr id="w-drodze"><td>W drodze</td><td>Wynik następnego skoku radiowego: przekaźnik przejął ramkę. Nie potwierdza odbioru zgłoszenia przez stanowisko i nie ma związku ze stanem 4 „przekazane dalej”. Dawniej nazywany „przekazane” (<a href="system-wici-funkcje.html#dane-stany">rozdział 3</a>).</td></tr>
           <tr id="wici"><td>WICI</td><td>System łączności radiowej schronień ze stanowiskiem odbiorczym; jego formaty SA1, koperta WICI i WICI-Link to protokoły WICI (<a href="system-wici-zasady.html#przedmiot">rozdział 1</a>).</td></tr>
           <tr id="wici-link"><td>WICI-Link</td><td>Normatywny nośnik koperty WICI: ramki i reguły przekazywania między stacjami przez radio (<a href="system-wici-siec.html#ramka">rozdział 6</a>).</td></tr>
           <tr id="zdarzenie-kryzysowe"><td>Zdarzenie kryzysowe</td><td>Cała sytuacja, której zamknięcie kończy ponawianie intencji przez stanowisko (<a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>).</td></tr>
@@ -94,7 +94,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.45 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.46 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
