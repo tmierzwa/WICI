@@ -2,11 +2,11 @@
 
 **Stan programu stacji (krok 4 planu).** Pilotaż używa stacji z ESP32-S3 i układem LoRa SX1262: prototyp na płytce v1, potem stacje pilotażowe na płytce v2 ([plan](../docs/concept/08-plan-weryfikacji-i-decyzje.html#kolejnosc-prac)). Obraz [`l0`](docs/prototyp-l0-i-xiao.md#stacja-l0-l0) ma sterownik SX1262 w profilu LoRa z poleceniami pomiarowymi i [interfejs LoRa w stosie](docs/prototyp-l0-i-xiao.md#interfejs-lora-stosu): format w eterze zgodny z RNode, cisza 12t, IFAC ([profil LoRa](../docs/spec/radio.md#profil-lora-pilotażu)). Na komputerze przechodzi próbę zgodności z `RNodeInterface` przez emulator radia RNode; na sprzęcie nie był uruchomiony, więc następna jest [procedura kroku 4](docs/prototyp-l0-i-xiao.md#krok-4-interfejs-lora-z-radiem-rnode) z RAK4631. Środowisko `l0` to nazwa PlatformIO obrazu prototypu; w `hardware/l0-diagnostic` jest osobne środowisko `l0` programu diagnostycznego (inny program, wersje `l0-0.5`).
 
-Pod tym README są tylko rzeczy potrzebne na co dzień: które środowisko budować, jak zbudować i wgrać obraz, jak uruchomić testy. Szczegóły są w [plikach opisu](#opis-szczegółowy).
+Tu jest to, czego potrzeba na co dzień: wybór środowiska, budowa i wgranie obrazu, testy. Resztę opisują [pliki w `docs/`](#opis-szczegółowy).
 
 ## Środowiska
 
-Środowiska PlatformIO z [platformio.ini](platformio.ini). Obrazy z rdzeniem Reticulum stacji są domyślne; obrazy `*-port` mają port microReticulum i zostają do etapu rdzenia 6-5 ([wybór stosu](docs/stos.md#wybór-stosu-port-albo-rdzeń)).
+Środowiska są zdefiniowane w [platformio.ini](platformio.ini). Domyślnie obrazy mają rdzeń Reticulum stacji; obrazy `*-port` mają port microReticulum i znikną w etapie rdzenia 6-5 ([wybór stosu](docs/stos.md#wybór-stosu-port-albo-rdzeń)).
 
 | Środowisko | Sprzęt | Do czego | Stan |
 |---|---|---|---|
@@ -31,7 +31,7 @@ Samo `pio run` buduje domyślne `bench-a`, więc środowisko podaje się zawsze 
 
 ## Stacja L0 (l0)
 
-Program stacji prototypu: piny, sterownik SX1262, interfejs LoRa stosu, procedura kroku 4 z radiem RNode i próby rdzenia na prototypie są w [opisie prototypu](docs/prototyp-l0-i-xiao.md#stacja-l0-l0). Po odbiorze prototypu programem diagnostycznym wgrywa się ten obraz (`pio run -e l0 -t upload`).
+Piny, sterownik SX1262, interfejs LoRa stosu, procedurę kroku 4 z radiem RNode i próby rdzenia na prototypie opisuje [plik o prototypie](docs/prototyp-l0-i-xiao.md#stacja-l0-l0). Ten obraz wgrywa się (`pio run -e l0 -t upload`), gdy prototyp przejdzie odbiór programem diagnostycznym.
 
 ## Jak działa program
 
