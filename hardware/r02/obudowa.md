@@ -10,11 +10,11 @@ Wymagania: [elektronika](../../docs/archiwum/elektronika-r02.md#płytka-stacji-r
 
 | | **Hammond 1599KBAT** (propozycja) | Bopla BOS 801 | OKW DATEC-CONTROL L (A9079207) |
 |---|---|---|---|
-| Kształt | płaska skrzynka z wgłębieniem w pokrywie na folię panelu; w podstawie otwory do zawieszenia na ścianie | ręczna, jeden koniec ścięty | ręczna, z głowicą ekranu |
+| Kształt | płaska skrzynka z wgłębieniem we froncie na folię panelu; z tyłu pokrywa z klapką ogniw i otworami do zawieszenia na ścianie | ręczna, jeden koniec ścięty | ręczna, z głowicą ekranu |
 | Wymiary zewnętrzne | 220 × 140 × 40 mm | 196 × 100 × 40 mm | 266 × 90/144 × 60 mm |
 | Wnętrze | 213,6 × 133,6 × 33 mm | około 180 × 82 mm użytkowe | według rysunku OKW |
 | Front | wgłębienie 206,25 × 126,5 × 1,0 mm na folię | okno 61,5 × 25 mm, za niskie dla pola aktywnego 35,3 mm | wgłębienie ekranu 66 × 99 mm |
-| Ogniwa | 4 × AA w koszyku Hammond BH4AAW za klapką w podstawie | wbudowana komora 4 × AA z klapką | komora 4 × AA (A9178128) z klapką |
+| Ogniwa | 4 × AA w koszyku Hammond BH4AAW za klapką w pokrywie | wbudowana komora 4 × AA z klapką | komora 4 × AA (A9178128) z klapką |
 | Materiał | ABS, UL94 V-0 | ABS, UL94 do sprawdzenia | ABS, UL94 HB |
 | Masa pustej | około 300 g | około 205 g | brak w danych |
 | Dostępność | DigiKey: 2 sztuki w magazynie i 448 w fabryce (4 tygodnie), 21,52 USD; koszyk BH4AAW 5,97 USD | TME, stan niepewny, około 28–31 USD | brak w DigiKey i TME; tylko na zapytanie |
@@ -26,7 +26,9 @@ Wymagania: [elektronika](../../docs/archiwum/elektronika-r02.md#płytka-stacji-r
 
 Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłoni w rękawicach, a jej okno jest za niskie. OKW ma tworzywo HB, kształt ręczny i nie ma jej u dystrybutorów. Jeśli Hammond odpadnie przy przymiarce, zostaje dowolna obudowa V-0 do zawieszenia na ścianie z wciskaną komorą ogniw Bopla BE 60 (4 × AA, IP40; DigiKey 17 sztuk, 13,81 USD). Takachi LD-4 odpada, bo pracuje tylko do −10 °C.
 
-**Ryzyko Hammonda:** koszyk ogniw (14,6 mm wysokości) leży w podstawie, pod płytką. Płytka przykręcona do słupków pokrywy około 12 mm za frontem zostawia około 19 mm nad dnem. Nad koszykiem spód płytki może więc mieć tylko elementy niższe niż około 3 mm. Potwierdza się to na modelu STEP Hammonda i na przymiarce.
+**Nazwy stron (jak u Hammonda):** **skrzynka** („1599K Box”) ma front ze wgłębieniem na folię i ściany, a **pokrywa** („1599KBAT Lid”) to tył z klapką ogniw. Pokrywę przykręca się od tyłu czterema śrubami M3 × 12 z łbem stożkowym w mosiężne wkładki w słupkach skrzynki, więc front zostaje gładki. W tym pliku „front” to zewnętrzna strona dna skrzynki, z panelem.
+
+**Koszyk i płytka (model STEP, 2026-11-09):** koszyk ogniw (14,57 mm wysokości) leży na klapce pokrywy, pod płytką. Płytka v2 na słupkach skrzynki z tulejkami 6 mm leży 10,5 mm za wewnętrzną powierzchnią frontu, a wierzch koszyka jest 6,3 mm pod jej spodem (4,8 mm, jeśli koszyk oprze się na obrzeżu klapki). Nad koszykiem spód płytki ma tylko końcówki wyprowadzeń THT. Pokrywę zakłada się klapką po lewej, patrząc od frontu; obrócona o 180° stawia koszyk pod modułem radia ([płytka v2, montaż](../plytka-v2/README.md#montaż-w-obudowie)). Do potwierdzenia na przymiarce.
 
 ## Elementy panelu
 
@@ -37,7 +39,7 @@ Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłon
 | Wyłącznik główny | PV6 w innym kolorze albo z symbolem | AV | zagłębiony około 3 mm w pierścieniu folii, ≥30 mm od rzędu nawigacji; wyłączenie i tak wymaga przytrzymania 2 s |
 | Przycisk przygotowania | przycisk SMD na płytce (np. E-Switch TL1105 albo C&K PTS645, do sprawdzenia) | inny producent | naciska się go rysikiem przez otwór Ø3–4 mm pod numerowaną naklejką serwisową; przy otworze montażowym płytki, żeby się nie uginała; w promieniu 10 mm żadnych ścieżek ani padów widocznych przez otwór |
 | Naklejka serwisowa | numerowana naklejka VOID około 22 × 12 mm na otworze przycisku przygotowania, co najmniej 3 mm kleju wokół otworu | pokrywa około 25 × 20 mm na śrubie plombowej z plombą ołowianą (do oceny przy wydaniu) | przyjęte dla pilotażu ([F113](../../docs/review.md)): naklejka tylko ujawnia wejście, a każde wejście zapisuje stacja ([tryb przygotowania](../../docs/spec/oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) |
-| Dioda alarmu | dioda na płytce ze światłowodem albo dioda panelowa Ø5 mm | | widoczna z drugiego końca pomieszczenia |
+| Dioda alarmu | dioda 5 mm na płytce, osadzona kołnierzem, świeci przez otwór Ø5,5 mm we froncie (płytka v2: Kingbright WP7113ID, 0,95 mm pod frontem) | dioda panelowa Ø5 mm | widoczna z drugiego końca pomieszczenia |
 | Brzęczyk | na płytce, za otworami w folii albo ścianie | | ≥20 mm od toru RF |
 
 ## Złącza
@@ -52,8 +54,8 @@ Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłon
 ## Okno ekranu i podświetlenie
 
 Panel Sharp jest odblaskowy i nie ma podświetlenia od tyłu, więc wymagane podświetlenie krawędziowe leży przed panelem. Od frontu warstwy są takie:
-1. folia panelu z poliestru 0,175–0,25 mm, matowa, z nadrukiem PL, UK i EN, wypełniająca wgłębienie pokrywy;
-2. wycięcie w pokrywie około 61,5 × 38 mm, czyli pole aktywne z marginesem ≥1 mm;
+1. folia panelu z poliestru 0,175–0,25 mm, matowa, z nadrukiem PL, UK i EN, wypełniająca wgłębienie frontu;
+2. wycięcie we froncie około 61,5 × 38 mm, czyli pole aktywne z marginesem ≥1 mm;
 3. szybka z poliwęglanu albo PMMA 1–1,5 mm, przyklejona od środka; to ona przenosi nacisk, nie szkło panelu;
 4. płytka światłowodowa 0,5–1 mm z 2–4 diodami na dłuższej krawędzi, ukrytymi pod nieprzezroczystym brzegiem folii;
 5. panel na ramce z pianki 0,5 mm.
@@ -62,7 +64,7 @@ Szybka, światłowód i panel razem mają ≤4 mm, a szczeliny powietrzne ≤0,5
 
 ## Układ panelu
 
-Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika pokrywy Hammond 1599KBAT (220 × 140 mm). X rośnie w prawo, Y w dół. Na ścianie stacja wisi poziomo, a przewody wychodzą dołem.
+Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika frontu Hammond 1599KBAT (220 × 140 mm), patrząc od frontu. X rośnie w prawo, Y w dół. Na ścianie stacja wisi poziomo, a przewody wychodzą dołem.
 
 ```text
  0         40          80          120         160         200    220
@@ -87,26 +89,26 @@ Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika pokrywy
 - CISZA i wyłącznik główny stoją w osobnej kolumnie, ≥30 mm od rzędu nawigacji, żeby nie nacisnąć ich przypadkiem.
 - Dioda alarmu jest w prawym górnym rogu.
 - SMA można przenieść na górną ścianę, jeśli przewód antenowy przychodzi z góry. Decyduje o tym rysunek instalacji.
-- Klapka ogniw jest w podstawie, więc do wymiany ogniw zdejmuje się stację ze ściany albo odwraca na stole. Zgadza się to z procedurą z karty (wymiana po komunikacie `mozna_wyjac`). Na klapce: piktogram „+ / −” i napis o przytrzymaniu wyłącznika przez 2 s.
+- Klapka ogniw jest w pokrywie (z tyłu), więc do wymiany ogniw zdejmuje się stację ze ściany albo odwraca na stole. Zgadza się to z procedurą z karty (wymiana po komunikacie `mozna_wyjac`). Na klapce: piktogram „+ / −” i napis o przytrzymaniu wyłącznika przez 2 s.
 
 ## Płyta bazowa: obrys i ograniczenia
 
-Wstępnie, do potwierdzenia na modelu STEP Hammonda:
+Sprawdzone na modelu STEP Hammonda (2026-11-09) przy płytce v2, do potwierdzenia na przymiarce. Szczegóły i odrzucone warianty: [płytka v2, dopasowanie do obudowy](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09).
 
-- **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar pokrywy x 10–210 mm i y 10–130 mm. Płytka tej wielkości opłaca się tylko jako dwuwarstwowa płyta bazowa. To kolejny argument za podziałem na płytę bazową i mały czterowarstwowy moduł MCU+RF ([architektura](architektura.md#podział-na-płytki)).
-- **Mocowanie:** do słupków pokrywy, 4–6 otworów nieplaterowanych Ø3,2 mm według [lekcji](lekcje.md#zasady-layoutu), z jednym otworem ≤25 mm od przycisku przygotowania. Rozmieszczenie słupków w pokrywie Hammond (siatka 80 mm) bierze się z modelu STEP.
+- **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar frontu x 10–210 mm i y 10–130 mm; w jej płaszczyźnie ściany są 6,3 mm dalej (pochylenie ścian: wewnętrzna krawędź 3,7–3,9 mm od zewnętrznej). Płytka tej wielkości opłaca się tylko jako dwuwarstwowa płyta bazowa. To kolejny argument za podziałem na płytę bazową i mały czterowarstwowy moduł MCU+RF ([architektura](architektura.md#podział-na-płytki)).
+- **Mocowanie:** do słupków skrzynki, otwory nieplaterowane według [lekcji](lekcje.md#zasady-layoutu), z jednym otworem ≤25 mm od przycisku przygotowania (v2: 15,6 mm). Skrzynka ma osiem słupków Ø4,75 mm, wysokich na 4,5 mm, w siatce x 20/80/140/200 i y 30/110, z otworem Ø2,36 mm na 4,6 mm głębokości pod wkręt samogwintujący #4; pod otworem front ma 2,9 mm. Słupki (20, 30) i (80, 30) leżą pod oknem ekranu i szlifuje się je na równo z frontem, więc płytka v2 ma sześć otworów Ø3,5 mm. Na każdym słupku tulejka dystansowa 6 mm (otwór 3,2 mm) i wkręt #4 × 7/16" (11,1 mm) z tępym końcem typu B; najdłuższy dopuszczalny wkręt to 12,0 mm pod łbem, bo dłuższy wejdzie we front pod folią. Pokrywa ma słupki w tej samej siatce, ale płytki nie dotykają (16,4 mm pod nią). Uzasadnienie: [płytka v2](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09).
 - **Strefa nad koszykiem ogniw:** od spodu elementy ≤3 mm, bez odsłoniętej miedzi i punktów testowych. Przewody koszyka idą do kluczowanego złącza 2-stykowego przy ochronie toru ogniw.
-- **Narożniki:** bez miedzi w odległości 2 mm od ściany pokrywy, ze względu na ESD od szczeliny folii.
+- **Narożniki:** bez miedzi w odległości 2 mm od ściany skrzynki, ze względu na ESD od szczeliny folii.
 - **Przyciski panelowe:** strefa Ø20–24 mm wolna od wysokich elementów wokół osi każdego przycisku na pozycjach z rysunku. Wokół wspornika osłony CISZY strefa 30 × 40 mm.
 - **Ekran:** strefa 64 × 45 mm pod modułem bez elementów wyższych niż około 1 mm. Złącze FPC po stronie taśmy panelu, diody podświetlenia przy górnej krawędzi okna.
-- **Złącza na dolnej krawędzi:** USB-C, EN3 i SMA 0–1 mm od wewnętrznej ściany. Wysokość osi złącza nad płytką musi się zgadzać ze środkiem otworu w ścianie. Elementy ESD i TVS leżą ≤10 mm od każdego złącza, przed elementami szeregowymi.
+- **Złącza na dolnej krawędzi:** USB-C 0–1 mm od wewnętrznej ściany, na języku płytki. Wysokość osi złącza nad płytką musi się zgadzać ze środkiem otworu w ścianie. Ściana ma tam 3,8 mm, więc otwór 13,2 × 7,2 mm przepuszcza osłonę wtyku (do 12,5 × 6,6 mm). EN3 i SMA są w ścianie i łączą się z płytką przewodami. Tył EN3 (kołnierz Ø20,6 mm, korpus Ø14 mm i kubki lutownicze, razem 13,1 mm za ścianą według biuletynu Switchcraft 602) przechodzi przez płaszczyznę płytki, więc płytka ma pod nim wycięcie. Elementy ESD i TVS leżą ≤10 mm od każdego złącza, przed elementami szeregowymi.
 - **Przycisk przygotowania:** około (150, 122), w osi otworu pod naklejką serwisową.
 - **Powłoka ochronna:** maskuje się złącza, przyciski, złącze FPC, złącze koszyka, pola programowania i strefy otworów montażowych.
 - **Ciepło:** stacja traci poniżej 0,5 W, więc wystarczy trzymać przetwornice z dala od ekranu, bo kontrast panelu zależy od temperatury.
 
 ## Następne kroki
 
-1. Pobrać model STEP Hammond 1599KBAT i sprawdzić położenie i wysokość słupków pokrywy, otwór klapki ogniw oraz odstęp płytki od koszyka.
+1. Zrobione 2026-11-09: model STEP Hammond 1599KBAT (słupki, klapka, odstęp płytki od koszyka) i dopasowanie płytki v2 ([płytka v2](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09)).
 2. Zamówić próbki do przymiarki 1:1 (krok 5 [kolejności prac](README.md#kolejność-prac)): dwie obudowy, przyciski PV6, gniazdo EN3 z wtykiem, przełącznik GTS z klapką GT-4R, koszyk BH4AAW.
 3. Rozstrzygnąć pozycje do sprawdzenia: SMA krawędziowe albo przepustowe, model USB-C, koszyk z osłoniętym stykiem i drugi dostawca złącza 12 V.
 

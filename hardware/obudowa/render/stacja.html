@@ -301,7 +301,7 @@ if (VIEW === "materialy") {
     VIEW === "front" ? "WICI – koncepcja stacji (założenia na 2026-10-11)" : "WICI – złącza na dolnej ściance (koncepcja)";
   document.querySelector("#caption span").textContent =
     `${U.enclosure.model} ${W} × ${H} × ${D} mm · układ panelu: ${U.source}. ` +
-    `Bez pomiarów (${U.unmeasured.length}): wnętrze, słupki, śruby pokrywy, linia podziału, wysokości złączy i kształt osłony CISZY są umowne. Przycisk przygotowania pod naklejką VOID (F113).`;
+    `Brak pomiarów z przymiarki: ${U.unmeasured.length}. Umowne są: wnętrze, linia podziału, wysokości złączy i kształt osłony CISZY. Przycisk przygotowania pod naklejką VOID (F113).`;
 }
 window.RENDER_DONE = true;
 </script>

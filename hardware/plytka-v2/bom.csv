@@ -22,7 +22,7 @@ C13,1,100u,Taiyo Yuden,LMK325ABJ107MM-P,,100 µF 10 V X5R 1210,Capacitor_SMD:C_1
 SW1 SW2 SW3 SW4,4,GÓRA / DÓŁ / OK / WSTECZ,Omron,B3F-4055,,"przycisk 12x12 mm, nasadka B32-1310",Button_Switch_THT:SW_SPST_Omron_B3F-40xx,rozmiar i rozstaw przycisków pod obudowę i rękawice: do ustalenia z obudową
 SW5,1,CISZA,E-Switch,100SP1T1B4M2QE,,przełącznik dźwigienkowy SPDT ON-NONE-ON,WICI:Toggle_ESwitch_100SP1T1B4M2QE,1-2 = cisza radiowa (SW_CISZA = L)
 SW6,1,PRZYGOTOWANIE,Omron,B3F-1000,,przycisk 6x6 mm,Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x,pod naklejką serwisową
-D1,1,ALARM,Kingbright,WP7113ID,,"LED 5 mm czerwona, rozproszona",LED_THT:LED_D5.0mm,katoda do masy
+D1,1,ALARM,Kingbright,WP7113ID,,"LED 5 mm czerwona, rozproszona",LED_THT:LED_D5.0mm,"katoda do masy; kołnierzem do płytki (najwyżej 9,55 mm), świeci przez otwór Ø5,5 we froncie"
 BZ1,1,CEM-1203(42),Same Sky (CUI Devices),CEM-1203(42),,"brzęczyk magnetyczny 12 mm, 2048 Hz, cewka 42 Ω",Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC,"pad 1 = ""+"""
 R2,1,22R,Yageo,RC1206FR-0722RL,,"22 Ω 1% 1206, 0,25 W",Resistor_SMD:R_1206_3216Metric,brzęczyk z szyny 5 V ekranu (U2); tętnienia VDD panelu sprawdza oscyloskop
 D2,1,1N4148W,Diodes Incorporated,1N4148W-7-F,,"dioda 75 V, SOD-123",Diode_SMD:D_SOD-123,dioda gasząca cewki brzęczyka

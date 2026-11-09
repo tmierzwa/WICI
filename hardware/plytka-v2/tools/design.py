@@ -157,7 +157,8 @@ for ref, net in (('R5', 'BTN_UP'), ('R6', 'BTN_DOWN'), ('R7', 'BTN_OK'), ('R8', 
 res('R16', '1k', 'SW_COM', 'SW_CISZA', 'SW_CISZA przez 1 kΩ', 'RC0805FR-071KL')
 
 part('D1', 'Device:LED', 'ALARM', 'LED_THT:LED_D5.0mm', {1: 'GND', 2: 'LED_A'}, mpn='WP7113ID',
-     manufacturer='Kingbright', spec='LED 5 mm czerwona, rozproszona', note='katoda do masy')
+     manufacturer='Kingbright', spec='LED 5 mm czerwona, rozproszona',
+     note='katoda do masy; kołnierzem do płytki (najwyżej 9,55 mm), świeci przez otwór Ø5,5 we froncie')
 res('R1', '1k', 'LED_ALARM', 'LED_A', 'prąd diody około 1 mA', 'RC0805FR-071KL')
 # Buzzer from the panel 5 V rail: the DevKitC 5V pin is dead when the board is fed through 3V3.
 part('BZ1', 'Device:Buzzer', 'CEM-1203(42)', 'Buzzer_Beeper:MagneticBuzzer_ProSignal_ABT-410-RC',
@@ -437,10 +438,10 @@ cap('C51', '82p', 'CONV_FB', 'CONV_CMP2', 'kompensacja: C_FF', 'CL21C820JBANNNC'
 res('R68', '20k', 'CONV_CMP2', '+3V3', 'kompensacja: R_FF', 'RC0805FR-0720KL')
 res('R63', '100k', 'PWM_SYNC', 'GND', 'Burst Mode do startu MCU; GPIO45 musi być niski przy resecie', 'RC0805FR-07100KL')
 
-HOLES = ['H1', 'H2', 'H3', 'H4']
+HOLES = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 for ref in HOLES:
-    part(ref, 'Mechanical:MountingHole', 'M3', 'MountingHole:MountingHole_3.2mm_M3', {}, bom=False,
-         note='położenie i liczba z obudowy (Hammond 1599KBAT, pomiar)')
+    part(ref, 'Mechanical:MountingHole', '#4', 'MountingHole:MountingHole_3.5mm', {}, bom=False,
+         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 6 mm, wkręt #4 × 7/16" typ B')
 
 EXTRAS = [
     ('JP3', 1, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'założona w pracy; zdjęta przy pomiarze prądu radia'),
