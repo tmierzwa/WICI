@@ -2,7 +2,7 @@
 
 **Archiwum (F99, 2026-10-08; porządek 2026-10-29, F119).** Plik opisuje obsługę stanowisk deweloperskich A/B na płytce v1 (dawniej N1), wstrzymanych razem z profilem P1 ([stanowiska A/B](../archiwum/stanowiska-a-b.md)); prototyp obsługuje się według [programu diagnostycznego](../l0-diagnostic/README.md). Dla prototypu nadal obowiązują zasady o panelu, zacisku VTEST, macie antystatycznej i pomiarze prądu przez JP1/JP2.
 
-Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); tam opisano montaż, kontrolę przed zasilaniem i pierwsze włączenie. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/README.md#polecenia), granice pomiarów stanowiska: [archiwum stanowisk](../archiwum/stanowiska-a-b.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
+Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. Dotyczy sztuki płytki N1, która przeszła [uruchomienie](uruchomienie.md); tam opisano montaż, kontrolę przed zasilaniem i pierwsze włączenie. Opis płytki: [płytka nośna](plytka-nosna.md), polecenia oprogramowania: [firmware/README.md](../../firmware/docs/polecenia.md#polecenia), granice pomiarów stanowiska: [archiwum stanowisk](../archiwum/stanowiska-a-b.md#co-sprawdza-stanowisko-a-co-dopiero-r02).
 
 ## Zasady
 
@@ -26,7 +26,7 @@ Instrukcja dla osoby, która prowadzi próby T1–T4 na zmontowanym stanowisku. 
 | Zworki N1 | JP3 założona; JP1 i JP2 zdjęte | JP1 i JP2 założone; JP3 bez znaczenia |
 | Puste gniazda | J5, J6 | J9, J10 |
 | Podparcie | lewa część płytki na dystansach H1, H2, H5, tak by leżała poziomo | dziewięć dystansów H1–H9 |
-| Obraz | `bench-n1` ([opis](../../firmware/README.md#płytka-nośna-n1-bench-n1)) | `bench-b` ([opis](../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)) |
+| Obraz | `bench-n1` ([opis](../../firmware/docs/stanowiska-a-b.md#płytka-nośna-n1-bench-n1)) | `bench-b` ([opis](../../firmware/docs/stanowiska-a-b.md#stanowisko-b-na-płytce-n1-bench-b)) |
 | Zasilanie i wgrywanie | USB płytki DK; J-Link na złączu J2 DK | złącze „USB” DevKitC (nie „UART”) |
 | Porty do laptopa | dwa porty szeregowe na złączu nRF USB (J3) DK: diagnostyka i dane | dwa porty szeregowe na złączu „USB” DevKitC: diagnostyka i dane |
 | Przełączniki płytki MCU | ustawione przed nałożeniem N1: SW8 włączony, SW9 w położeniu fabrycznym, TRACE (SW7) „Default” | brak |
@@ -44,7 +44,7 @@ Ta sama sztuka N1 może służyć obu stanowiskom. Każdą zmianę konfiguracji 
 
 | Element | Oznaczenie | Działanie |
 |---|---|---|
-| Przyciski menu | SW1–SW4: GÓRA, DÓŁ, OK, WSTECZ | menu stacji ([ekran i przyciski](../../firmware/README.md#ekran-i-przyciski)) |
+| Przyciski menu | SW1–SW4: GÓRA, DÓŁ, OK, WSTECZ | menu stacji ([ekran i przyciski](../../firmware/docs/aplikacja.md#ekran-i-przyciski)) |
 | Przełącznik ciszy radiowej | SW5, opis „CISZA: 1-2” | styki 1–2 zwarte = cisza radiowa; przełącznik ma pierwszeństwo przed poleceniami z USB. Położenie sprawdza się poleceniem `BTN` (`silence_switch: true` = cisza) |
 | Przycisk trybu przygotowania | SW6, „PRZYGOT.” | przytrzymanie 3 s włącza albo wyłącza tryb przygotowania, w którym działają polecenia pomiarowe |
 | Dioda alarmu | D1, „ALARM” | świeci, dopóki trwa przyczyna alarmu, i w ciszy radiowej |

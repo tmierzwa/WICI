@@ -7,8 +7,8 @@ Katalog zawiera sprzęt i programy do kroków planu z [rozdziału 08 koncepcji](
 | Krok | Sprzęt | Stan |
 |---|---|---|
 | 1. Radia testowe | 2 zestawy Seeed XIAO ESP32-S3 + Wio SX1262 z programem radiowym `pair-0.4` ([radio-pair](radio-pair/README.md)) | wykonany 2026-10-10: 100/100 w obie strony przy stole ([wyniki](radio-pair/evidence/bench-r0-2026-10-10.txt)), próby w budynku przy 0 dBm ([wyniki](radio-pair/evidence/range-r0-2026-10-10.txt)). 2026-10-31 sprawdzone jako radia RNode: oficjalne RNode 1.86 nie steruje przełącznikiem anteny RF_SW1 i odbiera o około 25 dB słabiej, z łatką z `radio-pair` działa ([wyniki](radio-pair/evidence/rnode-xiao-2026-10-31.txt), [radia RNode](../docs/spec/radio.md#radia-rnode)). Zestawy są wolne; nie są narzędziem dalszych kroków |
-| 2. Radia RNode przy stole | 2 zestawy RAK19007 + RAK4631 z firmware RNode, laptopy z Reticulum w Pythonie ([rnode](rnode/README.md)) | zestawy zamówione 2026-10-29 |
-| 3. Pomiar ogólny | radia RNode | po kroku 2 |
+| 2. Radia RNode przy stole | 2 zestawy RAK19007 + RAK4631 z firmware RNode, laptopy z Reticulum w Pythonie ([rnode](rnode/README.md)) | wykonany 2026-11-02: 10/10 prób `rnprobe` w każdą stronę w SF7 i SF8, IFAC odrzuca obce hasło ([wyniki](rnode/evidence/krok2-2026-11-02.txt)); bez pomiaru mocy na złączu |
+| 3. Pomiar ogólny | radia RNode | do zrobienia |
 | 4. Prototyp na płytce v1 | stacja na płytce v1 ([dev-bench](dev-bench/README.md)), odbiór programem diagnostycznym ([l0-diagnostic](l0-diagnostic/README.md)), program stacji z [firmware](../firmware/README.md) | 2 prototypy w montażu u wykonawcy |
 | 5. Pomiar w gminie | radia RNode | wymaga gminy pilotażowej i kroku 3 |
 | 6. Stacje pilotażowe na płytce v2 | płytka v2 ([elektronika](../docs/spec/elektronika.md#stacja-pilotażowa)), obudowa ([obudowa](obudowa/README.md)), zasilanie z ogniw i 12 V (materiał w [r02](r02/README.md)) | projekt v2 po kroku 4 |
