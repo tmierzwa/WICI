@@ -18,7 +18,7 @@ Wcześniejsze odczytanie W14 (dwie rodziny układów radiowych już w pierwszym 
 
 Opcja systemu „samodzielna stacja MCU + Reticulum/LXMF + własny FSK P1” miała jawny profil i dwóch kandydatów RF od niezależnych producentów, a sterowniki P1 i stanowiska deweloperskie już istniały. Kosztem były dwa projekty torów RF, dwie rodziny MCU, mieszana kwalifikacja TI–ST, badania RED każdego wykonania i ujemny zapas łącza w modelu przy niskich antenach. Wariant 0.4 (laptop jako węzeł z modemem P1) wymagał adaptera czasu dla protokołu KISS, bo kontrola przepływu KISS ma limit 5 s, a P1 może wymagać ponad 16 s samej ciszy.
 
-**Mikrokontroler w wariancie P1.** Z odbiornikiem CC1120 (22 mA) ESP32-S3 spełniał W23 tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy 45–60 mA dawał 33–39 h. Wycofany kontroler R01.3 miał STM32F103, który nie mieści stosu Reticulum. Port microReticulum zostawiał na nRF52840 w odtworzeniu ruchu 3,5% wolnej RAM w szczycie i 12,5% w stanie ustalonym, bez LXMF ([pomiar](../../firmware/README.md#pamięć-ram)); rdzeń stacji zastąpił port w obrazach.
+**Mikrokontroler w wariancie P1.** Z odbiornikiem CC1120 (22 mA) ESP32-S3 spełniał W23 tylko przy średnim poborze MCU około 30 mA, czyli przy lekkim uśpieniu z odbiornikiem stale włączonym; przy 45–60 mA dawał 33–39 h. Wycofany kontroler R01.3 miał STM32F103, który nie mieści stosu Reticulum. Port microReticulum zostawiał na nRF52840 w odtworzeniu ruchu 3,5% wolnej RAM w szczycie i 12,5% w stanie ustalonym, bez LXMF ([pomiar](../../firmware/docs/stos.md#pamięć-ram)); rdzeń stacji zastąpił port w obrazach.
 
 ## Budżet czasu antenowego P1 (dawniej rozdział 06)
 

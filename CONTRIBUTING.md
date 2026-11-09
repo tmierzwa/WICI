@@ -27,7 +27,7 @@ Każde wymaga tylko Pythona 3.12 i edytora. Recenzję wykonuje opiekun repozytor
 
 Zadania odpowiadają krokom 2–4 [planu](docs/concept/08-plan-weryfikacji-i-decyzje.html). Zadania wariantu P1 i stanowisk deweloperskich A/B są wstrzymane ([archiwum](docs/archiwum/README.md)).
 
-1. **Interfejs LoRa w programie stacji na prototypie (krok 4).** Kod jest zrobiony ([interfejs LoRa stosu](firmware/README.md#interfejs-lora-stosu)) i przechodzi próbę zgodności z `RNodeInterface` na komputerze. Zostaje próba na prototypie z radiem RNode według [procedury kroku 4](firmware/README.md#krok-4-interfejs-lora-z-radiem-rnode). W raporcie podaj egzemplarz, zapas RAM zmierzony poleceniem `RNS` i wynik wymiany.
+1. **Interfejs LoRa w programie stacji na prototypie (krok 4).** Kod jest zrobiony ([interfejs LoRa stosu](firmware/docs/prototyp-l0-i-xiao.md#interfejs-lora-stosu)) i przechodzi próbę zgodności z `RNodeInterface` na komputerze. Zostaje próba na prototypie z radiem RNode według [procedury kroku 4](firmware/docs/prototyp-l0-i-xiao.md#krok-4-interfejs-lora-z-radiem-rnode). W raporcie podaj egzemplarz, zapas RAM zmierzony poleceniem `RNS` i wynik wymiany.
 2. **Radia RNode przy stole i pomiar ogólny (kroki 2 i 3).** Wgrać RNode na RAK4631 według [hardware/rnode](hardware/rnode/README.md), sprawdzić wymianę przy stole, potem zmierzyć zasięg na własnym terenie według [procedury](docs/spec/odbior.md#krok-3-pomiar-ogólny). Przed pomiarem poza budynkiem przeczytaj [podstawę pomiarów](docs/spec/odbior.md#podstawa-pomiarów-radiami-rnode).
 3. Dodać do modelu protokół USB laptop–stacja (D17) i dziennik FRAM z długiem ciszy.
 
