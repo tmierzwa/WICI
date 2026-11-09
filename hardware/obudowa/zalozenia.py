@@ -102,7 +102,8 @@ MEASUREMENTS = {
                                  "model STEP Hammonda 1599KBKBAT.stp; potwierdzić na próbce", 2.9),
     "board_spacer": ("Tulejka dystansowa między słupkiem skrzynki a płytką v2 [mm]; wierzch płytki 10,5 mm od frontu",
                      "dobór na modelu STEP (hardware/plytka-v2/README.md); potwierdzić na przymiarce", 6.0),
-    "board_screw_max": ("Największa długość wkrętu #4 pod łbem: płytka 1,6 + tulejka 6 + otwór 4,6 − 0,2 [mm]",
+    "board_screw_max": ("Największa długość wkrętu płytki pod łbem bez podkładki: płytka 1,6 + tulejka 6 + otwór 4,6 − 0,2 [mm]; "
+                        "wkręt 3 × 12 idzie z podkładką 1 mm",
                         "model STEP; dłuższy wchodzi we front pod folią", 12.0),
     "pilot_board": ("Płytka v2 stacji pilotażowej: obrys, otwory, położenie złącza anteny i gniazda USB-C",
                     "projekt v2 (elektronika.md, stacja pilotażowa)", None),

@@ -469,14 +469,16 @@ res('R63', '100k', 'PWM_SYNC', 'GND', 'Burst Mode do startu MCU; GPIO45 musi by�
 HOLES = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 for ref in HOLES:
     part(ref, 'Mechanical:MountingHole', '#4', 'MountingHole:MountingHole_3.5mm', {}, bom=False,
-         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 6 mm, wkręt #4 × 7/16" typ B (EXTRAS)')
+         note='na słupku skrzynki Hammond 1599KBAT (model STEP), tulejka 6 mm, wkręt 3 × 12 do tworzyw z podkładką 1 mm (EXTRAS)')
 
 EXTRAS = [
     ('JP3', 1, 'Würth Elektronik', '60900213421', 'zworka 2,54 mm', 'założona w pracy; zdjęta przy pomiarze prądu radia'),
     ('H1-H6', 6, 'Harwin', 'R30-6700694', 'tulejka dystansowa nylonowa 6,00 mm, otwór 3,2 mm, średnica 5,0 mm',
      'na słupku skrzynki pod płytką; nie calowa 1/4" (6,35 mm)'),
-    ('H1-H6', 6, '', 'wkręt #4 × 7/16" typ B', 'wkręt samogwintujący do tworzyw #4 (2,84 mm) × 11,1 mm, łeb walcowy '
-     'krzyżowy, tępy koniec typu B (ASME B18.6.4)', 'numer do wyboru; nie dłuższy niż 12,0 mm pod łbem'),
+    ('H1-H6', 6, 'Bossard', 'BN 82428 3 × 12 (3034086)', 'wkręt do tworzyw ecosyn-plast 3 × 12 mm, łeb walcowy '
+     'Ø5,6 × 2,4 mm, Pozidriv PZ1, stal ocynkowana', 'TME B3X12/BN82428; od spodu, przez podkładkę'),
+    ('H1-H6', 6, 'Essentra', '1340107', 'podkładka poliamidowa M3: 1,0 mm, otwór 3,1 mm, średnica 6 mm',
+     'TME 1340107; pod łbem wkrętu, skraca wejście wkrętu w słupek o 1 mm'),
     ('J10', 4, 'E-Switch', 'PV6F240SS', 'przycisk panelowy GÓRA, DÓŁ, OK, WSTECZ: Ø16 mm, SPST-NO, IP65, bez podświetlenia',
      'we froncie, przewody do wtyku JST XHP-5'),
     ('J3', 1, 'E-Switch', 'PV6F240SS', 'wyłącznik główny, panelowy: Ø16 mm, SPST-NO, IP65', 'we froncie, przewody do wtyku XHP-2'),
