@@ -10,7 +10,7 @@ python3 -m unittest discover -s tests -v
 python3 tools/verify_repository.py
 ```
 
-Kontrola porównuje manifest z indeksem Git i sprawdza sumy wszystkich plików, lokalne odnośniki Markdown i HTML (z kotwicami: w stronach HTML według `id`, w plikach Markdown według nagłówków, tak jak tworzy je GitHub), zgodność wydruków PDF w `output/pdf/` z ich źródłami, składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
+Kontrola bierze pliki z indeksu Git i sprawdza lokalne odnośniki Markdown i HTML (z kotwicami: w stronach HTML według `id`, w plikach Markdown według nagłówków, tak jak tworzy je GitHub), zgodność wydruków PDF w `output/pdf/` z ich źródłami, składnię JSON/Python i wyniki obliczeń. Nie aktualizuje dowodów podczas sprawdzania. CI działa na Linuksie z Pythonem 3.12 i nie uruchamia KiCad.
 
 ## Oprogramowanie układowe
 
@@ -48,15 +48,15 @@ Płytki stacji projektuje się w KiCad 10.0.6: v1 (dawniej płytka nośna N1, p�
 
 ## Paczka źródłowa
 
-Po sprawdzeniu repozytorium:
+`manifest.json` nie leży w repozytorium. Między wydaniami pliki chroni Git, a manifest z sumami SHA-256 wszystkich plików paczki powstaje tylko przy wydaniu. Przy tagu `v*` CI (`checks.yml`) buduje paczkę i manifest i udostępnia je jako artefakt `source-archive`; opiekun dołącza oba pliki do wydania na GitHubie. To samo lokalnie, po sprawdzeniu repozytorium:
 
 ```sh
-python3 tools/release.py --source-zip dist/WICI-0.5-source.zip
+python3 tools/release.py --version 0.6 --source-zip dist/WICI-0.6-source.zip
 ```
 
-Paczka zawiera źródła, dokumentację i eksporty; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Archiwum zawiera wszystkie pliki manifestu i sam manifest, ze stałymi datami i kolejnością wpisów. Kontrola porównuje także bajty każdego wpisu. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
+Polecenie tworzy `dist/WICI-0.6-source.zip` z `manifest.json` w środku i ten sam manifest obok, jako `dist/WICI-0.6-source-manifest.json`. Paczka zawiera źródła, dokumentację i eksporty z indeksu Git, bez wyrenderowanych filmów; nie jest systemem startowym ani aplikacją stacji. Katalog `dist/` nie jest śledzony w Git. Wpisy mają stałe daty i kolejność, a kontrola porównuje bajty każdego wpisu ze źródłem. Zgodność identycznych wejść sprawdzają testy; inne wersje narzędzi lub kompresji mogą dać inną sumę kontrolną ZIP.
 
-Manifest odświeża opiekun po scaleniu zmian i przed wydaniem, osobnym PR (na `main` nie można wysyłać zmian bezpośrednio). Przegląda i dodaje pliki do indeksu Git, wykonuje `python3 tools/release.py --refresh`, a następnie pełną kontrolę. Kontrybutor w PR używa `python3 tools/verify_repository.py --pull-request`, które pomija zgodność `manifest.json`. CI robi to samo dla pull requestów i gałęzi `main`, a pełną kontrolę z manifestem i paczkę źródłową wykonuje tylko dla tagów `v*`; gałęzie robocze sprawdza tylko w pull requeście. Po scaleniu PR, który zmienia pliki, manifest pozostaje nieaktualny, dopóki opiekun go nie odświeży. Kontrola `main` go pomija, ale tag `v*` z nieaktualnym manifestem nie przejdzie. Nie używaj `--refresh` do ukrycia niewyjaśnionej różnicy.
+Przed tagiem opiekun przegląda listę zmienionych plików od poprzedniego wydania: `git diff --stat v0.5.2..HEAD` (z numerem poprzedniego tagu).
 
 Oznaczenia licencji sprawdza [REUSE](https://reuse.software/): `pipx run reuse==5.0.2 lint`. Nowy plik bez nagłówka SPDX dostaje licencję z [REUSE.toml](../REUSE.toml).
 

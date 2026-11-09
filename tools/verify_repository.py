@@ -11,7 +11,7 @@ import argparse
 import sys
 from urllib.parse import unquote
 
-from release import check_manifest
+from release import published_files
 
 ROOT = Path(__file__).resolve().parents[1]
 LINK_PATTERNS = {".md": r"\[[^\]]*\]\(([^)]+)\)", ".html": r'(?:href|src)="([^"]+)"'}
@@ -73,9 +73,9 @@ def main() -> None:
     """Reject stale evidence or broken local documentation without refreshing it."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--pull-request", action="store_true",
-                        help="Do not require a refreshed manifest; the maintainer refreshes it")
-    args = parser.parse_args()
-    files = check_manifest(strict=not args.pull_request)
+                        help="Accepted for older instructions; the check is the same with or without it")
+    parser.parse_args()
+    files = published_files()
     links = 0
     for name, path in files.items():
         if path.suffix == ".json":

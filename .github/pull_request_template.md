@@ -8,9 +8,9 @@ Issue, ustalenia przeglądu (F), decyzje (D), próby (T) i wymagania (W), który
 
 - [ ] `python3 -m unittest discover -s software/reference -v`
 - [ ] `python3 -m unittest discover -s tests -v`
-- [ ] `python3 tools/verify_repository.py --pull-request`
+- [ ] `python3 tools/verify_repository.py`
 - [ ] `pipx run reuse==5.0.2 lint` (nowe pliki mają licencję)
-- [ ] Zaktualizowano dowody dotknięte zmianą (wyniki obliczeń, paczka sprzętu); **bez** odświeżania `manifest.json`
+- [ ] Zaktualizowano dowody dotknięte zmianą (wyniki obliczeń, paczka sprzętu, wydruki PDF w `output/pdf/`)
 
 ## Zgodność
 
