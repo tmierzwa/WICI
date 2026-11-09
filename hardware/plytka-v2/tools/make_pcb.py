@@ -64,8 +64,8 @@ AT_EDGE = {'J4'}                        # may overhang the bottom edge towards t
 # Sockets of the modules, bottom side: (x, y of pin 1, rotation). Seen from below the modules sit as on v1.1,
 # so seen from the top the two rows swap sides.
 SOCKETS = {
-    'J6': (86.0, 9.0, 0), 'J5': (86.0 + 22.86, 9.0, 0),          # DevKitC J3 / J1, row spacing as v1.1
-    'J9': (142.4, 67.4, 0), 'J8': (142.4 + 15.24, 67.4, 0),      # Wio J2 / J1, spacing from the Seeed drawing
+    'J6': (86.0, 9.0, 0), 'J5': (86.0 + 22.86, 9.0, 0),          # J6 = DevKitC J3, J5 = DevKitC J1; spacing as v1.1
+    'J9': (142.4, 67.4, 0), 'J8': (142.4 + 15.24, 67.4, 0),      # J9 = Wio J2, J8 = Wio J1; 15.24 mm (Seeed STEP)
 }
 # Packing regions per block: (side, x0, y0, x1, y1, start, refs). The first part goes as close as possible to
 # the start point, every next one as close as possible to that first part (the IC of the block);
@@ -80,20 +80,23 @@ REGIONS = [
                                        'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
     ('T', 80, 96, 122, 113, (100, 108), ['D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32']),
     ('T', 124, 92, 162, 106, (134, 100), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
-                                         'C33', 'D6']),
-    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11']),
+                                         'D6']),
+    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
     ('T', 146, 102, 188, 119, (160, 112), ['U6', 'C36', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35',
-                                          'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12']),
+                                          'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78']),
     ('T', 140, 84, 164, 94, (150, 89), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
     ('T', 26, 98, 60, 113, (50, 109), ['U8', 'R65', 'R66', 'R73', 'R74', 'D17', 'Q12', 'R75']),
+    # ADC filters at GPIO4/GPIO5 (J5.4, J5.5), top side between the DevKitC rows; the dividers stay in their blocks.
+    ('T', 92, 10, 106, 30, (104, 18), ['C33', 'R76', 'C34', 'R77']),
 ]
-# Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm).
+# Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm); 'J5.5' is one pad.
 CLOSE = [
     ('U8', 'J4', 10.0), ('D4', 'J2', 10.0),                      # ESD and TVS at their connectors (obudowa.md)
     ('C44', 'U7', 5.0), ('C45', 'U7', 5.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 6.0), ('C41', 'U7', 6.0), ('C42', 'U7', 6.0), ('C43', 'U7', 6.0),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
     ('C36', 'U6', 5.0), ('C11', 'U4', 5.0),
+    ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
 def mm(v):
     return pcbnew.FromMM(v)
@@ -267,8 +270,12 @@ def main():
 
     for ref, (x, y, rot) in SOCKETS.items():
         fix(ref, x, y, rot, 'B', 'pin1')
-    # Bodies of the modules hanging under the sockets (DevKitC 25.4 x 62.7 mm, Wio 17.5 x 21 mm).
-    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.0, 2.0)):
+    # Bodies of the modules hanging under the sockets. Across the rows the module edge lies 1.27 mm beyond the
+    # row axis on both modules; 1.77 mm keeps 0.5 mm clearance for the module seated off-centre in the sockets.
+    # DevKitC 25.4 x 62.7 mm; Wio 17.78 x 21.44 mm, pin 1 2.92 mm from its short edge (Seeed STEP model
+    # 2024-09-23); along the rows 0.5 mm is added at both ends, as across. The 2.2 mm hole of the Wio lies on
+    # its axis 0.84 mm beyond the pin-1 row, inside the body.
+    for left, right, pins, length, margin in (('J6', 'J5', 22, 62.7, 1.5), ('J9', 'J8', 7, 21.44 + 1.0, 2.92 + 0.5)):
         p1 = [footprints[r].Pads()[0].GetPosition() for r in (left, right)]
         xs = sorted(pcbnew.ToMM(p.x) for p in p1)
         y0 = min(pcbnew.ToMM(p.y) for p in p1) - margin
@@ -310,7 +317,8 @@ def main():
     for a, b, limit in CLOSE:
         d = min(((pcbnew.ToMM(p.GetPosition().x - q.GetPosition().x)) ** 2
                  + (pcbnew.ToMM(p.GetPosition().y - q.GetPosition().y)) ** 2) ** 0.5
-                for p in footprints[a].Pads() for q in footprints[b].Pads())
+                for p in footprints[a].Pads() for q in footprints[b.split('.')[0]].Pads()
+                if '.' not in b or q.GetNumber() == b.split('.')[1])
         if d > limit:
             sys.exit(f'{a} is {d:.1f} mm from {b}, limit {limit:g} mm')
     board.Save(str(OUT))

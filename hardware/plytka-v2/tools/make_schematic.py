@@ -127,9 +127,9 @@ def effects(size=1.27, hide=False, justify=None):
 # Columns by block, top to bottom.
 GROUPS = [
     ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32'],
-    ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6'],
-    ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'C50'],
-    ['U6', 'J3', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12'],
+    ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6', 'R76'],
+    ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77', 'C50'],
+    ['U6', 'J3', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78'],
     ['U7', 'L2', 'C40', 'C41', 'C42', 'C43', 'C44', 'C45', 'C46', 'C47', 'R60', 'R61', 'R62', 'C48', 'C49',
      'R67', 'C51', 'R68', 'R63'],
     ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52', 'J4', 'R65', 'R66', 'U8', 'R73', 'R74', 'D17', 'Q12', 'R75'],
@@ -269,7 +269,7 @@ def write_bom():
             p = items[0]
             notes = [i['note'] for i in items]
             note = notes[0] if len(set(notes)) == 1 else '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
-            w.writerow([' '.join(i['ref'] for i in items), len(items),
+            w.writerow([' '.join(i['ref'] for i in items), sum(i['qty'] for i in items),
                         ' / '.join(dict.fromkeys(i['value'] for i in items)), p['manufacturer'], p['mpn'],
                         p['lcsc'], p['spec'], p['footprint'], note])
         for refs, qty, manufacturer, mpn, spec, note in EXTRAS:

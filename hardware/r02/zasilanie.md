@@ -82,13 +82,14 @@ Drugi producent: ADI LTC2965 (3,5–100 V, 3/7/15 µA) z osobnymi progami w gór
 - **Ogniwa:** 4 × AA → rezystor 1 Ω impulsowy (2512) → dioda Schottky’ego → VSYS (decyzja Z7).
   - Rezystor ogranicza udar do ≤5 A (Z13).
   - Napięcie ogniw mierzy się przed rezystorem, więc progi 4,4 i 4,0 V się nie przesuwają.
-- **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek ≤0,4 V przy 120 mA, impuls ≥5 A.
+- **Dioda:** VR ≥30 V (VSYS ogranicza OVP łącznika S12 do ≤18,3 V), spadek przy 120 mA możliwie mały, cel około 0,5 V w całym zakresie temperatur (koszt w energii niżej), impuls ≥5 A.
   - Gdy stacja pracuje z 12 V, VSYS jest wyższe od ogniw, a prąd wsteczny diody płynie do pierwotnych ogniw litowych. Diodę wybiera się więc o małym upływie; karta Energizer L91 (EBC-8915AP-D9X) dopuszcza 2 µA.
-  - Płytka v2 ma ROHM RB168MM-40: typowo około 0,4 µA w 60 °C, spadek około 0,43 V przy 120 mA ([dobór części](../plytka-v2/README.md#dobór-części-2026-11-09)). Drugi producent do znalezienia.
+  - Płytka v2 ma ROHM RB168MM-40: typowo około 0,4 µA w 60 °C, spadek przy 120 mA typowo około 0,43 V w 25 °C i około 0,5 V w −25 °C. To wartości typowe z wykresu, nie gwarancja: karta gwarantuje tylko ≤0,65 V przy 1 A. Najgorsza sztuka może mieć około 0,05 V więcej, co w modelu daje około 47,9 h w 20 °C, czyli trochę poniżej 48 h; rozstrzyga pomiar T6 ([dobór części](../plytka-v2/README.md#dobór-części-2026-11-09)). Drugi producent do znalezienia.
 - **Koszt w energii:** spadek 0,35 V przy 6 V zwiększa moc pobieraną z ogniw o około 6%. Model energii liczy go jawnie:
   - nRF52840: 91 h na komplecie ogniw;
   - ESP32-S3 z MCU 30 mA: 49 h, czyli nadal ≥48 h;
   - W23 dopuszcza średnio najwyżej około 61 mA z szyny 3V3, wcześniej 64 mA.
+  - Z RB168MM-40 płytki v2 (typowo 0,43 V w 20 °C) moc rośnie o kolejne około 1,4%: ESP32-S3 około 48,3 h, a przy 0,5 V około 47,7 h. Zapas do 48 h jest więc w modelu bardzo mały i rozstrzyga pomiar T6.
 - **Zapas do komparatora VSYS:** przy wyłączeniu przez ogniwa (4,0 V) VSYS wynosi około 3,65 V zamiast 4,0 V. Do progu zaniku (3,4 V, najwyżej 3,47 V) zostaje około 0,2 V. Impuls TX przy zimnych, wyczerpanych ogniwach może więc wywołać fałszywe przerwanie VSYS_FAIL. T6 sprawdza to w −10 °C przy końcu pracy ogniw. W razie potrzeby obniża się próg komparatora (z przeliczeniem pojemności) albo podnosi próg wyłączenia ogniw.
 
 ### Suma diodowa i sterownik wyłącznika
@@ -197,6 +198,8 @@ Przerzut liczono tak: OV wyłącza bramkę w ≤5,4 µs, a w tym czasie nawet 50
 ## Próby teraz, na płytkach ewaluacyjnych
 
 Wyniki tych prób są potrzebne do schematu zasilania, a same próby nie czekają na T3–T5.
+
+Stan 2026-11-09: próby się nie odbyły. Dla płytki v2 zostaje płytka testowa przetwornicy, a resztę zastępuje prototyp v2 ([płytka v2](../plytka-v2/README.md#przed-ścieżkami-i-zamówieniem)).
 
 | Próba | Płytka | Cena (DigiKey, 2026-10-08) | Co mierzyć |
 |---|---|---|---|
