@@ -505,7 +505,7 @@ DRC w KiCad liczy potem z prawdziwą regułą projektu i to ono jest sprawdziane
 
 ## Części w JLC i pliki produkcyjne (2026-11-10)
 
-Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) i ponowne obejrzenie pięciu części w podglądzie JLC po poprawce obrotów (niżej).
+Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty części są potwierdzone w podglądzie JLC, niżej).
 
 ### Numery LCSC
 
@@ -582,7 +582,7 @@ LCSC nie ma go w magazynie: kupowany u dystrybutora, lutowany ręcznie. Pojemno�
 | gniazdo USB-C J4 | | 0° | obrót zgodny; model leżał 1,5 mm poza padami, bo JLC liczy pozycję od środka padów, a nie od punktu zerowego footprintu; pozycja J4 jest teraz środkiem jego padów |
 | SMB (D4), X1SON (D18, D19), rezystory, kondensatory, cewka L1 | | 0° | części bez biegunowości (TVS dwukierunkowe) albo symetryczne |
 
-Cztery poprawione obroty i pozycja J4 wynikają z odczytu zrzutu, nie z nowego podglądu: **po wgraniu poprawionego `jlc-cpl.csv` trzeba w podglądzie JLC obejrzeć jeszcze raz U5, U6, U8, U9 i J4.** Gniazda modułów są przewlekane i nie ma ich w pliku pozycji.
+Po poprawce plik pozycji został wgrany do JLC jeszcze raz i **drugi podgląd (2026-11-10) potwierdził wszystkie pięć poprawek**: znacznik pinu 1 modeli U5, U6, U8 i U9 leży przy pinie 1 na płytce, a styki gniazda J4 leżą na swoich padach. Gniazda modułów są przewlekane i nie ma ich w pliku pozycji. Porównanie robi się na zrzucie podglądu; przy każdej zmianie części albo footprintu trzeba je powtórzyć.
 
 ## Przed zamówieniem
 
