@@ -28,19 +28,19 @@ Bopla BOS 801 przy szerokości 100 mm nie mieści czterech przycisków dla dłon
 
 **Nazwy stron (jak u Hammonda):** **skrzynka** („1599K Box”) ma front ze wgłębieniem na folię i ściany, a **pokrywa** („1599KBAT Lid”) to tył z klapką ogniw. Pokrywę przykręca się od tyłu czterema śrubami M3 × 12 z łbem stożkowym w mosiężne wkładki w słupkach skrzynki, więc front zostaje gładki. W tym pliku „front” to zewnętrzna strona dna skrzynki, z panelem.
 
-**Koszyk i płytka (model STEP, 2026-11-09):** koszyk ogniw (14,57 mm wysokości) leży na klapce pokrywy, pod płytką. Płytka v2 na słupkach skrzynki z tulejkami 6 mm leży 10,5 mm za wewnętrzną powierzchnią frontu, a wierzch koszyka jest 6,3 mm pod jej spodem (4,8 mm, jeśli koszyk oprze się na obrzeżu klapki). Nad koszykiem spód płytki ma tylko końcówki wyprowadzeń THT. Pokrywę zakłada się klapką po lewej, patrząc od frontu; obrócona o 180° stawia koszyk pod modułem radia ([płytka v2, montaż](../plytka-v2/README.md#montaż-w-obudowie)). Do potwierdzenia na przymiarce.
+**Koszyk i płytka (model STEP, 2026-11-10):** koszyk ogniw (korpus 14,57 mm, ogniwa AA do 16,4 mm nad klapką) leży na klapce pokrywy, pod płytką, przyklejony cienką taśmą (≤0,3 mm) na środku klapki. Płytka v2 na słupkach skrzynki z tulejkami 6 mm leży 10,5 mm za wewnętrzną powierzchnią frontu; korpus koszyka jest 6,3 mm, a ogniwa 4,5 mm pod jej spodem, bez taśmy i przechyłu. W osi v koszyk (57 mm) mieści się w otworze klapki (około 57,1 mm); w osi u płaska część klapki ma około 59,6 mm, więc koszyk opiera się o zaokrąglenie lewej ściany albo o podwyższenie zaczepu klapki po prawej i na środku podnosi się o około 0,6 mm. Nad koszykiem spód płytki nie ma elementów. Pokrywę zakłada się klapką po lewej, patrząc od frontu; obrócona o 180° stawia koszyk pod modułem radia ([płytka v2, montaż](../plytka-v2/README.md#montaż-w-obudowie)). Do potwierdzenia na przymiarce.
 
 ## Elementy panelu
 
 | Funkcja | Kandydat 1 | Kandydat 2 | Uwagi |
 |---|---|---|---|
-| GÓRA, DÓŁ, OK, WSTECZ | E-Switch PV6F240SS-341: otwór Ø16 mm, 1 000 000 cykli mechanicznych, IP65; DigiKey 3633 sztuk, 15,60 USD | APEM AV091003C900: otwór Ø19,2 mm, IP65; DigiKey 439 sztuk, 51,30 USD | metalowe przyciski montowane w panelu, połączone z płytką krótką wiązką z kluczowanym wtykiem; ESD i filtr RC przy wejściu na płytkę. Wariant przycisków lutowanych na płytce (APEM Multimec 5G z nasadkami 15 mm) wiąże wysokość płytki z frontem z dokładnością ±0,3 mm i wymaga wczesnej przymiarki |
-| CISZA z osłoną | przełącznik dźwigniowy CW Industries GTS z klapką GT-4R; klapka DigiKey 3301 sztuk, 5,72 USD | Bulgin 3900 (otwór Ø12,2 mm, IP67) z osłoną TG1-RED; DigiKey 773 sztuki, 18,30 USD | położenie przełącznika jest stanem CISZY, odczytywanym przy starcie; klapka wystaje 25–35 mm nad panel, więc najbliższy przycisk stoi ≥20 mm dalej. Otwór przełącznika GTS do sprawdzenia |
-| Wyłącznik główny | PV6 w innym kolorze albo z symbolem | AV | zagłębiony około 3 mm w pierścieniu folii, ≥30 mm od rzędu nawigacji; wyłączenie i tak wymaga przytrzymania 2 s |
+| GÓRA, DÓŁ, OK, WSTECZ | E-Switch PV6F240SS (płaski, stal nierdzewna, bez podświetlenia, SPST-NO, końcówki lutowane): otwór Ø16 mm, 1 000 000 cykli mechanicznych, IP65, −40…85 °C; DigiKey PL 2026-11-09: 718 sztuk, 43,07 zł przy 10 sztukach (TME: brak, 19 tygodni). Wersja z końcówką -341 ma niebieski pierścień i nie pasuje | brak sprawdzonego zamiennika na otwór Ø16 mm (APEM AV091003C900 ma otwór Ø19,2 mm i nie pasuje do frontu ani do otworu Ø20 mm w płytce) | metalowe przyciski montowane w panelu, równo z folią, połączone z płytką wiązką z wtykiem JST XH (J10 płytki v2); ESD i filtr RC przy złączu na płytce. Przyciski lutowane na płytce (B3F z nasadkami, Multimec 5G) odrzucono: wiążą wysokość płytki z frontem z dokładnością ±0,3 mm, a nasadka B32-1310 w otworze Ø16 trze narożnikami o ściankę ([płytka v2, front w wariancie 2](../plytka-v2/README.md#front-w-wariancie-2-2026-11-09)) |
+| CISZA z osłoną | przełącznik dźwigniowy E-Switch 100SP1T8B13M1QEH (SPDT ON-ON, gwintowana tuleja 15/32-32 długości 11,38 mm, dźwignia 18 mm, końcówki lutowane, uszczelnienie epoksydowe, −40…85 °C; DigiKey PL 2026-11-09: 2267 sztuk, 20,24 zł przy 10 sztukach) z klapką CW Industries GT-4R (otwór Ø12,2 mm, zawias u góry) | Bulgin 3900 (otwór Ø12,2 mm, IP67) z osłoną TG1-RED; DigiKey 773 sztuki, 18,30 USD | położenie przełącznika jest stanem CISZY, odczytywanym przy starcie; zamknięta klapka ma 27,65 mm nad panelem, a otwarta 43 mm, więc najbliższy przycisk stoi ≥20 mm dalej. GT-4R pasuje tylko na tuleję 15/32" (12 mm); dawny przełącznik na płytce (100SP1T1B4M2QE) miał tuleję bez gwintu. Otwór we froncie Ø11,91 mm z noskiem 1,65 × 0,79 mm pod wpust tulei (rysunek ST111027). Zamknięta klapka spycha dźwignię od zawiasu i to jest położenie pracy; CISZA to dźwignia do zawiasu, więc masę lutuje się na końcówkę najdalej od zawiasu. Do przymiarki: dźwignia (17,56–18 mm) pod osłoną na 17,5 mm, tuleja do Ø12,24 mm w otworze Ø12,2 mm osłony i czy sprężyna puszczonej klapki nie przerzuca dźwigni |
+| Wyłącznik główny | E-Switch PV6F240SS, jak przyciski nawigacji | jak wyżej | w kolumnie z boku, w linii rzędu nawigacji, ≥30 mm od niego; głowica wystaje 1,5 mm nad folię jak w przyciskach (zagłębienie w folii 0,2 mm jest niewykonalne). Przed przypadkowym wyłączeniem chroni przytrzymanie 2 s i napis „WYŁĄCZ: TRZYMAJ 2 s” o wysokości ≥3,2 mm. Od przycisków nawigacji odróżnia go miejsce, nadrukowany czarny pierścień i symbol zasilania |
 | Przycisk przygotowania | przycisk SMD na płytce (np. E-Switch TL1105 albo C&K PTS645, do sprawdzenia) | inny producent | naciska się go rysikiem przez otwór Ø3–4 mm pod numerowaną naklejką serwisową; przy otworze montażowym płytki, żeby się nie uginała; w promieniu 10 mm żadnych ścieżek ani padów widocznych przez otwór |
 | Naklejka serwisowa | numerowana naklejka VOID około 22 × 12 mm na otworze przycisku przygotowania, co najmniej 3 mm kleju wokół otworu | pokrywa około 25 × 20 mm na śrubie plombowej z plombą ołowianą (do oceny przy wydaniu) | przyjęte dla pilotażu ([F113](../../docs/review.md)): naklejka tylko ujawnia wejście, a każde wejście zapisuje stacja ([tryb przygotowania](../../docs/spec/oprogramowanie.md#tryb-przygotowania-i-naklejka-serwisowa)) |
-| Dioda alarmu | dioda 5 mm na płytce, osadzona kołnierzem, świeci przez otwór Ø5,5 mm we froncie (płytka v2: Kingbright WP7113ID, 0,95 mm pod frontem) | dioda panelowa Ø5 mm | widoczna z drugiego końca pomieszczenia |
-| Brzęczyk | na płytce, za otworami w folii albo ścianie | | ≥20 mm od toru RF |
+| Dioda alarmu | dioda 5 mm na płytce, osadzona kołnierzem, świeci przez otwór Ø5,5 mm we froncie (płytka v2: Kingbright WP7113ID, 0,95 mm pod frontem) | dioda panelowa Ø5 mm | widoczna z drugiego końca pomieszczenia; napis ALARM pod diodą i kratką, nad zawiasem osłony CISZY |
+| Brzęczyk | na płytce, za kratką siedmiu otworów Ø1,5 mm we froncie obok diody (środek (191,5; 20), rozstaw 3 mm) | | ≥20 mm od toru RF; na płytce v2 otwór dźwiękowy 1,4 mm od środka kratki |
 
 ## Złącza
 
@@ -70,24 +70,25 @@ Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika frontu 
  0         40          80          120         160         200    220
  +------------------------------------------------------------------+ 0
  | o                                                              o |   o = śruba pokrywy M3
- |   +--- światłowód, diody ---+                     (*) ALARM (185, 22)
- |   |  OKNO EKRANU 61,5 × 38  |                                    |
- |   |  środek (52, 42)        |                     [CISZA z osłoną]
- |   |                         |                     (185, 58)      |
- |   +-------------------------+                                    |
+ |   +--- światłowód, diody ---+                    (*) ALARM  ::: brzęczyk
+ |   |  OKNO EKRANU 61,5 × 38  |       LOGO        (178,5; 20) (191,5; 20)
+ |   |  środek (52, 42)        |    (126; 30,5)                     |
+ |   |                         |    nazwa (126, 48)                 |
+ |   +-------------------------+                     [CISZA z osłoną]
+ |   OK = TAK  WSTECZ = NIE (52, 71)                  (185, 62)      |
  |                                                                  |
- |  [WSTECZ]  [GÓRA]   [DÓŁ]    [OK]                                |
- |  (30, 98)  (62, 98) (94, 98) (126, 98)           ((WYŁĄCZNIK))   |
- |                                                  (185, 100)      |
- | o                               [NAKLEJKA SERWISOWA (150, 122)] o |
+ |  [WSTECZ]  [GÓRA]   [DÓŁ]    [OK]                 ((WYŁĄCZNIK))  |
+ |  (30, 98)  (62, 98) (94, 98) (126, 98)            (185, 98)      |
+ | o                       [NAKLEJKA SERWISOWA (151, 116)]          o |
  +------------------------------------------------------------------+ 140
    dolna ściana: USB-C (x 60), 12 V EN3 (x 110), SMA (x 170)
 ```
 
 - WSTECZ jest po lewej, OK po prawej, bo na ekranie OK znaczy TAK, a WSTECZ znaczy NIE. GÓRA i DÓŁ leżą obok siebie pod ekranem.
 - Rozstaw 32 mm przy otworach Ø16 mm zostawia ≥16 mm między przyciskami dla palców w rękawicach.
-- CISZA i wyłącznik główny stoją w osobnej kolumnie, ≥30 mm od rzędu nawigacji, żeby nie nacisnąć ich przypadkiem.
-- Dioda alarmu jest w prawym górnym rogu.
+- CISZA i wyłącznik główny stoją w osobnej kolumnie, ≥30 mm od rzędu nawigacji, żeby nie nacisnąć ich przypadkiem. Wyłącznik leży w linii rzędu nawigacji.
+- Dioda alarmu jest w prawym górnym rogu, a obok niej kratka brzęczyka; wspólny napis ALARM jest pod nimi, nad zawiasem osłony CISZY.
+- Front w wariancie 2 wybrał właściciel 2026-11-09 ([płytka v2](../plytka-v2/README.md#front-w-wariancie-2-2026-11-09)).
 - SMA można przenieść na górną ścianę, jeśli przewód antenowy przychodzi z góry. Decyduje o tym rysunek instalacji.
 - Klapka ogniw jest w pokrywie (z tyłu), więc do wymiany ogniw zdejmuje się stację ze ściany albo odwraca na stole. Zgadza się to z procedurą z karty (wymiana po komunikacie `mozna_wyjac`). Na klapce: piktogram „+ / −” i napis o przytrzymaniu wyłącznika przez 2 s.
 
@@ -96,20 +97,20 @@ Współrzędne w milimetrach od zewnętrznego lewego górnego narożnika frontu 
 Sprawdzone na modelu STEP Hammonda (2026-11-09) przy płytce v2, do potwierdzenia na przymiarce. Szczegóły i odrzucone warianty: [płytka v2, dopasowanie do obudowy](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09).
 
 - **Obrys:** 200 × 120 mm z narożnikami R4 i wycięciami 12 × 12 mm na słupki śrub pokrywy. Płytka zajmuje obszar frontu x 10–210 mm i y 10–130 mm; w jej płaszczyźnie ściany są 6,3 mm dalej (pochylenie ścian: wewnętrzna krawędź 3,7–3,9 mm od zewnętrznej). Płytka tej wielkości opłaca się tylko jako dwuwarstwowa płyta bazowa. To kolejny argument za podziałem na płytę bazową i mały czterowarstwowy moduł MCU+RF ([architektura](architektura.md#podział-na-płytki)).
-- **Mocowanie:** do słupków skrzynki, otwory nieplaterowane według [lekcji](lekcje.md#zasady-layoutu), z jednym otworem ≤25 mm od przycisku przygotowania (v2: 15,6 mm). Skrzynka ma osiem słupków Ø4,75 mm, wysokich na 4,5 mm, w siatce x 20/80/140/200 i y 30/110, z otworem Ø2,36 mm na 4,6 mm głębokości pod wkręt samogwintujący #4; pod otworem front ma 2,9 mm. Słupki (20, 30) i (80, 30) leżą pod oknem ekranu i szlifuje się je na równo z frontem, więc płytka v2 ma sześć otworów Ø3,5 mm. Na każdym słupku tulejka dystansowa 6 mm (otwór 3,2 mm) i wkręt #4 × 7/16" (11,1 mm) z tępym końcem typu B; najdłuższy dopuszczalny wkręt to 12,0 mm pod łbem, bo dłuższy wejdzie we front pod folią. Pokrywa ma słupki w tej samej siatce, ale płytki nie dotykają (16,4 mm pod nią). Uzasadnienie: [płytka v2](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09).
-- **Strefa nad koszykiem ogniw:** od spodu elementy ≤3 mm, bez odsłoniętej miedzi i punktów testowych. Przewody koszyka idą do kluczowanego złącza 2-stykowego przy ochronie toru ogniw.
+- **Mocowanie:** do słupków skrzynki, otwory nieplaterowane według [lekcji](lekcje.md#zasady-layoutu), z jednym otworem ≤25 mm od przycisku przygotowania (v2: 15,6 mm). Skrzynka ma osiem słupków Ø4,75 mm, wysokich na 4,5 mm, w siatce x 20/80/140/200 i y 30/110, z otworem Ø2,36 mm na 4,6 mm głębokości pod wkręt samogwintujący #4 lub 3 mm; pod otworem front ma 2,9 mm. Słupki (20, 30) i (80, 30) leżą pod oknem ekranu i szlifuje się je na równo z frontem, więc płytka v2 ma sześć otworów Ø3,5 mm. Na każdym słupku tulejka dystansowa 6 mm (Harwin R30-6700694, otwór 3,2 mm) i wkręt do tworzyw 3 × 12 mm (Bossard BN 82428) z podkładką 1 mm pod łbem, więc wkręt wchodzi w słupek na 2,5–4,3 mm; najdłuższy dopuszczalny wkręt to 12,0 mm pod łbem bez podkładki i 13,0 mm z nią, bo dłuższy wejdzie we front pod folią. Pokrywa ma słupki w tej samej siatce, ale płytki nie dotykają (16,4 mm pod nią). Uzasadnienie: [płytka v2](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09).
+- **Strefa nad koszykiem ogniw:** od spodu elementy ≤2 mm (ogniwa około 3,6 mm pod spodem płytki przy cienkiej taśmie i koszyku na środku), bez odsłoniętej miedzi i punktów testowych. Przewody koszyka idą do kluczowanego złącza 2-stykowego przy ochronie toru ogniw.
 - **Narożniki:** bez miedzi w odległości 2 mm od ściany skrzynki, ze względu na ESD od szczeliny folii.
-- **Przyciski panelowe:** strefa Ø20–24 mm wolna od wysokich elementów wokół osi każdego przycisku na pozycjach z rysunku. Wokół wspornika osłony CISZY strefa 30 × 40 mm.
+- **Przyciski panelowe:** wszystkie elementy sterujące są panelowe i przechodzą przez płytkę: pod każdym przyciskiem PV6, wyłącznikiem i przełącznikiem CISZY płytka v2 ma otwór Ø20 mm i 1 mm wolnego pola wokół z obu stron. Korpus PV6F240SS sięga 14,0 mm za folię, a końcówki 17,5 ± 0,5 mm, czyli do 2,7 mm pod spód płytki; przełącznik CISZY sięga 14,1 mm za wewnętrzną powierzchnię frontu (2,0 mm pod spód płytki). Przy WSTECZ i GÓRA, nad końcem koszyka, końcówki ustawia się w linii rzędu, a przewody lutuje bokiem ([płytka v2](../plytka-v2/README.md#front-w-wariancie-2-2026-11-09)). Każda linia z przewodu ma ochronę ESD i filtr RC przy swoim złączu. Przewody idą do złączy JST XH na spodzie (J10 przyciski, J3 wyłącznik, J11 CISZA).
 - **Ekran:** strefa 64 × 45 mm pod modułem bez elementów wyższych niż około 1 mm. Złącze FPC po stronie taśmy panelu, diody podświetlenia przy górnej krawędzi okna.
 - **Złącza na dolnej krawędzi:** USB-C 0–1 mm od wewnętrznej ściany, na języku płytki. Wysokość osi złącza nad płytką musi się zgadzać ze środkiem otworu w ścianie. Ściana ma tam 3,8 mm, więc otwór 13,2 × 7,2 mm przepuszcza osłonę wtyku (do 12,5 × 6,6 mm). EN3 i SMA są w ścianie i łączą się z płytką przewodami. Tył EN3 (kołnierz Ø20,6 mm, korpus Ø14 mm i kubki lutownicze, razem 13,1 mm za ścianą według biuletynu Switchcraft 602) przechodzi przez płaszczyznę płytki, więc płytka ma pod nim wycięcie. Elementy ESD i TVS leżą ≤10 mm od każdego złącza, przed elementami szeregowymi.
-- **Przycisk przygotowania:** około (150, 122), w osi otworu pod naklejką serwisową.
+- **Przycisk przygotowania:** (151, 116), w osi otworu pod naklejką serwisową.
 - **Powłoka ochronna:** maskuje się złącza, przyciski, złącze FPC, złącze koszyka, pola programowania i strefy otworów montażowych.
 - **Ciepło:** stacja traci poniżej 0,5 W, więc wystarczy trzymać przetwornice z dala od ekranu, bo kontrast panelu zależy od temperatury.
 
 ## Następne kroki
 
 1. Zrobione 2026-11-09: model STEP Hammond 1599KBAT (słupki, klapka, odstęp płytki od koszyka) i dopasowanie płytki v2 ([płytka v2](../plytka-v2/README.md#dopasowanie-do-obudowy-2026-11-09)).
-2. Zamówić próbki do przymiarki 1:1 (krok 5 [kolejności prac](README.md#kolejność-prac)): dwie obudowy, przyciski PV6, gniazdo EN3 z wtykiem, przełącznik GTS z klapką GT-4R, koszyk BH4AAW.
+2. Zamówić próbki do przymiarki 1:1 (krok 5 [kolejności prac](README.md#kolejność-prac)): dwie obudowy, przyciski PV6F240SS, gniazdo EN3 z wtykiem, przełącznik 100SP1T8B13M1QEH z klapką GT-4R, koszyk BH4AAW.
 3. Rozstrzygnąć pozycje do sprawdzenia: SMA krawędziowe albo przepustowe, model USB-C, koszyk z osłoniętym stykiem i drugi dostawca złącza 12 V.
 
 ## Źródła
@@ -119,5 +120,6 @@ Sprawdzone na modelu STEP Hammonda (2026-11-09) przy płytce v2, do potwierdzeni
 - OKW DATEC-CONTROL L: https://www.okw.com/en/drawings-pdf/00007906.pdf
 - Takachi LD: https://www.takachi-enclosure.com/assets/attachments/images/ld_catalog.pdf
 - E-Switch PV6: https://configured-product-images.s3.amazonaws.com/Datasheets/PV6.pdf; APEM AV: https://www.farnell.com/datasheets/1817214.pdf
+- E-Switch 100SP1T8B13M1QEH, rysunek ST111027: https://configured-product-images.s3.amazonaws.com/2D/specs/100SP1T8B13M1QEH.pdf
 - CW Industries GT-4R: https://mm.digikey.com/Volume0/opasdata/d220001/medias/docus/7159/GT-4R.pdf; Bulgin, przełączniki dźwigniowe: https://www.bulgin.com/products/pub/media/bulgin/data/A_Toggle%20Switch.pdf
 - Switchcraft EN3, biuletyn 602: https://static.chipdip.ru/lib/314/DOC012314485.pdf

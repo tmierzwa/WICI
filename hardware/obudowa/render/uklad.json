@@ -1,5 +1,5 @@
 {
- "source": "hardware/r02/obudowa.md (2026-10-08), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
+ "source": "hardware/r02/obudowa.md, front w wariancie 2 (2026-11-09), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
  "enclosure": {
   "model": "Hammond 1599KBAT",
   "outer": [
@@ -92,26 +92,69 @@
    "id": "ALARM",
    "kind": "led",
    "xy": [
-    185.0,
-    22.0
+    178.5,
+    20.0
    ],
-   "hole": 5.5
+   "hole": 5.5,
+   "label_xy": [
+    185.0,
+    29.5
+   ]
+  },
+  {
+   "id": "BRZĘCZYK",
+   "kind": "grille",
+   "xy": [
+    191.5,
+    20.0
+   ],
+   "hole": 1.5,
+   "holes": [
+    [
+     191.5,
+     20.0
+    ],
+    [
+     194.5,
+     20.0
+    ],
+    [
+     193.0,
+     22.598
+    ],
+    [
+     190.0,
+     22.598
+    ],
+    [
+     188.5,
+     20.0
+    ],
+    [
+     190.0,
+     17.402
+    ],
+    [
+     193.0,
+     17.402
+    ]
+   ]
   },
   {
    "id": "CISZA",
    "kind": "guard",
    "xy": [
     185.0,
-    58.0
+    62.0
    ],
-   "hole": null
+   "hole": 11.91
   },
   {
    "id": "WYŁĄCZNIK",
    "kind": "power",
    "xy": [
     185.0,
-    100.0
+    98.0
    ],
    "hole": 16.0
   },
@@ -119,8 +162,8 @@
    "id": "SERWIS",
    "kind": "seal",
    "xy": [
-    150.0,
-    122.0
+    151.0,
+    116.0
    ],
    "hole": 4.0,
    "size": [
@@ -129,6 +172,23 @@
    ]
   }
  ],
+ "foil": {
+  "logo": {
+   "xy": [
+    126.0,
+    30.5
+   ],
+   "height": 11.0
+  },
+  "brand": [
+   126.0,
+   48.0
+  ],
+  "hint": [
+   52.0,
+   71.0
+  ]
+ },
  "connectors": [
   {
    "id": "USB-C",

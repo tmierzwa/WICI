@@ -35,13 +35,22 @@ NS = uuid.UUID('4d0c3a2e-8b1f-4f7e-9a51-6c2b7e0d9f31')   # as make_schematic.py,
 # Panel: front positions from hardware/obudowa/zalozenia.py minus LID_OFFSET.
 DISPLAY_CENTER = (42.0, 32.0)          # window centre (52, 42) on the front
 DISPLAY_OUTLINE = (62.8, 42.82)
-PANEL_POWER = (175.0, 90.0)            # PV6 main switch in the front (185, 100), wired to J3
+# Front variant 2 (2026-11-09): every control is a panel part with wires to a connector on the bottom side; each
+# passes through a 20 mm hole in the board. PV6 (E-Switch): M16 thread 16.5 mm and terminals to 20 mm behind the
+# panel; toggle 100SP1T8B13M1QEH: body 8.9 x 12.7 mm, 12.7 mm plus 4.7 mm lugs behind the panel (E-Switch ST111027).
+# The board is 13.5 mm behind the panel surface, so both reach through it; a 20 mm hole keeps >= 2 mm round the
+# PV6 thread (16 mm) and the toggle body (15.5 mm diagonal) for the position tolerance of the front holes.
+PANEL_NAV = {'WSTECZ': (20.0, 88.0), 'GÓRA': (52.0, 88.0), 'DÓŁ': (84.0, 88.0), 'OK': (116.0, 88.0)}  # J10
+PANEL_POWER = (175.0, 88.0)            # PV6 main switch in the front (185, 98), wired to J3
+PANEL_CISZA = (175.0, 52.0)            # toggle under the GT-4R guard in the front (185, 62), wired to J11
+PANEL_HOLE = 20.0
+PANEL_HOLES = {**PANEL_NAV, 'WYŁĄCZNIK': PANEL_POWER, 'CISZA': PANEL_CISZA}
 # Mounting holes on the board bosses of the Box (STEP: 8 bosses 4.75 mm, 4.5 mm high, 2.36 mm hole 4.6 mm deep for
 # a #4 thread-forming screw). Bosses (20, 30) and (80, 30) on the front lie under the display window and are ground
 # off. Spacers 6 mm (inner 3.2, outer <= 6 mm) put the board top 10.5 mm from the inner face of the front; screw
 # #4 x 7/16" (11.1 mm) type B, blunt point: 3.5 mm in the boss, 1.1 mm above the hole bottom; at most 12.0 mm
 # (board 1.6 + spacer 6 + hole 4.6 - 0.2), under the hole only 2.9 mm of front wall. Holes 3.5 mm take up the
-# position tolerance of six moulded bosses (+-0.3 mm around the screw). H5 is 15.6 mm from SW6.
+# position tolerance of six moulded bosses (+-0.3 mm around the screw). H3 leaves a 3.9 mm web to the WSTECZ hole.
 HOLES = {'H1': (130.0, 20.0), 'H2': (190.0, 20.0), 'H3': (10.0, 100.0), 'H4': (70.0, 100.0), 'H5': (130.0, 100.0),
          'H6': (190.0, 100.0)}
 HOLE_KEEP = 4.0                        # half side of the free square: spacer <= 6 mm on top, screw head 5.6 mm below
@@ -62,12 +71,9 @@ OUTLINE = [(NOTCH, 0, RADIUS), (W - NOTCH, 0, RADIUS), (W - NOTCH, NOTCH, 0), (W
            (EN3_NOTCH[0], H, 1.0), (USB_TONGUE[2], H, 0), (USB_TONGUE[2], USB_TONGUE[3], 1.0),
            (USB_TONGUE[0], USB_TONGUE[3], 1.0), (USB_TONGUE[0], H, 0), (NOTCH, H, RADIUS), (NOTCH, H - NOTCH, 0),
            (0, H - NOTCH, RADIUS), (0, NOTCH, RADIUS), (NOTCH, NOTCH, 0)]
-# Hole under the PV6 main switch: M16 thread 16.5 mm and terminals to 20 mm behind the panel (E-Switch PV6), the
-# board 13.5 mm behind it; the switch passes through, its terminals and wires to J3 lie under the board.
-PV6_HOLE = 20.0
 CUTS = [(0, 0, NOTCH, NOTCH), (W - NOTCH, 0, W, NOTCH), (0, H - NOTCH, NOTCH, H), (W - NOTCH, H - NOTCH, W, H),
-        EN3_NOTCH, (PANEL_POWER[0] - PV6_HOLE / 2, PANEL_POWER[1] - PV6_HOLE / 2, PANEL_POWER[0] + PV6_HOLE / 2,
-                    PANEL_POWER[1] + PV6_HOLE / 2)]
+        EN3_NOTCH]
+HOLE_WEB = 2.0                          # board left between a panel hole and a mounting hole, mm
 SMD_THT_GAP = 2.5                       # mm, SMD pad to THT pad of another part
 # Zones kept free (hardware/r02/obudowa.md, "Płyta bazowa"): (side, x0, y0, x1, y1, name, parts allowed inside);
 # side 'T' top, 'B' bottom, 'TB' both sides.
@@ -75,40 +81,39 @@ SMD_THT_GAP = 2.5                       # mm, SMD pad to THT pad of another part
 # x 0.7-67.4, y 40.5-99.5 and the holder top lies 6.3 mm below the board, 4.8 mm if it rests on the raised rim of
 # the door (STEP); only the solder tails of THT parts there. 'B' the back of the SMA bulkhead socket (axis 6.3 mm
 # below the board) and its cable to the Wio. 'B' the PV6 terminals and wires under the board.
-# 'T' the display (64 x 45 mm), the PV6 body, the CISZA guard (30 x 40 mm), the navigation buttons (22 mm) and
-# 10 mm around the preparation button seen through the hole under the sticker. A spacer (<= 6 mm) may stand in the
-# corner of a button square when it stays outside the 22 mm circle. 'TB' spacer and screw head.
+# 'T' the display (64 x 45 mm) and 10 mm around the preparation button seen through the hole under the sticker.
+# 'TB' spacer and screw head. Round each panel hole 1 mm is kept free on both sides (inside_board): the nut and the
+# body above, the terminals and wires below.
 
 
-def spacers_clear(x, y):
-    """Holes whose spacer (<= 6 mm) stays outside the 22 mm circle of a panel button at x, y."""
-    return {h for h, (hx, hy) in HOLES.items() if ((hx - x) ** 2 + (hy - y) ** 2) ** 0.5 >= 11.0 + 3.0}
+SERVICE = (141.0, 106.0)                # preparation button SW6 under the hole in the SERWIS sticker, front (151, 116)
 
 
 ZONES = [
     ('T', 10.0, 9.5, 74.0, 54.5, 'ekran Sharp', set()),
     ('B', 0.5, 30.0, 58.0, 90.0, 'koszyk ogniw 4 × AA', set()),
     ('B', 152.0, 104.0, 168.0, 119.5, 'tył gniazda SMA', set()),
-    ('B', 164.0, 79.0, 186.0, 101.0, 'zaciski PV6 wyłącznika', set()),
-    ('T', 164.0, 79.0, 186.0, 101.0, 'przycisk PV6 wyłącznika', spacers_clear(*PANEL_POWER)),
-    ('T', 160.0, 28.0, 190.0, 68.0, 'osłona CISZY', {'SW5'}),
-    ('T', 130.0, 102.0, 150.0, 122.0, 'otwór przygotowania', {'SW6', 'H5'}),
-] + [('T', x - 11.0, 77.0, x + 11.0, 99.0, name, {ref} | spacers_clear(x, 88.0)) for ref, x, name in
-     (('SW4', 20.0, 'WSTECZ'), ('SW1', 52.0, 'GÓRA'), ('SW2', 84.0, 'DÓŁ'), ('SW3', 116.0, 'OK'))] + [
+    ('T', SERVICE[0] - 10.0, SERVICE[1] - 10.0, SERVICE[0] + 10.0, SERVICE[1] + 10.0, 'otwór przygotowania',
+     {'SW6', 'H5'}),
+] + [
     ('TB', x - HOLE_KEEP, y - HOLE_KEEP, x + HOLE_KEEP, y + HOLE_KEEP, 'tulejka ' + ref, {ref})
     for ref, (x, y) in HOLES.items()]
 
 # Fixed parts: ref -> (x, y, rotation, side); x, y is the centre of the footprint body.
 FIXED = {
-    'SW4': (20.0, 88.0, 0, 'T'), 'SW1': (52.0, 88.0, 0, 'T'), 'SW2': (84.0, 88.0, 0, 'T'), 'SW3': (116.0, 88.0, 0, 'T'),
-    'D1': (175.0, 12.0, 0, 'T'), 'SW5': (175.0, 48.0, 0, 'T'), 'SW6': (140.0, 112.0, 0, 'T'),
+    'D1': (168.5, 10.0, 0, 'T'), 'SW6': (*SERVICE, 0, 'T'),
     # JST XH with the plug is 9.8 mm high: the wire connectors are on the bottom, where the wires come from.
-    'J3': (194.0, 90.0, 90, 'B'),        # wires to the PV6 terminals under the board; clear of the spacer of H6
+    'J3': (194.0, 88.0, 90, 'B'),        # wires to the PV6 terminals under the board; clear of the spacer of H6
+    'J10': (100.0, 90.5, 90, 'B'),       # harness of the four PV6 buttons, between the DÓŁ and OK holes
+    'J11': (192.0, 52.0, 90, 'B'),       # wires to the CISZA toggle
     'J2': (116.0, 115.0, 0, 'B'),        # wires to the EN3 socket (bottom wall, front x 110), beside its notch
     'J1': (68.0, 115.0, 0, 'B'),         # wires to the AA holder on the battery door
-    'BZ1': (150.0, 20.0, 0, 'T'),        # >= 20 mm from the radio
+    # Under the grille of seven 1.5 mm holes, front (191.5, 20); clear of the Lid screw notch and the H2 spacer.
+    'BZ1': (180.5, 9.0, 0, 'T'),
     'F1': (114.0, 103.0, 0, 'B'), 'C50': (132.0, 84.0, 0, 'B'),
-    'JP3': (172.0, 74.0, 90, 'T'),      # outside the CISZA guard zone
+    # 2 mm further from the main switch than a 22 mm nut needs (no PV6 nut in the data sheet; M16 x 1 nuts are
+    # 19-22 mm across flats, so up to 12.7 mm to a corner).
+    'JP3': (172.0, 70.0, 90, 'T'),
     **{ref: (x, y, 0, 'T') for ref, (x, y) in HOLES.items()},
 }
 # FPC connector placed by its footprint origin, 13.8 mm below the panel glass as on v1.1
@@ -128,12 +133,17 @@ REGIONS = [
     ('T', 112, 8, 146, 40, (120, 20), ['U1', 'C3', 'R20', 'U4', 'C11>U4', 'U3', 'C12>U3', 'C13', 'R18']),
     ('T', 136, 56, 172, 86, (150.0, 75.0), ['C1', 'C2', 'R11', 'R12', 'R64']),
     ('T', 54, 56, 80, 78, (60, 66), ['U2', 'L1', 'C4', 'C6', 'C7', 'R13', 'R19', 'C8', 'C9', 'R21', 'R22', 'C10']),
-    ('T', 10, 70, 130, 81, (10, 72), ['R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16']),
+    ('T', 10, 70, 130, 81, (10, 72), ['R5', 'R6', 'R7', 'R8', 'R9', 'R10']),
+    # ESD array at the button harness J10 and the RC filters of the four buttons, between the DÓŁ and OK holes.
+    ('T', 88, 64, 112, 83, (100, 80), ['U9', 'R80', 'R81', 'R82', 'R83', 'C60', 'C61', 'C62', 'C63']),
+    # ESD and RC filter of CISZA at J11 and of the main switch at J3, right of the panel holes.
+    ('T', 186, 34, 199, 66, (192, 60), ['D19', 'R16', 'C64']),
+    ('T', 186, 66, 199, 96, (193, 80), ['D18', 'R84', 'C65']),
     ('T', 154, 8, 166, 40, (160, 12), ['Q1', 'R1', 'R2', 'D2', 'R3', 'R4']),
     ('T', 112, 42, 146, 74, (124, 54), ['U7', 'C44', 'C45', 'C46', 'C47', 'L2', 'C43', 'C42', 'C41', 'C40', 'R60',
                                        'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
     ('T', 80, 96, 129, 119, (122, 112), ['D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32']),
-    ('T', 124, 92, 162, 106, (140, 98), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
+    ('T', 120, 84, 164, 106, (156, 98), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
                                          'D6']),
     ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
     ('T', 146, 102, 188, 119, (160, 112), ['U6', 'C36', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35',
@@ -145,13 +155,24 @@ REGIONS = [
 ]
 # Placement rules checked on the result: (part, part, largest pad-to-pad distance in mm); 'J5.5' is one pad.
 CLOSE = [
-    ('U8', 'J4', 10.0), ('D4', 'J2', 10.0),                      # ESD and TVS at their connectors (obudowa.md)
+    ('U8', 'J4', 10.0), ('D4', 'J2', 10.0), ('U9', 'J10', 10.0),  # ESD and TVS at their connectors (obudowa.md)
+    ('D19', 'J11', 10.0), ('D18', 'J3', 10.0),
+    ('R80', 'J10', 10.0), ('R81', 'J10', 10.0), ('R82', 'J10', 10.0), ('R83', 'J10', 10.0),   # filters at the wires
+    ('C60', 'J10', 15.0), ('C61', 'J10', 15.0), ('C62', 'J10', 15.0), ('C63', 'J10', 15.0),
+    ('R16', 'J11', 10.0), ('C64', 'J11', 10.0), ('R84', 'J3', 10.0), ('C65', 'J3', 10.0),
     ('C44', 'U7', 5.0), ('C45', 'U7', 5.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 6.0), ('C41', 'U7', 6.0), ('C42', 'U7', 6.0), ('C43', 'U7', 6.0),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
     ('C36', 'U6', 5.0), ('C11', 'U4', 5.0),
     ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
+for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
+    # spacer (<= 6 mm) and the screw head (5.6 mm) stand on that web, clear of the PV6 nut (the front, 10.5 mm up)
+    for _name, (_px, _py) in PANEL_HOLES.items():
+        _web = ((_x - _px) ** 2 + (_y - _py) ** 2) ** 0.5 - PANEL_HOLE / 2 - 1.75
+        assert _web >= HOLE_WEB, f'{_h} leaves {_web:.1f} mm to the {_name} hole'
+
+
 def mm(v):
     return pcbnew.FromMM(v)
 
@@ -206,11 +227,18 @@ def overlaps(a, b, gap=GAP):
     return not (a[2] + gap <= b[0] or b[2] + gap <= a[0] or a[3] + gap <= b[1] or b[3] + gap <= a[1])
 
 
-def inside_board(box):
+def inside_board(box, panel=True):
+    """Box on the board, 1 mm from its edge and the notches, and with panel=True 1 mm from the panel holes."""
     x0, y0, x1, y1 = box
     if x0 < 1 or y0 < 1 or x1 > W - 1 or y1 > H - 1:
         return False
-    return not any(overlaps(box, cut, 1.0) for cut in CUTS)
+    return not (any(overlaps(box, cut, 1.0) for cut in CUTS)
+                or panel and any(box_circle(box, x, y) < PANEL_HOLE / 2 + 1.0 for x, y in PANEL_HOLES.values()))
+
+
+def box_circle(box, x, y):
+    """Distance from the centre x, y to the box."""
+    return box_distance(box, (x, y, x, y))
 
 
 def outline(board):
@@ -245,12 +273,13 @@ def outline(board):
         edge(pcbnew.SHAPE_T_ARC, start, toward(centre, c, r), end)
     for a, b in segs:
         edge(pcbnew.SHAPE_T_SEGMENT, a, b)
-    hole = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_CIRCLE)
-    hole.SetCenter(pcbnew.VECTOR2I(mm(PANEL_POWER[0]), mm(PANEL_POWER[1])))
-    hole.SetEnd(pcbnew.VECTOR2I(mm(PANEL_POWER[0] + PV6_HOLE / 2), mm(PANEL_POWER[1])))
-    hole.SetLayer(pcbnew.Edge_Cuts)
-    hole.SetWidth(mm(0.1))
-    board.Add(hole)
+    for x, y in PANEL_HOLES.values():
+        hole = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_CIRCLE)
+        hole.SetCenter(pcbnew.VECTOR2I(mm(x), mm(y)))
+        hole.SetEnd(pcbnew.VECTOR2I(mm(x + PANEL_HOLE / 2), mm(y)))
+        hole.SetLayer(pcbnew.Edge_Cuts)
+        hole.SetWidth(mm(0.1))
+        board.Add(hole)
 
 
 def zone_marks(board):
@@ -270,6 +299,21 @@ def zone_marks(board):
             text.SetLayer(layer)
             text.SetTextSize(pcbnew.VECTOR2I(mm(1.5), mm(1.5)))
             text.SetMirrored(side == 'B')
+            board.Add(text)
+    for name, (x, y) in PANEL_HOLES.items():
+        for layer in (pcbnew.F_Fab, pcbnew.B_Fab):
+            ring = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_CIRCLE)
+            ring.SetCenter(pcbnew.VECTOR2I(mm(x), mm(y)))
+            ring.SetEnd(pcbnew.VECTOR2I(mm(x + PANEL_HOLE / 2 + 1.0), mm(y)))
+            ring.SetLayer(layer)
+            ring.SetWidth(mm(0.15))
+            board.Add(ring)
+            text = pcbnew.PCB_TEXT(board)
+            text.SetText(name)
+            text.SetPosition(pcbnew.VECTOR2I(mm(x), mm(y)))
+            text.SetLayer(layer)
+            text.SetTextSize(pcbnew.VECTOR2I(mm(1.5), mm(1.5)))
+            text.SetMirrored(layer == pcbnew.B_Fab)
             board.Add(text)
 
 
@@ -331,7 +375,7 @@ def main():
         """Body fits on the board, clear of bodies on the given sides and of the zones on its own side;
         the solder tails of a THT part under a zone (<= 3 mm over the AA holder) are allowed. The body of an SMD
         part keeps SMD_THT_GAP from the THT pads (its pads lie inside the body box, so this is on the safe side)."""
-        return ((edge or inside_board(box)) and not any(s in sides and overlaps(box, b) for s, b in placed)
+        return ((edge or inside_board(box, ref not in HOLES)) and not any(s in sides and overlaps(box, b) for s, b in placed)
                 and not any(own in z[0] and ref not in z[6] and overlaps(box, z[1:5]) for z in ZONES)
                 and not (smd and any(box_distance(box, t) < SMD_THT_GAP for t in tht_pads)))
 
