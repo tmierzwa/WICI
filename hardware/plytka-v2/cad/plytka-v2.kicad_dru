@@ -9,7 +9,7 @@
 (rule "v2 thermal spokes" (constraint min_resolved_spokes 1))
 (rule "v2 high voltage, masked copper" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && A.Type != 'Pad' && B.Type != 'Pad'")
   (layer outer) (constraint clearance (min 0.3mm)))
-(rule "v2 high voltage, bare pads" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && (A.Type == 'Pad' || B.Type == 'Pad') && !(A.Type == 'Pad' && B.Type == 'Pad') && !(A.intersectsCourtyard('U5') && B.intersectsCourtyard('U5')) && !(A.intersectsCourtyard('U6') && B.intersectsCourtyard('U6'))")
+(rule "v2 high voltage, bare pads" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && (A.Type == 'Pad' || B.Type == 'Pad') && !(A.Type == 'Pad' && B.Type == 'Pad') && !(A.Type != 'Zone' && B.Type != 'Zone' && ((A.intersectsCourtyard('U5') && B.intersectsCourtyard('U5')) || (A.intersectsCourtyard('U6') && B.intersectsCourtyard('U6'))))")
   (layer outer) (constraint clearance (min 0.6mm)))
 (rule "v2 12 V path" (condition "A.NetClass == 'HV12' && A.Type == 'Track' && !A.intersectsCourtyard('U5')") (constraint track_width (min 0.6mm)))
 (rule "v2 VSYS path" (condition "A.NetClass == 'VSYS' && A.Type == 'Track' && !A.intersectsCourtyard('U7') && !A.intersectsCourtyard('C46') && !A.intersectsCourtyard('U5')")

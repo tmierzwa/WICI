@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
-# Route the board with Freerouting 2.5.0 in stages, after "route_pcb.py prepare" (build.sh does that):
+# Route the board with Freerouting 2.5.0 in stages; places the parts and prepares the board itself first:
 #   1. checks/routing.dsn -> checks/routing.ses: the power nets and every net in the areas of the 12 V parts;
 #   2. checks/routing-2.dsn -> checks/routing-2.ses: the rest, with the complete nets of stage 1 as fixed copper;
 #   3. and on (checks/routing-N.*): the nets still open and their neighbours again, until nothing is open.
@@ -24,6 +24,11 @@ stage() {  # DSN, SES, classes to skip, log
   sed -i.bak "s#$(pwd)/##g" "$2" && rm "$2.bak"
   sed -e "s#$(pwd)/##g" -e "s#$HOME#~#g" "$work/out.txt" > "$4"
 }
+# Always from the prepared state: on a board that is routed already, stage 2 would see nothing open and the kept
+# sessions would be thrown away.
+(cd tools && "$KICAD_PY" make_pcb.py "${KICAD_SHARE:-/Applications/KiCad/KiCad.app/Contents/SharedSupport}/footprints" \
+  && "$KICAD_PY" route_pcb.py prepare) 2>&1 | grep "placed\|prepared\|closer\|no room\|Error\|error" || true
+test "$(shasum -a 256 checks/routing.dsn | cut -d' ' -f1)" != "" || exit 1
 stage checks/routing.dsn checks/routing.ses Plane,Later,LaterHV checks/routing.log
 prev=checks/routing; n=2
 while [ "$n" -le "${STAGES:-8}" ]; do

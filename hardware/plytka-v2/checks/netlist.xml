@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-10T09:11:32</date>
+    <date>2026-11-10T15:35:17</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -603,6 +603,62 @@
       <property name="ki_fp_filters" value="C_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>130c4965-7896-502d-8a24-1717d3c7356e</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C38">
+      <value>100n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B104KCFNNNE</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B104KCFNNNE"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>fa2105a1-a38f-5264-8b98-1a5aadb10251</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C39">
+      <value>10n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B103KBANNNC</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B103KBANNNC"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>de0e51ad-d07f-5945-9a22-7f6d1e2b5d22</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -5866,6 +5922,8 @@
       <node ref="C35" pin="2" pintype="passive"/>
       <node ref="C36" pin="2" pintype="passive"/>
       <node ref="C37" pin="2" pintype="passive"/>
+      <node ref="C38" pin="2" pintype="passive"/>
+      <node ref="C39" pin="2" pintype="passive"/>
       <node ref="C4" pin="2" pintype="passive"/>
       <node ref="C40" pin="2" pintype="passive"/>
       <node ref="C41" pin="2" pintype="passive"/>
@@ -6129,6 +6187,7 @@
       <node ref="R32" pin="2" pintype="passive"/>
     </net>
     <net code="70" name="/S12_EN" class="Default">
+      <node ref="C39" pin="1" pintype="passive"/>
       <node ref="R37" pin="2" pintype="passive"/>
       <node ref="R38" pin="1" pintype="passive"/>
       <node ref="U5" pin="6" pinfunction="EN/UVLO_6" pintype="input"/>
@@ -6214,6 +6273,7 @@
       <node ref="R73" pin="1" pintype="passive"/>
     </net>
     <net code="86" name="/V12_F" class="Default">
+      <node ref="C38" pin="1" pintype="passive"/>
       <node ref="D13" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D4" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D5" pin="1" pinfunction="K_1" pintype="passive"/>

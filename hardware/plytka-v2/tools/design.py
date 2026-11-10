@@ -242,6 +242,11 @@ part('Q3', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'VSYS', 2: 'VSYS', 3: 'VSYS', 4: 'S12_HGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
       8: 'V12_MID'}, note='łącznik do VSYS (HGATE), odcina przy OVP i UV', lcsc='C176743', **NMOS100)
 cap('C30', '100n', 'V12_MID', 'GND', 'VS U5 (karta: 100 nF)', 'CL21B104KCFNNNE', spec='100 nF 100 V X7R 0805')
+# Input capacitor at the switch (LM7480-Q1 SNOSD95C: 7.3 "A to GND" 0.1 uF minimum, 10.2.3.3, 11.1): the TVS D4
+# stands at the connector, about 105 mm of track away, so the capacitor takes the spike of that track when the
+# MOSFETs open: V = I x sqrt(L / C), under 1 V at 1 A with 0.1 uH (README, "Ścieżki").
+cap('C38', '100n', 'V12_F', 'GND', 'kondensator wejściowy U5 przy źródle Q2 (karta: min. 100 nF na A)', 'CL21B104KCFNNNE',
+    spec='100 nF 100 V X7R 0805')
 cap('C31', '100n', 'S12_CAP', 'V12_MID', 'pompa ładunkowa U5, CAP–VS (karta: 100 nF)', 'CL21B104KBCNNNC',
     spec='100 nF 50 V X7R 0805')
 # OVP 102k / 8.06k: 1.231 V x 13.66 = 16.81 V rising (16.32-17.30 V), 15.4 V falling. Below 120 kOhm in total
@@ -282,6 +287,10 @@ res('R36', '1M', 'Q5_G', 'GND', 'Q5 wyłączony bez ON; 91% ON na bramce także 
 zener15('D15', 'Q5_G', 'GND', 'VGS Q5 ≤15 V przy ON do około 35 V')
 res('R37', '221k', 'V12_SW', 'S12_EN', 'dzielnik UV: włączenie 11,94 V (11,59–12,29 V), wyłączenie 10,98 V (10,58–11,24 V)',
     **precise('221 kΩ', 'RT0805BRD07221KL'))
+# The divider stands about 110 mm from U5, so EN/UVLO gets a capacitor at its pin: 10 nF with the 22.8 kOhm of
+# the ladder is 0.23 ms, which does not move the thresholds.
+cap('C39', '10n', 'S12_EN', 'GND', 'filtr EN/UVLO przy U5 (dzielnik jest około 110 mm dalej); 0,23 ms z dzielnikiem',
+    'CL21B103KBANNNC', spec='10 nF 50 V X7R 0805')
 res('R38', '10k', 'S12_EN', 'V_12_DIV', 'dzielnik UV i pomiaru 12 V', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
 res('R39', '15k4', 'V_12_DIV', 'GND', 'pomiar 12 V: 0,0625 × V12', **precise('15,4 kΩ', 'RT0805BRD0715K4L'))
 cap('C33', '100n', 'V_12_ADC', 'GND', 'filtr wejścia ADC 12 V za R76 (karta ESP32-S3, 5.5: 100 nF przy ADC)', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')

@@ -168,10 +168,12 @@ SWITCH_AT = (168.0, 108.0)
 SWITCH_TURN = True
 SWITCH = {
     'U5': (0.0, 0.0, 0), 'Q2': (-8.6, 0.0, 0), 'Q3': (8.6, 0.0, 180),
-    'C31': (1.2, -3.4, 180),                                          # CAP-VS at pins 11 and 12, VS pad towards pin 12
+    'C31': (1.2, -3.4, 180),                                          # CAP-VS above pins 12 (C), 11 (CAP), 10 (VS)
     'R30': (-1.5, 4.6, 90), 'R31': (1.1, 4.6, 270),                   # OVP ladder at pins 4 and 5, OV pads towards U5
-    'C30': (3.7, 6.1, 90),                                            # VS-GND: GND pad towards U5, VS through L4 copper
-    'R32': (7.05, 5.2, 0), 'C32': (11.1, 5.2, 0),                     # HGATE slew-rate network
+    'C30': (3.75, 5.35, 90),                                          # VS-GND below pins 7-10: GND pad towards pin 7
+    'C38': (-16.6, -0.7, 180),                                        # input capacitor at the sources of Q2
+    'C39': (-5.2, 5.2, 270),                                          # EN/UVLO filter below pin 6
+    'R32': (7.15, 5.2, 0), 'C32': (11.2, 5.2, 0),                     # HGATE slew-rate network
     'R46': (6.66, 11.5, 0), 'C35': (12.9, 10.6, 0), 'D10': (13.6, 13.5, 0),   # controller supply filter from the drain
 }
 
@@ -184,7 +186,9 @@ def switch_xy(x, y):
 # Button controller U6 with its supply capacitor: fixed, because route_pcb.py fans the pins of U6 out on both
 # sides and C36 has to stand right behind the fan of pin 6.
 U6_AT = (152.0, 36.0)
-U6_GROUP = {'U6': (0.0, 0.0, 0), 'C36': (7.0, 0.7, 0)}
+# R50 stands at pin 7 (PWR_ENB) and is joined to it by hand: the router kept closing that pin in between the VCTL
+# tracks of pin 6.
+U6_GROUP = {'U6': (0.0, 0.0, 0), 'C36': (7.0, 0.325, 0), 'R50': (5.6, -3.0, 270)}
 # FPC connector placed by its footprint origin, 13.8 mm below the panel glass as on v1.1
 # (hardware/dev-bench/tools/design.py: 9.4 mm glass to connector face plus 4.4 mm to the origin).
 J7_AT = (DISPLAY_CENTER[0], DISPLAY_CENTER[1] + DISPLAY_OUTLINE[1] / 2 + 13.8, 180)
@@ -214,7 +218,7 @@ REGIONS = [
     # Parts of the 12 V side stand WIDE_GAP apart (list WIDE), so a track or a via passes between them with the
     # high-voltage spacing.
     ('T', 137, 21, 172, 50, (152, 36), ['C37', 'R71', 'C53', 'D8', 'D9', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8',
-                                        'R49', 'R50', 'D12', 'R78']),
+                                        'R49', 'D12', 'R78']),
     ('T', 137, 21, 172, 50, (142, 46), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
     # UV divider with its switch and the divider of the automatic start, right of the EN3 notch under the OK hole;
     # the fused 12 V passes below them on L4.
@@ -236,9 +240,11 @@ CLOSE = [
     ('C44', 'U7', 6.0), ('C45', 'U7', 6.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 7.5), ('C41', 'U7', 11.5), ('C42', 'U7', 7.5), ('C43', 'U7', 11.5),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
-    # C31 (charge pump, CAP-VS) sits at pins 11 and 12. C30 (VS-GND) stands behind R31: its GND pad is 3.6 mm from
-    # pin 7 and its VS pad reaches pin 12 through the common-drain copper on L4, which is also the VS supply.
-    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 5.0), ('C31', 'U5', 4.0),
+    # U5 (LM7480-Q1 table 6-1): VS is pin 10, CAP pin 11, C pin 12. C31 (CAP-VS) sits above pins 10-12, away from
+    # the MOSFETs. C30 (VS-GND) stands below pins 7-10; VS (pin 10), C30 and C31 each have a via into the
+    # common-drain copper on L4, which is the VS supply. C38 is the input capacitor at the sources of Q2.
+    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 4.0), ('C31', 'U5', 4.0), ('C38', 'Q2', 5.0),
+    ('C39', 'U5', 6.0),
     ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
 for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
@@ -431,6 +437,10 @@ def main():
 
     def add(ref, fp):
         fp.SetReference(ref)
+        # In the hand-placed groups and at the connectors the small parts stand too close for their names to fit on the silkscreen (the
+        # names lay on pads and on each other): there the name goes to the assembly drawing layer F.Fab.
+        if ref in (set(CONVERTER) | set(SWITCH) | set(U6_GROUP) | set(AT_CONNECTOR)) - {'U5', 'U6', 'U7', 'L2', 'Q2', 'Q3'}:
+            fp.Reference().SetLayer(pcbnew.F_Fab)
         fp.SetValue(parts[ref]['value'])
         fp.SetPath(pcbnew.KIID_PATH('/' + str(uuid.uuid5(NS, ref))))   # link to the schematic symbol
         fp.SetSheetfile('plytka-v2.kicad_sch')

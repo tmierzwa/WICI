@@ -37,13 +37,14 @@ F1,2,T1A,Littelfuse,01110501Z,C151075,"zacisk bezpiecznika 5x20 mm do druku (ser
 D4,1,SMBJ33CA,Hongjiacheng (R+O),SMBJ33CA,C19077587,"TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB",Diode_SMD:D_SMB,pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)
 U5,1,LM74800-Q1,Texas Instruments,LM74800QDRRRQ1,C3215600,"sterownik idealnej diody i łącznika 3–65 V, do −65 V, WSON-12 3 × 3 mm",Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm,"pad termiczny RTN zostaje niepodłączony (karta, tabela 6-1)"
 Q2 Q3,2,AO4292E,Alpha & Omega,AO4292E,C176743,"N-MOSFET 100 V, 23 mΩ, VGS ±20 V, SOIC-8",Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,"Q2: idealna dioda (DGATE); przy odwrotnym impulsie do około 70 V; Q3: łącznik do VSYS (HGATE), odcina przy OVP i UV"
-C30,1,100n,Samsung Electro-Mechanics,CL21B104KCFNNNE,,100 nF 100 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,VS U5 (karta: 100 nF)
+C30 C38,2,100n,Samsung Electro-Mechanics,CL21B104KCFNNNE,,100 nF 100 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,C30: VS U5 (karta: 100 nF); C38: kondensator wejściowy U5 przy źródle Q2 (karta: min. 100 nF na A)
 R30,1,102k,Yageo,RT0805BRD07102KL,,"102 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"górny rezystor progu OVP (16,8 V)"
 R31,1,8k06,Yageo,RT0805BRD078K06L,,"8,06 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,dolny rezystor progu OVP
 C32,1,27n,Samsung Electro-Mechanics,CL21B273KBANNNC,,27 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,C_dVdT: prąd włączania około 250 mA przy około 120 µF na VSYS
 Q4,1,SI2309CDS,Vishay,SI2309CDS-T1-GE3,C10493,"P-MOSFET −60 V, SOT-23",Package_TO_SOT_SMD:SOT-23,"podłącza dzielnik 12 V tylko przy włączonej stacji; impuls 53,3 V wymaga ≥60 V"
 Q5,1,2N7002,Nexperia,"2N7002,215",C65189,"N-MOSFET 60 V, IDSS ≤1 µA (≤10 µA w 150 °C), SOT-23",Package_TO_SOT_SMD:SOT-23,"klucz Q4 z szyny ON; dren do 53,3 V przy wyłączonej stacji, więc 60 V"
 R37,1,221k,Yageo,RT0805BRD07221KL,,"221 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"dzielnik UV: włączenie 11,94 V (11,59–12,29 V), wyłączenie 10,98 V (10,58–11,24 V)"
+C39 C65,2,10n,Samsung Electro-Mechanics,CL21B103KBANNNC,,10 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,"C39: filtr EN/UVLO przy U5 (dzielnik jest około 110 mm dalej); 0,23 ms z dzielnikiem; C65: wyłącznik: filtr RC przy J3"
 R38 R45,2,10k,Yageo,RT0805BRD0710KL,,"10,0 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,R38: dzielnik UV i pomiaru 12 V; R45: pomiar ogniw
 R39,1,15k4,Yageo,RT0805BRD0715K4L,,"15,4 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,"pomiar 12 V: 0,0625 × V12"
 D6 D11,2,BAV199,Nexperia,"BAV199,215",C40919,"podwójna dioda o małym upływie 75 V (szczyt 85 V), ≤5 nA, SOT-23",Package_TO_SOT_SMD:SOT-23,D6: ogranicza wejście ADC przy odwrotnym 12 V; upływ nie zmienia pomiaru 12 V; D11: ogranicza wejście ADC przy ogniwach odwrotnie
@@ -60,7 +61,6 @@ R70,1,280k,Yageo,RT0805BRD07280KL,C865351,"280 kΩ 0,1% 25 ppm/K 0805",Resistor_
 R71,1,30k1,Yageo,RT0805BRD0730K1L,,"30,1 kΩ 0,1% 25 ppm/K 0805",Resistor_SMD:R_0805_2012Metric,dolny rezystor dzielnika ON
 C53,1,470n,Samsung Electro-Mechanics,CL21B474KBFNNNE,,470 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,filtr ON (około 13 ms) przeciw zakłóceniom z przewodu 12 V
 C37,1,2u2,Samsung Electro-Mechanics,CL21B225KAFNNNE,,"2,2 µF 25 V X7R 0805",Capacitor_SMD:C_0805_2012Metric,"wymuszone wyłączenie po 5,2–19 s przytrzymania"
-C65,1,10n,Samsung Electro-Mechanics,CL21B103KBANNNC,,10 nF 50 V X7R 0805,Capacitor_SMD:C_0805_2012Metric,wyłącznik: filtr RC przy J3
 R48,1,470k,Yageo,RC0805FR-07470KL,,470k 1% 0805,Resistor_SMD:R_0805_2012Metric,"KILL wysoki z VCTL, niezależnie od 3V3, szyny ON i MCU"
 D16,1,BZT52C5V1,Diodes Incorporated,BZT52C5V1-7-F,C151588,"Zener 5,1 V, SOD-123",Diode_SMD:D_SOD-123,KILL ≤6 V (karta) przy VCTL do około 35 V
 R51 R55,2,220k,Yageo,RC0805FR-07220KL,,220k 1% 0805,Resistor_SMD:R_0805_2012Metric,"R51: Q9 wyłączony bez sterowania; upływ Q10 w 60 °C daje ≤0,22 V na bramce Q9; R55: RUN niski przy wyłączonym Q9"

@@ -14908,6 +14908,88 @@
     (uuid "3e66cb3e-a0cd-5f9c-9e36-8bde7e91c969"))
   (symbol
     (lib_id "Device:C")
+    (at 30.48 330.2 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "fa2105a1-a38f-5264-8b98-1a5aadb10251")
+    (property "Reference" "C38"
+      (at 30.48 321.31 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "100n"
+      (at 30.48 323.85 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 30.48 330.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 30.48 330.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 30.48 330.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B104KCFNNNE"
+      (at 30.48 330.2 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "3cd4d0be-6a63-5c6b-afca-b54b882d2a92"))
+    (pin "2"
+      (uuid "ccc493ec-25b2-5dc6-8c42-00c6a3f1c04c"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C38")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 30.48 326.39)
+      (xy 30.48 321.31))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "fd4fff4b-e2e8-54fa-a988-6003b71fb923"))
+  (label "V12_F"
+    (at 30.48 321.31 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "bcb81027-e1da-5ba3-b399-f58c82dbb27f"))
+  (wire
+    (pts
+      (xy 30.48 334.01)
+      (xy 30.48 339.09))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "e9c306a5-501c-5889-b0e2-87836bd46550"))
+  (label "GND"
+    (at 30.48 339.09 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "1f357925-7c1c-50b3-a161-b04fa20cc632"))
+  (symbol
+    (lib_id "Device:C")
     (at 30.48 215.9 0)
     (unit 1)
     (exclude_from_sim no)
@@ -16088,6 +16170,88 @@
         (size 1.27 1.27))
       (justify left))
     (uuid "b76aee9d-899f-5a37-9866-efd65903eb76"))
+  (symbol
+    (lib_id "Device:C")
+    (at 30.48 353.06 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (dnp no)
+    (uuid "de0e51ad-d07f-5945-9a22-7f6d1e2b5d22")
+    (property "Reference" "C39"
+      (at 30.48 344.17 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "10n"
+      (at 30.48 346.71 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Capacitor_SMD:C_0805_2012Metric"
+      (at 30.48 353.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 30.48 353.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Samsung Electro-Mechanics"
+      (at 30.48 353.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "CL21B103KBANNNC"
+      (at 30.48 353.06 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "847d7bdd-039d-5a2b-8b38-d49f89190625"))
+    (pin "2"
+      (uuid "fc6f8504-7278-5a23-8770-41fcca7a39e3"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "C39")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 30.48 349.25)
+      (xy 30.48 344.17))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "4edeb8a4-e54d-5ee4-8c57-5d4db78b8daa"))
+  (label "S12_EN"
+    (at 30.48 344.17 90)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "1a944407-fd6c-570a-8b2f-93f37d3e68c3"))
+  (wire
+    (pts
+      (xy 30.48 356.87)
+      (xy 30.48 361.95))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "d0b8bc0d-d629-53eb-85de-576f00ec3c48"))
+  (label "GND"
+    (at 30.48 361.95 270)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "a1c8ad4b-2e11-58ba-a963-95681d375443"))
   (symbol
     (lib_id "Device:R")
     (at 106.68 246.38 0)

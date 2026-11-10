@@ -50,6 +50,8 @@ printf '%s\n' "(rule \"v2 canary\" (condition \"A.Type == 'Via'\") (constraint v
 grep -q "v2 canary" "$work/canary.json" || { echo "reguły z cad/plytka-v2.kicad_dru nie zostały wczytane" >&2; exit 1; }
 rm -rf "$work"
 "$KICAD_CLI" pcb drc --format json --severity-all --refill-zones --save-board --output checks/drc.json cad/plytka-v2.kicad_pcb
+# Apart from DRC: the distance of every filled area to the pads across a high-voltage net, measured on the saved fill.
+(cd tools && "$KICAD_PY" route_pcb.py check)
 python3 -c "
 import json, sys
 d = json.load(open('checks/drc.json'))
