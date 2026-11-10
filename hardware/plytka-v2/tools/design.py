@@ -57,7 +57,7 @@ JLC = {
     'CL21B474KBFNNNE': ('C13967', None, None),                          # Basic, 820 k
     'CL21C101JBANNNC': ('C1790', None, None),                           # Basic, 740 k
     'CL21B225KAFNNNE': ('C19110', None, None),                          # Extended, 460 k
-    'CL21B102KBANNNC': ('C94121', 'Yageo', 'CC0805KRX7R9BB102'),        # Extended, 2.0 M (Samsung: 4.8 k)
+    'CL21B102KBANNNC': ('C46653', 'Samsung Electro-Mechanics', 'CL21B102KBCNNNC'),   # Basic, 1.3 M; 1 nF 50 V X7R
     'CL21B273KBANNNC': ('C113860', 'Yageo', 'CC0805KRX7R9BB273'),       # Extended, 9.1 k (Samsung: not listed)
     'CL21B392KBANNNC': ('C113861', 'Yageo', 'CC0805KRX7R9BB392'),       # Extended, 3.2 k (Samsung: not listed)
     'CL21C820JBANNNC': ('C113833', 'Yageo', 'CC0805JRNPO9BN820'),       # Extended, 14 k (Samsung: 0); 82 pF 50 V NP0 5%
@@ -67,6 +67,7 @@ JLC = {
     # semiconductors and the rest of the SMT parts
     '1N4148W-7-F': ('C81598', 'ST (Semtech)', '1N4148W'),               # Basic, 3.5 M; clamp diode of the buzzer
     'MMBT3904LT1G': ('C20526', 'Jiangsu Changjing', 'MMBT3904'),        # Basic, 4.3 M; buzzer switch
+    'BZT52C33-7-F': ('C19077419', 'Hongjiacheng', 'BZT52C33'),          # Preferred, 210 k; 31.35-34.65 V, 100 nA
     'BZT52C5V1-7-F': ('C19077401', 'Hongjiacheng', 'BZT52C5V1'),        # Preferred, 2.2 M (Diodes Inc.: 3)
     'TPS3840PH27DBVR': ('C1849503', 'Texas Instruments', 'TPS3840PH27DBVRQ1'),   # Extended, 45 (DBVR: 6); same part, AEC-Q100
     'SN74LVC1G32DBVR': ('C10096', None, None),                          # Extended, 150 k
@@ -74,17 +75,20 @@ JLC = {
     '744031004': ('C2649331', None, None),                              # Extended, 899
     'LTC2955ITS8-2#TRPBF': ('C683797', None, None),                     # Extended, 33
     'FH12-10S-0.5SH(55)': ('C506791', None, None),                      # Extended, 1.9 k
-    # no stock at JLC on 2026-11-10: fitted by hand or supplied to the assembler (README, fab outputs)
-    'CY15B104QN-50SXI': ('C1349451', None, None),                       # Extended, 0; the RAMXEED equivalent C42742723: 11
-    # through-hole parts, soldered by hand; the numbers are for buying only
+    # No stock of the design part at JLC on 2026-11-10: an equivalent that is in stock (owner's decision of
+    # 2026-11-10: JLC fits every part, through-hole too).
+    'CY15B104QN-50SXI': ('C42742723', 'RAMXEED', 'MB85RS4MTPF-G-BCERE1'),    # Extended, 11 (Infineon: 0); same pins
+    'PPTC221LFBN-RC': ('C41376161', 'Hong Cheng', 'HC-PM254-8.5H-1x22PZ'),   # Extended, 18 k (Sullins: 0); 8.5 mm high
+    'PPTC071LFBN-RC': ('C22438157', 'hanxia', 'HX PM2.54-1x7P ZC-Y'),        # Extended, 23 k (Sullins: 0); 8.5 mm high
+    'UKL1E101MPD': ('C350221', 'SamYoung', 'PXB 25V100 8*11.5'),             # Extended, 2.9 k (Nichicon UKL: 0)
+    # through-hole parts with stock
     '61300211121': ('C2915055', None, None), 'B5B-XH-A(LF)(SN)': ('C157991', None, None),
     'B2B-XH-A(LF)(SN)': ('C158012', None, None), 'B3F-1000': ('C93157', None, None),
-    'WP7113ID': ('C6926004', None, None), 'CEM-1203(42)': ('C3812098', None, None),
+    'WP7113ID': ('C6926004', None, None), 'CEM-1203(42)': ('C3812098', None, None),      # buzzer: 103 in stock
+    '01110501Z': ('C151075', None, None),
 }
-# Fitted by hand, not by the SMT assembler: every through-hole part, and the SMT parts listed here.
-HAND_SMT = {'U1': 'brak w magazynie JLC (2026-11-10); SOIC-8, lutowana ręcznie albo dostarczona do montażu'}
-THT_LIBS = ('Connector_PinSocket', 'Connector_PinHeader', 'Connector_JST', 'Button_Switch_THT', 'LED_THT',
-            'Buzzer_Beeper', 'Fuse', 'Capacitor_THT', 'MountingHole')
+# Parts JLC does not fit (soldered by hand): none since 2026-11-10.
+HAND = {}
 
 
 def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True, dnp=False):
@@ -95,7 +99,7 @@ def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='
         number, maker, model = JLC[mpn]
         assert not lcsc or lcsc == number, (ref, lcsc, number)
         lcsc, manufacturer, mpn = number, maker or manufacturer, model or mpn
-    hand = footprint.split(':')[0].startswith(THT_LIBS) or ref in HAND_SMT
+    hand = ref in HAND
     PARTS.append(dict(ref=ref, lib_id=lib_id, value=value, footprint=footprint,
                       nets={str(k): v for k, v in nets.items()}, mpn=mpn, manufacturer=manufacturer,
                       spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom and not dnp, dnp=dnp, hand=hand))
@@ -201,7 +205,7 @@ cap('C7', '100n', 'LCD_DISP', 'GND', 'DISP panelu (zalecenie Sharp)', 'CL21B104K
 part('U1', 'Memory_NVRAM:MB85RS2MT', 'CY15B104QN-50SXI', 'Package_SO:SOIC-8_5.3x5.3mm_P1.27mm',
      {1: 'FRAM_CS_U1', 2: 'SPI_MISO', 3: '+3V3', 4: 'GND', 5: 'SPI_MOSI', 6: 'SPI_SCK', 7: '+3V3', 8: '+3V3'},
      mpn='CY15B104QN-50SXI', manufacturer='Infineon', spec='FRAM 4 Mbit SPI, 1,8–3,6 V, SOIC-8 208 mil',
-     note='zamiennik: RAMXEED MB85RS4MTPF-G-BCERE1 (LCSC C42742723); ' + HAND_SMT['U1'])
+     note='w projekcie Infineon CY15B104QN-50SXI (LCSC C1349451, stan 0); montowany zamiennik RAMXEED o tych samych pinach')
 part('U3', 'WICI:TPS3840PH', 'TPS3840PH27', 'Package_TO_SOT_SMD:SOT-23-5',
      {1: 'FRAM_GUARD', 2: '+3V3', 3: 'GND'}, mpn='TPS3840PH27DBVR', manufacturer='Texas Instruments',
      spec='nadzorca napięcia 2,7 V, wyjście aktywne stanem wysokim, SOT-23-5', note='ochrona CS FRAM jak w v1.1')
@@ -443,7 +447,7 @@ res('R46', '1k', 'V12_MID', 'V12_FLT', 'filtr 12 V przed sumą (Z14); ze wspóln
 cap('C35', '1u', 'V12_FLT', 'GND', 'filtr 12 V przed sumą (Z14)', 'CL21B105KBFNNNE', spec='1 µF 50 V X7R 0805')
 part('D10', 'Device:D_Zener', 'BZT52C33', 'Diode_SMD:D_SOD-123', {1: 'V12_FLT', 2: 'GND'},
      mpn='BZT52C33-7-F', manufacturer='Diodes Incorporated', spec='Zener 33 V (31–35 V), SOD-123',
-     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi', lcsc='C260938')
+     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi')
 cap('C36', '100n', 'VCTL', 'GND', 'VIN U6', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 part('U6', 'WICI:LTC2955-2', 'LTC2955ITS8-2', 'Package_TO_SOT_SMD:TSOT-23-8',
      {1: 'PWR_ON', 2: 'PWR_KILL', 3: 'PWR_TMR', 4: 'GND', 5: 'PWR_PB', 6: 'VCTL', 7: 'PWR_ENB', 8: 'PWR_INT'},
@@ -531,10 +535,10 @@ cap('C52', '1n', 'RUN', 'GND', 'filtr RUN (karta LTC3115-1: 1000 pF, nie więcej
 # --- VSYS and the 3V3 converter: LTC3115-1, values of the JLC test board (hardware/przetwornica-3v3) ---------
 part('C50', 'Device:C_Polarized', '100u 25V', 'Capacitor_THT:CP_Radial_D8.0mm_P3.50mm', {1: 'VSYS', 2: 'GND'},
      mpn='UKL1E101MPD', manufacturer='Nichicon',
-     spec='elektrolit o małym upływie 100 µF 25 V ±20%, 8 × 11,5 mm, raster 3,5 mm, −40…+85 °C, 2000 h w 85 °C, '
-          'upływ ≤5 µA przy 25 V, tętnienia 280 mA',
+     spec='elektrolit 100 µF 25 V ±20%, 8 × 11,5 mm, raster 3,5 mm, −40…+125 °C, 3000 h w 125 °C, tętnienia 325 mA',
      note='kondensator szyny: przełączenie 12 V ↔ ogniwa bez restartu; pojemność do potwierdzenia w próbie toru ogniw; '
-          'brak w magazynie JLC, kupowany u dystrybutora i lutowany ręcznie')
+          'w projekcie Nichicon UKL1E101MPD o małym upływie (brak w JLC), montowany zwykły elektrolit: upływ do sprawdzenia '
+          'w pomiarze prądu w stanie wyłączonym')
 part('U7', 'WICI:LTC3115-1', 'LTC3115-1', 'WICI:LTC3115-1_FE20_CA',
      {1: 'GND', 2: 'RUN', 3: 'CONV_SW2', 4: '+3V3', 5: 'GND', 6: 'GND', 7: 'CONV_VC', 8: 'CONV_FB', 9: 'CONV_RT',
       10: 'GND', 11: 'GND', 12: 'CONV_VCC', 13: 'VSYS', 14: 'CONV_VCC', 15: 'CONV_BST2', 16: 'CONV_BST1',

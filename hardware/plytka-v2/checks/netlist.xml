@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-10T21:08:17</date>
+    <date>2026-11-10T21:31:03</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -952,15 +952,15 @@
       <value>100u 25V</value>
       <footprint>Capacitor_THT:CP_Radial_D8.0mm_P3.50mm</footprint>
       <fields>
-        <field name="Manufacturer">Nichicon</field>
-        <field name="MPN">UKL1E101MPD</field>
+        <field name="Manufacturer">SamYoung</field>
+        <field name="MPN">PXB 25V100 8*11.5</field>
         <field name="Footprint">Capacitor_THT:CP_Radial_D8.0mm_P3.50mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C_Polarized" description="Polarized capacitor"/>
-      <property name="Manufacturer" value="Nichicon"/>
-      <property name="MPN" value="UKL1E101MPD"/>
+      <property name="Manufacturer" value="SamYoung"/>
+      <property name="MPN" value="PXB 25V100 8*11.5"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1008,15 +1008,15 @@
       <value>1n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">CC0805KRX7R9BB102</field>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B102KBCNNNC</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="CC0805KRX7R9BB102"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B102KBCNNNC"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1457,15 +1457,15 @@
       <value>BZT52C33</value>
       <footprint>Diode_SMD:D_SOD-123</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">BZT52C33-7-F</field>
+        <field name="Manufacturer">Hongjiacheng</field>
+        <field name="MPN">BZT52C33</field>
         <field name="Footprint">Diode_SMD:D_SOD-123</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D_Zener" description="Zener diode"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="BZT52C33-7-F"/>
+      <property name="Manufacturer" value="Hongjiacheng"/>
+      <property name="MPN" value="BZT52C33"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -2079,15 +2079,15 @@
       <value>DEVKITC J1</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC221LFBN-RC</field>
+        <field name="Manufacturer">Hong Cheng</field>
+        <field name="MPN">HC-PM254-8.5H-1x22PZ</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x22" description="Generic connector, single row, 01x22, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC221LFBN-RC"/>
+      <property name="Manufacturer" value="Hong Cheng"/>
+      <property name="MPN" value="HC-PM254-8.5H-1x22PZ"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2127,15 +2127,15 @@
       <value>DEVKITC J3</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC221LFBN-RC</field>
+        <field name="Manufacturer">Hong Cheng</field>
+        <field name="MPN">HC-PM254-8.5H-1x22PZ</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x22" description="Generic connector, single row, 01x22, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC221LFBN-RC"/>
+      <property name="Manufacturer" value="Hong Cheng"/>
+      <property name="MPN" value="HC-PM254-8.5H-1x22PZ"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2212,15 +2212,15 @@
       <value>WIO J1</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC071LFBN-RC</field>
+        <field name="Manufacturer">hanxia</field>
+        <field name="MPN">HX PM2.54-1x7P ZC-Y</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x07" description="Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC071LFBN-RC"/>
+      <property name="Manufacturer" value="hanxia"/>
+      <property name="MPN" value="HX PM2.54-1x7P ZC-Y"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2245,15 +2245,15 @@
       <value>WIO J2</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC071LFBN-RC</field>
+        <field name="Manufacturer">hanxia</field>
+        <field name="MPN">HX PM2.54-1x7P ZC-Y</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x07" description="Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC071LFBN-RC"/>
+      <property name="Manufacturer" value="hanxia"/>
+      <property name="MPN" value="HX PM2.54-1x7P ZC-Y"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -4650,15 +4650,15 @@
       <value>CY15B104QN-50SXI</value>
       <footprint>Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</footprint>
       <fields>
-        <field name="Manufacturer">Infineon</field>
-        <field name="MPN">CY15B104QN-50SXI</field>
+        <field name="Manufacturer">RAMXEED</field>
+        <field name="MPN">MB85RS4MTPF-G-BCERE1</field>
         <field name="Footprint">Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Memory_NVRAM" part="MB85RS2MT" description="FeRAM memory with SPI interface, 2Mbit (256K x 8), 1.8V to 3.6V supply, DIP-8 / SOIC-8 (SOP-8, 208 mil)"/>
-      <property name="Manufacturer" value="Infineon"/>
-      <property name="MPN" value="CY15B104QN-50SXI"/>
+      <property name="Manufacturer" value="RAMXEED"/>
+      <property name="MPN" value="MB85RS4MTPF-G-BCERE1"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="FRAM Ferroelectric-RAM 3.3V 2-Mbit MB85RS2MTPH MB85RS2MTPF Fujitsu Obsolete"/>

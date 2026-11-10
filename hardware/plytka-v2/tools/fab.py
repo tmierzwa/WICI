@@ -2,8 +2,9 @@
 """JLC assembly files of board v2: fabrication/jlc-bom.csv and fabrication/jlc-cpl.csv.
 
 usage: fab.py   (KiCad Python, after build.sh has made the board)
-In both files: every part the SMT assembler fits. Left out: parts marked "do not fit" (D20), mounting holes,
-through-hole parts and the SMT parts of design.HAND_SMT (soldered by hand), all from tools/design.py.
+In both files: every part JLC fits, SMT and through-hole (owner's decision of 2026-11-10: JLC fits everything).
+Left out: parts marked "do not fit" (D20), mounting holes and the parts of design.HAND (none now), all from
+tools/design.py.
 """
 import csv
 from pathlib import Path
@@ -25,6 +26,12 @@ TURN_PART = {'C7519': 270}          # by LCSC number: USBLC6-2SC6 (U8), unlike t
 # Position: JLC puts the centre of its model there. For these footprints the KiCad origin is not that centre and
 # the centre of all pads is used (USB-C socket: in the preview the model sat 1.5 mm off its pads).
 CENTRE_OF_PADS = (r'^USB_C_Receptacle_HRO_TYPE-C-31-M-12',)
+# Through-hole parts: the KiCad origin is pin 1, the position is the centre of the pads. Parts on the bottom side:
+# JLC wants the angle as seen from above the part, 180 - KiCad angle (as the Fabrication Toolkit for KiCad does).
+# Pin headers and sockets: a quarter turn, as on the converter test board (JLC preview of 2026-10-31).
+TURN_THT = [(r'^PinHeader_1x', 90), (r'^PinSocket_1x', 90)]
+# One footprint, two parts: the fuse holder is two clips, one at each pair of pads.
+SPLIT = {'F1': ('1', '2')}
 
 
 def main():
@@ -38,18 +45,31 @@ def main():
         ref = fp.GetReference()
         if ref not in fitted:
             continue
-        assert not fp.IsDNP() and not fp.IsFlipped(), ref
-        assert fp.GetAttributes() & k.FP_SMD, f'{ref}: the footprint is not marked SMD'
+        assert not fp.IsDNP(), ref
+        tht = bool(fp.GetAttributes() & k.FP_THROUGH_HOLE)
+        assert tht or fp.GetAttributes() & k.FP_SMD, f'{ref}: the footprint is marked neither SMD nor through-hole'
+        assert tht or not fp.IsFlipped(), f'{ref}: SMT part on the bottom side'
         name = fp.GetFPID().GetUniStringLibItemName()
-        turn = TURN_PART.get(fitted[ref]['lcsc'], next((t for pattern, t in TURN if re.match(pattern, name)), 0))
+        table = TURN_THT if tht else TURN
+        turn = TURN_PART.get(fitted[ref]['lcsc'], next((t for pattern, t in table if re.match(pattern, name)), 0))
+        angle = 180 - fp.GetOrientationDegrees() if fp.IsFlipped() else fp.GetOrientationDegrees()
+        side = 'Bottom' if fp.IsFlipped() else 'Top'
+
+        def centre(pads):
+            boxes = [p.GetBoundingBox() for p in pads]
+            return (k.ToMM(min(b.GetLeft() for b in boxes) + max(b.GetRight() for b in boxes)) / 2,
+                    k.ToMM(min(b.GetTop() for b in boxes) + max(b.GetBottom() for b in boxes)) / 2)
+        if ref in SPLIT:
+            for letter, number in zip('AB', SPLIT[ref]):
+                x, y = centre([p for p in fp.Pads() if p.GetNumber() == number])
+                rows.append([ref + letter, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{(angle + turn) % 360:.0f}'])
+            continue
         x, y = k.ToMM(fp.GetPosition().x), k.ToMM(fp.GetPosition().y)
-        if any(re.match(pattern, name) for pattern in CENTRE_OF_PADS):
-            boxes = [p.GetBoundingBox() for p in fp.Pads()]
-            x = k.ToMM(min(b.GetLeft() for b in boxes) + max(b.GetRight() for b in boxes)) / 2
-            y = k.ToMM(min(b.GetTop() for b in boxes) + max(b.GetBottom() for b in boxes)) / 2
-        rows.append([ref, f'{x:.3f}mm', f'{-y:.3f}mm', 'Top',
-                     f'{(fp.GetOrientationDegrees() + turn) % 360:.0f}'])
-    assert {r[0] for r in rows} == set(fitted), set(fitted) ^ {r[0] for r in rows}
+        if tht or any(re.match(pattern, name) for pattern in CENTRE_OF_PADS):
+            x, y = centre(list(fp.Pads()))
+        rows.append([ref, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{(angle + turn) % 360:.0f}'])
+    names = lambda ref: [ref + letter for letter in 'AB'] if ref in SPLIT else [ref]
+    assert {r[0] for r in rows} == {n for ref in fitted for n in names(ref)}
     with (out / 'jlc-cpl.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
         w.writerow(['Designator', 'Mid X', 'Mid Y', 'Layer', 'Rotation'])
@@ -63,9 +83,9 @@ def main():
         w.writerow(['Comment', 'Designator', 'Footprint', 'LCSC Part #'])
         for (lcsc, footprint), items in groups.items():
             values = ' / '.join(dict.fromkeys(i['value'] for i in items))
-            w.writerow([f"{values} ({items[0]['mpn']})", ','.join(i['ref'] for i in items), footprint, lcsc])
+            w.writerow([f"{values} ({items[0]['mpn']})", ','.join(n for i in items for n in names(i['ref'])), footprint, lcsc])
     hand = sorted(p['ref'] for p in PARTS if p['bom'] and p['hand'])
-    print(f'fabrication/: {len(rows)} parts placed by JLC in {len(groups)} BOM lines; by hand: {" ".join(hand)}')
+    print(f'fabrication/: {len(rows)} parts placed by JLC in {len(groups)} BOM lines; by hand: {" ".join(hand) or "none"}')
 
 
 if __name__ == '__main__':

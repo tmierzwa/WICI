@@ -505,17 +505,19 @@ DRC w KiCad liczy potem z prawdziwą regułą projektu i to ono jest sprawdziane
 
 ## Części w JLC i pliki produkcyjne (2026-11-10)
 
-Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty części są potwierdzone w podglądzie JLC, niżej).
+Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty części SMD są potwierdzone w podglądzie JLC, części przewlekanych jeszcze nie; niżej).
 
 ### Numery LCSC
 
-Każda część montowana automatycznie ma numer LCSC w [bom.csv](bom.csv) (148 części w 65 liniach wykazu dla JLC). Źródłem jest tabela `JLC` w `tools/design.py`: część z projektu → część w katalogu. Stany i klasy odczytane z katalogu części JLC 2026-11-10.
+**JLC montuje wszystkie części, także przewlekane** (decyzja właściciela z 2026-11-10; wcześniej części przewlekane i pamięć FRAM miały być lutowane ręcznie). Każda część na płytce poza D20 ma numer LCSC w [bom.csv](bom.csv): 165 pozycji montażu w 76 liniach wykazu dla JLC (148 SMD i 17 przewlekanych; oprawka bezpiecznika F1 to dwa zaciski, czyli dwie pozycje). Źródłem jest tabela `JLC` w `tools/design.py`: część z projektu → część w katalogu. Stany i klasy odczytane z katalogu części JLC 2026-11-10.
 
 Zasada wyboru: część z listy Basic albo Preferred, dostępna w magazynie, gdy ma tę samą wartość, tolerancję, napięcie, dielektryk i obudowę; w przeciwnym razie część z projektu jako Extended. Zwykłe rezystory i kondensatory biorą część Basic (są typowe i mają zamienniki u wielu producentów, więc większa partia nie zależy od jednej pozycji). Części, na których parametrach z karty opiera się projekt (upływ, dzielniki 0,1%, 100 V, obciążenie impulsowe), zostają przy wskazanym producencie.
 
-- **Basic (19 linii):** rezystory 0805 1% UNI-ROYAL (33 Ω, 1 k, 5,1 k, 10 k, 20 k, 100 k, 220 k, 470 k, 1 M) i 1206 22 Ω; kondensatory 0805: 10 µF 25 V X5R, 100 nF 50 V X7R, 100 nF 100 V X7R, 10 nF, 470 nF i 1 µF 50 V X7R, 100 pF C0G; dioda 1N4148W; tranzystor MMBT3904.
-- **Preferred (2 linie):** TVS SMBJ33CA (D4), Zener BZT52C5V1 (D16).
-- **Extended:** pozostałe.
+- **Basic (20 linii):** rezystory 0805 1% UNI-ROYAL (33 Ω, 1 k, 5,1 k, 10 k, 20 k, 100 k, 220 k, 470 k, 1 M) i 1206 22 Ω; kondensatory 0805: 10 µF 25 V X5R, 100 nF 50 V X7R, 100 nF 100 V X7R, 10 nF, 470 nF i 1 µF 50 V X7R, 100 pF C0G, 1 nF 50 V X7R; dioda 1N4148W; tranzystor MMBT3904.
+- **Preferred (3 linie):** TVS SMBJ33CA (D4), Zenery BZT52C5V1 (D16) i BZT52C33 (D10).
+- **Extended (53 linie):** pozostałe, w tym 11 linii części przewlekanych.
+
+JLC dolicza opłatę za każdą linię Extended w zamówieniu (raz na typ części, niezależnie od liczby płytek). Sprawdzone 2026-11-10, czy da się ją zmniejszyć: na Basic przeszedł kondensator 1 nF, na Preferred Zener 33 V. Reszta zostaje, bo w Basic i Preferred nie ma odpowiedników: układy scalone, złącza, cewki, rezystory 0,1%, 2512 i o wartościach spoza listy (47,5 k, 309 k, 432 k), kondensatory 1210, 2,2 µF, 27 nF, 3,9 nF i 82 pF, diody o małym upływie (BAV199, BAS116), BSS138, BZT52C15, 74LVC1G32, USBLC6. Dwie zamiany odrzucone: 2N7002 z listy Basic (karta nie podaje upływu w 60 °C, na którym opiera się budżet KILL) i BSS84 z listy Preferred (wyższa granica upływu niż BSS84AK, liczy się w prądzie stanu wyłączonego).
 
 Zmiany części względem wcześniejszego wykazu, wszystkie o tych samych parametrach:
 
@@ -524,19 +526,26 @@ Zmiany części względem wcześniejszego wykazu, wszystkie o tych samych parame
 | rezystory 0805 1% i R2 | Yageo RC0805FR / RC1206FR | UNI-ROYAL 0805W8F / 1206W4F | Basic; 309 k i 432 k: większy stan niż Yageo |
 | 10 µF 25 V X5R | Samsung CL21A106KAYNNNG | Samsung CL21A106KAYNNNE | Basic, ta sama seria |
 | 100 nF 50 V X7R | Samsung CL21B104KBCNNNC | Yageo CC0805KRX7R9BB104 | Basic |
-| 1 nF, 3,9 nF, 27 nF 50 V X7R, 82 pF NP0 | Samsung | Yageo CC0805 | Samsung bez stanu albo poza katalogiem |
+| 3,9 nF, 27 nF 50 V X7R, 82 pF NP0 | Samsung | Yageo CC0805 | Samsung bez stanu albo poza katalogiem |
+| 1 nF 50 V X7R | Samsung CL21B102KBANNNC | Samsung CL21B102KBCNNNC | Basic, ta sama seria |
+| D10 (Zener 33 V) | Diodes BZT52C33-7-F | Hongjiacheng BZT52C33 | Preferred; dioda tylko ogranicza napięcie na pinie U6 przy przepięciu, przy 24–28,8 V nie przewodzi |
 | R37 (221 k), R44 (39 k), 0,1% 25 ppm/K | Yageo RT0805BRD | Viking AR05BTCW2213, ARG05BTC3902 | Yageo: stan 0; te same 0,1% i 25 ppm/K |
 | D2, Q1 (brzęczyk) | Diodes 1N4148W-7-F, onsemi MMBT3904LT1G | ST 1N4148W, Changjing MMBT3904 | Basic; bez wymagań na upływ |
 | D16 (Zener 5,1 V) | Diodes BZT52C5V1-7-F | Hongjiacheng BZT52C5V1 | Diodes: 3 sztuki; upływu przy 3,6 V nie podaje żadna z kart, więc pomiar KILL z [pierwszych sztuk](#na-pierwszych-sztukach-v2) dotyczy tej części |
 | U3 (nadzorca 2,7 V) | TPS3840PH27DBVR | TPS3840PH27DBVRQ1 | 45 sztuk zamiast 6; ten sam układ w wersji samochodowej |
 
-Mały stan w dniu sprawdzenia (wystarcza na 2 prototypy, przed większą partią trzeba sprawdzić ponownie albo dostarczyć części do montażu): U7 LTC3115-1 23 sztuki, U6 LTC2955 33, U3 45, R62 (432 k) 236, C13 (100 µF 10 V) 411, U2 MCP1640 516, L2 646, L1 899.
+Mały stan w dniu sprawdzenia (wystarcza na 2 prototypy, przed większą partią trzeba sprawdzić ponownie albo kupić części z wyprzedzeniem do magazynu JLC): U1 FRAM 11 sztuk, U7 LTC3115-1 23, U6 LTC2955 33, U3 45, BZ1 brzęczyk 103, R62 (432 k) 236, C13 (100 µF 10 V) 436, U2 MCP1640 516, D1 603, L2 646, L1 899.
 
-Części bez dobrego pokrycia w LCSC:
+Zamienniki części, których JLC nie ma w magazynie:
 
-- **U1 (FRAM CY15B104QN-50SXI):** stan 0, zamiennik RAMXEED MB85RS4MTPF-G-BCERE1 11 sztuk. Na prototypach lutowana ręcznie (SOIC-8) albo dostarczona do montażu; nie ma jej w plikach dla JLC.
-- **Gniazda modułów J5, J6, J8, J9 (Sullins):** stan 0; kupowane u dystrybutora, przewlekane, lutowane ręcznie.
-- **C50:** niżej.
+| Część | W projekcie | W JLC | Różnica |
+|---|---|---|---|
+| U1 (FRAM 4 Mbit SPI) | Infineon CY15B104QN-50SXI | RAMXEED MB85RS4MTPF-G-BCERE1 (C42742723) | ta sama pojemność, SPI i obudowa SOP-8 z tym samym układem pinów; inny identyfikator producenta: jeśli program go sprawdza, musi przyjąć oba |
+| J5, J6 (gniazda 1×22) | Sullins PPTC221LFBN-RC | Hong Cheng HC-PM254-8.5H-1x22PZ (C41376161) | ten sam raster 2,54 mm i wysokość 8,5 mm |
+| J8, J9 (gniazda 1×7) | Sullins PPTC071LFBN-RC | hanxia HX PM2.54-1x7P ZC-Y (C22438157) | jak wyżej |
+| C50 (100 µF 25 V) | Nichicon UKL1E101MPD | SamYoung PXB 25V100 8×11,5 (C350221) | niżej |
+
+Pozostałe części przewlekane są w JLC w wersji z projektu albo równoważnej: złącza JST, zaciski bezpiecznika, przycisk serwisowy, dioda alarmu, brzęczyk, listwa JP3 (numery w [bom.csv](bom.csv)).
 
 ### Kondensator szyny C50
 
@@ -548,7 +557,7 @@ Wybrany **Nichicon UKL1E101MPD**: 100 µF, 25 V, ±20%, 8 × 11,5 mm, raster 3,5
 - **temperatura:** −40…+85 °C wobec wymaganych −10…+40 °C;
 - **trwałość:** 2000 h w 85 °C. Według zwykłej reguły (dwa razy dłużej na każde 10 °C mniej) to około 45 tysięcy godzin w 40 °C i ponad 100 tysięcy w 25 °C, czyli kilka do kilkunastu lat pod napięciem.
 
-LCSC nie ma go w magazynie: kupowany u dystrybutora, lutowany ręcznie. Pojemność 100 µF nadal czeka na potwierdzenie w próbie przełączania 12 V ↔ ogniwa ([pierwsze sztuki](#na-pierwszych-sztukach-v2)).
+**JLC nie ma go w magazynie ani żadnego innego elektrolitu 100 µF/25 V o małym upływie.** Na prototypy montowany jest zwykły SamYoung PXB 25 V 100 µF w tej samej obudowie 8 × 11,5 mm i rastrze 3,5 mm (125 °C, 3000 h). Różnica: upływ według zwykłej normy, najwyżej 0,01 × C × V = 25 µA przy 25 V wobec 5 µA Nichicona; przy 6 V z ogniw jest kilka razy mniejszy, ale karta tego nie podaje. Rozstrzyga pomiar prądu w stanie wyłączonym z [pierwszych sztuk](#na-pierwszych-sztukach-v2): jeśli C50 zabiera z budżetu za dużo, do serii wraca Nichicon kupiony u dystrybutora. Pojemność 100 µF nadal czeka na potwierdzenie w próbie przełączania 12 V ↔ ogniwa ([pierwsze sztuki](#na-pierwszych-sztukach-v2)).
 
 ### Pliki produkcyjne
 
@@ -560,7 +569,8 @@ LCSC nie ma go w magazynie: kupowany u dystrybutora, lutowany ręcznie. Pojemno�
 | `jlc-bom.csv` | wykaz do montażu: Comment, Designator, Footprint, LCSC Part # |
 | `jlc-cpl.csv` | pozycje: Designator, Mid X, Mid Y, Layer, Rotation |
 
-- W wykazie i pozycjach są tylko części montowane automatycznie. Pominięte: D20 (nie montować), otwory montażowe, wszystkie części przewlekane (gniazda, złącza JST, zaciski bezpiecznika, brzęczyk, dioda alarmu, przycisk serwisowy, C50) i U1. Te części lutuje się ręcznie; w [bom.csv](bom.csv) mają w kolumnie „montaż” wpis „ręcznie”. `fab.py` kończy się błędem, gdy część do montażu nie ma numeru LCSC albo jej footprint nie jest oznaczony jako SMD.
+- W wykazie i pozycjach są wszystkie części poza D20 (nie montować) i otworami montażowymi. `fab.py` kończy się błędem, gdy część nie ma numeru LCSC, jej footprint nie jest oznaczony jako SMD ani przewlekany, albo część SMD jest od spodu.
+- Części przewlekane: pozycją jest środek padów (w KiCad punktem odniesienia jest pin 1). Od spodu są gniazda modułów, złącza przewodów, zaciski bezpiecznika i C50; mają warstwę „Bottom” i kąt 180° − kąt z KiCad, jak we wtyczce Fabrication Toolkit. Oprawka F1 jest w plikach jako dwa zaciski, F1A i F1B. **Ustawienie części przewlekanych nie jest jeszcze potwierdzone w podglądzie JLC** (złącza z kluczem, biegunowość C50 i diody, brzęczyk).
 - Współrzędne we wszystkich plikach są bezwzględne, takie jak w pliku płytki (y w pozycjach to −y z KiCad, tak jak w Gerberach).
 - Pliki nie zawierają dat (są usuwane z nagłówków), a ZIP ma stałe czasy plików, więc zmieniają się tylko razem z płytką. Są w repozytorium, tak jak dla [płytki testowej](../przetwornica-3v3/README.md).
 - Cewka L2 miała w footprincie typ „inny” zamiast SMD i wypadłaby z pozycji; poprawione, a sprawdzenie zgodności typu footprintu z padami jest w DRC włączone jako błąd (wynik: 0).
@@ -590,6 +600,7 @@ Do rozstrzygnięcia przed pierwszym zamówieniem płytki:
 - przyciski: obsługa PV6 w rękawicach przy rozstawie 32 mm;
 - obudowa, przymiarka z prawdziwą skrzynką (obrys, otwory i wysokości są już dopasowane do modelu STEP, [Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)): mocowanie i położenie koszyka BH4AAW na klapce (płasko czy na obrzeżu); pięć PV6 i przełącznik CISZY w otworach Ø20 mm płytki; dźwignia przełącznika (18 mm) pod osłoną GT-4R (opis osłony: 17,5 mm) i zamykanie klapki; odstęp końcówek WSTECZ i GÓRA od koszyka z ogniwami (z modelu 1,4–2,7 mm przy koszyku na środku) przy cienkiej taśmie; kierunek CISZY miernikiem i czy sprężyna puszczonej klapki nie przerzuca dźwigni z położenia CISZA; tuleja przełącznika (do Ø12,24 mm) w otworze Ø12,2 mm płytki GT-4R; głośność BZ1 przez kratkę 7 × Ø1,5 mm; stos ekranu (szybka, światłowód, panel, pianka) i długość taśmy do J7; oś USB-C w otworze ściany, czoło gniazda 0–1 mm od niej i próba z kilkoma kablami o różnych osłonach wtyku (pełne włożenie, bez oporu o ścianę); oś EN3 0,8 mm pod płytką, korpus i przewody w wycięciu; oś SMA i przewód do u.FL; szlifowanie dwóch słupków pod oknem ekranu; tulejki 6 mm i wkręty 3 × 12 z podkładką (moment zerwania gwintu na pierwszej sztuce, czy słupek Ø4,75 mm nie pęka przy wkręcie 3 mm i czy płytka trzyma się po kilku miesiącach); D1 przez otwór Ø5,5 mm (widoczność z kilku metrów); oznaczenie strzałkami położenia pokrywy; zwrot Wio i położenie u.FL. Na obrazku Seeed od strony elementów J1 leży po lewej, pin 1 przy otworze Ø 2,2 mm, a u.FL przy pinie 7 J2. Gniazda (z góry J9 po lewej, J8 po prawej, piny 1 przy y 67,4) pasują, gdy listwy wychodzą od strony bez elementów, czyli moduł wisi elementami w dół; potwierdzić przymiarką;
 - D20 dolutowany ręcznie na jednym prototypie przed pierwszym podłączeniem 24 V, pomiar napięcia szczytowego przy łączniku i decyzja o D20 w serii ([plan](#ochrona-wejścia-przy-łączniku)); po przymiarce obudowy ewentualne poprawki rozmieszczenia i nowy przebieg routera;
+- potwierdzenie ustawienia części przewlekanych w podglądzie JLC ([Pliki produkcyjne](#pliki-produkcyjne));
 - wnioski z kroku 4 i decyzja: moduły wpinane czy przylutowany ESP32-S3 i układ radiowy;
 - program stacji: piny GPIO3, GPIO4, GPIO5 i GPIO45–48, ADC ogniw i 12 V, KILL i INT, [czuwanie](../../docs/spec/oprogramowanie.md#czuwanie);
 - pomiary na [płytce testowej przetwornicy](../przetwornica-3v3/README.md): sprawność LTC3115-1 przy 3,3 V (Z11, [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)) i Burst Mode U7 (typowo poniżej 50 mA) przy starcie ESP32-S3 i panelu oraz przy 4 V na wejściu: 3,3 V nie może przy tym spaść do progu nadzorcy FRAM 2,7 V (U3). Płytka testowa nie ma ESP32-S3, panelu ani nadzorcy, więc do tej próby podłącza się L0 (DevKitC na płytce v1.1, z panelem i nadzorcą U3) pinem 3V3 i G do VOUT płytki testowej, bez USB (DevKitC dopuszcza tylko jedno źródło zasilania). Gdyby 3,3 V spadało: najpierw program włącza PWM (GPIO45) zaraz po starcie, przed panelem i radiem; gdyby spadek był już w czasie ładowania programu (przed kodem stacji), większa pojemność na 3V3. Ostatecznie można rozdzielić sieć PWM_SYNC i GPIO45 (rezystor 0 Ω od PWM/SYNC do VCC przetwornicy, GPIO45 odłączony z R63 do masy), ale PWM bez obciążenia bierze około 12 mA (karta LTC3115-1, wykres „PWM Mode No-Load Input Current”, 1 MHz, 5 V; przy 750 kHz i 3,3 V niewiele mniej) zamiast 50 µA w Burst Mode, także w czuwaniu i przy wyłączonym radiu, czyli około 60 mW przy 6 V, co przy zapasie modelu poniżej 1 h spycha czas pracy na ogniwach wyraźnie poniżej 48 h. GPIO45 wysoki przy resecie (R63 do 3V3) odpada, bo wybiera 1,8 V dla flash, a WROOM-1 N8R8 ma flash 3,3 V; eFuse VDD_SPI_FORCE i VDD_SPI_TIEH, które to obchodzą, są nieodwracalne i zostają tylko jako ostateczność;

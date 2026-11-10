@@ -6799,13 +6799,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Sullins"
+    (property "Manufacturer" "Hong Cheng"
       (at 487.67999999999995 63.5 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "PPTC221LFBN-RC"
+    (property "MPN" "HC-PM254-8.5H-1x22PZ"
       (at 487.67999999999995 63.5 0)
       (effects
         (font
@@ -7197,13 +7197,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Sullins"
+    (property "Manufacturer" "Hong Cheng"
       (at 487.67999999999995 132.08 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "PPTC221LFBN-RC"
+    (property "MPN" "HC-PM254-8.5H-1x22PZ"
       (at 487.67999999999995 132.08 0)
       (effects
         (font
@@ -7617,13 +7617,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Sullins"
+    (property "Manufacturer" "hanxia"
       (at 487.67999999999995 208.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "PPTC071LFBN-RC"
+    (property "MPN" "HX PM2.54-1x7P ZC-Y"
       (at 487.67999999999995 208.28 0)
       (effects
         (font
@@ -7760,13 +7760,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Sullins"
+    (property "Manufacturer" "hanxia"
       (at 487.67999999999995 238.76 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "PPTC071LFBN-RC"
+    (property "MPN" "HX PM2.54-1x7P ZC-Y"
       (at 487.67999999999995 238.76 0)
       (effects
         (font
@@ -10004,13 +10004,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Infineon"
+    (property "Manufacturer" "RAMXEED"
       (at 640.08 45.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CY15B104QN-50SXI"
+    (property "MPN" "MB85RS4MTPF-G-BCERE1"
       (at 640.08 45.72 0)
       (effects
         (font
@@ -18155,13 +18155,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "Hongjiacheng"
       (at 259.08 355.6 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BZT52C33-7-F"
+    (property "MPN" "BZT52C33"
       (at 259.08 355.6 0)
       (effects
         (font
@@ -20703,13 +20703,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "Samsung Electro-Mechanics"
       (at 411.47999999999996 203.2 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CC0805KRX7R9BB102"
+    (property "MPN" "CL21B102KBCNNNC"
       (at 411.47999999999996 203.2 0)
       (effects
         (font
@@ -20785,13 +20785,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Nichicon"
+    (property "Manufacturer" "SamYoung"
       (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "UKL1E101MPD"
+    (property "MPN" "PXB 25V100 8*11.5"
       (at 182.88 312.42 0)
       (effects
         (font
