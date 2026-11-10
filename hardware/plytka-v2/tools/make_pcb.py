@@ -153,6 +153,9 @@ CONVERTER = {
     'C42': (-9.8, -3.8, 90), 'C43': (-13.7, -3.8, 90),                # +3V3 pad towards U7, GND outwards
     'C46': (6.3, 1.8, 0),                                             # pin 13 VIN bypass, VSYS left
     'C47': (2.6, 5.4, 0),                                             # VCC, VCC pad left
+    # RUN filter: as near to pin 2 as the copper of figure 17 leaves room. Pin 2 lies between the SW2 and output
+    # copper, so the capacitor stands in the far corner of the output copper, 6 mm from SW2, on the L4 track of RUN.
+    'C52': (-13.2, 2.3, 270),
     'R63': (10.4, 1.8, 0),                                             # PWM_SYNC pull-down, PWM pad left
     'R60': (-1.6, 7.6, 270), 'C49': (-4.3, 7.6, 270), 'C48': (-7.0, 7.6, 270), 'R62': (-9.7, 7.6, 270),
     'R61': (-12.4, 7.6, 90), 'C51': (-15.1, 7.6, 270),                # feedback row, FB pads on top
@@ -227,7 +230,7 @@ REGIONS = [
     # high-voltage spacing.
     ('T', 137, 21, 172, 50, (152, 36), ['C37', 'R71', 'C53', 'D8', 'D9', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8',
                                         'R49', 'D12', 'R78']),
-    ('T', 137, 21, 172, 50, (142, 46), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
+    ('T', 137, 21, 172, 50, (142, 46), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55']),
     # UV divider with its switch and the divider of the automatic start, right of the EN3 notch under the OK hole;
     # the fused 12 V passes below them on L4.
     ('T', 109.5, 97, 151, 119.5, (120, 109), ['Q4', 'Q5', 'D6', 'D5', 'D15', 'D13', 'R33', 'R34', 'R35', 'R36',
@@ -261,6 +264,7 @@ SUPPLY_CLOSE = [
     ('C42', 'U7.4', 5.0, '+3V3'), ('C43', 'U7.4', 9.0, '+3V3'),
     ('C1', 'J9.3', 6.0, '+3V3_RF'), ('C2', 'J9.3', 6.0, '+3V3_RF'),
     ('C8', 'U2.6', 2.2, '+3V3'), ('C9', 'U2.5', 1.5, '+5V'),
+    ('C52', 'U7.2', 10.5, 'RUN'),
 ]
 for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
     # spacer (<= 6 mm) and the screw head (5.6 mm) stand on that web, clear of the PV6 nut (the front, 10.5 mm up)

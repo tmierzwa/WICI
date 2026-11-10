@@ -567,50 +567,51 @@
     )
   )
   (placement
-    (component AN:anchor41
-      (place AN41 171900 -103750 front 0)
-      (place AN40 169437.5 -105550 front 0)
-      (place AN37 156675 -30625 front 0)
-      (place AN30 148870 -23175 front 0)
-      (place AN24 144475 -32117.5 front 0)
-      (place AN23 143175 -48330 front 0)
-      (place AN22 142475 -37117.5 front 0)
-      (place AN20 141770 -39175 front 0)
-      (place AN18 137200 -57600 front 0)
-      (place AN17 134400 -53300 front 0)
-      (place AN16 134199.999 -57000 front 0)
-      (place AN15 132900 -57550 front 0)
-      (place AN14 132900 -54450 front 0)
-      (place AN13 124300 -57975 front 0)
-      (place AN12 124300 -54450 front 0)
-      (place AN11 122950 -66599.999 front 0)
-      (place AN10 122800 -53300 front 0)
-      (place AN6 117580 -110175 front 0)
+    (component AN:anchor42
+      (place AN42 171900 -103750 front 0)
+      (place AN41 169437.5 -105550 front 0)
+      (place AN38 156675 -30625 front 0)
+      (place AN31 148870 -23175 front 0)
+      (place AN25 144475 -32117.5 front 0)
+      (place AN24 143175 -48330 front 0)
+      (place AN23 142475 -37117.5 front 0)
+      (place AN21 141770 -39175 front 0)
+      (place AN19 137200 -57600 front 0)
+      (place AN18 134400 -53300 front 0)
+      (place AN17 134199.999 -57000 front 0)
+      (place AN16 132900 -57550 front 0)
+      (place AN15 132900 -54450 front 0)
+      (place AN14 124300 -57975 front 0)
+      (place AN13 124300 -54450 front 0)
+      (place AN12 122950 -66599.999 front 0)
+      (place AN11 122800 -53300 front 0)
+      (place AN7 117580 -110175 front 0)
+      (place AN4 115400 -56600 front 0)
       (place AN3 111400 -54450 front 0)
       (place AN2 111400 -52400 front 0)
       (place AN0 41250 -71360 front 0)
     )
-    (component AN:anchor39
-      (place AN39 161225 -25580 front 0)
-      (place AN38 160275 -30330 front 0)
-      (place AN36 155875 -37950 front 0)
-      (place AN35 155875 -36650 front 0)
-      (place AN34 155875 -34050 front 0)
-      (place AN33 154830 -42225 front 0)
-      (place AN32 150080 -43175 front 0)
-      (place AN31 150080 -41275 front 0)
-      (place AN29 148125 -36650 front 0)
-      (place AN28 148125 -35350 front 0)
-      (place AN27 148125 -34050 front 0)
-      (place AN26 147725 -45580 front 0)
-      (place AN25 146775 -50330 front 0)
-      (place AN21 142225 -43580 front 0)
-      (place AN19 141275 -48330 front 0)
-      (place AN9 122330 -114725 front 0)
-      (place AN8 122330 -109225 front 0)
-      (place AN7 122330 -103725 front 0)
-      (place AN5 117580 -108275 front 0)
-      (place AN4 117580 -102775 front 0)
+    (component AN:anchor40
+      (place AN40 161225 -25580 front 0)
+      (place AN39 160275 -30330 front 0)
+      (place AN37 155875 -37950 front 0)
+      (place AN36 155875 -36650 front 0)
+      (place AN35 155875 -34050 front 0)
+      (place AN34 154830 -42225 front 0)
+      (place AN33 150080 -43175 front 0)
+      (place AN32 150080 -41275 front 0)
+      (place AN30 148125 -36650 front 0)
+      (place AN29 148125 -35350 front 0)
+      (place AN28 148125 -34050 front 0)
+      (place AN27 147725 -45580 front 0)
+      (place AN26 146775 -50330 front 0)
+      (place AN22 142225 -43580 front 0)
+      (place AN20 141275 -48330 front 0)
+      (place AN10 122330 -114725 front 0)
+      (place AN9 122330 -109225 front 0)
+      (place AN8 122330 -103725 front 0)
+      (place AN6 117580 -108275 front 0)
+      (place AN5 117580 -102775 front 0)
     )
     (component AN:anchor1
       (place AN1 66500 -64400 front 0)
@@ -644,7 +645,6 @@
       (place C39 173200 -102800 front 90 (PN 10n))
       (place C44 134400 -51150 front 90 (PN 100n))
       (place C45 122800 -51150 front 90 (PN 100n))
-      (place C52 157505 -42725 front 90 (PN 1n))
       (place C53 148005 -29725 front 90 (PN 470n))
     )
     (component HV:C_1210_3225Metric_C13
@@ -664,6 +664,7 @@
       (place C48 121600 -64599.999 front -90 (PN 82p))
       (place C49 124300 -64599.999 front -90 (PN 3n9))
       (place C51 113500 -64599.999 front -90 (PN 82p))
+      (place C52 115399.999 -59300 front -90 (PN 1n))
     )
     (component HV:CP_Radial_D8.0mm_P3.50mm_C50
       (place C50 133652.65 -84000 back 0 (PN "100u 25V"))
@@ -896,10 +897,10 @@
     )
   )
   (library
-    (image AN:anchor41
+    (image AN:anchor42
       (pin Round[T]Pad_600.000000_um 1 0 0)
     )
-    (image AN:anchor39
+    (image AN:anchor40
       (pin Round[T]Pad_250.000000_um 1 0 0)
     )
     (image AN:anchor1
@@ -2551,31 +2552,31 @@
       (pins C35-1 D9-2 D10-1 R46-2)
     )
     (net VCTL
-      (pins AN37-1 AN35-1 AN32-1 AN30-1 AN24-1 AN22-1 AN20-1 C36-1 D8-1 D9-1 D12-1
+      (pins AN38-1 AN36-1 AN33-1 AN31-1 AN25-1 AN23-1 AN21-1 C36-1 D8-1 D9-1 D12-1
         Q8-2 R48-1 R49-1 U6-6)
     )
     (net PWR_TMR
-      (pins AN29-1 C37-1 U6-3)
+      (pins AN30-1 C37-1 U6-3)
     )
     (net V12_F
-      (pins AN6-1 C38-1 D4-1 D5-1 D13-2 D20-1 F1-2 F1-2@1 Q2-1 Q2-2 Q2-3 Q4-2 R33-1
+      (pins AN7-1 C38-1 D4-1 D5-1 D13-2 D20-1 F1-2 F1-2@1 Q2-1 Q2-2 Q2-3 Q4-2 R33-1
         U5-2)
     )
     (net S12_EN
-      (pins AN41-1 AN40-1 C39-1 R37-2 R38-1 U5-6)
+      (pins AN42-1 AN41-1 C39-1 R37-2 R38-1 U5-6)
     )
     (net VSYS
-      (pins AN23-1 C40-1 C41-1 C46-1 C50-1 D7-1 Q3-1 Q3-2 Q3-3 Q9-2 R51-1 U5-9 U7-13
+      (pins AN24-1 C40-1 C41-1 C46-1 C50-1 D7-1 Q3-1 Q3-2 Q3-3 Q9-2 R51-1 U5-9 U7-13
         U7-17)
     )
     (net CONV_BST1
-      (pins AN17-1 AN16-1 C44-1 U7-16)
+      (pins AN18-1 AN17-1 C44-1 U7-16)
     )
     (net CONV_SW1
       (pins C44-2 L2-2 U7-18)
     )
     (net CONV_BST2
-      (pins AN15-1 AN10-1 C45-1 U7-15)
+      (pins AN16-1 AN11-1 C45-1 U7-15)
     )
     (net CONV_SW2
       (pins C45-2 L2-1 U7-3)
@@ -2587,7 +2588,7 @@
       (pins C48-1 C49-1 C51-1 R61-2 R62-1 U7-8)
     )
     (net CONV_VC
-      (pins AN13-1 AN11-1 C48-2 R67-2 U7-7)
+      (pins AN14-1 AN12-1 C48-2 R67-2 U7-7)
     )
     (net CONV_CMP1
       (pins C49-2 R67-1)
@@ -2596,10 +2597,10 @@
       (pins C51-2 R68-1)
     )
     (net RUN
-      (pins AN21-1 AN12-1 AN3-1 C52-1 Q9-3 R55-1 U7-2)
+      (pins AN22-1 AN13-1 AN4-1 AN3-1 C52-1 Q9-3 R55-1 U7-2)
     )
     (net PWR_ON
-      (pins AN27-1 C53-1 R70-2 R71-1 U6-1)
+      (pins AN28-1 C53-1 R70-2 R71-1 U6-1)
     )
     (net BTN_UP
       (pins C60-1 J6-7 R5-2 R80-2)
@@ -2617,16 +2618,16 @@
       (pins C64-1 J6-4 R9-2 R16-2)
     )
     (net PWR_PB
-      (pins AN36-1 C65-1 R84-2 U6-5)
+      (pins AN37-1 C65-1 R84-2 U6-5)
     )
     (net LED_A
       (pins D1-2 R1-2)
     )
     (net Q4_G
-      (pins AN5-1 D5-2 Q4-1 R33-2 R34-1)
+      (pins AN6-1 D5-2 Q4-1 R33-2 R34-1)
     )
     (net V_12_DIV
-      (pins AN9-1 D6-3 R38-2 R39-1 R76-1)
+      (pins AN10-1 D6-3 R38-2 R39-1 R76-1)
     )
     (net BAT_R
       (pins D7-2 D8-2 R40-2)
@@ -2635,19 +2636,19 @@
       (pins D11-3 R44-2 R45-1 R77-1)
     )
     (net Q8_G
-      (pins AN31-1 D12-2 Q8-1 R49-2 R50-1)
+      (pins AN32-1 D12-2 Q8-1 R49-2 R50-1)
     )
     (net ON_DIV
       (pins D13-1 R70-1)
     )
     (net Q10_G
-      (pins AN25-1 D14-1 Q10-1 R53-2 R54-1)
+      (pins AN26-1 D14-1 Q10-1 R53-2 R54-1)
     )
     (net Q5_G
-      (pins AN4-1 D15-1 Q5-1 R35-2 R36-1)
+      (pins AN5-1 D15-1 Q5-1 R35-2 R36-1)
     )
     (net PWR_KILL
-      (pins AN39-1 AN28-1 D16-1 Q11-3 R48-2 U6-2)
+      (pins AN40-1 AN29-1 D16-1 Q11-3 R48-2 U6-2)
     )
     (net Q12_G
       (pins D17-1 Q12-1 R73-2 R74-1)
@@ -2725,13 +2726,13 @@
       (pins J6-6 J8-5 R64-1)
     )
     (net PWM_SYNC
-      (pins AN18-1 AN14-1 AN2-1 J6-15 R63-1 U7-19)
+      (pins AN19-1 AN15-1 AN2-1 J6-15 R63-1 U7-19)
     )
     (net PWR_INT
-      (pins AN34-1 J6-16 R47-2 U6-8)
+      (pins AN35-1 J6-16 R47-2 U6-8)
     )
     (net KILL_MCU
-      (pins AN38-1 J6-17 Q11-1 R72-1)
+      (pins AN39-1 J6-17 Q11-1 R72-1)
     )
     (net RF_GPIO1
       (pins J6-18 J8-1)
@@ -2764,10 +2765,10 @@
       (pins Q3-4 R32-1 U5-8)
     )
     (net V12_SW
-      (pins AN8-1 Q4-3 R37-1)
+      (pins AN9-1 Q4-3 R37-1)
     )
     (net Q5_D
-      (pins AN7-1 Q5-3 R34-2)
+      (pins AN8-1 Q5-3 R34-2)
     )
     (net Q6_G
       (pins Q6-1 Q7-3 R41-2)
@@ -2776,10 +2777,10 @@
       (pins Q6-3 R44-1)
     )
     (net ON
-      (pins AN33-1 Q8-3 R35-1 R53-1 R78-1)
+      (pins AN34-1 Q8-3 R35-1 R53-1 R78-1)
     )
     (net Q9_G
-      (pins AN26-1 AN19-1 Q9-1 Q10-3 R51-2)
+      (pins AN27-1 AN20-1 Q9-1 Q10-3 R51-2)
     )
     (net S12_SW
       (pins R30-1 U5-4)
@@ -2944,6 +2945,10 @@
     (wire (path F.Cu 400  114275 -30505  113225 -30505)(net +3V3)(type fix))
     (wire (path F.Cu 400  114275 -9505  113225 -9505)(net +3V3)(type fix))
     (wire (path F.Cu 400  114675 -107725  114675 -106725)(net GND)(type fix))
+    (wire (path B.Cu 200  115400 -54450  111400 -54450)(net RUN)(type fix))
+    (wire (path B.Cu 200  115400 -54450  115400 -56600)(net RUN)(type fix))
+    (wire (path F.Cu 200  115400 -56600  115400 -58350)(net RUN)(type fix))
+    (wire (path F.Cu 400  115400 -60250  115400 -61450)(net GND)(type fix))
     (wire (path F.Cu 600  115670 -114675  116660 -113685)(net V12_F)(type fix))
     (wire (path F.Cu 400  116175 -30505  117225 -30505)(net GND)(type fix))
     (wire (path F.Cu 400  116175 -9505  117225 -9505)(net GND)(type fix))
@@ -2985,7 +2990,7 @@
     (wire (path F.Cu 400  123762 -19395  125117 -19155.3)(net +3V3)(type fix))
     (wire (path B.Cu 600  124292 -113075  124292 -113000)(net V12_F)(type fix))
     (wire (path F.Cu 600  124292 -114475  124292 -113075)(net V12_F)(type fix))
-    (wire (path B.Cu 200  124300 -54450  111400 -54450)(net RUN)(type fix))
+    (wire (path B.Cu 200  124300 -54450  115400 -54450)(net RUN)(type fix))
     (wire (path B.Cu 200  124300 -57975  122950 -59300)(net CONV_VC)(type fix))
     (wire (path F.Cu 200  124300 -62600  124300 -63700)(net CONV_FB)(type fix))
     (wire (path F.Cu 200  124300 -65500  124300 -67900)(net CONV_CMP1)(type fix))
@@ -3118,7 +3123,6 @@
     (wire (path F.Cu 250  156600 -34625  157600 -33912.5)(net PWR_ENB)(type fix))
     (wire (path F.Cu 300  156675 -29125  156675 -30625)(net VCTL)(type fix))
     (wire (path B.Cu 300  156675 -30125  156675 -30625  156675 -35850  155875 -36650)(net VCTL)(type fix))
-    (wire (path F.Cu 400  157505 -41775  157505 -40725)(net GND)(type fix))
     (wire (path F.Cu 300  157875 -105000  157875 -109905  155825 -109905)(net S12_HGATE)(type fix))
     (wire (path F.Cu 300  158362 -102800  156175 -102800)(net S12_DVDT)(type fix))
     (wire (path F.Cu 300  158378 -96500  156050 -94500)(net V12_FLT)(type fix))
@@ -3276,6 +3280,8 @@
     (via "Via[0-3]_600:300_um"  113900 -60600 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  114675 -106725 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  115233 -20904.7 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  115400 -56600 (net RUN)(type fix))
+    (via "Via[0-3]_600:300_um"  115400 -61450 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  115490 -22517.9 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  115900 -50300 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  116200 -66600 (net +3V3)(type fix))
@@ -3288,8 +3294,8 @@
     (via "Via[0-3]_600:300_um"  117225 -30505 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  117225 -9505 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  117274 -114514 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  117580 -102775 (net Q5_G)(type fix))
-    (via "Via[0-3]_600:300_um"  117580 -108275 (net Q4_G)(type fix))
+    (via "Via[0-3]_800:400_um"  117580 -102775 (net Q5_G)(type fix))
+    (via "Via[0-3]_800:400_um"  117580 -108275 (net Q4_G)(type fix))
     (via "Via[0-3]_600:300_um"  117580 -110175 (net V12_F)(type fix))
     (via "Via[0-3]_600:300_um"  117850 -50300 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  118225 -14505 (net +3V3)(type fix))
@@ -3299,8 +3305,8 @@
     (via "Via[0-3]_600:300_um"  120000 -58000 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  120000 -60600 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  122225 -14505 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  122330 -103725 (net Q5_D)(type fix))
-    (via "Via[0-3]_600:300_um"  122330 -109225 (net V12_SW)(type fix))
+    (via "Via[0-3]_800:400_um"  122330 -103725 (net Q5_D)(type fix))
+    (via "Via[0-3]_800:400_um"  122330 -109225 (net V12_SW)(type fix))
     (via "Via[0-3]_600:300_um"  122330 -114725 (net V_12_DIV)(type fix))
     (via "Via[0-3]_600:300_um"  122800 -53300 (net CONV_BST2)(type fix))
     (via "Via[0-3]_600:300_um"  122950 -66600 (net CONV_VC)(type fix))
@@ -3337,19 +3343,19 @@
     (via "Via[0-3]_600:300_um"  14475 -74180 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  141275 -48330 (net Q9_G)(type fix))
     (via "Via[0-3]_600:300_um"  141300 -50300 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  141770 -39175 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  141770 -39175 (net VCTL)(type fix))
     (via "Via[0-3]_800:400_um"  141900 -61600 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  142225 -43580 (net RUN)(type fix))
-    (via "Via[0-3]_600:300_um"  142475 -37117.5 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  142475 -37117.5 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  142975 -22730 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  143175 -48330 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  143300 -50300 (net GND)(type fix))
     (via "Via[0-3]_800:400_um"  143500 -58000 (net VSYS)(type fix))
     (via "Via[0-3]_800:400_um"  143500 -61600 (net VSYS)(type fix))
-    (via "Via[0-3]_600:300_um"  144475 -32117.5 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  144475 -32117.5 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  145975 -36680 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  146675 -21225 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  146775 -50330 (net Q10_G)(type fix))
+    (via "Via[0-3]_800:400_um"  146775 -50330 (net Q10_G)(type fix))
     (via "Via[0-3]_600:300_um"  147347 -37172.2 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  147725 -45580 (net Q9_G)(type fix))
     (via "Via[0-3]_600:300_um"  148005 -27725 (net GND)(type fix))
@@ -3358,9 +3364,9 @@
     (via "Via[0-3]_600:300_um"  148125 -36650 (net PWR_TMR)(type fix))
     (via "Via[0-3]_600:300_um"  148230 -78475 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  148675 -50880 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  148870 -23175 (net VCTL)(type fix))
-    (via "Via[0-3]_600:300_um"  150080 -41275 (net Q8_G)(type fix))
-    (via "Via[0-3]_600:300_um"  150080 -43175 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  148870 -23175 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  150080 -41275 (net Q8_G)(type fix))
+    (via "Via[0-3]_800:400_um"  150080 -43175 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  152180 -67975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152180 -81975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152225 -71505 (net GND)(type fix))
@@ -3373,13 +3379,12 @@
     (via "Via[0-3]_600:300_um"  153525 -107250 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  154180 -26975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  154225 -30505 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  154830 -42225 (net ON)(type fix))
+    (via "Via[0-3]_800:400_um"  154830 -42225 (net ON)(type fix))
     (via "Via[0-3]_600:300_um"  155875 -34050 (net PWR_INT)(type fix))
-    (via "Via[0-3]_600:300_um"  155875 -36650 (net VCTL)(type fix))
+    (via "Via[0-3]_800:400_um"  155875 -36650 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  155875 -37950 (net PWR_PB)(type fix))
     (via "Via[0-3]_600:300_um"  156570 -47175 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  156675 -30625 (net VCTL)(type fix))
-    (via "Via[0-3]_600:300_um"  157505 -40725 (net GND)(type fix))
+    (via "Via[0-3]_800:400_um"  156675 -30625 (net VCTL)(type fix))
     (via "Via[0-3]_800:400_um"  158825 -106050 (net V12_MID)(type fix))
     (via "Via[0-3]_800:400_um"  158825 -108700 (net V12_MID)(type fix))
     (via "Via[0-3]_800:400_um"  158825 -109900 (net V12_MID)(type fix))

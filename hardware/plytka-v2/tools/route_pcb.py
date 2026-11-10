@@ -330,8 +330,17 @@ def converter(c):
     c.track(R((-3.4, -2.275), (-4.3, -2.55)), 'RUN', 0.2)
     via(-4.3, -2.55, 'RUN')
     # Exits on L4 to vias outside the group, where the router takes over (it cannot reach into the keepout).
-    c.track(R((-4.3, -2.55), (-17.2, -2.55)), 'RUN', 0.2, B)
+    # (two pieces: the branch to C52 leaves at x -13.2, and an exit the router does not use is pruned only up to there)
+    c.track(R((-4.3, -2.55), (-13.2, -2.55)), 'RUN', 0.2, B)
+    c.track(R((-13.2, -2.55), (-17.2, -2.55)), 'RUN', 0.2, B)
     via(-17.2, -2.55, 'RUN')
+    # RUN filter C52 on that track: up through a via in the output copper to the top pad of C52; its ground pad
+    # has a via of its own to In1.
+    c.track(R((-13.2, -2.55), (-13.2, -0.4)), 'RUN', 0.2, B)
+    via(-13.2, -0.4, 'RUN')
+    c.track(R((-13.2, -0.4), (-13.2, 1.35)), 'RUN', 0.2)
+    c.track(R((-13.2, 3.25), (-13.2, 4.45)), 'GND', 0.4)
+    via(-13.2, 4.45, 'GND')
     # PWM leaves to the left as well (the DevKitC is there): on L4 under the inductor side of the IC, between the
     # bootstrap vias and the ground vias of the capacitors.
     c.track(R((4.3, -2.55), (2.25, -4.6), (-17.2, -4.6)), 'PWM_SYNC', 0.2, B)
@@ -1072,6 +1081,11 @@ def export_dsn(stage, only=None):
     text = drop_inner_layers(text)
     text = re.sub(r'(\(layer B\.Cu\s*\(type signal\)\s*\(property\s*\(index )3\)', r'\g<1>1)', text)
     text = text.replace(str(ROOT) + '/', '')
+    # The router kept only 0.25 mm between a track of an ordinary net and a fixed via of a high-voltage signal net
+    # (the rule wants 0.3 mm under the mask): in the job these vias are 0.8 mm instead of 0.6 mm.
+    assert '(padstack "Via[0-3]_800:400_um"' in text
+    text = re.sub(r'\(via "Via\[0-3\]_600:300_um"(\s+-?[\d.]+ -?[\d.]+ \(net "?(%s)"?\)\(type fix\))'
+                  % '|'.join(map(re.escape, HV_SIGNAL)), r'(via "Via[0-3]_800:400_um"\1', text)
     # KiCad writes the zones (planes) in an order that changes from run to run; sort them, so the same placement
     # always gives the same DSN and build.sh can tell whether the kept session belongs to it.
     planes, first = [], None

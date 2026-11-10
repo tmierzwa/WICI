@@ -7535,13 +7535,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 487.67999999999995 180.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0733RL"
+    (property "MPN" "0805W8F330JT5E"
       (at 487.67999999999995 180.34 0)
       (effects
         (font
@@ -7991,7 +7991,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21A106KAYNNNG"
+    (property "MPN" "CL21A106KAYNNNE"
       (at 487.67999999999995 287.02 0)
       (effects
         (font
@@ -8067,13 +8067,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 487.67999999999995 309.88 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 487.67999999999995 309.88 0)
       (effects
         (font
@@ -8149,13 +8149,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 487.67999999999995 332.74 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 487.67999999999995 332.74 0)
       (effects
         (font
@@ -8231,13 +8231,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 487.67999999999995 355.6 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 487.67999999999995 355.6 0)
       (effects
         (font
@@ -8313,13 +8313,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 487.67999999999995 378.46 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 487.67999999999995 378.46 0)
       (effects
         (font
@@ -8618,13 +8618,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 279.4 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-075K1L"
+    (property "MPN" "0805W8F5101T5E"
       (at 411.47999999999996 279.4 0)
       (effects
         (font
@@ -8700,13 +8700,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 302.26 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-075K1L"
+    (property "MPN" "0805W8F5101T5E"
       (at 411.47999999999996 302.26 0)
       (effects
         (font
@@ -8782,13 +8782,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 350.52 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 411.47999999999996 350.52 0)
       (effects
         (font
@@ -8864,13 +8864,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 373.38 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 411.47999999999996 373.38 0)
       (effects
         (font
@@ -9127,13 +9127,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 441.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 411.47999999999996 441.96 0)
       (effects
         (font
@@ -9594,13 +9594,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 563.88 154.94 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 563.88 154.94 0)
       (effects
         (font
@@ -9676,13 +9676,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 563.88 177.8 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 563.88 177.8 0)
       (effects
         (font
@@ -9764,7 +9764,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21A106KAYNNNG"
+    (property "MPN" "CL21A106KAYNNNE"
       (at 563.88 86.36 0)
       (effects
         (font
@@ -9840,13 +9840,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 563.88 109.22 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 563.88 109.22 0)
       (effects
         (font
@@ -9922,13 +9922,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 563.88 132.08 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 563.88 132.08 0)
       (effects
         (font
@@ -10194,7 +10194,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "TPS3840PH27DBVR"
+    (property "MPN" "TPS3840PH27DBVRQ1"
       (at 640.08 182.88 0)
       (effects
         (font
@@ -10430,13 +10430,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 640.08 99.06 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 640.08 99.06 0)
       (effects
         (font
@@ -10512,13 +10512,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 640.08 76.2 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 640.08 76.2 0)
       (effects
         (font
@@ -10594,13 +10594,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 640.08 157.48 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 640.08 157.48 0)
       (effects
         (font
@@ -10676,13 +10676,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 640.08 208.28 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 640.08 208.28 0)
       (effects
         (font
@@ -11193,13 +11193,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 91.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 716.2800000000001 91.44 0)
       (effects
         (font
@@ -11275,13 +11275,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 182.88 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 716.2800000000001 182.88 0)
       (effects
         (font
@@ -11357,13 +11357,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 114.3 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 716.2800000000001 114.3 0)
       (effects
         (font
@@ -11439,13 +11439,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 205.74 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 716.2800000000001 205.74 0)
       (effects
         (font
@@ -11521,13 +11521,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 137.16 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 716.2800000000001 137.16 0)
       (effects
         (font
@@ -11603,13 +11603,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 228.6 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 716.2800000000001 228.6 0)
       (effects
         (font
@@ -11685,13 +11685,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 160.02 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 716.2800000000001 160.02 0)
       (effects
         (font
@@ -11767,13 +11767,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 251.46 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 716.2800000000001 251.46 0)
       (effects
         (font
@@ -11931,13 +11931,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 716.2800000000001 340.36 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 716.2800000000001 340.36 0)
       (effects
         (font
@@ -12095,13 +12095,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 381.0 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 381.0 0)
       (effects
         (font
@@ -12177,13 +12177,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 403.86 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 403.86 0)
       (effects
         (font
@@ -12259,13 +12259,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 426.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 426.72 0)
       (effects
         (font
@@ -12341,13 +12341,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 449.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 449.58 0)
       (effects
         (font
@@ -12423,13 +12423,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 472.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 472.44 0)
       (effects
         (font
@@ -12505,13 +12505,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 495.3 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 716.2800000000001 495.3 0)
       (effects
         (font
@@ -12587,13 +12587,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 716.2800000000001 317.5 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 716.2800000000001 317.5 0)
       (effects
         (font
@@ -12751,13 +12751,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 792.4800000000001 60.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 792.4800000000001 60.96 0)
       (effects
         (font
@@ -12915,13 +12915,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 792.4800000000001 101.6 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC1206FR-0722RL"
+    (property "MPN" "1206W4F220JT5E"
       (at 792.4800000000001 101.6 0)
       (effects
         (font
@@ -12997,13 +12997,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "ST (Semtech)"
       (at 792.4800000000001 121.92 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "1N4148W-7-F"
+    (property "MPN" "1N4148W"
       (at 792.4800000000001 121.92 0)
       (effects
         (font
@@ -13079,13 +13079,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "onsemi"
+    (property "Manufacturer" "Jiangsu Changjing"
       (at 792.4800000000001 142.24 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "MMBT3904LT1G"
+    (property "MPN" "MMBT3904"
       (at 792.4800000000001 142.24 0)
       (effects
         (font
@@ -13178,13 +13178,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 792.4800000000001 167.64 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 792.4800000000001 167.64 0)
       (effects
         (font
@@ -13260,13 +13260,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 792.4800000000001 190.5 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 792.4800000000001 190.5 0)
       (effects
         (font
@@ -13580,7 +13580,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21A106KAYNNNG"
+    (property "MPN" "CL21A106KAYNNNE"
       (at 563.88 251.46 0)
       (effects
         (font
@@ -13662,7 +13662,7 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21A106KAYNNNG"
+    (property "MPN" "CL21A106KAYNNNE"
       (at 563.88 274.32 0)
       (effects
         (font
@@ -13738,13 +13738,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 563.88 297.18 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 563.88 297.18 0)
       (effects
         (font
@@ -13820,13 +13820,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 563.88 320.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07309KL"
+    (property "MPN" "0805W8F3093T5E"
       (at 563.88 320.04 0)
       (effects
         (font
@@ -15101,13 +15101,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 30.48 215.9 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 30.48 215.9 0)
       (effects
         (font
@@ -15347,13 +15347,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 30.48 307.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B273KBANNNC"
+    (property "MPN" "CC0805KRX7R9BB273"
       (at 30.48 307.34 0)
       (effects
         (font
@@ -15429,13 +15429,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 30.48 284.48 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 30.48 284.48 0)
       (effects
         (font
@@ -15610,13 +15610,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 106.68 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 106.68 66.04 0)
       (effects
         (font
@@ -15774,13 +15774,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 106.68 106.68 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 106.68 106.68 0)
       (effects
         (font
@@ -15955,13 +15955,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 106.68 157.48 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 106.68 157.48 0)
       (effects
         (font
@@ -16037,13 +16037,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 106.68 180.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 106.68 180.34 0)
       (effects
         (font
@@ -16201,13 +16201,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "Viking Tech"
       (at 106.68 223.52 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RT0805BRD07221KL"
+    (property "MPN" "AR05BTCW2213"
       (at 106.68 223.52 0)
       (effects
         (font
@@ -16529,13 +16529,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 106.68 292.1 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 106.68 292.1 0)
       (effects
         (font
@@ -16710,13 +16710,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 106.68 340.36 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 106.68 340.36 0)
       (effects
         (font
@@ -17137,13 +17137,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 182.88 124.46 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 182.88 124.46 0)
       (effects
         (font
@@ -17318,13 +17318,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 182.88 172.72 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 182.88 172.72 0)
       (effects
         (font
@@ -17400,13 +17400,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "Viking Tech"
       (at 182.88 195.58 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RT0805BRD0739KL"
+    (property "MPN" "ARG05BTC3902"
       (at 182.88 195.58 0)
       (effects
         (font
@@ -17564,13 +17564,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 182.88 241.3 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 182.88 241.3 0)
       (effects
         (font
@@ -17745,13 +17745,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 182.88 289.56 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 182.88 289.56 0)
       (effects
         (font
@@ -18237,13 +18237,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 259.08 375.92 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 259.08 375.92 0)
       (effects
         (font
@@ -19077,13 +19077,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 116.84 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071KL"
+    (property "MPN" "0805W8F1001T5E"
       (at 259.08 116.84 0)
       (effects
         (font
@@ -19241,13 +19241,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 398.78 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0710KL"
+    (property "MPN" "0805W8F1002T5E"
       (at 259.08 398.78 0)
       (effects
         (font
@@ -19422,13 +19422,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 538.48 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 259.08 538.48 0)
       (effects
         (font
@@ -19504,13 +19504,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 561.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 259.08 561.34 0)
       (effects
         (font
@@ -19586,13 +19586,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 599.44 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 259.08 599.44 0)
       (effects
         (font
@@ -19750,13 +19750,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 421.64 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07470KL"
+    (property "MPN" "0805W8F4703T5E"
       (at 259.08 421.64 0)
       (effects
         (font
@@ -19832,13 +19832,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Diodes Incorporated"
+    (property "Manufacturer" "Hongjiacheng"
       (at 259.08 441.96 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "BZT52C5V1-7-F"
+    (property "MPN" "BZT52C5V1"
       (at 259.08 441.96 0)
       (effects
         (font
@@ -20013,13 +20013,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 259.08 487.68 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 259.08 487.68 0)
       (effects
         (font
@@ -20194,13 +20194,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 66.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07220KL"
+    (property "MPN" "0805W8F2203T5E"
       (at 411.47999999999996 66.04 0)
       (effects
         (font
@@ -20375,13 +20375,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 116.84 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 411.47999999999996 116.84 0)
       (effects
         (font
@@ -20457,13 +20457,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 139.7 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 411.47999999999996 139.7 0)
       (effects
         (font
@@ -20621,13 +20621,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 411.47999999999996 180.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07220KL"
+    (property "MPN" "0805W8F2203T5E"
       (at 411.47999999999996 180.34 0)
       (effects
         (font
@@ -20703,13 +20703,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 411.47999999999996 203.2 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B102KBANNNC"
+    (property "MPN" "CC0805KRX7R9BB102"
       (at 411.47999999999996 203.2 0)
       (effects
         (font
@@ -20785,13 +20785,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" ""
+    (property "Manufacturer" "Nichicon"
       (at 182.88 312.42 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" ""
+    (property "MPN" "UKL1E101MPD"
       (at 182.88 312.42 0)
       (effects
         (font
@@ -21682,13 +21682,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 193.04 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 335.28 193.04 0)
       (effects
         (font
@@ -21764,13 +21764,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 215.9 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 335.28 215.9 0)
       (effects
         (font
@@ -21846,13 +21846,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 238.76 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B104KBCNNNC"
+    (property "MPN" "CC0805KRX7R9BB104"
       (at 335.28 238.76 0)
       (effects
         (font
@@ -22092,13 +22092,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 335.28 307.34 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-071ML"
+    (property "MPN" "0805W8F1004T5E"
       (at 335.28 307.34 0)
       (effects
         (font
@@ -22174,13 +22174,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 335.28 330.2 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07432KL"
+    (property "MPN" "0805W8F4323T5E"
       (at 335.28 330.2 0)
       (effects
         (font
@@ -22256,13 +22256,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 353.06 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21C820JBANNNC"
+    (property "MPN" "CC0805JRNPO9BN820"
       (at 335.28 353.06 0)
       (effects
         (font
@@ -22338,13 +22338,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 375.92 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21B392KBANNNC"
+    (property "MPN" "CC0805KRX7R9BB392"
       (at 335.28 375.92 0)
       (effects
         (font
@@ -22420,13 +22420,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 335.28 398.78 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0720KL"
+    (property "MPN" "0805W8F2002T5E"
       (at 335.28 398.78 0)
       (effects
         (font
@@ -22502,13 +22502,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Samsung Electro-Mechanics"
+    (property "Manufacturer" "Yageo"
       (at 335.28 421.64 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "CL21C820JBANNNC"
+    (property "MPN" "CC0805JRNPO9BN820"
       (at 335.28 421.64 0)
       (effects
         (font
@@ -22584,13 +22584,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 335.28 444.5 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-0720KL"
+    (property "MPN" "0805W8F2002T5E"
       (at 335.28 444.5 0)
       (effects
         (font
@@ -22666,13 +22666,13 @@
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "Manufacturer" "Yageo"
+    (property "Manufacturer" "UNI-ROYAL"
       (at 335.28 467.36 0)
       (effects
         (font
           (size 1.27 1.27))
         (hide yes)))
-    (property "MPN" "RC0805FR-07100KL"
+    (property "MPN" "0805W8F1003T5E"
       (at 335.28 467.36 0)
       (effects
         (font

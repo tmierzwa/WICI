@@ -41,6 +41,14 @@ else
   place
   (cd tools && "$KICAD_PY" route_pcb.py planes)
 fi
+# The check of footprint type against pads (an SMD part marked as through-hole or left without a type drops out of
+# the placement file) is off in a new KiCad project: switch it on.
+python3 -c "
+import json
+p = 'cad/plytka-v2.kicad_pro'
+d = json.load(open(p))
+d['board']['design_settings']['rule_severities']['footprint_type_mismatch'] = 'error'
+open(p, 'w').write(json.dumps(d, indent=2) + '\n')"
 # kicad-cli drops the whole .kicad_dru without a word when one rule does not parse: a copy with a canary rule
 # that must fire is checked first (as hardware/dev-bench/tools/drc.sh).
 work=$(mktemp -d)
@@ -69,3 +77,5 @@ print(f'DRC: {len(found)} naruszeń poza sitodrukiem, {len(d[\"unconnected_items
       f'{len(parity)} różnic płytki i schematu')
 sys.exit(f'DRC: {found}' if found else 'DRC: niepołączone' if d['unconnected_items'] else
          f'płytka różni się od schematu: {parity}' if parity else 0)"
+# Fabrication files for JLC, only from a board that passed everything above.
+sh tools/fab.sh

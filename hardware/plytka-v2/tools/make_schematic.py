@@ -265,16 +265,16 @@ def write_bom():
                            p['footprint']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'specyfikacja', 'footprint', 'uwagi'])
+        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'montaż', 'specyfikacja', 'footprint', 'uwagi'])
         for items in groups.values():
             p = items[0]
             notes = [i['note'] for i in items]
             note = notes[0] if len(set(notes)) == 1 else '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
             w.writerow([' '.join(i['ref'] for i in items), sum(i['qty'] for i in items),
                         ' / '.join(dict.fromkeys(i['value'] for i in items)), p['manufacturer'], p['mpn'],
-                        p['lcsc'], p['spec'], p['footprint'], note])
+                        p['lcsc'], 'ręcznie' if p['hand'] else 'JLC', p['spec'], p['footprint'], note])
         for refs, qty, manufacturer, mpn, spec, note in EXTRAS:
-            w.writerow([refs, qty, '', manufacturer, mpn, '', spec, 'bez footprintu', note])
+            w.writerow([refs, qty, '', manufacturer, mpn, '', 'poza płytką', spec, 'bez footprintu', note])
 
 
 def write_connections():

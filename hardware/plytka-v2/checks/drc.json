@@ -1,7 +1,7 @@
 {
     "$schema": "https://schemas.kicad.org/drc.v1.json",
     "coordinate_units": "mm",
-    "date": "2026-11-10T19:29:18",
+    "date": "2026-11-10T21:08:40",
     "ignored_checks": [
         {
             "description": "Footprint has no courtyard defined",
@@ -18,10 +18,6 @@
         {
             "description": "Footprint doesn't match symbol's footprint filters",
             "key": "footprint_filters_mismatch"
-        },
-        {
-            "description": "Footprint component type doesn't match footprint pads",
-            "key": "footprint_type_mismatch"
         }
     ],
     "included_severities": [
@@ -1612,8 +1608,8 @@
                 {
                     "description": "Footprint C52",
                     "pos": {
-                        "x": 157.505,
-                        "y": 42.725
+                        "x": 115.4,
+                        "y": 59.3
                     },
                     "uuid": "78f4a54e-40e2-5f58-8c48-bab6f2b55ba1"
                 }
@@ -1627,8 +1623,8 @@
                 {
                     "description": "Pad 1 [RUN] of C52 on F.Cu",
                     "pos": {
-                        "x": 157.505,
-                        "y": 43.675
+                        "x": 115.4,
+                        "y": 58.35
                     },
                     "uuid": "3d4d3f67-321e-5fc7-8254-933739ef0e55"
                 }
@@ -1642,8 +1638,8 @@
                 {
                     "description": "Pad 2 [GND] of C52 on F.Cu",
                     "pos": {
-                        "x": 157.505,
-                        "y": 41.775
+                        "x": 115.4,
+                        "y": 60.25
                     },
                     "uuid": "ab43c68c-16de-5b4c-9761-170c689d1f75"
                 }
