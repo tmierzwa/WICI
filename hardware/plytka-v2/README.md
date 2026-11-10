@@ -505,7 +505,7 @@ DRC w KiCad liczy potem z prawdziwą regułą projektu i to ono jest sprawdziane
 
 ## Części w JLC i pliki produkcyjne (2026-11-10)
 
-Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) i sprawdzenie obrotów części w podglądzie JLC (niżej).
+Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) i ponowne obejrzenie pięciu części w podglądzie JLC po poprawce obrotów (niżej).
 
 ### Numery LCSC
 
@@ -565,18 +565,24 @@ LCSC nie ma go w magazynie: kupowany u dystrybutora, lutowany ręcznie. Pojemno�
 - Pliki nie zawierają dat (są usuwane z nagłówków), a ZIP ma stałe czasy plików, więc zmieniają się tylko razem z płytką. Są w repozytorium, tak jak dla [płytki testowej](../przetwornica-3v3/README.md).
 - Cewka L2 miała w footprincie typ „inny” zamiast SMD i wypadłaby z pozycji; poprawione, a sprawdzenie zgodności typu footprintu z padami jest w DRC włączone jako błąd (wynik: 0).
 
-**Obroty części w pliku pozycji.** Modele w bibliotece JLC są dla części obudów obrócone względem footprintów KiCad, więc `fab.py` dodaje poprawkę do kąta:
+**Obroty części w pliku pozycji.** Modele w bibliotece JLC są dla części obudów obrócone względem footprintów KiCad, więc `fab.py` dodaje poprawkę do kąta. Pierwsza wersja poprawek pochodziła z wcześniejszych płytek i z publicznej tabeli wtyczki Fabrication Toolkit dla KiCad; potem wszystkie części zostały porównane z **podglądem rozmieszczenia JLC z 2026-11-10** (znacznik pinu 1 modelu wobec pinu 1 na płytce, na zrzucie podglądu), co zmieniło cztery poprawki i jedną pozycję:
 
-| Obudowa | Części | Poprawka | Skąd |
+| Obudowa | Części | Poprawka | Wynik porównania z podglądem |
 |---|---|---|---|
-| SOT-23, SOT-23-5, SOT-23-6, TSOT-23-8 | tranzystory, D6, D11, U2, U3, U4, U6, U8 | +180° | publiczna tabela wtyczki Fabrication Toolkit dla KiCad (odczyt 2026-11-10) |
-| SC-70-6 (SOT-363) | U9 | +180° | ta sama tabela |
-| SOIC-8 | Q2, Q3 | +270° | jak na płytce v1.1 zmontowanej w JLC; ta sama tabela |
-| TSSOP-20 (LTC3115-1) | U7 | +270° | jak na płytce testowej, podgląd JLC z 2026-10-31 |
-| WSON-12 | U5 | +270° | tabela nie ma WSON; przyjęte jak DFN, **niepotwierdzone** |
-| SMB, SOD-123, SOD-123F, X1SON (D18, D19), 0805, 1206, 1210, 2512, cewki L1 i L2, gniazdo USB-C J4, złącze taśmy J7 | pozostałe | 0° | **niepotwierdzone**; diody mają katodę na padzie 1 |
+| SOT-23, SOT-23-5 | tranzystory, D6, D11, U3, U4 | +180° | zgodne |
+| SOT-23-6 | U2 | +180° | zgodne |
+| SOT-23-6, USBLC6-2SC6 | U8 | +270° | było +180°: model leżał o ćwierć obrotu inaczej niż U2; poprawione |
+| TSOT-23-8 | U6 | +270° | było +180°; poprawione |
+| SC-70-6 (SOT-363) | U9 | +270° | było +180°; poprawione |
+| SOIC-8 | Q2, Q3 | +270° | zgodne |
+| TSSOP-20 (LTC3115-1) | U7 | +270° | zgodne |
+| WSON-12 | U5 | 0° | było +270° (przyjęte jak DFN); poprawione |
+| SOD-123, SOD-123F | diody i Zenery | 0° | zgodne: katoda na padzie 1 |
+| złącze taśmy J7, cewka L2 | | 0° | zgodne |
+| gniazdo USB-C J4 | | 0° | obrót zgodny; model leżał 1,5 mm poza padami, bo JLC liczy pozycję od środka padów, a nie od punktu zerowego footprintu; pozycja J4 jest teraz środkiem jego padów |
+| SMB (D4), X1SON (D18, D19), rezystory, kondensatory, cewka L1 | | 0° | części bez biegunowości (TVS dwukierunkowe) albo symetryczne |
 
-Gniazda modułów są przewlekane i nie ma ich w pliku pozycji. Tabele z internetu i wcześniejsze płytki nie zastępują podglądu: **przed zamówieniem z montażem trzeba w podglądzie JLC obejrzeć każdą część z biegunowością albo pinem 1** (U5, U7, Q2, Q3, wszystkie SOT-23, diody i Zenery, D4, U9, D18, D19, J4, J7, L2) i poprawić kąt w `fab.py`, jeśli podgląd pokaże co innego.
+Cztery poprawione obroty i pozycja J4 wynikają z odczytu zrzutu, nie z nowego podglądu: **po wgraniu poprawionego `jlc-cpl.csv` trzeba w podglądzie JLC obejrzeć jeszcze raz U5, U6, U8, U9 i J4.** Gniazda modułów są przewlekane i nie ma ich w pliku pozycji.
 
 ## Przed zamówieniem
 
