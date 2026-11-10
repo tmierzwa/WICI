@@ -116,6 +116,25 @@ FIXED = {
     'JP3': (172.0, 70.0, 90, 'T'),
     **{ref: (x, y, 0, 'T') for ref, (x, y) in HOLES.items()},
 }
+# 3.3 V converter as one fixed group after figure 17 of the LTC3115-1 data sheet, as on the measured test board
+# (hardware/przetwornica-3v3/tools/build.py): inductor above the IC, SW1 and the input (VSYS) on the right, SW2
+# and the output (+3V3) on the left towards the DevKitC, bootstrap capacitors between IC and inductor, feedback
+# and compensation below the IC away from both switch nodes. Positions are relative to the centre of U7; 0805
+# parts instead of the 0402/0603 of the test board, so the pitch of the feedback row is 2.7 mm instead of 1.8.
+# Rotation 270 puts pad 1 of a two-pad part on top, 90 at the bottom.
+CONV_AT = (128.6, 57.0)
+CONVERTER = {
+    'U7': (0.0, 0.0, 0), 'L2': (0.0, -13.6, 0),
+    'C44': (5.8, -5.85, 90), 'C45': (-5.8, -5.85, 90),                  # BST1-SW1, BST2-SW2: BST pad towards U7
+    'C40': (9.8, -3.8, 90), 'C41': (13.7, -3.8, 90),                  # VSYS pad towards U7, GND outwards
+    'C42': (-9.8, -3.8, 90), 'C43': (-13.7, -3.8, 90),                # +3V3 pad towards U7, GND outwards
+    'C46': (6.3, 1.8, 0),                                             # pin 13 VIN bypass, VSYS left
+    'C47': (2.6, 5.4, 0),                                             # VCC, VCC pad left
+    'R63': (10.4, 1.8, 0),                                             # PWM_SYNC pull-down, PWM pad left
+    'R60': (-1.6, 7.6, 270), 'C49': (-4.3, 7.6, 270), 'C48': (-7.0, 7.6, 270), 'R62': (-9.7, 7.6, 270),
+    'R61': (-12.4, 7.6, 90), 'C51': (-15.1, 7.6, 270),                # feedback row, FB pads on top
+    'R67': (-4.3, 11.8, 270), 'R68': (-15.1, 11.8, 270),              # second row: CMP1-VC, CMP2-+3V3
+}
 # FPC connector placed by its footprint origin, 13.8 mm below the panel glass as on v1.1
 # (hardware/dev-bench/tools/design.py: 9.4 mm glass to connector face plus 4.4 mm to the origin).
 J7_AT = (DISPLAY_CENTER[0], DISPLAY_CENTER[1] + DISPLAY_OUTLINE[1] / 2 + 13.8, 180)
@@ -140,9 +159,10 @@ REGIONS = [
     ('T', 186, 34, 199, 66, (192, 60), ['D19', 'R16', 'C64']),
     ('T', 186, 66, 199, 96, (193, 80), ['D18', 'R84', 'C65']),
     ('T', 154, 8, 166, 40, (160, 12), ['Q1', 'R1', 'R2', 'D2', 'R3', 'R4']),
-    ('T', 112, 42, 146, 74, (124, 54), ['U7', 'C44', 'C45', 'C46', 'C47', 'L2', 'C43', 'C42', 'C41', 'C40', 'R60',
-                                       'R61', 'R62', 'C48', 'C49', 'R67', 'C51', 'R68', 'R63']),
-    ('T', 80, 96, 129, 119, (122, 112), ['D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32']),
+    # 12 V switch: TVS at J2 first, then the LM74800 with its own parts packed round it (not round D4: the VS and
+    # charge-pump capacitors C30, C31 ended 28 mm from U5 before), the two MOSFETs next to U5.
+    ('T', 80, 96, 129, 119, (122, 112), ['D4', 'U5', 'C30>U5', 'C31>U5', 'Q2>U5', 'Q3>U5', 'R32>U5', 'C32>U5',
+                                         'R30>U5', 'R31>U5']),
     ('T', 120, 84, 164, 106, (156, 98), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
                                          'D6']),
     ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
@@ -160,10 +180,12 @@ CLOSE = [
     ('R80', 'J10', 10.0), ('R81', 'J10', 10.0), ('R82', 'J10', 10.0), ('R83', 'J10', 10.0),   # filters at the wires
     ('C60', 'J10', 15.0), ('C61', 'J10', 15.0), ('C62', 'J10', 15.0), ('C63', 'J10', 15.0),
     ('R16', 'J11', 10.0), ('C64', 'J11', 10.0), ('R84', 'J3', 10.0), ('C65', 'J3', 10.0),
-    ('C44', 'U7', 5.0), ('C45', 'U7', 5.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
-    ('C40', 'U7', 6.0), ('C41', 'U7', 6.0), ('C42', 'U7', 6.0), ('C43', 'U7', 6.0),
+    # Converter (pad centres): the group of figure 17 puts the bootstrap capacitors between IC and inductor and
+    # the input and output capacitors in two pairs beside the switch-node copper, as on the test board.
+    ('C44', 'U7', 6.0), ('C45', 'U7', 6.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
+    ('C40', 'U7', 7.5), ('C41', 'U7', 11.5), ('C42', 'U7', 7.5), ('C43', 'U7', 11.5),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
-    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0),
+    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 4.0), ('C31', 'U5', 4.0),
     ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
 for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
@@ -402,6 +424,8 @@ def main():
     fix('J4', *J4_AT, 'T', 'origin')
     for ref, (x, y, rot, side) in FIXED.items():
         fix(ref, x, y, rot, side)
+    for ref, (dx, dy, rot) in CONVERTER.items():     # by footprint origin: pads are symmetric about it
+        fix(ref, CONV_AT[0] + dx, CONV_AT[1] + dy, rot, 'T', 'origin')
     for side, x0, y0, x1, y1, start, refs in REGIONS:
         target = start
         for entry in refs:

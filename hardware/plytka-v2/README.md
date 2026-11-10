@@ -1,18 +1,21 @@
 # WICI: płytka v2, schemat wstępny
 
-**Status 2026-10-31: schemat i rozmieszczenie wstępne, bez ścieżek. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Ścieżki czekają na przymiarkę, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-ścieżkami-i-zamówieniem)).
+**Status 2026-11-10: schemat, rozmieszczenie wstępne i pierwszy szkic ścieżek do nauki ([Ścieżki, szkic](#ścieżki-szkic-2026-11-10)). Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Ścieżki czekają na przymiarkę, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-ścieżkami-i-zamówieniem)).
 
 | Plik | Zawartość |
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
 | [bom.csv](bom.csv) | lista części z producentami, numerami i numerami LCSC, tam gdzie są już wybrane |
-| `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb` | projekt KiCad 10.0.6: schemat i płytka z rozmieszczeniem wstępnym, bez ścieżek |
-| `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC rozmieszczenia (tylko uwagi o sitodruku i niepołączone pady) |
+| `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb`, `cad/plytka-v2.kicad_dru` | projekt KiCad 10.0.6: schemat, płytka 4-warstwowa ze szkicem ścieżek i reguły projektu |
+| `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC szkicu ścieżek (naruszenia wypisane w [Ścieżki, szkic](#ścieżki-szkic-2026-11-10)) |
+| `checks/routing.dsn`, `checks/routing.ses`, `checks/routing.ses.sha256`, `checks/routing.log` | zadanie dla Freeroutingu, zachowana sesja ścieżek, suma zadania, z którego powstała, i dziennik przebiegu |
+| [render-sciezki-gora.png](render-sciezki-gora.png), [render-sciezki-spod.png](render-sciezki-spod.png) | render szkicu ścieżek od góry i od spodu |
 | `tools/design.py` | jedyne źródło: części, piny, sieci i sprawdzenia przydziału pinów |
 | `tools/make_pcb.py` | obrys, otwory i rozmieszczenie: założenia, położenia stałe i obszary bloków |
+| `tools/route_pcb.py`, `tools/route.sh` | klasy sieci, reguły, warstwy, miedź przetwornicy i płaszczyzny; uruchomienie Freeroutingu |
 
-Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC, rysuje PDF, rozmieszcza elementy na płytce i uruchamia DRC. Plików w `cad/` nie edytuje się ręcznie.
+Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC, rysuje PDF, rozmieszcza elementy na płytce, dokłada miedź ręczną, wczytuje zachowaną sesję ścieżek (gdy pasuje do zadania) i uruchamia DRC. Plików w `cad/` nie edytuje się ręcznie.
 
 ## Co zmienia się względem v1.1
 
@@ -59,12 +62,13 @@ Wszystkie inne piny DevKitC są zajęte, dlatego użyto pinów konfiguracji star
 
 ## Rozmieszczenie wstępne
 
-Płytka ma obrys i rozmieszczenie wszystkich 164 elementów, bez ścieżek. Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
+Płytka ma obrys i rozmieszczenie wszystkich 164 elementów (szkic ścieżek opisuje [Ścieżki, szkic](#ścieżki-szkic-2026-11-10)). Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
 - ESD U8 ≤10 mm od USB-C J4, ESD U9 ≤10 mm od J10, TVS D4 ≤10 mm od J2 (zasada z [obudowy R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia));
-- kondensatory wejściowe i wyjściowe przetwornicy ≤5–6 mm od U7;
+- przetwornica U7 jest stałą grupą według rysunku 17 karty LTC3115-1, przeniesioną z płytki testowej (`CONVERTER` w `make_pcb.py`); kondensatory C44–C47 ≤5–6 mm od U7, C40–C43 ≤7,5–11,5 mm;
+- C30 i C31 ≤4 mm od U5;
 - C1 i C2 ≤8 mm od gniazda Wio, C36 ≤5 mm od U6, C11 ≤5 mm od U4.
 
-Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. DRC zgłasza tylko uwagi o sitodruku i niepołączone pady, bo ścieżek jeszcze nie ma. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1) i piny 4 i 5 U3, których schemat nie używa.
+Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1) i piny 4 i 5 U3, których schemat nie używa.
 
 Nazwy stron obudowy są jak u Hammonda: **skrzynka** („Box”) ma front ze wgłębieniem na folię panelu, a **pokrywa** („Lid”) to tył z klapką ogniw, przykręcany do skrzynki od tyłu. Współrzędne obudowy liczy się od zewnętrznego lewego górnego narożnika frontu, patrząc od frontu. Założenia (liczby z modelu STEP Hammonda, do potwierdzenia na przymiarce):
 
@@ -235,6 +239,94 @@ Numery LCSC są w kolumnie „LCSC” w [bom.csv](bom.csv); stany sprawdzone 202
 - **D4 SMBJ33CA zostaje (LCSC C19077587, Hongjiacheng/R+O).** Karta tej części podaje te same wartości co Littelfuse: VRWM 33 V, VBR 36,7–40,6 V (40,6 V w opisie LCSC to maksimum przebicia), ograniczenie 53,3 V przy 11,26 A. Różni się tylko upływ przy 33 V (≤5 µA zamiast ≤1 µA); płynie on z wejścia 12 V, nie z ogniw, i przy 12–15 V jest dużo mniejszy.
 - **R32 zostaje 1 kΩ.** Przy wyłączaniu C32 dokłada przez R32 najwyżej 14,5 mA (napęd HGATE do 14,5 V) do prądu, który musi ściągnąć HGATE, a źródło HGATE 39–75 µA daje na nim tylko 75 mV. Karta LM7480 (7.5) podaje ściąganie HGATE ≥168 mA tylko przy przepięciu (OV); dla wyłączenia przez EN/UVLO nie podaje prądu. Płytka TI LM74800EVM-CD ma 100 Ω z 10 nF, ale u nas 100 Ω pozwoliłoby C32 dokładać do 145 mA.
 - **Bez zmian:** SI2309CDS, BSS84AK, BAS116H, BZT52C15/C33/C5V1 (Diodes Incorporated), USBLC6-2SC6 i gniazdo HRO TYPE-C-31-M-12 są w LCSC na stanie (od kilku do kilkuset tysięcy sztuk). Footprint gniazda w KiCad jest dla tej właśnie części; ma cztery przewlekane nóżki obudowy, lutowane razem z SMD. Zenery mają w puli preferowanej JLC odpowiedniki SOD-123 z tymi samymi granicami upływu w kartach; zostają części Diodes Incorporated, bo przy 10 płytkach różnica kosztu jest pomijalna.
+
+## Ścieżki, szkic (2026-11-10)
+
+Pierwsza próba poprowadzenia ścieżek, do nauki: co w rozmieszczeniu przeszkadza, zanim ścieżki zrobi się naprawdę. **Nie do zamówienia i nie do scalenia.** Płytka nie jest w pełni połączona i ma naruszenia odstępów wysokiego napięcia (niżej).
+
+### Liczba warstw: 4
+
+| | 2 warstwy | 4 warstwy |
+|---|---|---|
+| masa | wylewki przecinane ścieżkami; prąd powrotny przetwornicy i 12 V szuka drogi naokoło | ciągła warstwa masy pod całą płytką |
+| przetwornica | rysunek 17 karty LTC3115-1 zakłada masę pod układem; płytka testowa jest 4-warstwowa i tylko ten układ jest zmierzony | ten sam układ co na zmierzonej płytce testowej |
+| USB (Full Speed) | działa, impedancja nie jest krytyczna | działa, ścieżka nad ciągłą masą |
+| gęstość | 164 elementy, cztery tory napięć, sześć otworów Ø20 mm i wycięcie EN3: dwie warstwy na ścieżki i masę nie wystarczą | dwie warstwy na ścieżki, dwie na płaszczyzny |
+| JLC, 200 × 120 mm, 1,6 mm, HASL, bez wysyłki (kalkulator 2026-11-10) | 5 szt. 15,60 USD, 10 szt. około 27 USD | 5 szt. 39,80 USD, 10 szt. 54,60 USD |
+
+Wybór: **4 warstwy.** Dopłata to około 25–28 USD na całą serię, czyli około 3–5 USD na płytkę, a w zamian przetwornica ma ten sam układ co zmierzona płytka testowa i cała płytka ma ciągłą masę. Zdanie w [obudowie R02](../r02/obudowa.md), że płytka tej wielkości „opłaca się tylko jako dwuwarstwowa”, nie zgadza się z dzisiejszymi cenami JLC i trzeba je tam poprawić.
+
+Warstwy: L1 (góra) elementy i ścieżki; In1 ciągła masa; In2 płaszczyzna +3V3 (przechodzą przez nią tylko krótkie ścieżki BST przetwornicy, jak na płytce testowej); L4 (spód) ścieżki. Stos JLC04161H-7628, 1,6 mm.
+
+### Reguły
+
+Reguły zapisuje `tools/route_pcb.py` (klasy sieci w projekcie, reguły własne w `cad/plytka-v2.kicad_dru`); w `cad/` nic nie zmienia się ręcznie.
+
+| Klasa | Ścieżka | Przelotka (otwór) | Sieci | Skąd |
+|---|---|---|---|---|
+| 12 V | 0,6 mm | 0,8 (0,4) mm | 12V_IN, V12_F, V12_MID | do 1 A ciągle; IPC-2152 dla 1 oz daje przy 0,6 mm przyrost około 10 °C; impuls TVS około 190 A przez 1 ms ścieżka 0,6 mm wytrzymuje (wzór Onderdonka) |
+| HV | 0,3 mm | 0,6 (0,3) mm | węzły sterowania 12 V: V12_FLT, V12_SW, bramki i dzielniki LM74800 i LTC4368, ON i inne | małe prądy, ale napięcie jak 12 V |
+| VSYS | 0,8 mm | 0,8 (0,4) mm | VSYS, BAT_IN, BAT_R | prąd wejściowy przetwornicy rośnie przy niskim napięciu ogniw; szerzej niż 12 V |
+| zasilanie | 0,5 mm | 0,6 (0,3) mm | +5V, +3V3_RF, brzęczyk, BST_SW, CONV_VCC | prądy do kilkuset mA |
+| USB | 0,25 mm | 0,6 (0,3) mm | USB_DP, USB_DN | Full Speed; 0,25/0,15 mm nad masą daje około 90 Ω (szacunek ze wzoru), dla 12 Mb/s bez znaczenia |
+| płaszczyzna | 0,4 mm | 0,6 (0,3) mm | GND, +3V3 | krótkie odcinki do przelotek |
+| pozostałe | 0,2 mm | 0,6 (0,3) mm | sygnały 3,3 V | |
+
+Najmniejsze wartości: odstęp 0,15 mm, ścieżka 0,15 mm, przelotka 0,6/0,3 mm, pierścień 0,15 mm, od krawędzi 0,5 mm, otwór od otworu 0,3 mm. JLC dopuszcza mniejsze wartości, więc płytka mieści się w podstawowym procesie bez dopłat.
+
+**Odstęp wysokiego napięcia.** Pierwotny `make_pcb.py` miał tylko ogólne 0,15 mm. Ten szkic dodaje regułę dla sieci 12 V i HV: **0,6 mm od odsłoniętego padu i 0,3 mm między miedzią pod maską**, na warstwach zewnętrznych. To wiersz 31–100 V tabeli 6-1 IPC-2221B (B2 dla odsłoniętych przewodników: 0,6 mm; B4 dla przewodników pod powłoką: 0,13 mm, wzięte z zapasem jako 0,3 mm). Napięcia, które pokrywa: 33 V ciągle (instalacja 24 V, ładowanie do 28,8 V), ograniczenie TVS 53,3 V w impulsie, −53,3 V przy odwrotnym podłączeniu i do około 70 V na Q2 (suma przy odwróceniu). Wewnątrz obrysów U5 i U6 reguła nie obowiązuje, bo rozstaw pinów układów (0,5 i 0,65 mm) ustala producent na te napięcia. Ścieżki 12 V, VSYS i zasilania mają też najmniejszą szerokość w DRC (0,6, 0,6 i 0,4 mm, poza padami U5, U7 i C46).
+
+### Jak ścieżki żyją obok generatora
+
+`build.sh` dalej buduje płytkę od zera:
+1. `make_pcb.py` rozmieszcza elementy;
+2. `route_pcb.py prepare` ustawia 4 warstwy, klasy i reguły, rysuje miedź ręczną (niżej) i zapisuje zadanie `checks/routing.dsn`;
+3. jeśli `checks/routing.ses` istnieje, a jego suma w `checks/routing.ses.sha256` zgadza się z sumą nowego zadania, `route_pcb.py import` wczytuje ścieżki, poprawia przelotki i wylewa płaszczyzny; jeśli nie, `build.sh` mówi, że sesja jest nieaktualna, i buduje płytkę bez ścieżek (z płaszczyznami);
+4. DRC z regułami projektu.
+
+Ścieżki liczy osobno `tools/route.sh` (Freerouting 2.5.0, Java 25; kilka minut), potem `build.sh` je wczytuje. Każda zmiana rozmieszczenia unieważnia sesję, więc nie da się przez pomyłkę wczytać ścieżek do innej płytki. Wybrałem to zamiast trzymania ścieżek w samej płytce, bo `make_pcb.py` zostaje jedynym źródłem rozmieszczenia, a ścieżki są zawsze pochodną zadania, które da się powtórzyć. Dwa przebiegi `build.sh` dają ten sam plik.
+
+### Miedź ręczna (przed routerem)
+
+- **Przetwornica** według rysunku 17 karty LTC3115-1, przeniesiona z płytki testowej: wylewki SW1 i SW2 pod cewką, wejście VSYS i wyjście +3V3 przy kondensatorach, wyspy masy z przelotkami do In1 (sześć w padzie termicznym), BST1 i BST2 na In2, sprzężenie zwrotne w rzędzie pod układem. Router dostaje te wylewki jako przeszkody i tylko wyprowadzenia RUN, PWM i VSYS na L4.
+- **Q2 i Q3:** paski 0,6 mm wzdłuż pinów drenu i źródła.
+- **Płaszczyzny:** po jednej przelotce do In1 albo In2 przy każdym padzie SMD masy i +3V3 (132 przelotki), wylewki masy na L1 i L4.
+- **Strefy bez miedzi:** otwory montażowe (wszystkie warstwy), otwory panelu i przycisk przygotowania (warstwy zewnętrzne).
+
+### Pułapki narzędzi
+
+- Freerouting traktuje warstwy wewnętrzne bez płaszczyzny jako sygnałowe, a jego strefa zakazu blokuje też przelotki. Dlatego `route_pcb.py` usuwa In1 i In2 z zadania i podaje routerowi tylko L1 i L4.
+- Strefa zakazu nad stałymi przelotkami sprawia, że router odrzuca całe sieci. Wylewki przetwornicy dostaje więc jako szerokie ścieżki zastępcze.
+- Router ma odstęp 0,2 mm, także dla HV, bo przy 0,3 lub 0,6 mm nie wychodzi z pinów U5 i U6. Reguła projektu zostaje 0,6/0,3 mm, a DRC liczy z nią; stąd naruszenia niżej.
+- Router zwęża ścieżki przy pinach (do 0,10–0,15 mm). Bez tego nie poprowadzi sieci HV; najmniejsza szerokość w regułach to 0,15 mm.
+- KiCad wczytuje przelotki routera jako ślepe; `import` zamienia je na przelotki przelotowe i usuwa te, które łączą tylko jedną warstwę.
+- Warunek reguły w `kicad_dru` rozbity na dwie linie sprawia, że `kicad-cli` cicho pomija cały plik reguł. `build.sh` sprawdza więc przed DRC, czy reguły w ogóle działają (reguła próbna).
+
+### Wynik
+
+- **Połączenie: niepełne, 11 niepołączonych miejsc.** Router zostawił otwarte sieci V12_F, V12_MID i VSYS (8–9 połączeń każda) oraz PWM_SYNC; po wczytaniu w KiCad zostaje 11 braków: piny 3, 10 i 12 U5 do drenów V12_MID, C31 i R46; pin 9 U5 (VSYS) do Q3 i C50; pin 2 U5 (V12_F); pin 19 U7 (PWM) do J6.15.
+- **DRC: 160 naruszeń** (bez sitodruku i uwag o bibliotece):
+  - 85 odstępów HV od odsłoniętego padu (< 0,6 mm) i 57 między miedzią pod maską (< 0,3 mm); 90 z nich jest w bloku U6 i łącznika (x 140–190, y 84–120), 52 przy U5, Q2 i Q3 (x 80–130, y 95–120); duża część to odstęp między dwiema sieciami HV;
+  - 13 ścieżek zasilania węższych niż 0,4 mm i 3 węższe niż 0,15 mm (zwężenia routera);
+  - 2 przelotki połączone tylko z jedną warstwą.
+
+  Żadnego z tych naruszeń nie poprawiono ani nie złagodzono reguły; wszystkie wynikają z rozmieszczenia (niżej).
+- **Długości:** 5,28 m ścieżek w 1529 odcinkach, 259 przelotek (132 ręczne). USB_DP 94,4 mm z 3 przelotkami, USB_DN 83,9 mm z 1 przelotką (różnica 10,5 mm, dla Full Speed bez znaczenia). 12V_IN 16,3 mm, V12_F 111,5 mm, VSYS 62,6 mm.
+- **Przyczyna braków:** zator, nie reguły. Przy ścieżkach 12 V i VSYS zwężonych do 0,3 mm router zostawił 12 otwartych połączeń zamiast 27, czyli brakuje miejsca, a nie zawodzą reguły. Wszystkie ścieżki toru 12 V muszą przejść korytarzem około 9 mm między wycięciem EN3 a strefami otworów przycisków DÓŁ i OK.
+- Rendery: [od góry](render-sciezki-gora.png), [od spodu](render-sciezki-spod.png).
+
+### Wnioski dla rozmieszczenia (`make_pcb.py`)
+
+1. **Przetwornica jako stała grupa** według rysunku 17 (zrobione w tym szkicu). Koszt: żaden poza tym szkicem. Można jeszcze przejść na części 0402/0603 z płytki testowej, żeby grupa była identyczna.
+2. **C30 i C31 przy U5** (zrobione; wcześniej leżały 28 mm od U5). Koszt 0.
+3. **Tor 12 V w jednym miejscu.** Teraz J2, F1 i D4 są po prawej stronie wycięcia EN3, a Q2, Q3 i U5 po lewej, więc cały prąd 12 V i wszystkie sieci HV idą wąskim korytarzem. To główna przeszkoda. Propozycja: J2, F1, D4, Q2, Q3 i U5 jako jedna stała grupa po lewej stronie wycięcia, C50 przy Q3. Koszt: grupa w `make_pcb.py`, przewód od EN3 około 25 mm dłuższy, sprawdzenie w modelu 3D i nowy przebieg routera.
+4. **R46, C35 i D10 przy Q2 i Q3**, nie przy U6: V12_MID (do 53 V) biegnie teraz około 70 mm. Koszt: zmiana obszaru w `make_pcb.py`, mały.
+5. **Blok U6 (LTC4368) jest za gęsty**: sieci HV leżą tuż obok sygnałów 3,3 V. Większy obszar albo podział na część HV i część 3,3 V. Koszt: przesunięcie sąsiednich bloków, średni.
+6. **C50 przy punkcie sumowania VSYS** (Q3, D7, wejście przetwornicy): teraz Q3→C50 57,7 mm i C50→U7 28 mm. Koszt: mały, C50 jest od spodu i THT, ale wymaga miejsca poza strefą koszyka.
+7. **Wyjście PWM** poprowadzić pod U7 po L4 w lewo, jak na płytce testowej, albo przenieść Q9, R55 i C52 obok przetwornicy. Koszt: mały.
+8. **USB zostaje** około 90 mm, bo J4 ma stałe miejsce w ścianie. Dla Full Speed to nie problem. Koszt 0.
+
+Do zrobienia przy prawdziwych ścieżkach: zapisać stos warstw (`checks/stackup.json`) i policzyć impedancję USB w kalkulatorze JLC zamiast ze wzoru.
 
 ## Przed ścieżkami i zamówieniem
 
