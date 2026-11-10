@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.50</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.51</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.50</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.51</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -97,7 +97,7 @@
         </tbody>
       </table>
       <p>Stacja wyświetla decyzję z najwyższym <code>event</code> STATUS, niezależnie od rewizji. Nowa rewizja wraca do etapu „zapisane”; poprzednia decyzja pozostaje widoczna pod nim do potwierdzenia nowej rewizji. Wiadomość dla <code>id</code> spoza rejestru albo z rewizją wyższą niż najnowsza jest pomijana i nie zmienia stanu.</p>
-      <p class="explain">HACK i wynik „w drodze” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w przeciwnym razie pokazuje „wynik nieznany”. Gwarancje określają <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozstrzygnięcia o gwarancjach przyjęcia</a>.</p>
+      <p class="explain">HACK i wynik „w drodze” nie znaczą „odbiorca zapisał”. Po utracie odpowiedzi na zapis przez USB skutek może być nieznany: laptop sprawdza stan i ponawia tę samą intencję, jeśli potrafi rozpoznać jej wynik; w przeciwnym razie pokazuje „wynik nieznany”. Zasady przyjęcia i ponawiania ustala <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">rozstrzygnięcie o gwarancjach</a> w rozdziale 4.</p>
       <h3 id="operacje">Operacje</h3>
       <p>Pod każdą operacją są wymagania w kształcie z <a href="system-wici-o-dokumencie.html#metamodel">przedmowy</a>: identyfikator roboczy, podmiot, rodzaj, zdanie ze słowem MUSI lub NIE MOŻE, uzasadnienie, sposób sprawdzenia i źródło. Identyfikatory są robocze do czasu numeracji po decyzjach. Sprawdzenie wskazuje metodę, a nie wynik; stan prób zapisuje <a href="system-wici-zgodnosc.html">rejestr zgodności</a>.</p>
       <h4 class="group" id="operacje-schronienie">W schronieniu</h4>
@@ -480,7 +480,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.50 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.51 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
