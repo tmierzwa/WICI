@@ -199,7 +199,7 @@ Przerzut liczono tak: OV wyłącza bramkę w ≤5,4 µs, a w tym czasie nawet 50
 
 Wyniki tych prób są potrzebne do schematu zasilania, a same próby nie czekają na T3–T5.
 
-Stan 2026-11-09: próby się nie odbyły. Dla płytki v2 zostaje płytka testowa przetwornicy, a resztę zastępuje prototyp v2 ([płytka v2](../plytka-v2/README.md#przed-ścieżkami-i-zamówieniem)).
+Stan 2026-11-09: próby się nie odbyły. Dla płytki v2 zostaje płytka testowa przetwornicy, a resztę zastępuje prototyp v2 ([płytka v2](../plytka-v2/README.md#przed-zamówieniem)).
 
 | Próba | Płytka | Cena (DigiKey, 2026-10-08) | Co mierzyć |
 |---|---|---|---|

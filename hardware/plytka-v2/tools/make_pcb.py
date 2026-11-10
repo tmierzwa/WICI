@@ -30,6 +30,25 @@ OUT = ROOT / 'cad' / 'plytka-v2.kicad_pcb'
 W, H, NOTCH, RADIUS = 200.0, 120.0, 12.0, 4.0
 LID_OFFSET = 10.0
 GAP = 0.6  # clearance between packed bodies, mm
+WIDE_GAP = 1.3  # between the bodies of parts on the 12 V side (IPC-2221B spacing needs room between their pads)
+WIDE = {'U6', 'C36', 'D13', 'D8', 'D9', 'R48', 'D16', 'Q8', 'R49', 'R50', 'D12', 'R78', 'R70', 'Q4', 'R33', 'D5',
+        'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'Q10', 'R53', 'R54', 'D14'}
+# More room for the escape tracks of route_pcb.py: fan-out on both sides of U6, 0.5 mm beyond the SOT-23 pads.
+EXTRA_GAP = {'U6': 2.6, 'Q4': 1.7, 'Q5': 1.7, 'Q8': 1.7, 'Q10': 1.7}
+
+
+PACK_GAP = 1.2  # between the small parts packed into a region: room for a track and a via between any two
+
+
+# Filters and ESD parts that must stay within 10 mm of their connector keep the plain GAP.
+AT_CONNECTOR = {'U9', 'R80', 'R81', 'R82', 'R83', 'C60', 'C61', 'C62', 'C63', 'D19', 'R16', 'C64', 'D18', 'R84', 'C65'}
+
+
+def gap_of(ref, packed=set()):
+    if not packed:
+        packed.update(r.split('>')[0] for region in REGIONS for r in region[6])
+        packed.difference_update(AT_CONNECTOR)
+    return EXTRA_GAP.get(ref, WIDE_GAP if ref in WIDE else PACK_GAP if ref in packed else GAP)
 NS = uuid.UUID('4d0c3a2e-8b1f-4f7e-9a51-6c2b7e0d9f31')   # as make_schematic.py, so footprints link to symbols
 
 # Panel: front positions from hardware/obudowa/zalozenia.py minus LID_OFFSET.
@@ -106,11 +125,15 @@ FIXED = {
     'J3': (194.0, 88.0, 90, 'B'),        # wires to the PV6 terminals under the board; clear of the spacer of H6
     'J10': (100.0, 90.5, 90, 'B'),       # harness of the four PV6 buttons, between the DÓŁ and OK holes
     'J11': (192.0, 52.0, 90, 'B'),       # wires to the CISZA toggle
-    'J2': (116.0, 115.0, 0, 'B'),        # wires to the EN3 socket (bottom wall, front x 110), beside its notch
+    # 12 V input left of the EN3 notch (routing, 2026-11-10): connector, fuse and TVS in one place, the fused 12 V
+    # crosses above the notch once and nothing else of the 12 V path does. J2 pin 1 (12 V) on the left towards the
+    # fuse clip F1.1, F1.2 (fused) on the right towards the switch; D4 between the fuse output and J2.
+    'J2': (86.0, 115.0, 180, 'B'),       # wires to the EN3 socket (bottom wall, front x 110), beside its notch
     'J1': (68.0, 115.0, 0, 'B'),         # wires to the AA holder on the battery door
     # Under the grille of seven 1.5 mm holes, front (191.5, 20); clear of the Lid screw notch and the H2 spacer.
     'BZ1': (180.5, 9.0, 0, 'T'),
-    'F1': (114.0, 103.0, 0, 'B'), 'C50': (132.0, 84.0, 0, 'B'),
+    'F1': (86.0, 103.0, 180, 'B'), 'D4': (86.2, 108.4, 180, 'T'), 'C50': (132.0, 84.0, 0, 'B'),
+    'D7': (70.6, 107.2, 180, 'T'),      # cells diode: VSYS pad towards the track that passes between the F1 clips
     # 2 mm further from the main switch than a 22 mm nut needs (no PV6 nut in the data sheet; M16 x 1 nuts are
     # 19-22 mm across flats, so up to 12.7 mm to a corner).
     'JP3': (172.0, 70.0, 90, 'T'),
@@ -135,6 +158,33 @@ CONVERTER = {
     'R61': (-12.4, 7.6, 90), 'C51': (-15.1, 7.6, 270),                # feedback row, FB pads on top
     'R67': (-4.3, 11.8, 270), 'R68': (-15.1, 11.8, 270),              # second row: CMP1-VC, CMP2-+3V3
 }
+# 12 V switch as one fixed group round the LM74800 (U5), hand-routed in route_pcb.py, in the lower right where
+# there is room: Q2 (ideal diode) with its sources on the outside, where the fused 12 V arrives, Q3 (switch to
+# VSYS) on the other side with its sources towards C50, both drain columns facing U5 (data sheet layout: A, DGATE,
+# C and HGATE, OUT next to their MOSFET). SWITCH holds the design frame (Q2 left, pin 1 of U5 top left), relative
+# to the centre of U5; on the board the group is turned by 180 degrees (SWITCH_TURN), so Q3 and VSYS face the
+# converter side and the 12 V comes in from the right.
+SWITCH_AT = (168.0, 108.0)
+SWITCH_TURN = True
+SWITCH = {
+    'U5': (0.0, 0.0, 0), 'Q2': (-8.6, 0.0, 0), 'Q3': (8.6, 0.0, 180),
+    'C31': (1.2, -3.4, 180),                                          # CAP-VS at pins 11 and 12, VS pad towards pin 12
+    'R30': (-1.5, 4.6, 90), 'R31': (1.1, 4.6, 270),                   # OVP ladder at pins 4 and 5, OV pads towards U5
+    'C30': (3.7, 6.1, 90),                                            # VS-GND: GND pad towards U5, VS through L4 copper
+    'R32': (7.05, 5.2, 0), 'C32': (11.1, 5.2, 0),                     # HGATE slew-rate network
+    'R46': (6.66, 11.5, 0), 'C35': (12.9, 10.6, 0), 'D10': (13.6, 13.5, 0),   # controller supply filter from the drain
+}
+
+
+def switch_xy(x, y):
+    """Board position of a point of the SWITCH design frame."""
+    return (SWITCH_AT[0] - x, SWITCH_AT[1] - y) if SWITCH_TURN else (SWITCH_AT[0] + x, SWITCH_AT[1] + y)
+
+
+# Button controller U6 with its supply capacitor: fixed, because route_pcb.py fans the pins of U6 out on both
+# sides and C36 has to stand right behind the fan of pin 6.
+U6_AT = (152.0, 36.0)
+U6_GROUP = {'U6': (0.0, 0.0, 0), 'C36': (7.0, 0.7, 0)}
 # FPC connector placed by its footprint origin, 13.8 mm below the panel glass as on v1.1
 # (hardware/dev-bench/tools/design.py: 9.4 mm glass to connector face plus 4.4 mm to the origin).
 J7_AT = (DISPLAY_CENTER[0], DISPLAY_CENTER[1] + DISPLAY_OUTLINE[1] / 2 + 13.8, 180)
@@ -159,16 +209,17 @@ REGIONS = [
     ('T', 186, 34, 199, 66, (192, 60), ['D19', 'R16', 'C64']),
     ('T', 186, 66, 199, 96, (193, 80), ['D18', 'R84', 'C65']),
     ('T', 154, 8, 166, 40, (160, 12), ['Q1', 'R1', 'R2', 'D2', 'R3', 'R4']),
-    # 12 V switch: TVS at J2 first, then the LM74800 with its own parts packed round it (not round D4: the VS and
-    # charge-pump capacitors C30, C31 ended 28 mm from U5 before), the two MOSFETs next to U5.
-    ('T', 80, 96, 129, 119, (122, 112), ['D4', 'U5', 'C30>U5', 'C31>U5', 'Q2>U5', 'Q3>U5', 'R32>U5', 'C32>U5',
-                                         'R30>U5', 'R31>U5']),
-    ('T', 120, 84, 164, 106, (156, 98), ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39',
-                                         'D6']),
-    ('T', 54, 95, 82, 114, (68, 106), ['D7', 'R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
-    ('T', 146, 102, 188, 119, (160, 112), ['U6', 'C36', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35',
-                                          'D10', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78']),
-    ('T', 140, 84, 164, 94, (150, 89), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
+    ('T', 56, 80, 75, 119.5, (66, 107), ['R40', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'D11']),
+    # Button controller and the enable switch of the converter in the free upper right, beside the converter.
+    # Parts of the 12 V side stand WIDE_GAP apart (list WIDE), so a track or a via passes between them with the
+    # high-voltage spacing.
+    ('T', 137, 21, 172, 50, (152, 36), ['C37', 'R71', 'C53', 'D8', 'D9', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8',
+                                        'R49', 'R50', 'D12', 'R78']),
+    ('T', 137, 21, 172, 50, (142, 46), ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52']),
+    # UV divider with its switch and the divider of the automatic start, right of the EN3 notch under the OK hole;
+    # the fused 12 V passes below them on L4.
+    ('T', 109.5, 97, 151, 119.5, (120, 109), ['Q4', 'Q5', 'D6', 'D5', 'D15', 'D13', 'R33', 'R34', 'R35', 'R36',
+                                                 'R37', 'R38', 'R39', 'R70']),
     ('T', 26, 98, 60, 116, (50, 113), ['U8', 'R65', 'R66', 'R73', 'R74', 'D17', 'Q12', 'R75']),
     # ADC filters at GPIO4/GPIO5 (J5.4, J5.5), top side between the DevKitC rows; the dividers stay in their blocks.
     ('T', 92, 10, 106, 30, (104, 18), ['C33', 'R76', 'C34', 'R77']),
@@ -185,7 +236,9 @@ CLOSE = [
     ('C44', 'U7', 6.0), ('C45', 'U7', 6.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
     ('C40', 'U7', 7.5), ('C41', 'U7', 11.5), ('C42', 'U7', 7.5), ('C43', 'U7', 11.5),
     ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
-    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 4.0), ('C31', 'U5', 4.0),
+    # C31 (charge pump, CAP-VS) sits at pins 11 and 12. C30 (VS-GND) stands behind R31: its GND pad is 3.6 mm from
+    # pin 7 and its VS pad reaches pin 12 through the common-drain copper on L4, which is also the VS supply.
+    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 5.0), ('C31', 'U5', 4.0),
     ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
 ]
 for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
@@ -388,24 +441,31 @@ def main():
         board.Add(fp)
         footprints[ref] = fp
         box = body(fp)
-        sides = ('T', 'B') if is_tht(fp) else ('B' if fp.IsFlipped() else 'T',)
-        for s in sides:
-            placed.append((s, box))
+        own = 'B' if fp.IsFlipped() else 'T'
+        placed.append((own, box, ref))
+        if is_tht(fp):                   # on the other side only the pads take room (and SMD_THT_GAP round them)
+            for p in fp.Pads():
+                placed.append(('T' if own == 'B' else 'B', pad_box(p), ref))
         tht_pads.extend(pad_box(p) for p in fp.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_PTH)
 
-    def free(ref, box, sides, own, edge=False, smd=False):
+    def free(ref, box, sides, own, edge=False, smd=False, mates=()):
         """Body fits on the board, clear of bodies on the given sides and of the zones on its own side;
         the solder tails of a THT part under a zone (<= 3 mm over the AA holder) are allowed. The body of an SMD
         part keeps SMD_THT_GAP from the THT pads (its pads lie inside the body box, so this is on the safe side)."""
-        return ((edge or inside_board(box, ref not in HOLES)) and not any(s in sides and overlaps(box, b) for s, b in placed)
+        return ((edge or inside_board(box, ref not in HOLES))
+                and not any(s in sides and overlaps(box, b, GAP if r in mates else max(gap_of(ref), gap_of(r)))
+                            for s, b, r in placed)
                 and not any(own in z[0] and ref not in z[6] and overlaps(box, z[1:5]) for z in ZONES)
                 and not (smd and any(box_distance(box, t) < SMD_THT_GAP for t in tht_pads)))
 
-    def fix(ref, x, y, rot, side, anchor='body'):
+    def fix(ref, x, y, rot, side, anchor='body', mates=()):
         fp = load(board, footprint_dir, parts[ref]['footprint'])
         put(fp, x, y, rot, side, anchor)
-        if not free(ref, body(fp), ('T', 'B') if is_tht(fp) else (side,), side, edge=ref in AT_EDGE):
-            sys.exit(f'{ref} overlaps an earlier part, a kept-free zone or the board edge')
+        if not free(ref, body(fp), ('T', 'B') if is_tht(fp) else (side,), side, edge=ref in AT_EDGE, mates=mates):
+            box = body(fp)
+            hit = [r for s_, b_, r in placed if overlaps(box, b_, max(gap_of(ref), gap_of(r)))]
+            sys.exit(f'{ref} at {tuple(round(v, 2) for v in box)} overlaps an earlier part {hit}, a kept-free zone '
+                     f'or the board edge')
         add(ref, fp)
 
     for ref, (x, y, rot) in SOCKETS.items():
@@ -419,13 +479,17 @@ def main():
         p1 = [footprints[r].Pads()[0].GetPosition() for r in (left, right)]
         xs = sorted(pcbnew.ToMM(p.x) for p in p1)
         y0 = min(pcbnew.ToMM(p.y) for p in p1) - margin
-        placed.append(('B', (xs[0] - 1.77, y0, xs[1] + 1.77, y0 + length)))
+        placed.append(('B', (xs[0] - 1.77, y0, xs[1] + 1.77, y0 + length), left))
     fix('J7', *J7_AT, 'T', 'origin')
     fix('J4', *J4_AT, 'T', 'origin')
     for ref, (x, y, rot, side) in FIXED.items():
         fix(ref, x, y, rot, side)
-    for ref, (dx, dy, rot) in CONVERTER.items():     # by footprint origin: pads are symmetric about it
-        fix(ref, CONV_AT[0] + dx, CONV_AT[1] + dy, rot, 'T', 'origin')
+    # Fixed groups by footprint origin (pads symmetric about it); inside a group the plain GAP applies.
+    for at, group in ((CONV_AT, CONVERTER), (U6_AT, U6_GROUP)):
+        for ref, (dx, dy, rot) in group.items():
+            fix(ref, at[0] + dx, at[1] + dy, rot, 'T', 'origin', mates=set(group))
+    for ref, (dx, dy, rot) in SWITCH.items():
+        fix(ref, *switch_xy(dx, dy), (rot + 180) % 360 if SWITCH_TURN else rot, 'T', 'origin', mates=set(SWITCH))
     for side, x0, y0, x1, y1, start, refs in REGIONS:
         target = start
         for entry in refs:

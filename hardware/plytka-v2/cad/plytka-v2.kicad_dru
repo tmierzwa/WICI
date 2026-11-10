@@ -12,7 +12,7 @@
 (rule "v2 high voltage, bare pads" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && (A.Type == 'Pad' || B.Type == 'Pad') && !(A.Type == 'Pad' && B.Type == 'Pad') && !(A.intersectsCourtyard('U5') && B.intersectsCourtyard('U5')) && !(A.intersectsCourtyard('U6') && B.intersectsCourtyard('U6'))")
   (layer outer) (constraint clearance (min 0.6mm)))
 (rule "v2 12 V path" (condition "A.NetClass == 'HV12' && A.Type == 'Track' && !A.intersectsCourtyard('U5')") (constraint track_width (min 0.6mm)))
-(rule "v2 VSYS path" (condition "A.NetClass == 'VSYS' && A.Type == 'Track' && !A.intersectsCourtyard('U7') && !A.intersectsCourtyard('C46')")
+(rule "v2 VSYS path" (condition "A.NetClass == 'VSYS' && A.Type == 'Track' && !A.intersectsCourtyard('U7') && !A.intersectsCourtyard('C46') && !A.intersectsCourtyard('U5')")
   (constraint track_width (min 0.6mm)))
 (rule "v2 power tracks" (condition "A.NetClass == 'Power' && A.Type == 'Track' && !A.intersectsCourtyard('U7')")
   (constraint track_width (min 0.4mm)))
