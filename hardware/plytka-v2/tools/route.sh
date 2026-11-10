@@ -35,6 +35,8 @@ while [ "$n" -le "${STAGES:-8}" ]; do
   f=checks/routing-$n
   out=$(cd tools && "$KICAD_PY" route_pcb.py stage "$n" "../$prev.ses" 2>&1 | grep "imported\|open nets")
   echo "$out"
+  # Without this line the stage step failed and the job of this stage is an old one: stop.
+  case "$out" in *"open nets"*) ;; *) echo "route_pcb.py stage $n nie powiodło się" >&2; exit 1 ;; esac
   case "$out" in *"open nets: none"*) break ;; esac
   stage "$f.dsn" "$f.ses" Plane,Later,LaterHV "$f.log"
   prev=$f; n=$((n + 1))

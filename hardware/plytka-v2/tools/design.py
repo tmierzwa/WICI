@@ -16,12 +16,13 @@ XH2 = 'Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical'
 PARTS = []
 
 
-def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True):
+def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True, dnp=False):
     """Record one board item; nets maps pin number to net name, lcsc is the LCSC/JLC part number and qty the
-    number of pieces bought for this item (two clips for one fuse holder)."""
+    number of pieces bought for this item (two clips for one fuse holder). dnp: footprint and symbol only, the
+    part is not fitted and not in the BOM."""
     PARTS.append(dict(ref=ref, lib_id=lib_id, value=value, footprint=footprint,
                       nets={str(k): v for k, v in nets.items()}, mpn=mpn, manufacturer=manufacturer,
-                      spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom))
+                      spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom and not dnp, dnp=dnp))
 
 
 def res(ref, value, a, b, note, mpn='', spec='', footprint=R0805, lcsc=''):
@@ -228,6 +229,13 @@ part('F1', 'Device:Fuse', 'T1A', 'Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Late
 part('D4', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
      manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
      note='pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)', lcsc='C19077587')
+# Place for a second TVS at the sources of Q2, not fitted (decided after the second review, 2026-11-10): D4 stands 105 mm away at
+# the input. It is fitted only if the peak measured at C38 on the first units is above 65 V (README, input
+# protection at the switch).
+part('D20', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
+     manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
+     note='NIE MONTOWAĆ: miejsce na drugi TVS przy łączniku; montaż po pomiarze na pierwszych sztukach',
+     lcsc='C19077587', dnp=True)
 part('U5', 'WICI:LM74800-Q1', 'LM74800-Q1', 'Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm',
      {1: 'S12_DGATE', 2: 'V12_F', 3: 'V12_MID', 4: 'S12_SW', 5: 'S12_OV', 6: 'S12_EN', 7: 'GND',
       8: 'S12_HGATE', 9: 'VSYS', 10: 'V12_MID', 11: 'S12_CAP', 12: 'V12_MID'},

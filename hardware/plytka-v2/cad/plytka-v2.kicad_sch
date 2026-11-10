@@ -14200,6 +14200,88 @@
       (justify left))
     (uuid "d04aeaa6-265a-56be-87d9-dd7b1b768c36"))
   (symbol
+    (lib_id "Device:D_TVS")
+    (at 30.48 375.92 0)
+    (unit 1)
+    (exclude_from_sim no)
+    (in_bom no)
+    (on_board yes)
+    (dnp yes)
+    (uuid "3a616300-623a-516a-8d63-479d24c5f757")
+    (property "Reference" "D20"
+      (at 30.48 368.3 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Value" "SMBJ33CA"
+      (at 30.48 370.84 0)
+      (effects
+        (font
+          (size 1.27 1.27))))
+    (property "Footprint" "Diode_SMD:D_SMB"
+      (at 30.48 375.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Datasheet" ""
+      (at 30.48 375.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "Manufacturer" "Hongjiacheng (R+O)"
+      (at 30.48 375.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (property "MPN" "SMBJ33CA"
+      (at 30.48 375.92 0)
+      (effects
+        (font
+          (size 1.27 1.27))
+        (hide yes)))
+    (pin "1"
+      (uuid "daa1cc6a-26b7-5768-97d4-1318b586122f"))
+    (pin "2"
+      (uuid "7704615f-be02-55aa-8775-bbb3c046f263"))
+    (instances
+      (project "plytka-v2"
+        (path "/d6c0c90e-9866-5fd3-a68f-372aaa2256a2"
+          (reference "D20")
+          (unit 1)))))
+  (wire
+    (pts
+      (xy 26.67 375.92)
+      (xy 21.59 375.92))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "53baaa03-c0d9-591c-9c90-a437313d1963"))
+  (label "V12_F"
+    (at 21.59 375.92 180)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify right))
+    (uuid "beb9a703-962e-51b3-b83d-fb51ebd63594"))
+  (wire
+    (pts
+      (xy 34.29 375.92)
+      (xy 39.37 375.92))
+    (stroke
+      (width 0)
+      (type default))
+    (uuid "f7830f18-b6be-523b-92e9-80eb6a2325d8"))
+  (label "GND"
+    (at 39.37 375.92 0)
+    (effects
+      (font
+        (size 1.27 1.27))
+      (justify left))
+    (uuid "5036539f-e5f3-5dbc-ba65-1e85fc8ff106"))
+  (symbol
     (lib_id "WICI:LM74800-Q1")
     (at 30.48 104.14 0)
     (unit 1)

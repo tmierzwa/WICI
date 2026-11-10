@@ -126,7 +126,7 @@ def effects(size=1.27, hide=False, justify=None):
 
 # Columns by block, top to bottom.
 GROUPS = [
-    ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32', 'C38', 'C39'],
+    ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32', 'C38', 'C39', 'D20'],
     ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6', 'R76'],
     ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77', 'C50'],
     ['U6', 'J3', 'D18', 'R84', 'C65', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78'],
@@ -195,7 +195,7 @@ def generate():
         inst = [A('symbol'), [A('lib_id'), p['lib_id']], [A('at'), x, y, 0], [A('unit'), 1],
                 [A('exclude_from_sim'), A('no')],
                 [A('in_bom'), A('yes' if p.get('bom', True) and not flag else 'no')],
-                [A('on_board'), A('no' if flag else 'yes')], [A('dnp'), A('no')],
+                [A('on_board'), A('no' if flag else 'yes')], [A('dnp'), A('yes' if p.get('dnp') else 'no')],
                 [A('uuid'), uid(p['ref'])]]
         props = [('Reference', p['ref'], False), ('Value', p['value'], False),
                  ('Footprint', p['footprint'], True), ('Datasheet', '', True)]

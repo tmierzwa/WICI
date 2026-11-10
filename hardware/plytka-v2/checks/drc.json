@@ -1,7 +1,7 @@
 {
     "$schema": "https://schemas.kicad.org/drc.v1.json",
     "coordinate_units": "mm",
-    "date": "2026-11-10T15:35:39",
+    "date": "2026-11-10T19:29:18",
     "ignored_checks": [
         {
             "description": "Footprint has no courtyard defined",
@@ -30,7 +30,5558 @@
         "exclusion"
     ],
     "kicad_version": "10.0.6",
-    "schematic_parity": [],
+    "schematic_parity": [
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint BZ1",
+                    "pos": {
+                        "x": 177.25,
+                        "y": 9.0
+                    },
+                    "uuid": "d967fd19-3a73-5e4f-9ec9-99c575124949"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BZ_P) doesn't match net given by schematic (/BZ_P)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [BZ_P] of BZ1",
+                    "pos": {
+                        "x": 177.25,
+                        "y": 9.0
+                    },
+                    "uuid": "1f5a0355-88b8-576b-852b-5551d6249104"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BZ_N) doesn't match net given by schematic (/BZ_N)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [BZ_N] of BZ1",
+                    "pos": {
+                        "x": 183.75,
+                        "y": 9.0
+                    },
+                    "uuid": "3985a91d-1257-5c6b-9ced-6b4541a0fa93"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C1",
+                    "pos": {
+                        "x": 150.225,
+                        "y": 75.005
+                    },
+                    "uuid": "4a2a8f4e-542c-5819-b746-1b0734b7f345"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3_RF) doesn't match net given by schematic (/+3V3_RF)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3_RF] of C1 on F.Cu",
+                    "pos": {
+                        "x": 149.275,
+                        "y": 75.005
+                    },
+                    "uuid": "2ea1f2c1-c9a7-5ce6-b265-3593a1ad5a33"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C1 on F.Cu",
+                    "pos": {
+                        "x": 151.175,
+                        "y": 75.005
+                    },
+                    "uuid": "9970d7a5-6aa8-53ba-be2a-14e221a42bc4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C2",
+                    "pos": {
+                        "x": 150.225,
+                        "y": 71.505
+                    },
+                    "uuid": "38ec6412-515d-519e-9b6f-8a45e36b41e4"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3_RF) doesn't match net given by schematic (/+3V3_RF)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3_RF] of C2 on F.Cu",
+                    "pos": {
+                        "x": 149.275,
+                        "y": 71.505
+                    },
+                    "uuid": "812d84d4-f1fa-5d31-91a0-63175d15fe15"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C2 on F.Cu",
+                    "pos": {
+                        "x": 151.175,
+                        "y": 71.505
+                    },
+                    "uuid": "ae9a18d9-2eeb-559a-adbc-359295690f14"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C3",
+                    "pos": {
+                        "x": 120.225,
+                        "y": 14.505
+                    },
+                    "uuid": "fdd0728d-8b6f-5a23-9122-23d6bfba5315"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C3 on F.Cu",
+                    "pos": {
+                        "x": 119.275,
+                        "y": 14.505
+                    },
+                    "uuid": "6166fc06-d338-5935-9bbb-45b454ff12cc"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C3 on F.Cu",
+                    "pos": {
+                        "x": 121.175,
+                        "y": 14.505
+                    },
+                    "uuid": "582e9c9b-436a-5cf8-9b19-57b47a43345d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C4",
+                    "pos": {
+                        "x": 58.005,
+                        "y": 68.725
+                    },
+                    "uuid": "8fba8f71-ee80-5219-80b3-0757733a8864"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+5V) doesn't match net given by schematic (/+5V)",
+            "items": [
+                {
+                    "description": "Pad 1 [+5V] of C4 on F.Cu",
+                    "pos": {
+                        "x": 58.005,
+                        "y": 69.675
+                    },
+                    "uuid": "722ba3ea-9a6f-550d-b3d2-8e986b0dc518"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C4 on F.Cu",
+                    "pos": {
+                        "x": 58.005,
+                        "y": 67.775
+                    },
+                    "uuid": "d3ac5f9d-388b-54aa-8425-ecbbbff16fe7"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C6",
+                    "pos": {
+                        "x": 57.225,
+                        "y": 73.005
+                    },
+                    "uuid": "ad8ff8b1-7f9b-5566-947d-30867fee1339"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+5V) doesn't match net given by schematic (/+5V)",
+            "items": [
+                {
+                    "description": "Pad 1 [+5V] of C6 on F.Cu",
+                    "pos": {
+                        "x": 56.275,
+                        "y": 73.005
+                    },
+                    "uuid": "d7815c6e-c0df-5468-9310-33512b918d2b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C6 on F.Cu",
+                    "pos": {
+                        "x": 58.175,
+                        "y": 73.005
+                    },
+                    "uuid": "e134a543-b148-537e-8294-a4da5f056ff0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C7",
+                    "pos": {
+                        "x": 62.225,
+                        "y": 74.505
+                    },
+                    "uuid": "ec1036ad-de6f-5be8-b7ee-e45a78bee85c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (LCD_DISP) doesn't match net given by schematic (/LCD_DISP)",
+            "items": [
+                {
+                    "description": "Pad 1 [LCD_DISP] of C7 on F.Cu",
+                    "pos": {
+                        "x": 61.275,
+                        "y": 74.505
+                    },
+                    "uuid": "4dbfd60b-2204-5dbf-8ab5-d9238c6e7a5e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C7 on F.Cu",
+                    "pos": {
+                        "x": 63.175,
+                        "y": 74.505
+                    },
+                    "uuid": "b355e986-8fb5-52c5-bb4a-874a21e49a7a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C8",
+                    "pos": {
+                        "x": 62.7,
+                        "y": 62.45
+                    },
+                    "uuid": "78fbca73-4637-5fac-97d1-3f3360b0e338"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C8 on F.Cu",
+                    "pos": {
+                        "x": 61.75,
+                        "y": 62.45
+                    },
+                    "uuid": "8857e206-acd1-5ab4-89f5-eb5795b3beec"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C8 on F.Cu",
+                    "pos": {
+                        "x": 63.65,
+                        "y": 62.45
+                    },
+                    "uuid": "1ef3aefb-45e1-5561-a6b2-25923a30527e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C9",
+                    "pos": {
+                        "x": 67.45,
+                        "y": 66.0
+                    },
+                    "uuid": "8f93fb39-334b-5b82-82d6-901646d3c0d2"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+5V) doesn't match net given by schematic (/+5V)",
+            "items": [
+                {
+                    "description": "Pad 1 [+5V] of C9 on F.Cu",
+                    "pos": {
+                        "x": 66.5,
+                        "y": 66.0
+                    },
+                    "uuid": "c0316b72-5b3e-596f-81ef-c40dabf00943"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C9 on F.Cu",
+                    "pos": {
+                        "x": 68.4,
+                        "y": 66.0
+                    },
+                    "uuid": "db7d61f0-ce41-5e1d-b44c-b3b5bad49ee1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C10",
+                    "pos": {
+                        "x": 66.85,
+                        "y": 70.1
+                    },
+                    "uuid": "873c95e0-3132-5d1a-ae67-08c0de0f52f5"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+5V) doesn't match net given by schematic (/+5V)",
+            "items": [
+                {
+                    "description": "Pad 1 [+5V] of C10 on F.Cu",
+                    "pos": {
+                        "x": 66.85,
+                        "y": 71.05
+                    },
+                    "uuid": "408b73bc-2989-50d3-bac5-cfb1a24ae768"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BST_FB) doesn't match net given by schematic (/BST_FB)",
+            "items": [
+                {
+                    "description": "Pad 2 [BST_FB] of C10 on F.Cu",
+                    "pos": {
+                        "x": 66.85,
+                        "y": 69.15
+                    },
+                    "uuid": "d1437748-7765-5e69-b407-f6e657078425"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C11",
+                    "pos": {
+                        "x": 115.225,
+                        "y": 9.505
+                    },
+                    "uuid": "13729afa-a6fc-5e95-b305-9e58128c0594"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C11 on F.Cu",
+                    "pos": {
+                        "x": 114.275,
+                        "y": 9.505
+                    },
+                    "uuid": "5a668cf7-7cbe-5c8c-8df2-5bb31e4105be"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C11 on F.Cu",
+                    "pos": {
+                        "x": 116.175,
+                        "y": 9.505
+                    },
+                    "uuid": "75e6037b-d6fe-5ab1-a3e9-2782366d8680"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C12",
+                    "pos": {
+                        "x": 115.225,
+                        "y": 30.505
+                    },
+                    "uuid": "d39f4bf0-877d-5620-915c-cb52ee2be912"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C12 on F.Cu",
+                    "pos": {
+                        "x": 114.275,
+                        "y": 30.505
+                    },
+                    "uuid": "dd1349fc-688f-5b5f-8c33-58304cf3dff0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C12 on F.Cu",
+                    "pos": {
+                        "x": 116.175,
+                        "y": 30.505
+                    },
+                    "uuid": "7b00b5ef-8fbc-5f27-81a1-eeb24b3e217f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C13",
+                    "pos": {
+                        "x": 125.825,
+                        "y": 26.625
+                    },
+                    "uuid": "a1e00dac-8db5-5148-8295-d1786b452fdf"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C13 on F.Cu",
+                    "pos": {
+                        "x": 124.35,
+                        "y": 26.625
+                    },
+                    "uuid": "f217e5a5-4643-521e-a619-e6938d2e9ab2"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C13 on F.Cu",
+                    "pos": {
+                        "x": 127.3,
+                        "y": 26.625
+                    },
+                    "uuid": "4e9b7c39-233c-5cb0-adf3-6b69b11c6657"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C30",
+                    "pos": {
+                        "x": 163.7,
+                        "y": 108.05
+                    },
+                    "uuid": "b05a886b-d8a2-5d76-93bb-cbd83041691a"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_MID) doesn't match net given by schematic (/V12_MID)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_MID] of C30 on F.Cu",
+                    "pos": {
+                        "x": 163.7,
+                        "y": 109.0
+                    },
+                    "uuid": "3ca158cb-028a-5404-b5bf-74dbd51613c4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C30 on F.Cu",
+                    "pos": {
+                        "x": 163.7,
+                        "y": 107.1
+                    },
+                    "uuid": "8ca4065c-ca88-5ebe-bdec-73ceb0d24453"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C31",
+                    "pos": {
+                        "x": 166.8,
+                        "y": 111.4
+                    },
+                    "uuid": "86d52e5a-63a2-5092-a92c-bb9d7e00f96c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (S12_CAP) doesn't match net given by schematic (/S12_CAP)",
+            "items": [
+                {
+                    "description": "Pad 1 [S12_CAP] of C31 on F.Cu",
+                    "pos": {
+                        "x": 165.85,
+                        "y": 111.4
+                    },
+                    "uuid": "67d90240-d789-5f4e-9db0-4ece78a5e133"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V12_MID) doesn't match net given by schematic (/V12_MID)",
+            "items": [
+                {
+                    "description": "Pad 2 [V12_MID] of C31 on F.Cu",
+                    "pos": {
+                        "x": 167.75,
+                        "y": 111.4
+                    },
+                    "uuid": "6d34e377-3693-5c81-a7b4-36f745e80aa0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C32",
+                    "pos": {
+                        "x": 155.7,
+                        "y": 102.8
+                    },
+                    "uuid": "a444cf3e-deb3-5f49-a2e1-93b97ef8050a"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (S12_DVDT) doesn't match net given by schematic (/S12_DVDT)",
+            "items": [
+                {
+                    "description": "Pad 1 [S12_DVDT] of C32 on F.Cu",
+                    "pos": {
+                        "x": 156.65,
+                        "y": 102.8
+                    },
+                    "uuid": "b217ddcd-8b1f-5db3-bbe7-692858b25093"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C32 on F.Cu",
+                    "pos": {
+                        "x": 154.75,
+                        "y": 102.8
+                    },
+                    "uuid": "32c33039-3e97-5ac9-b9c6-7b9a1a4a6806"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C33",
+                    "pos": {
+                        "x": 104.005,
+                        "y": 18.225
+                    },
+                    "uuid": "d988534a-7f5c-5583-82d2-1b3c44bbd00f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V_12_ADC) doesn't match net given by schematic (/V_12_ADC)",
+            "items": [
+                {
+                    "description": "Pad 1 [V_12_ADC] of C33 on F.Cu",
+                    "pos": {
+                        "x": 104.005,
+                        "y": 19.175
+                    },
+                    "uuid": "44671697-572d-5525-b3f6-079a05fb1763"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C33 on F.Cu",
+                    "pos": {
+                        "x": 104.005,
+                        "y": 17.275
+                    },
+                    "uuid": "473ecdf5-486c-5454-a609-5c56c3e1c0cb"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C34",
+                    "pos": {
+                        "x": 103.725,
+                        "y": 14.005
+                    },
+                    "uuid": "cd384d68-de05-542e-a5ae-4866c3555a36"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V_AA_ADC) doesn't match net given by schematic (/V_AA_ADC)",
+            "items": [
+                {
+                    "description": "Pad 1 [V_AA_ADC] of C34 on F.Cu",
+                    "pos": {
+                        "x": 102.775,
+                        "y": 14.005
+                    },
+                    "uuid": "bd4757eb-022d-5533-b702-8ba6bc0b5be1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C34 on F.Cu",
+                    "pos": {
+                        "x": 104.675,
+                        "y": 14.005
+                    },
+                    "uuid": "996bf7e1-3606-50b3-9e90-c99ee1d2c65b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C35",
+                    "pos": {
+                        "x": 155.1,
+                        "y": 97.4
+                    },
+                    "uuid": "59267201-3ee1-5678-93f8-18efe1ca6921"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_FLT) doesn't match net given by schematic (/V12_FLT)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_FLT] of C35 on F.Cu",
+                    "pos": {
+                        "x": 156.05,
+                        "y": 97.4
+                    },
+                    "uuid": "3c96fdc2-9216-5faf-bff5-199649f18d55"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C35 on F.Cu",
+                    "pos": {
+                        "x": 154.15,
+                        "y": 97.4
+                    },
+                    "uuid": "482543f6-0b3d-5273-b184-98dda2851c3d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C36",
+                    "pos": {
+                        "x": 159.0,
+                        "y": 36.325
+                    },
+                    "uuid": "09a19a44-64c5-5080-b7bb-14a07f2976dd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VCTL) doesn't match net given by schematic (/VCTL)",
+            "items": [
+                {
+                    "description": "Pad 1 [VCTL] of C36 on F.Cu",
+                    "pos": {
+                        "x": 158.05,
+                        "y": 36.325
+                    },
+                    "uuid": "1b6b4802-1bf8-52e3-8738-9b27db6935cf"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C36 on F.Cu",
+                    "pos": {
+                        "x": 159.95,
+                        "y": 36.325
+                    },
+                    "uuid": "d25612b5-3b31-54fd-b438-07bf6b29c2df"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C37",
+                    "pos": {
+                        "x": 152.225,
+                        "y": 30.505
+                    },
+                    "uuid": "9ef9dacf-c7e8-54f1-b294-ba67d0fe8ba7"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_TMR) doesn't match net given by schematic (/PWR_TMR)",
+            "items": [
+                {
+                    "description": "Pad 1 [PWR_TMR] of C37 on F.Cu",
+                    "pos": {
+                        "x": 151.275,
+                        "y": 30.505
+                    },
+                    "uuid": "2d04de66-0e24-5473-8a09-5bf79e782d3b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C37 on F.Cu",
+                    "pos": {
+                        "x": 153.175,
+                        "y": 30.505
+                    },
+                    "uuid": "232397dd-5fb3-5370-bdcc-f7079d685f4c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C38",
+                    "pos": {
+                        "x": 184.6,
+                        "y": 108.7
+                    },
+                    "uuid": "08ce4177-cbb2-5705-9f57-3a54841869fc"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_F] of C38 on F.Cu",
+                    "pos": {
+                        "x": 183.65,
+                        "y": 108.7
+                    },
+                    "uuid": "75182389-1d5a-51d6-9d2e-34a8ba7c40b2"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C38 on F.Cu",
+                    "pos": {
+                        "x": 185.55,
+                        "y": 108.7
+                    },
+                    "uuid": "f8f726b4-7a81-55b3-87b9-0451c7965042"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C39",
+                    "pos": {
+                        "x": 173.2,
+                        "y": 102.8
+                    },
+                    "uuid": "b99e7a8b-1815-56c2-b7d1-0af27a829908"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (S12_EN) doesn't match net given by schematic (/S12_EN)",
+            "items": [
+                {
+                    "description": "Pad 1 [S12_EN] of C39 on F.Cu",
+                    "pos": {
+                        "x": 173.2,
+                        "y": 103.75
+                    },
+                    "uuid": "6747c32c-7bf7-5052-bd1e-be57305f3bca"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C39 on F.Cu",
+                    "pos": {
+                        "x": 173.2,
+                        "y": 101.85
+                    },
+                    "uuid": "8b30a250-0017-5f23-83f1-b82edb491f18"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C40",
+                    "pos": {
+                        "x": 138.4,
+                        "y": 53.2
+                    },
+                    "uuid": "08f84f6c-8da8-5f40-a33d-3768386a802e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VSYS) doesn't match net given by schematic (/VSYS)",
+            "items": [
+                {
+                    "description": "Pad 1 [VSYS] of C40 on F.Cu",
+                    "pos": {
+                        "x": 138.4,
+                        "y": 54.675
+                    },
+                    "uuid": "303b68dd-9fe5-53f6-a498-ad29932225e6"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C40 on F.Cu",
+                    "pos": {
+                        "x": 138.4,
+                        "y": 51.725
+                    },
+                    "uuid": "0b97271f-30a5-5096-a4e9-7ab331434b20"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C41",
+                    "pos": {
+                        "x": 142.3,
+                        "y": 53.2
+                    },
+                    "uuid": "0733c467-b322-5880-92a4-38ebf6b0d868"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VSYS) doesn't match net given by schematic (/VSYS)",
+            "items": [
+                {
+                    "description": "Pad 1 [VSYS] of C41 on F.Cu",
+                    "pos": {
+                        "x": 142.3,
+                        "y": 54.675
+                    },
+                    "uuid": "239fc258-ac8f-5588-b9fc-109a67555944"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C41 on F.Cu",
+                    "pos": {
+                        "x": 142.3,
+                        "y": 51.725
+                    },
+                    "uuid": "042b960d-75f7-53cc-92cd-8ed022d08201"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C42",
+                    "pos": {
+                        "x": 118.8,
+                        "y": 53.2
+                    },
+                    "uuid": "d567915d-49a3-5d35-8e2a-dd84e6b08fd6"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C42 on F.Cu",
+                    "pos": {
+                        "x": 118.8,
+                        "y": 54.675
+                    },
+                    "uuid": "17b7c323-4fca-53c9-a9ea-b8892903e4e6"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C42 on F.Cu",
+                    "pos": {
+                        "x": 118.8,
+                        "y": 51.725
+                    },
+                    "uuid": "7e6ce8a6-d7b9-57ff-a1c1-d6b3ba04afcf"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C43",
+                    "pos": {
+                        "x": 114.9,
+                        "y": 53.2
+                    },
+                    "uuid": "351e4fc0-1cdc-57c9-8ad2-e559727d5f2e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 1 [+3V3] of C43 on F.Cu",
+                    "pos": {
+                        "x": 114.9,
+                        "y": 54.675
+                    },
+                    "uuid": "c409d385-faae-5374-a3e8-a23bed831273"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C43 on F.Cu",
+                    "pos": {
+                        "x": 114.9,
+                        "y": 51.725
+                    },
+                    "uuid": "34505212-44c6-5377-a07b-9c66df2a4b0d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C44",
+                    "pos": {
+                        "x": 134.4,
+                        "y": 51.15
+                    },
+                    "uuid": "f17de146-2472-5b88-a566-51d5474d2c32"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_BST1) doesn't match net given by schematic (/CONV_BST1)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_BST1] of C44 on F.Cu",
+                    "pos": {
+                        "x": 134.4,
+                        "y": 52.1
+                    },
+                    "uuid": "705ba0f1-1e6b-5253-ab81-15bda3a937c8"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (CONV_SW1) doesn't match net given by schematic (/CONV_SW1)",
+            "items": [
+                {
+                    "description": "Pad 2 [CONV_SW1] of C44 on F.Cu",
+                    "pos": {
+                        "x": 134.4,
+                        "y": 50.2
+                    },
+                    "uuid": "7e689b1c-fd21-5f01-bfeb-8d685f65c4f3"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C45",
+                    "pos": {
+                        "x": 122.8,
+                        "y": 51.15
+                    },
+                    "uuid": "5f78b0e3-367b-5d8d-98a9-c8ab9aa9acbc"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_BST2) doesn't match net given by schematic (/CONV_BST2)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_BST2] of C45 on F.Cu",
+                    "pos": {
+                        "x": 122.8,
+                        "y": 52.1
+                    },
+                    "uuid": "5107170c-3a3b-5db4-9976-a7e83bde0fb7"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (CONV_SW2) doesn't match net given by schematic (/CONV_SW2)",
+            "items": [
+                {
+                    "description": "Pad 2 [CONV_SW2] of C45 on F.Cu",
+                    "pos": {
+                        "x": 122.8,
+                        "y": 50.2
+                    },
+                    "uuid": "93b9babd-5133-5f63-aa52-632bd571388f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C46",
+                    "pos": {
+                        "x": 134.9,
+                        "y": 58.8
+                    },
+                    "uuid": "da1b0181-8ad7-557b-998d-e5b80de873a9"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VSYS) doesn't match net given by schematic (/VSYS)",
+            "items": [
+                {
+                    "description": "Pad 1 [VSYS] of C46 on F.Cu",
+                    "pos": {
+                        "x": 133.95,
+                        "y": 58.8
+                    },
+                    "uuid": "ea7e18b3-86ef-5ca0-ba2b-07b49282b6d1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C46 on F.Cu",
+                    "pos": {
+                        "x": 135.85,
+                        "y": 58.8
+                    },
+                    "uuid": "5cf5d9ab-bb90-5c88-a750-956ea224d9c5"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C47",
+                    "pos": {
+                        "x": 131.2,
+                        "y": 62.4
+                    },
+                    "uuid": "b7434e32-c333-5166-a26a-ed7eccf9724e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_VCC) doesn't match net given by schematic (/CONV_VCC)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_VCC] of C47 on F.Cu",
+                    "pos": {
+                        "x": 130.25,
+                        "y": 62.4
+                    },
+                    "uuid": "9a143193-b1f1-5c38-a883-1e1f3a15dd10"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C47 on F.Cu",
+                    "pos": {
+                        "x": 132.15,
+                        "y": 62.4
+                    },
+                    "uuid": "4fe0f30b-db56-5945-a42b-63de8fed7e91"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C48",
+                    "pos": {
+                        "x": 121.6,
+                        "y": 64.6
+                    },
+                    "uuid": "51580621-9533-5fdd-a6d4-0917eadddeda"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_FB) doesn't match net given by schematic (/CONV_FB)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_FB] of C48 on F.Cu",
+                    "pos": {
+                        "x": 121.6,
+                        "y": 63.65
+                    },
+                    "uuid": "a1c8dae1-2ee6-5854-9810-aaf09356f449"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (CONV_VC) doesn't match net given by schematic (/CONV_VC)",
+            "items": [
+                {
+                    "description": "Pad 2 [CONV_VC] of C48 on F.Cu",
+                    "pos": {
+                        "x": 121.6,
+                        "y": 65.55
+                    },
+                    "uuid": "a0c5e306-49a2-5f96-b8ee-22bcab5b4248"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C49",
+                    "pos": {
+                        "x": 124.3,
+                        "y": 64.6
+                    },
+                    "uuid": "0bcdb4f2-5d47-5cd6-92e3-d1861acfc8dc"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_FB) doesn't match net given by schematic (/CONV_FB)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_FB] of C49 on F.Cu",
+                    "pos": {
+                        "x": 124.3,
+                        "y": 63.65
+                    },
+                    "uuid": "298271b9-6995-55f0-8e03-ead74cd4690a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (CONV_CMP1) doesn't match net given by schematic (/CONV_CMP1)",
+            "items": [
+                {
+                    "description": "Pad 2 [CONV_CMP1] of C49 on F.Cu",
+                    "pos": {
+                        "x": 124.3,
+                        "y": 65.55
+                    },
+                    "uuid": "3866dea0-401b-55e1-8f06-84ca2136af02"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C50",
+                    "pos": {
+                        "x": 133.6527,
+                        "y": 84.0
+                    },
+                    "uuid": "f20762a3-3063-5f42-a4cd-f3390ca00fde"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VSYS) doesn't match net given by schematic (/VSYS)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [VSYS] of C50",
+                    "pos": {
+                        "x": 133.6527,
+                        "y": 84.0
+                    },
+                    "uuid": "60a43f22-1d36-539a-a288-ec2709d2051a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [GND] of C50",
+                    "pos": {
+                        "x": 130.1527,
+                        "y": 84.0
+                    },
+                    "uuid": "35e52087-3d5f-5a06-8bfd-fc5a93057469"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C51",
+                    "pos": {
+                        "x": 113.5,
+                        "y": 64.6
+                    },
+                    "uuid": "0b4cd2c0-2c49-5b62-8005-0003d2d18133"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (CONV_FB) doesn't match net given by schematic (/CONV_FB)",
+            "items": [
+                {
+                    "description": "Pad 1 [CONV_FB] of C51 on F.Cu",
+                    "pos": {
+                        "x": 113.5,
+                        "y": 63.65
+                    },
+                    "uuid": "68479050-c7c8-5771-9270-cfa1e4c0d2b3"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (CONV_CMP2) doesn't match net given by schematic (/CONV_CMP2)",
+            "items": [
+                {
+                    "description": "Pad 2 [CONV_CMP2] of C51 on F.Cu",
+                    "pos": {
+                        "x": 113.5,
+                        "y": 65.55
+                    },
+                    "uuid": "8255b424-0dc1-5ebd-bfbf-ea61eb54ee53"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C52",
+                    "pos": {
+                        "x": 157.505,
+                        "y": 42.725
+                    },
+                    "uuid": "78f4a54e-40e2-5f58-8c48-bab6f2b55ba1"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (RUN) doesn't match net given by schematic (/RUN)",
+            "items": [
+                {
+                    "description": "Pad 1 [RUN] of C52 on F.Cu",
+                    "pos": {
+                        "x": 157.505,
+                        "y": 43.675
+                    },
+                    "uuid": "3d4d3f67-321e-5fc7-8254-933739ef0e55"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C52 on F.Cu",
+                    "pos": {
+                        "x": 157.505,
+                        "y": 41.775
+                    },
+                    "uuid": "ab43c68c-16de-5b4c-9761-170c689d1f75"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C53",
+                    "pos": {
+                        "x": 148.005,
+                        "y": 29.725
+                    },
+                    "uuid": "df1c72b1-fae1-5d62-a2ea-e02bfcae9818"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_ON) doesn't match net given by schematic (/PWR_ON)",
+            "items": [
+                {
+                    "description": "Pad 1 [PWR_ON] of C53 on F.Cu",
+                    "pos": {
+                        "x": 148.005,
+                        "y": 30.675
+                    },
+                    "uuid": "9f52ee02-8d1f-515a-b31a-ea602416816e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C53 on F.Cu",
+                    "pos": {
+                        "x": 148.005,
+                        "y": 28.775
+                    },
+                    "uuid": "123c3bb1-f949-5b2e-afad-31eed0ee8ee1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C60",
+                    "pos": {
+                        "x": 95.725,
+                        "y": 76.005
+                    },
+                    "uuid": "a06c2826-bdd2-5c15-b89a-6221ad295ab0"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BTN_UP) doesn't match net given by schematic (/BTN_UP)",
+            "items": [
+                {
+                    "description": "Pad 1 [BTN_UP] of C60 on F.Cu",
+                    "pos": {
+                        "x": 94.775,
+                        "y": 76.005
+                    },
+                    "uuid": "a086c0e9-f7af-5e4c-88db-c08b11d738c9"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C60 on F.Cu",
+                    "pos": {
+                        "x": 96.675,
+                        "y": 76.005
+                    },
+                    "uuid": "28eb560b-0a59-5e52-a61c-6526c8571415"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C61",
+                    "pos": {
+                        "x": 100.225,
+                        "y": 73.505
+                    },
+                    "uuid": "31f2048f-486b-52c7-90d1-893feab157fa"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BTN_DOWN) doesn't match net given by schematic (/BTN_DOWN)",
+            "items": [
+                {
+                    "description": "Pad 1 [BTN_DOWN] of C61 on F.Cu",
+                    "pos": {
+                        "x": 99.275,
+                        "y": 73.505
+                    },
+                    "uuid": "e51bb7e0-9ce3-5646-80a9-5de904947e55"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C61 on F.Cu",
+                    "pos": {
+                        "x": 101.175,
+                        "y": 73.505
+                    },
+                    "uuid": "824db4fd-d9ba-5368-b148-f946a465ed01"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C62",
+                    "pos": {
+                        "x": 107.005,
+                        "y": 78.225
+                    },
+                    "uuid": "af131a5d-d2c6-522f-8d55-76b8051532fd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BTN_OK) doesn't match net given by schematic (/BTN_OK)",
+            "items": [
+                {
+                    "description": "Pad 1 [BTN_OK] of C62 on F.Cu",
+                    "pos": {
+                        "x": 107.005,
+                        "y": 79.175
+                    },
+                    "uuid": "45b61abd-0260-5d45-b1d8-fb6e897f0004"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C62 on F.Cu",
+                    "pos": {
+                        "x": 107.005,
+                        "y": 77.275
+                    },
+                    "uuid": "9557ab0d-307f-5701-a5b1-25be8622d67f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C63",
+                    "pos": {
+                        "x": 95.725,
+                        "y": 73.005
+                    },
+                    "uuid": "54e4e33d-37da-53a7-9e5d-d6da26dbcc2e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BTN_BACK) doesn't match net given by schematic (/BTN_BACK)",
+            "items": [
+                {
+                    "description": "Pad 1 [BTN_BACK] of C63 on F.Cu",
+                    "pos": {
+                        "x": 94.775,
+                        "y": 73.005
+                    },
+                    "uuid": "ea451295-43ea-55ed-b2a7-e43e658942d1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C63 on F.Cu",
+                    "pos": {
+                        "x": 96.675,
+                        "y": 73.005
+                    },
+                    "uuid": "543809e5-d5ba-5d33-8470-cf8378a7e492"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C64",
+                    "pos": {
+                        "x": 194.505,
+                        "y": 59.725
+                    },
+                    "uuid": "829e8edf-86be-54d3-826c-e4d23b34c7a5"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (SW_CISZA) doesn't match net given by schematic (/SW_CISZA)",
+            "items": [
+                {
+                    "description": "Pad 1 [SW_CISZA] of C64 on F.Cu",
+                    "pos": {
+                        "x": 194.505,
+                        "y": 60.675
+                    },
+                    "uuid": "38b72f72-424a-5ffc-8d84-8bb383bef773"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C64 on F.Cu",
+                    "pos": {
+                        "x": 194.505,
+                        "y": 58.775
+                    },
+                    "uuid": "c4c651cd-70b1-52b7-b0a2-cd4250fce793"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint C65",
+                    "pos": {
+                        "x": 195.505,
+                        "y": 81.225
+                    },
+                    "uuid": "5fee61ef-e68e-50e4-af0c-e38f12e4459c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_PB) doesn't match net given by schematic (/PWR_PB)",
+            "items": [
+                {
+                    "description": "Pad 1 [PWR_PB] of C65 on F.Cu",
+                    "pos": {
+                        "x": 195.505,
+                        "y": 82.175
+                    },
+                    "uuid": "99116f3f-1d32-55d2-957d-2cf3fda9606f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of C65 on F.Cu",
+                    "pos": {
+                        "x": 195.505,
+                        "y": 80.275
+                    },
+                    "uuid": "9e940b9c-a0d3-5cb4-aee9-685d8550dd7e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D1",
+                    "pos": {
+                        "x": 167.225,
+                        "y": 10.0
+                    },
+                    "uuid": "7e613f7c-cd02-551d-905f-a3378a98f770"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [GND] of D1",
+                    "pos": {
+                        "x": 167.225,
+                        "y": 10.0
+                    },
+                    "uuid": "c33580e5-f6a1-5d6f-8fb5-1b1b821fcf0c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (LED_A) doesn't match net given by schematic (/LED_A)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [LED_A] of D1",
+                    "pos": {
+                        "x": 169.765,
+                        "y": 10.0
+                    },
+                    "uuid": "1314eb3c-20dc-5af3-bce0-bb6242883ee1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D2",
+                    "pos": {
+                        "x": 155.175,
+                        "y": 17.375
+                    },
+                    "uuid": "6fefbc46-087b-5e94-b07b-5d2b46f872bd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BZ_P) doesn't match net given by schematic (/BZ_P)",
+            "items": [
+                {
+                    "description": "Pad 1 [BZ_P] of D2 on F.Cu",
+                    "pos": {
+                        "x": 155.175,
+                        "y": 19.025
+                    },
+                    "uuid": "79ecbe07-403b-5607-ae8d-4692469bd3e3"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BZ_N) doesn't match net given by schematic (/BZ_N)",
+            "items": [
+                {
+                    "description": "Pad 2 [BZ_N] of D2 on F.Cu",
+                    "pos": {
+                        "x": 155.175,
+                        "y": 15.725
+                    },
+                    "uuid": "093eb375-f949-52e9-ad26-c386c8d212c3"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D4",
+                    "pos": {
+                        "x": 86.1775,
+                        "y": 108.4
+                    },
+                    "uuid": "14ac76ef-3537-590a-89c4-a47dfbd563e2"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_F] of D4 on F.Cu",
+                    "pos": {
+                        "x": 88.3275,
+                        "y": 108.4
+                    },
+                    "uuid": "dd8bc6fc-7c68-5efd-acd8-39537db40039"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D4 on F.Cu",
+                    "pos": {
+                        "x": 84.0275,
+                        "y": 108.4
+                    },
+                    "uuid": "98a64c71-6977-5f2e-8e1f-c91bfb1bfb9f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D5",
+                    "pos": {
+                        "x": 125.175,
+                        "y": 109.375
+                    },
+                    "uuid": "97eed2a0-ea2e-5c7d-8685-441b1bce6047"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_F] of D5 on F.Cu",
+                    "pos": {
+                        "x": 125.175,
+                        "y": 111.025
+                    },
+                    "uuid": "a0c1c051-44b9-5401-99f6-022d718fd5c1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (Q4_G) doesn't match net given by schematic (/Q4_G)",
+            "items": [
+                {
+                    "description": "Pad 2 [Q4_G] of D5 on F.Cu",
+                    "pos": {
+                        "x": 125.175,
+                        "y": 107.725
+                    },
+                    "uuid": "622b0d65-6b76-5499-b92c-da29a553a1aa"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D6",
+                    "pos": {
+                        "x": 119.955,
+                        "y": 114.725
+                    },
+                    "uuid": "0f89af03-d67a-5196-bf37-78e66a48c372"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 1 [GND] of D6 on F.Cu",
+                    "pos": {
+                        "x": 119.0175,
+                        "y": 113.775
+                    },
+                    "uuid": "6860c731-71da-5926-aae5-ff0656e9e34e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 2 [+3V3] of D6 on F.Cu",
+                    "pos": {
+                        "x": 119.0175,
+                        "y": 115.675
+                    },
+                    "uuid": "ac18547a-f05d-5c8d-a999-4e0acdc116a0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V_12_DIV) doesn't match net given by schematic (/V_12_DIV)",
+            "items": [
+                {
+                    "description": "Pad 3 [V_12_DIV] of D6 on F.Cu",
+                    "pos": {
+                        "x": 120.8925,
+                        "y": 114.725
+                    },
+                    "uuid": "888c8c6d-ef69-55be-a02f-861272673df0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D7",
+                    "pos": {
+                        "x": 70.5775,
+                        "y": 107.2
+                    },
+                    "uuid": "d1936c0d-632a-5bde-866f-8d48dcc61f7b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VSYS) doesn't match net given by schematic (/VSYS)",
+            "items": [
+                {
+                    "description": "Pad 1 [VSYS] of D7 on F.Cu",
+                    "pos": {
+                        "x": 71.9775,
+                        "y": 107.2
+                    },
+                    "uuid": "7df93569-e7af-540b-bc7b-4f6777905395"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BAT_R) doesn't match net given by schematic (/BAT_R)",
+            "items": [
+                {
+                    "description": "Pad 2 [BAT_R] of D7 on F.Cu",
+                    "pos": {
+                        "x": 69.1775,
+                        "y": 107.2
+                    },
+                    "uuid": "0d2abdcd-a321-57d0-a574-1257e4c48657"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D8",
+                    "pos": {
+                        "x": 156.675,
+                        "y": 27.725
+                    },
+                    "uuid": "200aa01d-e1fa-599a-a204-3b60cd1cc273"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VCTL) doesn't match net given by schematic (/VCTL)",
+            "items": [
+                {
+                    "description": "Pad 1 [VCTL] of D8 on F.Cu",
+                    "pos": {
+                        "x": 156.675,
+                        "y": 29.125
+                    },
+                    "uuid": "28bc298d-f2e5-5b53-9fb4-dc113ee0fd29"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BAT_R) doesn't match net given by schematic (/BAT_R)",
+            "items": [
+                {
+                    "description": "Pad 2 [BAT_R] of D8 on F.Cu",
+                    "pos": {
+                        "x": 156.675,
+                        "y": 26.325
+                    },
+                    "uuid": "f0ea2035-1ebb-5dd4-99ad-34515521cd24"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D9",
+                    "pos": {
+                        "x": 151.77,
+                        "y": 23.175
+                    },
+                    "uuid": "5f5ea20d-f702-58a9-be56-aa0a96c98e6c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VCTL) doesn't match net given by schematic (/VCTL)",
+            "items": [
+                {
+                    "description": "Pad 1 [VCTL] of D9 on F.Cu",
+                    "pos": {
+                        "x": 150.37,
+                        "y": 23.175
+                    },
+                    "uuid": "bb25b225-6cb4-514d-8c22-858797cc4fad"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V12_FLT) doesn't match net given by schematic (/V12_FLT)",
+            "items": [
+                {
+                    "description": "Pad 2 [V12_FLT] of D9 on F.Cu",
+                    "pos": {
+                        "x": 153.17,
+                        "y": 23.175
+                    },
+                    "uuid": "956a1d97-834f-5692-9e8b-796e7bbed742"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D10",
+                    "pos": {
+                        "x": 154.4,
+                        "y": 94.5
+                    },
+                    "uuid": "adbd58e2-fa19-5cf4-aaf1-08c8d420dda7"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_FLT) doesn't match net given by schematic (/V12_FLT)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_FLT] of D10 on F.Cu",
+                    "pos": {
+                        "x": 156.05,
+                        "y": 94.5
+                    },
+                    "uuid": "4f0cd739-ea45-58d1-ab64-54290ce055c1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D10 on F.Cu",
+                    "pos": {
+                        "x": 152.75,
+                        "y": 94.5
+                    },
+                    "uuid": "ec5ef102-185b-5b7e-bf69-0ed1676642d3"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D11",
+                    "pos": {
+                        "x": 64.455,
+                        "y": 93.225
+                    },
+                    "uuid": "7ba76fa3-93ea-5321-99ad-488443e371b1"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 1 [GND] of D11 on F.Cu",
+                    "pos": {
+                        "x": 63.5175,
+                        "y": 92.275
+                    },
+                    "uuid": "2b3c57fd-c36b-5a38-b085-89529580b0cf"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "Pad 2 [+3V3] of D11 on F.Cu",
+                    "pos": {
+                        "x": 63.5175,
+                        "y": 94.175
+                    },
+                    "uuid": "7fa1c32d-9bcb-508e-8525-9d615feeda31"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V_AA_DIV) doesn't match net given by schematic (/V_AA_DIV)",
+            "items": [
+                {
+                    "description": "Pad 3 [V_AA_DIV] of D11 on F.Cu",
+                    "pos": {
+                        "x": 65.3925,
+                        "y": 93.225
+                    },
+                    "uuid": "4545553f-1348-5c80-a41d-c950ea1c1a49"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D12",
+                    "pos": {
+                        "x": 144.92,
+                        "y": 39.175
+                    },
+                    "uuid": "634fed8e-6302-531f-8e57-8b44afff0df7"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (VCTL) doesn't match net given by schematic (/VCTL)",
+            "items": [
+                {
+                    "description": "Pad 1 [VCTL] of D12 on F.Cu",
+                    "pos": {
+                        "x": 143.27,
+                        "y": 39.175
+                    },
+                    "uuid": "e09fda86-690e-56d1-b134-81769f850e08"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (Q8_G) doesn't match net given by schematic (/Q8_G)",
+            "items": [
+                {
+                    "description": "Pad 2 [Q8_G] of D12 on F.Cu",
+                    "pos": {
+                        "x": 146.57,
+                        "y": 39.175
+                    },
+                    "uuid": "0910d695-7eee-5335-997c-c6d92049bd4b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D13",
+                    "pos": {
+                        "x": 114.27,
+                        "y": 114.675
+                    },
+                    "uuid": "a520c477-c9d1-5456-8301-1613221a31aa"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (ON_DIV) doesn't match net given by schematic (/ON_DIV)",
+            "items": [
+                {
+                    "description": "Pad 1 [ON_DIV] of D13 on F.Cu",
+                    "pos": {
+                        "x": 112.87,
+                        "y": 114.675
+                    },
+                    "uuid": "5727a855-2903-5089-9c02-f504f14229d2"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "Pad 2 [V12_F] of D13 on F.Cu",
+                    "pos": {
+                        "x": 115.67,
+                        "y": 114.675
+                    },
+                    "uuid": "058eec6f-e923-550c-ab2c-3de13c7b2423"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D14",
+                    "pos": {
+                        "x": 153.92,
+                        "y": 47.175
+                    },
+                    "uuid": "9ccc3f80-369f-5ce5-8618-9a671a442fc9"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (Q10_G) doesn't match net given by schematic (/Q10_G)",
+            "items": [
+                {
+                    "description": "Pad 1 [Q10_G] of D14 on F.Cu",
+                    "pos": {
+                        "x": 152.27,
+                        "y": 47.175
+                    },
+                    "uuid": "a19bc0c4-20d0-57f0-b6e7-621a66aee07a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D14 on F.Cu",
+                    "pos": {
+                        "x": 155.57,
+                        "y": 47.175
+                    },
+                    "uuid": "68af8db0-0d6e-5c1a-99fe-3a02f828d5af"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D15",
+                    "pos": {
+                        "x": 114.675,
+                        "y": 109.375
+                    },
+                    "uuid": "3e83823d-a08c-57dc-910a-cd4f9fdc17e9"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (Q5_G) doesn't match net given by schematic (/Q5_G)",
+            "items": [
+                {
+                    "description": "Pad 1 [Q5_G] of D15 on F.Cu",
+                    "pos": {
+                        "x": 114.675,
+                        "y": 111.025
+                    },
+                    "uuid": "e78bb553-b74e-5e94-a12f-f1cea7cc5505"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D15 on F.Cu",
+                    "pos": {
+                        "x": 114.675,
+                        "y": 107.725
+                    },
+                    "uuid": "9757ad2e-dc49-533d-9ce2-8b30b75d43cd"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D16",
+                    "pos": {
+                        "x": 146.675,
+                        "y": 23.875
+                    },
+                    "uuid": "2f28cebb-19c3-500f-a8e3-743b1fca9c95"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_KILL) doesn't match net given by schematic (/PWR_KILL)",
+            "items": [
+                {
+                    "description": "Pad 1 [PWR_KILL] of D16 on F.Cu",
+                    "pos": {
+                        "x": 146.675,
+                        "y": 25.525
+                    },
+                    "uuid": "64b73536-7a2e-5984-a062-1b0ba01d8edd"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D16 on F.Cu",
+                    "pos": {
+                        "x": 146.675,
+                        "y": 22.225
+                    },
+                    "uuid": "514c3579-b318-58b7-8b96-efff3dac8c92"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D17",
+                    "pos": {
+                        "x": 41.675,
+                        "y": 113.375
+                    },
+                    "uuid": "f9b7005d-d1f3-5ae5-9111-8366e3ebfdf8"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (Q12_G) doesn't match net given by schematic (/Q12_G)",
+            "items": [
+                {
+                    "description": "Pad 1 [Q12_G] of D17 on F.Cu",
+                    "pos": {
+                        "x": 41.675,
+                        "y": 115.025
+                    },
+                    "uuid": "fa202f47-cd9b-5e3a-8148-98030e96286d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D17 on F.Cu",
+                    "pos": {
+                        "x": 41.675,
+                        "y": 111.725
+                    },
+                    "uuid": "1f974c52-7396-5a19-b08d-411415ed3b89"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D18",
+                    "pos": {
+                        "x": 192.96,
+                        "y": 79.975
+                    },
+                    "uuid": "83a806be-e7fd-5281-8231-50879cb3a093"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_PB_IN) doesn't match net given by schematic (/PWR_PB_IN)",
+            "items": [
+                {
+                    "description": "Pad 1 [PWR_PB_IN] of D18 on F.Cu",
+                    "pos": {
+                        "x": 192.61,
+                        "y": 79.975
+                    },
+                    "uuid": "5d847acf-04ad-59b7-a630-022690f91b4c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D18 on F.Cu",
+                    "pos": {
+                        "x": 193.31,
+                        "y": 79.975
+                    },
+                    "uuid": "ee12790f-71ce-53d6-af1e-d2143e2057ae"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D19",
+                    "pos": {
+                        "x": 191.975,
+                        "y": 59.675
+                    },
+                    "uuid": "b1593e26-1d45-55df-aa0b-652d5ce20435"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (SW_COM) doesn't match net given by schematic (/SW_COM)",
+            "items": [
+                {
+                    "description": "Pad 1 [SW_COM] of D19 on F.Cu",
+                    "pos": {
+                        "x": 191.975,
+                        "y": 60.025
+                    },
+                    "uuid": "3c14ed83-af83-5a01-9fd1-c101bfb12ee0"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D19 on F.Cu",
+                    "pos": {
+                        "x": 191.975,
+                        "y": 59.325
+                    },
+                    "uuid": "de660a5a-3bb9-57bf-95a2-689e79e306cd"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint D20",
+                    "pos": {
+                        "x": 181.0,
+                        "y": 113.8
+                    },
+                    "uuid": "102d9859-8f81-5484-b2bd-5a4eb30b711e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "Pad 1 [V12_F] of D20 on F.Cu",
+                    "pos": {
+                        "x": 183.15,
+                        "y": 113.8
+                    },
+                    "uuid": "b49e5b7d-19ae-54aa-bb87-c611b25645e1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad 2 [GND] of D20 on F.Cu",
+                    "pos": {
+                        "x": 178.85,
+                        "y": 113.8
+                    },
+                    "uuid": "0940f433-6903-5246-8961-a3bbe4c50885"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint F1",
+                    "pos": {
+                        "x": 77.1,
+                        "y": 105.5
+                    },
+                    "uuid": "0251b20b-a758-58ff-9f8b-537dcba5f1bb"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (12V_IN) doesn't match net given by schematic (/12V_IN)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [12V_IN] of F1",
+                    "pos": {
+                        "x": 77.1,
+                        "y": 100.5
+                    },
+                    "uuid": "eda50d72-be08-5900-821f-ac81ad4237fb"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (12V_IN) doesn't match net given by schematic (/12V_IN)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [12V_IN] of F1",
+                    "pos": {
+                        "x": 77.1,
+                        "y": 105.5
+                    },
+                    "uuid": "556c2b13-66b4-5bed-8c43-5da4cbea1554"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [V12_F] of F1",
+                    "pos": {
+                        "x": 94.9,
+                        "y": 100.5
+                    },
+                    "uuid": "712821d9-f3e9-5390-969d-399d79bde95b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V12_F) doesn't match net given by schematic (/V12_F)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [V12_F] of F1",
+                    "pos": {
+                        "x": 94.9,
+                        "y": 105.5
+                    },
+                    "uuid": "a7d28d87-2667-5403-b01f-9713def8b96c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H1",
+                    "pos": {
+                        "x": 130.0,
+                        "y": 20.0
+                    },
+                    "uuid": "d9dfe317-89f4-520d-95d8-b1e9dbfb8e4e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H2",
+                    "pos": {
+                        "x": 190.0,
+                        "y": 20.0
+                    },
+                    "uuid": "61fcf052-6ff8-5595-863a-495129e5147b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H3",
+                    "pos": {
+                        "x": 10.0,
+                        "y": 100.0
+                    },
+                    "uuid": "f82f6d87-dc59-5d1d-b401-ac0ab4081780"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H4",
+                    "pos": {
+                        "x": 70.0,
+                        "y": 100.0
+                    },
+                    "uuid": "94db36d9-5e44-514c-95df-f3e596049708"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H5",
+                    "pos": {
+                        "x": 130.0,
+                        "y": 100.0
+                    },
+                    "uuid": "20e6694f-e147-5652-9769-a3cebfefd101"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint H6",
+                    "pos": {
+                        "x": 190.0,
+                        "y": 100.0
+                    },
+                    "uuid": "c8cf6a99-e5c1-5d9a-903b-a9dbcc2a8835"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J1",
+                    "pos": {
+                        "x": 69.25,
+                        "y": 114.475
+                    },
+                    "uuid": "8814742a-4a11-5e66-aa54-a68cedb5c3da"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (BAT_IN) doesn't match net given by schematic (/BAT_IN)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [BAT_IN] of J1",
+                    "pos": {
+                        "x": 69.25,
+                        "y": 114.475
+                    },
+                    "uuid": "74d628ad-a66c-5b41-ab80-2ff30df5e92c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [GND] of J1",
+                    "pos": {
+                        "x": 66.75,
+                        "y": 114.475
+                    },
+                    "uuid": "3386b553-fbd6-5b20-8549-d91042758c10"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J2",
+                    "pos": {
+                        "x": 84.75,
+                        "y": 115.525
+                    },
+                    "uuid": "b75aaa62-d426-5d50-a03d-f0e8da06cb85"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (12V_IN) doesn't match net given by schematic (/12V_IN)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [12V_IN] of J2",
+                    "pos": {
+                        "x": 84.75,
+                        "y": 115.525
+                    },
+                    "uuid": "f334e982-88ea-5afd-a75c-fa711170dd99"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [GND] of J2",
+                    "pos": {
+                        "x": 87.25,
+                        "y": 115.525
+                    },
+                    "uuid": "e3e09de3-873c-5be2-8d98-d6d3bb7836af"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J3",
+                    "pos": {
+                        "x": 194.525,
+                        "y": 89.25
+                    },
+                    "uuid": "fc610290-2e20-596e-81d5-b45f91c89ffa"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (PWR_PB_IN) doesn't match net given by schematic (/PWR_PB_IN)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [PWR_PB_IN] of J3",
+                    "pos": {
+                        "x": 194.525,
+                        "y": 89.25
+                    },
+                    "uuid": "bb128914-6cd0-546e-b639-7be8c2997c92"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [GND] of J3",
+                    "pos": {
+                        "x": 194.525,
+                        "y": 86.75
+                    },
+                    "uuid": "468b8722-8447-5451-b176-b51cf45c1520"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J4",
+                    "pos": {
+                        "x": 50.0,
+                        "y": 121.95
+                    },
+                    "uuid": "35b21e38-5fff-546f-8a55-8c677e96fa80"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad A1 [GND] of J4 on F.Cu",
+                    "pos": {
+                        "x": 46.75,
+                        "y": 117.905
+                    },
+                    "uuid": "76cfd984-0224-5dcc-aad1-77d1fac9ecd8"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_VBUS) doesn't match net given by schematic (/USB_VBUS)",
+            "items": [
+                {
+                    "description": "Pad A4 [USB_VBUS] of J4 on F.Cu",
+                    "pos": {
+                        "x": 47.55,
+                        "y": 117.905
+                    },
+                    "uuid": "9c53c052-656d-53eb-9c6f-b7b3cf56d20e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_CC1) doesn't match net given by schematic (/USB_CC1)",
+            "items": [
+                {
+                    "description": "Pad A5 [USB_CC1] of J4 on F.Cu",
+                    "pos": {
+                        "x": 48.75,
+                        "y": 117.905
+                    },
+                    "uuid": "c0661ce3-5bcf-5505-8185-e3c0f4562d30"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DP) doesn't match net given by schematic (/USB_DP)",
+            "items": [
+                {
+                    "description": "Pad A6 [USB_DP] of J4 on F.Cu",
+                    "pos": {
+                        "x": 49.75,
+                        "y": 117.905
+                    },
+                    "uuid": "0201a14d-5d60-5d83-811e-282efc497765"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DN) doesn't match net given by schematic (/USB_DN)",
+            "items": [
+                {
+                    "description": "Pad A7 [USB_DN] of J4 on F.Cu",
+                    "pos": {
+                        "x": 50.25,
+                        "y": 117.905
+                    },
+                    "uuid": "453a1831-45d0-5559-b09e-53b358159382"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J4-SBU1-PadA8))",
+            "items": [
+                {
+                    "description": "Pad A8 [<no net>] of J4 on F.Cu",
+                    "pos": {
+                        "x": 51.25,
+                        "y": 117.905
+                    },
+                    "uuid": "3b939b33-e569-5db1-a2a2-8a43c6dfc3c6"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_VBUS) doesn't match net given by schematic (/USB_VBUS)",
+            "items": [
+                {
+                    "description": "Pad A9 [USB_VBUS] of J4 on F.Cu",
+                    "pos": {
+                        "x": 52.45,
+                        "y": 117.905
+                    },
+                    "uuid": "8c94a02d-445a-5517-978a-53aa86756b4d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad A12 [GND] of J4 on F.Cu",
+                    "pos": {
+                        "x": 53.25,
+                        "y": 117.905
+                    },
+                    "uuid": "7102295f-92b4-5b69-be69-b889ef353107"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad B1 [GND] of J4 on F.Cu",
+                    "pos": {
+                        "x": 53.25,
+                        "y": 117.905
+                    },
+                    "uuid": "479fd1f3-140f-5bff-97df-78c3d803047a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_VBUS) doesn't match net given by schematic (/USB_VBUS)",
+            "items": [
+                {
+                    "description": "Pad B4 [USB_VBUS] of J4 on F.Cu",
+                    "pos": {
+                        "x": 52.45,
+                        "y": 117.905
+                    },
+                    "uuid": "f2d7030a-e1e9-5366-84d2-7ba99c1665b8"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_CC2) doesn't match net given by schematic (/USB_CC2)",
+            "items": [
+                {
+                    "description": "Pad B5 [USB_CC2] of J4 on F.Cu",
+                    "pos": {
+                        "x": 51.75,
+                        "y": 117.905
+                    },
+                    "uuid": "421f1708-3539-5b27-a097-cd0214313b49"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DP) doesn't match net given by schematic (/USB_DP)",
+            "items": [
+                {
+                    "description": "Pad B6 [USB_DP] of J4 on F.Cu",
+                    "pos": {
+                        "x": 50.75,
+                        "y": 117.905
+                    },
+                    "uuid": "be041243-e738-50a2-90c9-6abb35a1c3fc"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DN) doesn't match net given by schematic (/USB_DN)",
+            "items": [
+                {
+                    "description": "Pad B7 [USB_DN] of J4 on F.Cu",
+                    "pos": {
+                        "x": 49.25,
+                        "y": 117.905
+                    },
+                    "uuid": "36ce49a6-1e3e-5c8d-928c-f5566f070395"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J4-SBU2-PadB8))",
+            "items": [
+                {
+                    "description": "Pad B8 [<no net>] of J4 on F.Cu",
+                    "pos": {
+                        "x": 48.25,
+                        "y": 117.905
+                    },
+                    "uuid": "083de91e-8e92-5618-a170-eb5214fabb2c"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_VBUS) doesn't match net given by schematic (/USB_VBUS)",
+            "items": [
+                {
+                    "description": "Pad B9 [USB_VBUS] of J4 on F.Cu",
+                    "pos": {
+                        "x": 47.55,
+                        "y": 117.905
+                    },
+                    "uuid": "4d6dddfc-0b25-59ee-85fd-14b304fe4344"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "Pad B12 [GND] of J4 on F.Cu",
+                    "pos": {
+                        "x": 46.75,
+                        "y": 117.905
+                    },
+                    "uuid": "fdceaba3-655e-5ae3-8596-3bb2d8b14f81"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad SH [GND] of J4",
+                    "pos": {
+                        "x": 45.68,
+                        "y": 118.82
+                    },
+                    "uuid": "270948e9-ce6b-5114-b782-bfc5647f50f4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad SH [GND] of J4",
+                    "pos": {
+                        "x": 45.68,
+                        "y": 123.0
+                    },
+                    "uuid": "fa5886c1-9fd6-5981-b777-9df4bc277e3a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad SH [GND] of J4",
+                    "pos": {
+                        "x": 54.32,
+                        "y": 118.82
+                    },
+                    "uuid": "71b17703-ea63-532d-ac5f-c820b481b66d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad SH [GND] of J4",
+                    "pos": {
+                        "x": 54.32,
+                        "y": 123.0
+                    },
+                    "uuid": "f3e54713-1c1b-5ae4-b370-aa7f8fbfe585"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 9.0
+                    },
+                    "uuid": "efd7ae5c-9fb7-5fd4-a1ce-2916b58f5950"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [+3V3] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 9.0
+                    },
+                    "uuid": "f5b25244-38d3-53c7-9630-d566f3da960d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (+3V3) doesn't match net given by schematic (/+3V3)",
+            "items": [
+                {
+                    "description": "PTH pad 2 [+3V3] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 11.54
+                    },
+                    "uuid": "7e06ba02-1160-510e-8d95-dad743c0f13d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J5-Pin_3-Pad3))",
+            "items": [
+                {
+                    "description": "PTH pad 3 [<no net>] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 14.08
+                    },
+                    "uuid": "4488e149-b6ca-51ed-9ef3-3e6be742b93d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V_AA_ADC) doesn't match net given by schematic (/V_AA_ADC)",
+            "items": [
+                {
+                    "description": "PTH pad 4 [V_AA_ADC] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 16.62
+                    },
+                    "uuid": "560c0d98-6b11-5b0b-8829-96d11c9151f6"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (V_12_ADC) doesn't match net given by schematic (/V_12_ADC)",
+            "items": [
+                {
+                    "description": "PTH pad 5 [V_12_ADC] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 19.16
+                    },
+                    "uuid": "12a874df-67db-5a11-ba44-dd8fe7b07c91"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BTN_PREP) doesn't match net given by schematic (/BTN_PREP)",
+            "items": [
+                {
+                    "description": "PTH pad 6 [BTN_PREP] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 21.7
+                    },
+                    "uuid": "763f3bf2-bec3-5cc9-b1c4-d7fcd9217a0b"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (LCD_CS) doesn't match net given by schematic (/LCD_CS)",
+            "items": [
+                {
+                    "description": "PTH pad 7 [LCD_CS] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 24.24
+                    },
+                    "uuid": "169a5299-f563-5199-8c15-6f519d6b6762"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BUZZER) doesn't match net given by schematic (/BUZZER)",
+            "items": [
+                {
+                    "description": "PTH pad 8 [BUZZER] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 26.78
+                    },
+                    "uuid": "319b1864-6206-56f4-81a4-24510431c6c7"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (LCD_DISP) doesn't match net given by schematic (/LCD_DISP)",
+            "items": [
+                {
+                    "description": "PTH pad 9 [LCD_DISP] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 29.32
+                    },
+                    "uuid": "6b10194e-5554-5d81-aee2-1a4980b258cb"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (LCD_EXTCOMIN) doesn't match net given by schematic (/LCD_EXTCOMIN)",
+            "items": [
+                {
+                    "description": "PTH pad 10 [LCD_EXTCOMIN] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 31.86
+                    },
+                    "uuid": "97480e3e-3842-5e0a-9ade-1ebe47085b22"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (LED_ALARM) doesn't match net given by schematic (/LED_ALARM)",
+            "items": [
+                {
+                    "description": "PTH pad 11 [LED_ALARM] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 34.4
+                    },
+                    "uuid": "f86a0d4f-1446-550c-8fb4-f639a76bb86e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (FRAM_CS) doesn't match net given by schematic (/FRAM_CS)",
+            "items": [
+                {
+                    "description": "PTH pad 12 [FRAM_CS] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 36.94
+                    },
+                    "uuid": "73a6e476-55f6-5bf1-8137-50c6af4187cc"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_LAPTOP) doesn't match net given by schematic (/USB_LAPTOP)",
+            "items": [
+                {
+                    "description": "PTH pad 13 [USB_LAPTOP] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 39.48
+                    },
+                    "uuid": "9ef430a1-45a9-5a76-97fe-3abab08dcadd"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (DIV_EN) doesn't match net given by schematic (/DIV_EN)",
+            "items": [
+                {
+                    "description": "PTH pad 14 [DIV_EN] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 42.02
+                    },
+                    "uuid": "5e00ea61-7b89-5c89-8319-9ac8e0c6cc10"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (RF_RESET) doesn't match net given by schematic (/RF_RESET)",
+            "items": [
+                {
+                    "description": "PTH pad 15 [RF_RESET] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 44.56
+                    },
+                    "uuid": "37f93c77-aee8-5da5-b948-7d310788c111"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (RF_CS) doesn't match net given by schematic (/RF_CS)",
+            "items": [
+                {
+                    "description": "PTH pad 16 [RF_CS] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 47.1
+                    },
+                    "uuid": "e84a6627-a7ee-5176-a93c-2794f8d44679"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (SPI_MOSI) doesn't match net given by schematic (/SPI_MOSI)",
+            "items": [
+                {
+                    "description": "PTH pad 17 [SPI_MOSI] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 49.64
+                    },
+                    "uuid": "6319785f-14b9-5239-a7a0-59041a3ec31f"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (SPI_SCK_DEVKIT) doesn't match net given by schematic (/SPI_SCK_DEVKIT)",
+            "items": [
+                {
+                    "description": "PTH pad 18 [SPI_SCK_DEVKIT] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 52.18
+                    },
+                    "uuid": "877ecd9a-e8a9-5e4d-8232-1ace2b7df4c4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (SPI_MISO) doesn't match net given by schematic (/SPI_MISO)",
+            "items": [
+                {
+                    "description": "PTH pad 19 [SPI_MISO] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 54.72
+                    },
+                    "uuid": "70c5caa6-8178-5cfa-a197-a6d0a3bba151"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (RF_GPIO0) doesn't match net given by schematic (/RF_GPIO0)",
+            "items": [
+                {
+                    "description": "PTH pad 20 [RF_GPIO0] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 57.26
+                    },
+                    "uuid": "76792b03-326b-5632-9e19-dd3f7ff1df21"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J5-Pin_21-Pad21))",
+            "items": [
+                {
+                    "description": "PTH pad 21 [<no net>] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 59.8
+                    },
+                    "uuid": "0f9e8c89-b374-5ecb-92d8-2198ee393f13"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 22 [GND] of J5",
+                    "pos": {
+                        "x": 108.86,
+                        "y": 62.34
+                    },
+                    "uuid": "86c893cd-8ed3-5c90-a80c-71c228c93005"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 9.0
+                    },
+                    "uuid": "b6707e8c-951b-579c-8a74-917610c8db68"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 1 [GND] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 9.0
+                    },
+                    "uuid": "4b3d6eb6-758e-57c9-b669-ed35301891a5"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_2-Pad2))",
+            "items": [
+                {
+                    "description": "PTH pad 2 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 11.54
+                    },
+                    "uuid": "8a85cff3-b0c2-52b9-a332-9cb983bc80cc"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_3-Pad3))",
+            "items": [
+                {
+                    "description": "PTH pad 3 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 14.08
+                    },
+                    "uuid": "224648b5-ee36-51f9-8e27-1da02b76264a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (SW_CISZA) doesn't match net given by schematic (/SW_CISZA)",
+            "items": [
+                {
+                    "description": "PTH pad 4 [SW_CISZA] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 16.62
+                    },
+                    "uuid": "b12d5ecd-7e06-502b-a1c8-e6e99b753518"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BTN_BACK) doesn't match net given by schematic (/BTN_BACK)",
+            "items": [
+                {
+                    "description": "PTH pad 5 [BTN_BACK] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 19.16
+                    },
+                    "uuid": "22997ba1-597c-5aa0-b448-38fe54ca36c8"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (RF_GPIO3) doesn't match net given by schematic (/RF_GPIO3)",
+            "items": [
+                {
+                    "description": "PTH pad 6 [RF_GPIO3] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 21.7
+                    },
+                    "uuid": "68e7e18a-493d-5e70-8d63-af207f3aa8a4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BTN_UP) doesn't match net given by schematic (/BTN_UP)",
+            "items": [
+                {
+                    "description": "PTH pad 7 [BTN_UP] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 24.24
+                    },
+                    "uuid": "300fd5f6-748e-51e9-896f-38db39ef9cb4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BTN_DOWN) doesn't match net given by schematic (/BTN_DOWN)",
+            "items": [
+                {
+                    "description": "PTH pad 8 [BTN_DOWN] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 26.78
+                    },
+                    "uuid": "cfc516b0-e40b-5f4a-bbd3-c89b4664c353"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (BTN_OK) doesn't match net given by schematic (/BTN_OK)",
+            "items": [
+                {
+                    "description": "PTH pad 9 [BTN_OK] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 29.32
+                    },
+                    "uuid": "c45d6abd-8427-52d6-b3c1-d848f9c3b9dd"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_10-Pad10))",
+            "items": [
+                {
+                    "description": "PTH pad 10 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 31.86
+                    },
+                    "uuid": "cb1b59b8-e6c9-5b1e-96bf-a8172409ace5"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_11-Pad11))",
+            "items": [
+                {
+                    "description": "PTH pad 11 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 34.4
+                    },
+                    "uuid": "55885de7-a663-5033-86a1-b27b58b971f4"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_12-Pad12))",
+            "items": [
+                {
+                    "description": "PTH pad 12 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 36.94
+                    },
+                    "uuid": "fb604855-b0de-5ed3-acd9-370c3f57712a"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_13-Pad13))",
+            "items": [
+                {
+                    "description": "PTH pad 13 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 39.48
+                    },
+                    "uuid": "b5b9772a-3cdb-52d3-aebd-c38e5402628e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad missing net given by schematic (unconnected-(J6-Pin_14-Pad14))",
+            "items": [
+                {
+                    "description": "PTH pad 14 [<no net>] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 42.02
+                    },
+                    "uuid": "f4bdcfa4-fc5a-5e4d-946f-dcab27ee9bb5"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (PWM_SYNC) doesn't match net given by schematic (/PWM_SYNC)",
+            "items": [
+                {
+                    "description": "PTH pad 15 [PWM_SYNC] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 44.56
+                    },
+                    "uuid": "8a02c5a2-fb31-5b02-a32c-2d93cb3140e1"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (PWR_INT) doesn't match net given by schematic (/PWR_INT)",
+            "items": [
+                {
+                    "description": "PTH pad 16 [PWR_INT] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 47.1
+                    },
+                    "uuid": "2d42823d-2270-5d73-9408-8f1f683a6cc2"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (KILL_MCU) doesn't match net given by schematic (/KILL_MCU)",
+            "items": [
+                {
+                    "description": "PTH pad 17 [KILL_MCU] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 49.64
+                    },
+                    "uuid": "0e6a84ba-8761-5030-b401-80a43cd9111e"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (RF_GPIO1) doesn't match net given by schematic (/RF_GPIO1)",
+            "items": [
+                {
+                    "description": "PTH pad 18 [RF_GPIO1] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 52.18
+                    },
+                    "uuid": "a89a0691-ad61-5bcf-bfdd-f0ccdbbbd787"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DP) doesn't match net given by schematic (/USB_DP)",
+            "items": [
+                {
+                    "description": "PTH pad 19 [USB_DP] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 54.72
+                    },
+                    "uuid": "31cdd18b-8ddb-5bf5-b4f4-690954347b74"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (USB_DN) doesn't match net given by schematic (/USB_DN)",
+            "items": [
+                {
+                    "description": "PTH pad 20 [USB_DN] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 57.26
+                    },
+                    "uuid": "47d02111-16c9-53ea-a195-2cd38000b4ec"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Pad net (GND) doesn't match net given by schematic (/GND)",
+            "items": [
+                {
+                    "description": "PTH pad 21 [GND] of J6",
+                    "pos": {
+                        "x": 86.0,
+                        "y": 59.8
+                    },
+                    "uuid": "2fc8a42f-9e3e-5a59-8375-5d80cb83117d"
+                }
+            ],
+            "severity": "warning",
+            "type": "net_conflict"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J7",
+                    "pos": {
+                        "x": 42.0,
+                        "y": 67.21
+                    },
+                    "uuid": "c982caab-5bfe-563b-aab2-420a605783ac"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J8",
+                    "pos": {
+                        "x": 157.64,
+                        "y": 67.4
+                    },
+                    "uuid": "7672e8f0-267b-5e9e-89d1-267a0a03425f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J9",
+                    "pos": {
+                        "x": 142.4,
+                        "y": 67.4
+                    },
+                    "uuid": "09fba74e-1989-5dc6-84f8-8fdd78e2e1da"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J10",
+                    "pos": {
+                        "x": 100.525,
+                        "y": 95.5
+                    },
+                    "uuid": "13f71347-209f-5416-8d55-4b722a52d447"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint J11",
+                    "pos": {
+                        "x": 192.525,
+                        "y": 53.25
+                    },
+                    "uuid": "23579aee-4c88-592c-8891-81660224e450"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint JP3",
+                    "pos": {
+                        "x": 170.725,
+                        "y": 70.0
+                    },
+                    "uuid": "dd6bafb5-2de6-5b50-9c0a-9e7b87a6e17f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint L1",
+                    "pos": {
+                        "x": 57.85,
+                        "y": 63.3
+                    },
+                    "uuid": "87ae9321-9df1-5c5d-ab8f-b8a3f218c30e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint L2",
+                    "pos": {
+                        "x": 128.6,
+                        "y": 43.4
+                    },
+                    "uuid": "89031ad4-c409-55bc-aaa3-bd276911fa97"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q1",
+                    "pos": {
+                        "x": 160.225,
+                        "y": 11.955
+                    },
+                    "uuid": "75af17fe-f367-52cc-935a-0c1fa7e28ed0"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q2",
+                    "pos": {
+                        "x": 176.6,
+                        "y": 108.0
+                    },
+                    "uuid": "462967af-7197-54e5-a786-9bb84e9ed098"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q3",
+                    "pos": {
+                        "x": 158.3,
+                        "y": 108.0
+                    },
+                    "uuid": "ddcf8e40-84af-5969-9eed-c253f5646173"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q4",
+                    "pos": {
+                        "x": 119.955,
+                        "y": 109.225
+                    },
+                    "uuid": "441fa61b-8b62-5a73-95b4-ddd837985857"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q5",
+                    "pos": {
+                        "x": 119.955,
+                        "y": 103.725
+                    },
+                    "uuid": "046fa532-c3b8-50f8-a122-00121ae9c35a"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q6",
+                    "pos": {
+                        "x": 57.725,
+                        "y": 106.955
+                    },
+                    "uuid": "3f922cc0-5905-5099-a70a-aab039252f22"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q7",
+                    "pos": {
+                        "x": 62.955,
+                        "y": 99.725
+                    },
+                    "uuid": "2c792082-3694-5810-a872-afd84bf18292"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q8",
+                    "pos": {
+                        "x": 152.455,
+                        "y": 42.225
+                    },
+                    "uuid": "076e31d5-46a6-5abd-b594-9a6fb4914994"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q9",
+                    "pos": {
+                        "x": 142.225,
+                        "y": 45.955
+                    },
+                    "uuid": "ddecf370-74b5-5914-985c-ed56dd67a2f1"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q10",
+                    "pos": {
+                        "x": 147.725,
+                        "y": 47.955
+                    },
+                    "uuid": "ffb2bd7b-07e7-58d8-9847-addc85159d24"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q11",
+                    "pos": {
+                        "x": 161.225,
+                        "y": 27.955
+                    },
+                    "uuid": "ed970459-dc4c-570d-8930-363d72aabd44"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint Q12",
+                    "pos": {
+                        "x": 44.955,
+                        "y": 104.225
+                    },
+                    "uuid": "57be0203-01c5-522b-9363-0903b40a9423"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R1",
+                    "pos": {
+                        "x": 155.975,
+                        "y": 11.705
+                    },
+                    "uuid": "46d737b6-a772-548e-b616-ac0ce4208469"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R2",
+                    "pos": {
+                        "x": 160.305,
+                        "y": 16.655
+                    },
+                    "uuid": "01c37b2b-0ef5-582d-bd1c-6fbe72139373"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R3",
+                    "pos": {
+                        "x": 164.975,
+                        "y": 16.205
+                    },
+                    "uuid": "a73a92ed-8fd3-59e6-9892-b403e0c9fddd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R4",
+                    "pos": {
+                        "x": 160.205,
+                        "y": 20.475
+                    },
+                    "uuid": "338243dd-ab1a-5757-a7de-b3fd9fccc6c5"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R5",
+                    "pos": {
+                        "x": 10.975,
+                        "y": 72.205
+                    },
+                    "uuid": "984c4f93-8e51-53ee-90ee-209eefdae29c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R6",
+                    "pos": {
+                        "x": 14.475,
+                        "y": 72.205
+                    },
+                    "uuid": "a7b791c4-5704-500f-907a-049b3a1f7c87"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R7",
+                    "pos": {
+                        "x": 11.705,
+                        "y": 76.475
+                    },
+                    "uuid": "1bb1ba7f-4760-5504-b7cd-d92f83e7e2b0"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R8",
+                    "pos": {
+                        "x": 17.975,
+                        "y": 72.205
+                    },
+                    "uuid": "7cd15d0a-4b25-55ce-8077-efd146dac8f6"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R9",
+                    "pos": {
+                        "x": 21.475,
+                        "y": 72.205
+                    },
+                    "uuid": "4c1ff374-cbdb-5971-8ea0-489a54af9029"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R10",
+                    "pos": {
+                        "x": 24.975,
+                        "y": 72.205
+                    },
+                    "uuid": "b0731bef-3b65-54ca-bba4-20993d342f6f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R11",
+                    "pos": {
+                        "x": 150.205,
+                        "y": 78.475
+                    },
+                    "uuid": "86ecaa8e-a309-5c49-85e1-b51236962d38"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R12",
+                    "pos": {
+                        "x": 150.205,
+                        "y": 81.975
+                    },
+                    "uuid": "8d654338-8e2d-56fc-801f-7df19bed6b14"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R13",
+                    "pos": {
+                        "x": 57.205,
+                        "y": 76.475
+                    },
+                    "uuid": "69fc63e9-5eab-561b-949c-e91496febe79"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R16",
+                    "pos": {
+                        "x": 189.475,
+                        "y": 59.705
+                    },
+                    "uuid": "dab8323f-2399-5edb-acbf-47aa35bdfb17"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R18",
+                    "pos": {
+                        "x": 125.205,
+                        "y": 13.975
+                    },
+                    "uuid": "48af8b67-1bf9-52e7-8661-291513e69d16"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R19",
+                    "pos": {
+                        "x": 58.205,
+                        "y": 58.475
+                    },
+                    "uuid": "c265298e-d84b-50a2-9104-100d846531b4"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R20",
+                    "pos": {
+                        "x": 120.205,
+                        "y": 25.475
+                    },
+                    "uuid": "e9a6c414-47fa-568d-b43c-285296bcdc2c"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R21",
+                    "pos": {
+                        "x": 64.2,
+                        "y": 70.1
+                    },
+                    "uuid": "b5881797-70b2-5d96-b758-e08b88fe49f4"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R22",
+                    "pos": {
+                        "x": 61.6,
+                        "y": 70.1
+                    },
+                    "uuid": "ea25b5d7-9df8-5cce-baf6-2c93ebc43852"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R30",
+                    "pos": {
+                        "x": 169.5,
+                        "y": 103.4
+                    },
+                    "uuid": "d86f8e43-0d7a-5414-b299-d9d083ba0e98"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R31",
+                    "pos": {
+                        "x": 166.9,
+                        "y": 103.4
+                    },
+                    "uuid": "33d5d76b-01a3-5b1d-bad5-3b91c938fbad"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R32",
+                    "pos": {
+                        "x": 159.75,
+                        "y": 102.8
+                    },
+                    "uuid": "eb7167b3-8f07-524d-8d0f-20d84ceae4ee"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R33",
+                    "pos": {
+                        "x": 125.205,
+                        "y": 114.475
+                    },
+                    "uuid": "982c66c6-ceb0-55ad-b8a8-a87290bbc62b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R34",
+                    "pos": {
+                        "x": 114.975,
+                        "y": 103.705
+                    },
+                    "uuid": "0808ea76-9641-5ff9-8b2b-2893e8c8936a"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R35",
+                    "pos": {
+                        "x": 110.975,
+                        "y": 109.205
+                    },
+                    "uuid": "ec35fec7-f55f-56a3-97c6-7216bd0a2e4d"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R36",
+                    "pos": {
+                        "x": 128.975,
+                        "y": 109.205
+                    },
+                    "uuid": "7e2047c8-a0b6-5de1-a36b-958cd03b6111"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R37",
+                    "pos": {
+                        "x": 111.475,
+                        "y": 103.705
+                    },
+                    "uuid": "3f23b091-d688-5ce9-a180-d4d70c5bcd50"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R38",
+                    "pos": {
+                        "x": 125.205,
+                        "y": 117.975
+                    },
+                    "uuid": "149a2a68-bc00-5937-9cac-b378bc006a0f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R39",
+                    "pos": {
+                        "x": 122.705,
+                        "y": 98.975
+                    },
+                    "uuid": "b8b85660-f929-5602-b04a-1765305a0564"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R40",
+                    "pos": {
+                        "x": 62.955,
+                        "y": 106.855
+                    },
+                    "uuid": "60527d0b-3c03-559b-b058-1eb350a6b110"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R41",
+                    "pos": {
+                        "x": 61.205,
+                        "y": 112.975
+                    },
+                    "uuid": "e3d08235-95f3-5c74-af5e-3e2e75956b23"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R43",
+                    "pos": {
+                        "x": 58.475,
+                        "y": 101.705
+                    },
+                    "uuid": "34117e14-e38a-5b39-8f94-7a2d6d11839f"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R44",
+                    "pos": {
+                        "x": 56.975,
+                        "y": 112.205
+                    },
+                    "uuid": "7c4ce014-21d3-573a-9792-0099b925a151"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R45",
+                    "pos": {
+                        "x": 61.205,
+                        "y": 116.475
+                    },
+                    "uuid": "bd1c8255-35b2-5fb2-b928-3ddc360df8f1"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R46",
+                    "pos": {
+                        "x": 161.34,
+                        "y": 96.5
+                    },
+                    "uuid": "b7abf1e3-87e1-5460-bc5d-1f0b89fc7d1b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R47",
+                    "pos": {
+                        "x": 145.975,
+                        "y": 34.705
+                    },
+                    "uuid": "854561a3-ec5d-54ef-8753-aa068b5db765"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R48",
+                    "pos": {
+                        "x": 144.475,
+                        "y": 29.705
+                    },
+                    "uuid": "53c80b87-c4d2-5c58-bd3d-6d362d33a2cd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R49",
+                    "pos": {
+                        "x": 142.475,
+                        "y": 34.705
+                    },
+                    "uuid": "be380ec5-a0ee-54b8-8f10-fa9fc7a9ab61"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R50",
+                    "pos": {
+                        "x": 157.6,
+                        "y": 33.0
+                    },
+                    "uuid": "3b92f837-0043-510b-bd89-a930805e5f74"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R51",
+                    "pos": {
+                        "x": 137.975,
+                        "y": 45.705
+                    },
+                    "uuid": "66b475c6-a9ae-5110-9158-a322bf8b6703"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R53",
+                    "pos": {
+                        "x": 139.205,
+                        "y": 41.475
+                    },
+                    "uuid": "c3073949-f476-530f-8b8e-32b95a739fbd"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R54",
+                    "pos": {
+                        "x": 138.975,
+                        "y": 37.205
+                    },
+                    "uuid": "1480841a-03cc-5cc5-a9cf-ae92ee2a6e5e"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R55",
+                    "pos": {
+                        "x": 138.975,
+                        "y": 32.205
+                    },
+                    "uuid": "163f23b6-b1a3-567e-b1db-a2923841c4ae"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R60",
+                    "pos": {
+                        "x": 127.0,
+                        "y": 64.6
+                    },
+                    "uuid": "61a629dd-1396-5333-afe3-5f2c5f63a0bc"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R61",
+                    "pos": {
+                        "x": 116.2,
+                        "y": 64.6
+                    },
+                    "uuid": "5bcf66e0-aaa6-5a71-9900-9486be6c78c4"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R62",
+                    "pos": {
+                        "x": 118.9,
+                        "y": 64.6
+                    },
+                    "uuid": "6d835ca4-e4f2-5860-a629-2e66b847152d"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R63",
+                    "pos": {
+                        "x": 139.0,
+                        "y": 58.8
+                    },
+                    "uuid": "b5af5c64-34ce-5c25-8174-8d7025ee8fb1"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R64",
+                    "pos": {
+                        "x": 150.205,
+                        "y": 67.975
+                    },
+                    "uuid": "2367ac26-c589-5449-b193-75b97d190607"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R65",
+                    "pos": {
+                        "x": 50.205,
+                        "y": 108.475
+                    },
+                    "uuid": "f07ef27f-a9d2-50af-aa98-b4b4ec95de93"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R66",
+                    "pos": {
+                        "x": 45.475,
+                        "y": 112.705
+                    },
+                    "uuid": "f62bdacc-894e-5649-a597-c5a9e768a182"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R67",
+                    "pos": {
+                        "x": 124.3,
+                        "y": 68.8
+                    },
+                    "uuid": "75fe3337-9d58-59a2-b2d8-6fcf3d3602eb"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R68",
+                    "pos": {
+                        "x": 113.5,
+                        "y": 68.8
+                    },
+                    "uuid": "2910c476-2527-5ec8-a1ae-1e51c67accaa"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R70",
+                    "pos": {
+                        "x": 130.205,
+                        "y": 117.975
+                    },
+                    "uuid": "6caf2f01-fa5a-5d75-be1f-d472b6471482"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R71",
+                    "pos": {
+                        "x": 152.205,
+                        "y": 26.975
+                    },
+                    "uuid": "b54fad91-3c57-5d62-bdb5-750646fa16a3"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R72",
+                    "pos": {
+                        "x": 161.705,
+                        "y": 32.475
+                    },
+                    "uuid": "b9b3c68e-1fbe-5c7f-8f77-7ae2d6ad6465"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R73",
+                    "pos": {
+                        "x": 45.205,
+                        "y": 108.475
+                    },
+                    "uuid": "8a6cafa1-0fc6-5006-8f4e-54c83723d7f8"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R74",
+                    "pos": {
+                        "x": 50.205,
+                        "y": 104.975
+                    },
+                    "uuid": "8ed16cb7-77c8-5d4a-bf93-a2d8810180e0"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R75",
+                    "pos": {
+                        "x": 40.205,
+                        "y": 108.475
+                    },
+                    "uuid": "2e7d5b0f-dc7b-5ae5-87af-a979c61b4be4"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R76",
+                    "pos": {
+                        "x": 100.475,
+                        "y": 18.205
+                    },
+                    "uuid": "da2441ac-70b7-51ce-b35c-8567dcecf437"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R77",
+                    "pos": {
+                        "x": 103.705,
+                        "y": 22.475
+                    },
+                    "uuid": "fe2169e9-5586-526b-9b9e-7825ac4cf839"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R78",
+                    "pos": {
+                        "x": 142.975,
+                        "y": 24.705
+                    },
+                    "uuid": "5cc28ebe-439e-59aa-b14f-0b4e58b8822b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R80",
+                    "pos": {
+                        "x": 100.205,
+                        "y": 76.475
+                    },
+                    "uuid": "45334f85-5421-5e9b-bbfc-99ae9f8b3f37"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R81",
+                    "pos": {
+                        "x": 96.475,
+                        "y": 79.705
+                    },
+                    "uuid": "786c7321-b543-5495-acc6-22c9793d42ec"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R82",
+                    "pos": {
+                        "x": 103.475,
+                        "y": 80.205
+                    },
+                    "uuid": "b0c98fe0-83d8-5d64-be41-bc204c95e646"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R83",
+                    "pos": {
+                        "x": 103.975,
+                        "y": 75.705
+                    },
+                    "uuid": "982d896f-f1e9-52a5-8e0a-1381a8defac9"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint R84",
+                    "pos": {
+                        "x": 192.705,
+                        "y": 77.475
+                    },
+                    "uuid": "7df0a785-b149-55b6-9320-07bc3214bcc7"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint SW6",
+                    "pos": {
+                        "x": 137.75,
+                        "y": 103.75
+                    },
+                    "uuid": "8eba4c1c-94af-539f-bc0e-f5d179424a18"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U1",
+                    "pos": {
+                        "x": 120.175,
+                        "y": 20.03
+                    },
+                    "uuid": "0ef1eab3-0e99-58d9-9554-6b3b571434a3"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U2",
+                    "pos": {
+                        "x": 63.0,
+                        "y": 66.0
+                    },
+                    "uuid": "62542490-9577-5988-b4b9-682aa38e1a42"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U3",
+                    "pos": {
+                        "x": 115.075,
+                        "y": 26.4
+                    },
+                    "uuid": "30466230-29ba-5684-8099-cea8cc3979bf"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U4",
+                    "pos": {
+                        "x": 115.075,
+                        "y": 13.9
+                    },
+                    "uuid": "91de5349-6e7a-54f5-8dd3-2743b470650b"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U5",
+                    "pos": {
+                        "x": 168.0,
+                        "y": 108.0
+                    },
+                    "uuid": "adbaf09f-52cf-59ad-b922-48191defe297"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U6",
+                    "pos": {
+                        "x": 152.0,
+                        "y": 36.0
+                    },
+                    "uuid": "b2523e5c-4cd0-5107-935e-e1562c8b5581"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U7",
+                    "pos": {
+                        "x": 128.6,
+                        "y": 57.0
+                    },
+                    "uuid": "db7722ca-93a0-5656-9996-fdb95bb16ad2"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U8",
+                    "pos": {
+                        "x": 50.075,
+                        "y": 112.9
+                    },
+                    "uuid": "ead32b1a-a9ad-58dd-84f5-223fdbf59c9a"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        },
+        {
+            "description": "Missing symbol field 'Manufacturer' in footprint",
+            "items": [
+                {
+                    "description": "Footprint U9",
+                    "pos": {
+                        "x": 99.975,
+                        "y": 79.84
+                    },
+                    "uuid": "15d392df-ad4c-5dbd-a348-8bcde92bb286"
+                }
+            ],
+            "severity": "warning",
+            "type": "footprint_symbol_field_mismatch"
+        }
+    ],
     "source": "plytka-v2.kicad_pcb",
     "unconnected_items": [],
     "violations": [
@@ -43,7 +5594,7 @@
                         "x": 55.0,
                         "y": 124.5
                     },
-                    "uuid": "a47df5a1-6bb2-5623-b11c-fd3c1924a52a"
+                    "uuid": "b64c8a61-0ab7-5822-b2ca-7a789160edf5"
                 },
                 {
                     "description": "Segment of J4 on F.Silkscreen",
@@ -51,7 +5602,7 @@
                         "x": 45.3,
                         "y": 123.95
                     },
-                    "uuid": "ad00aa6f-52fc-581e-b2e6-aa37400d676e"
+                    "uuid": "d275d586-0d1f-55f8-94cb-ac1d4de4b9c6"
                 }
             ],
             "severity": "warning",
@@ -66,7 +5617,7 @@
                         "x": 55.0,
                         "y": 124.5
                     },
-                    "uuid": "a47df5a1-6bb2-5623-b11c-fd3c1924a52a"
+                    "uuid": "b64c8a61-0ab7-5822-b2ca-7a789160edf5"
                 },
                 {
                     "description": "Segment of J4 on F.Silkscreen",
@@ -74,7 +5625,7 @@
                         "x": 54.7,
                         "y": 123.95
                     },
-                    "uuid": "356ac8ca-9682-5f58-b339-1a2424c2a251"
+                    "uuid": "013bf491-e75e-5775-8688-96bbd490e208"
                 }
             ],
             "severity": "warning",
@@ -89,7 +5640,7 @@
                         "x": 168.0,
                         "y": 110.45
                     },
-                    "uuid": "d06d1878-20e7-5521-be44-520681dcea99"
+                    "uuid": "275ca78b-39b7-5aa2-8ec9-ce24587db3e9"
                 },
                 {
                     "description": "Pad 2 [V12_MID] of C31 on F.Cu",

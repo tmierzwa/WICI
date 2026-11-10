@@ -167,13 +167,14 @@ CONVERTER = {
 SWITCH_AT = (168.0, 108.0)
 SWITCH_TURN = True
 SWITCH = {
-    'U5': (0.0, 0.0, 0), 'Q2': (-8.6, 0.0, 0), 'Q3': (8.6, 0.0, 180),
+    'U5': (0.0, 0.0, 0), 'Q2': (-8.6, 0.0, 0), 'Q3': (9.7, 0.0, 180),   # Q3 1.1 mm further: room for C30 at pin 10
     'C31': (1.2, -3.4, 180),                                          # CAP-VS above pins 12 (C), 11 (CAP), 10 (VS)
     'R30': (-1.5, 4.6, 90), 'R31': (1.1, 4.6, 270),                   # OVP ladder at pins 4 and 5, OV pads towards U5
-    'C30': (3.75, 5.35, 90),                                          # VS-GND below pins 7-10: GND pad towards pin 7
+    'C30': (4.3, -0.05, 270),                                         # VS-GND beside pins 7-10: VS pad level with pin 10
     'C38': (-16.6, -0.7, 180),                                        # input capacitor at the sources of Q2
+    'D20': (-13.0, -5.8, 0),                                          # place for a second TVS (not fitted) at the sources of Q2
     'C39': (-5.2, 5.2, 270),                                          # EN/UVLO filter below pin 6
-    'R32': (7.15, 5.2, 0), 'C32': (11.2, 5.2, 0),                     # HGATE slew-rate network
+    'R32': (8.25, 5.2, 0), 'C32': (12.3, 5.2, 0),                     # HGATE slew-rate network
     'R46': (6.66, 11.5, 0), 'C35': (12.9, 10.6, 0), 'D10': (13.6, 13.5, 0),   # controller supply filter from the drain
 }
 
@@ -185,6 +186,13 @@ def switch_xy(x, y):
 
 # Button controller U6 with its supply capacitor: fixed, because route_pcb.py fans the pins of U6 out on both
 # sides and C36 has to stand right behind the fan of pin 6.
+# 5 V boost (MCP1640 U2) as one fixed group, hand-routed in route_pcb.boost(): pins 1 SW, 2 GND, 3 EN, 4 FB, 5 VOUT,
+# 6 VIN (pin 1 top left). The inductor L1 stands left of U2 with its switch pad level with pin 1 (a straight
+# switch track of about 3 mm on top, no via); the input capacitor C8 above U2 between the inductor input and VIN; the output
+# capacitor C9 at pin 5; the feedback divider R21, R22 and C10 in a row below, on the side away from the switch node.
+BOOST_AT = (63.0, 66.0)
+BOOST = {'U2': (0.0, 0.0, 0), 'L1': (-5.15, -2.7, 0), 'C8': (-0.3, -3.55, 0), 'C9': (4.45, 0.0, 0),
+         'R22': (-1.4, 4.1, 270), 'R21': (1.2, 4.1, 90), 'C10': (3.85, 4.1, 90)}
 U6_AT = (152.0, 36.0)
 # R50 stands at pin 7 (PWR_ENB) and is joined to it by hand: the router kept closing that pin in between the VCTL
 # tracks of pin 6.
@@ -205,7 +213,7 @@ SOCKETS = {
 REGIONS = [
     ('T', 112, 8, 146, 40, (120, 20), ['U1', 'C3', 'R20', 'U4', 'C11>U4', 'U3', 'C12>U3', 'C13', 'R18']),
     ('T', 136, 56, 172, 86, (150.0, 75.0), ['C1', 'C2', 'R11', 'R12', 'R64']),
-    ('T', 54, 56, 80, 78, (60, 66), ['U2', 'L1', 'C4', 'C6', 'C7', 'R13', 'R19', 'C8', 'C9', 'R21', 'R22', 'C10']),
+    ('T', 54, 56, 80, 78, (60, 66), ['C4', 'C6', 'C7', 'R13', 'R19']),
     ('T', 10, 70, 130, 81, (10, 72), ['R5', 'R6', 'R7', 'R8', 'R9', 'R10']),
     # ESD array at the button harness J10 and the RC filters of the four buttons, between the DÓŁ and OK holes.
     ('T', 88, 64, 112, 83, (100, 80), ['U9', 'R80', 'R81', 'R82', 'R83', 'C60', 'C61', 'C62', 'C63']),
@@ -235,17 +243,24 @@ CLOSE = [
     ('R80', 'J10', 10.0), ('R81', 'J10', 10.0), ('R82', 'J10', 10.0), ('R83', 'J10', 10.0),   # filters at the wires
     ('C60', 'J10', 15.0), ('C61', 'J10', 15.0), ('C62', 'J10', 15.0), ('C63', 'J10', 15.0),
     ('R16', 'J11', 10.0), ('C64', 'J11', 10.0), ('R84', 'J3', 10.0), ('C65', 'J3', 10.0),
-    # Converter (pad centres): the group of figure 17 puts the bootstrap capacitors between IC and inductor and
-    # the input and output capacitors in two pairs beside the switch-node copper, as on the test board.
-    ('C44', 'U7', 6.0), ('C45', 'U7', 6.0), ('C46', 'U7', 5.0), ('C47', 'U7', 5.0),
-    ('C40', 'U7', 7.5), ('C41', 'U7', 11.5), ('C42', 'U7', 7.5), ('C43', 'U7', 11.5),
-    ('C1', 'J9', 8.0), ('C2', 'J9', 8.0),                        # at the Wio, between its two rows
-    # U5 (LM7480-Q1 table 6-1): VS is pin 10, CAP pin 11, C pin 12. C31 (CAP-VS) sits above pins 10-12, away from
-    # the MOSFETs. C30 (VS-GND) stands below pins 7-10; VS (pin 10), C30 and C31 each have a via into the
-    # common-drain copper on L4, which is the VS supply. C38 is the input capacitor at the sources of Q2.
-    ('C36', 'U6', 5.0), ('C11', 'U4', 5.0), ('C30', 'U5', 4.0), ('C31', 'U5', 4.0), ('C38', 'Q2', 5.0),
-    ('C39', 'U5', 6.0),
     ('C33', 'J5.5', 10.0), ('R76', 'J5.5', 10.0), ('C34', 'J5.4', 10.0), ('R77', 'J5.4', 10.0),   # at the ADC pins
+]
+# Decoupling and supply capacitors: (capacitor, part or part.pin, limit, net). Measured edge to edge from the pad of
+# the capacitor on that net to the pin of the part on that net, not to the nearest pad of any net (C30 once passed
+# with its ground pad near U5 while its supply pad was 6.9 mm of copper away from the VS pin).
+# U5 (LM7480-Q1 table 6-1): VS is pin 10, CAP pin 11, C pin 12. Converter U7: the group of figure 17 puts the
+# bootstrap capacitors between IC and inductor and the input and output capacitors in two pairs beside the
+# switch-node copper.
+SUPPLY_CLOSE = [
+    ('C30', 'U5.10', 2.0, 'V12_MID'), ('C31', 'U5.11', 2.0, 'S12_CAP'), ('C31', 'U5.12', 1.5, 'V12_MID'),
+    ('C38', 'Q2', 3.5, 'V12_F'), ('C39', 'U5.6', 4.0, 'S12_EN'), ('C36', 'U6.6', 4.0, 'VCTL'),
+    ('C11', 'U4', 3.0, '+3V3'),
+    # C45: the BST2 pin is on the far side of U7 from SW2 (figure 17 and the test board: the track runs on In2)
+    ('C44', 'U7.16', 4.5, 'CONV_BST1'), ('C45', 'U7.15', 9.0, 'CONV_BST2'), ('C46', 'U7.13', 1.5, 'VSYS'),
+    ('C47', 'U7', 2.5, 'CONV_VCC'), ('C40', 'U7.17', 5.0, 'VSYS'), ('C41', 'U7.17', 9.0, 'VSYS'),
+    ('C42', 'U7.4', 5.0, '+3V3'), ('C43', 'U7.4', 9.0, '+3V3'),
+    ('C1', 'J9.3', 6.0, '+3V3_RF'), ('C2', 'J9.3', 6.0, '+3V3_RF'),
+    ('C8', 'U2.6', 2.2, '+3V3'), ('C9', 'U2.5', 1.5, '+5V'),
 ]
 for _h, (_x, _y) in HOLES.items():          # board web between a mounting hole (3.5 mm) and a panel hole; the
     # spacer (<= 6 mm) and the screw head (5.6 mm) stand on that web, clear of the PV6 nut (the front, 10.5 mm up)
@@ -437,9 +452,14 @@ def main():
 
     def add(ref, fp):
         fp.SetReference(ref)
+        if parts[ref].get('dnp'):
+            fp.SetDNP(True)
+            fp.SetExcludedFromBOM(True)
+            fp.SetExcludedFromPosFiles(True)
         # In the hand-placed groups and at the connectors the small parts stand too close for their names to fit on the silkscreen (the
         # names lay on pads and on each other): there the name goes to the assembly drawing layer F.Fab.
-        if ref in (set(CONVERTER) | set(SWITCH) | set(U6_GROUP) | set(AT_CONNECTOR)) - {'U5', 'U6', 'U7', 'L2', 'Q2', 'Q3'}:
+        if ref in (set(CONVERTER) | set(SWITCH) | set(U6_GROUP) | set(BOOST) | set(AT_CONNECTOR)) - {
+                'U5', 'U6', 'U7', 'L2', 'Q2', 'Q3', 'D20', 'L1'}:
             fp.Reference().SetLayer(pcbnew.F_Fab)
         fp.SetValue(parts[ref]['value'])
         fp.SetPath(pcbnew.KIID_PATH('/' + str(uuid.uuid5(NS, ref))))   # link to the schematic symbol
@@ -473,7 +493,8 @@ def main():
         put(fp, x, y, rot, side, anchor)
         if not free(ref, body(fp), ('T', 'B') if is_tht(fp) else (side,), side, edge=ref in AT_EDGE, mates=mates):
             box = body(fp)
-            hit = [r for s_, b_, r in placed if overlaps(box, b_, max(gap_of(ref), gap_of(r)))]
+            hit = [(r, tuple(round(v, 2) for v in b_)) for s_, b_, r in placed
+                   if overlaps(box, b_, GAP if r in mates else max(gap_of(ref), gap_of(r)))]
             sys.exit(f'{ref} at {tuple(round(v, 2) for v in box)} overlaps an earlier part {hit}, a kept-free zone '
                      f'or the board edge')
         add(ref, fp)
@@ -495,7 +516,7 @@ def main():
     for ref, (x, y, rot, side) in FIXED.items():
         fix(ref, x, y, rot, side)
     # Fixed groups by footprint origin (pads symmetric about it); inside a group the plain GAP applies.
-    for at, group in ((CONV_AT, CONVERTER), (U6_AT, U6_GROUP)):
+    for at, group in ((CONV_AT, CONVERTER), (U6_AT, U6_GROUP), (BOOST_AT, BOOST)):
         for ref, (dx, dy, rot) in group.items():
             fix(ref, at[0] + dx, at[1] + dy, rot, 'T', 'origin', mates=set(group))
     for ref, (dx, dy, rot) in SWITCH.items():
@@ -545,6 +566,16 @@ def main():
                         if d < SMD_THT_GAP - 1e-6:
                             sys.exit(f'{a} pad {p.GetNumber()} is {d:.2f} mm from THT pad {b}.{q.GetNumber()}, '
                                      f'limit {SMD_THT_GAP:g} mm')
+    for a, b, limit, net in SUPPLY_CLOSE:
+        # edge to edge, from the pad of the capacitor on that net to the pin of the part on that net (or the named pin)
+        ref, _, pin = b.partition('.')
+        mine = [pad_box(p) for p in footprints[a].Pads() if p.GetNetname() == net]
+        theirs = [pad_box(q) for q in footprints[ref].Pads() if (q.GetNumber() == pin if pin else q.GetNetname() == net)]
+        assert mine and theirs, (a, b, net)
+        d = min(box_distance(m, t) for m in mine for t in theirs)
+        print(f'  {a} [{net}] to {b}: {d:.2f} mm (limit {limit:g})')
+        if d > limit + 1e-6:
+            sys.exit(f'{a}: its {net} pad is {d:.2f} mm from {b}, limit {limit:g} mm')
     for a, b, limit in CLOSE:
         d = min(((pcbnew.ToMM(p.GetPosition().x - q.GetPosition().x)) ** 2
                  + (pcbnew.ToMM(p.GetPosition().y - q.GetPosition().y)) ** 2) ** 0.5

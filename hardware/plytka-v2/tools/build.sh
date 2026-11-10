@@ -49,12 +49,23 @@ printf '%s\n' "(rule \"v2 canary\" (condition \"A.Type == 'Via'\") (constraint v
 "$KICAD_CLI" pcb drc --format json --output "$work/canary.json" "$work/plytka-v2.kicad_pcb" > /dev/null
 grep -q "v2 canary" "$work/canary.json" || { echo "reguły z cad/plytka-v2.kicad_dru nie zostały wczytane" >&2; exit 1; }
 rm -rf "$work"
-"$KICAD_CLI" pcb drc --format json --severity-all --refill-zones --save-board --output checks/drc.json cad/plytka-v2.kicad_pcb
+"$KICAD_CLI" pcb drc --format json --severity-all --schematic-parity --refill-zones --save-board --output checks/drc.json cad/plytka-v2.kicad_pcb
 # Apart from DRC: the distance of every filled area to the pads across a high-voltage net, measured on the saved fill.
 (cd tools && "$KICAD_PY" route_pcb.py check)
 python3 -c "
 import json, sys
 d = json.load(open('checks/drc.json'))
 found = [v['type'] for v in d['violations'] if not v['type'].startswith('silk_') and v['type'] != 'lib_footprint_issues']
-print(f'DRC: {len(found)} naruszeń poza sitodrukiem, {len(d[\"unconnected_items\"])} niepołączonych')
-sys.exit(f'DRC: {found}' if found else 'DRC: niepołączone' if d['unconnected_items'] else 0)"
+# Board against schematic. Left out as cosmetic: fields the footprints do not carry, the sheet prefix of net names
+# (the board says GND, the schematic /GND) and pads the schematic marks as unconnected.
+import re
+def cosmetic(v):
+    t = v['description']
+    m = re.match(r\"Pad net \\((.+)\\) doesn't match net given by schematic \\(/(.+)\\)\", t)
+    return (v['type'] == 'footprint_symbol_field_mismatch' or (m and m.group(1) == m.group(2))
+            or t.startswith('Pad missing net given by schematic (unconnected-'))
+parity = [v['description'] + ' ' + v['items'][0]['description'] for v in d.get('schematic_parity', []) if not cosmetic(v)]
+print(f'DRC: {len(found)} naruszeń poza sitodrukiem, {len(d[\"unconnected_items\"])} niepołączonych, '
+      f'{len(parity)} różnic płytki i schematu')
+sys.exit(f'DRC: {found}' if found else 'DRC: niepołączone' if d['unconnected_items'] else
+         f'płytka różni się od schematu: {parity}' if parity else 0)"

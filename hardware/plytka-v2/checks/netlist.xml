@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-10T15:35:17</date>
+    <date>2026-11-10T19:28:56</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -1725,6 +1725,36 @@
       <property name="ki_fp_filters" value="Texas*DPY0002A*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>9a4df7cd-9ff3-57b0-b18e-4b6253a92d4d</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="D20">
+      <value>SMBJ33CA</value>
+      <footprint>Diode_SMD:D_SMB</footprint>
+      <fields>
+        <field name="Manufacturer">Hongjiacheng (R+O)</field>
+        <field name="MPN">SMBJ33CA</field>
+        <field name="Footprint">Diode_SMD:D_SMB</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="D_TVS" description="Bidirectional transient-voltage-suppression diode"/>
+      <property name="Manufacturer" value="Hongjiacheng (R+O)"/>
+      <property name="MPN" value="SMBJ33CA"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="exclude_from_bom"/>
+      <property name="dnp"/>
+      <property name="ki_keywords" value="diode TVS thyrector"/>
+      <property name="ki_fp_filters" value="TO-???* *_Diode_* *SingleDiode* D_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>3a616300-623a-516a-8d63-479d24c5f757</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -5953,6 +5983,7 @@
       <node ref="D17" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D18" pin="2" pinfunction="GND_2" pintype="power_in"/>
       <node ref="D19" pin="2" pinfunction="GND_2" pintype="power_in"/>
+      <node ref="D20" pin="2" pinfunction="A2_2" pintype="passive"/>
       <node ref="D4" pin="2" pinfunction="A2_2" pintype="passive"/>
       <node ref="D6" pin="1" pinfunction="A_1" pintype="passive"/>
       <node ref="J1" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
@@ -6275,6 +6306,7 @@
     <net code="86" name="/V12_F" class="Default">
       <node ref="C38" pin="1" pintype="passive"/>
       <node ref="D13" pin="2" pinfunction="A_2" pintype="passive"/>
+      <node ref="D20" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D4" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D5" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="F1" pin="2" pintype="passive"/>

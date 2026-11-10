@@ -24,7 +24,8 @@ import sys
 
 import pcbnew as k
 
-from make_pcb import AT_CONNECTOR, OUTLINE, SWITCH, SWITCH_AT, SWITCH_TURN, switch_xy, stable as stable_footprints
+from make_pcb import (AT_CONNECTOR, BOOST, BOOST_AT, OUTLINE, SWITCH, SWITCH_AT, SWITCH_TURN, U6_AT, switch_xy,
+                      stable as stable_footprints)
 
 ROOT = Path(__file__).resolve().parents[1]
 BOARD = ROOT / 'cad' / 'plytka-v2.kicad_pcb'
@@ -82,10 +83,10 @@ DRU = f'''(version 1)
 (rule "v2 thermal spokes" (constraint min_resolved_spokes 1))
 (rule "v2 high voltage, masked copper" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && A.Type != 'Pad' && B.Type != 'Pad'")
   (layer outer) (constraint clearance (min {HV_MASKED}mm)))
-(rule "v2 high voltage, bare pads" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && (A.Type == 'Pad' || B.Type == 'Pad') && !(A.Type == 'Pad' && B.Type == 'Pad') && !(A.Type != 'Zone' && B.Type != 'Zone' && ((A.intersectsCourtyard('U5') && B.intersectsCourtyard('U5')) || (A.intersectsCourtyard('U6') && B.intersectsCourtyard('U6'))))")
+(rule "v2 high voltage, bare pads" (condition "(A.NetClass == 'HV12' || A.NetClass == 'HV') && (A.Type == 'Pad' || B.Type == 'Pad') && !(A.Type == 'Pad' && B.Type == 'Pad') && !(A.Type != 'Zone' && B.Type != 'Zone' && ((A.enclosedByArea('piny U5') && B.enclosedByArea('piny U5')) || (A.enclosedByArea('piny U6') && B.enclosedByArea('piny U6'))))")
   (layer outer) (constraint clearance (min {HV_CLEARANCE}mm)))
-(rule "v2 12 V path" (condition "A.NetClass == 'HV12' && A.Type == 'Track' && !A.intersectsCourtyard('U5')") (constraint track_width (min 0.6mm)))
-(rule "v2 VSYS path" (condition "A.NetClass == 'VSYS' && A.Type == 'Track' && !A.intersectsCourtyard('U7') && !A.intersectsCourtyard('C46') && !A.intersectsCourtyard('U5')")
+(rule "v2 12 V path" (condition "A.NetClass == 'HV12' && A.Type == 'Track' && !A.intersectsArea('piny U5')") (constraint track_width (min 0.6mm)))
+(rule "v2 VSYS path" (condition "A.NetClass == 'VSYS' && A.Type == 'Track' && !A.intersectsCourtyard('U7') && !A.intersectsCourtyard('C46') && !A.intersectsArea('piny U5')")
   (constraint track_width (min 0.6mm)))
 (rule "v2 power tracks" (condition "A.NetClass == 'Power' && A.Type == 'Track' && !A.intersectsCourtyard('U7')")
   (constraint track_width (min 0.4mm)))
@@ -95,6 +96,7 @@ DRU = f'''(version 1)
 # screw head 5.6 mm below; lessons: no copper within 6.4 mm), 1 mm round the six panel holes (nuts and terminals
 # reach through, wires bend at the edge), and on the top layer 10 mm round the preparation button, which is seen
 # through the hole in the sticker (r02/obudowa.md).
+SW_KEEP = 1.2      # router keep-away round switch-node copper on L1 (the check wants 1.0 mm)
 MOUNTING = [(130.0, 20.0), (190.0, 20.0), (10.0, 100.0), (70.0, 100.0), (130.0, 100.0), (190.0, 100.0)]
 PANEL = [(20.0, 88.0), (52.0, 88.0), (84.0, 88.0), (116.0, 88.0), (175.0, 88.0), (175.0, 52.0)]
 SERVICE = (141.0, 106.0)
@@ -239,12 +241,18 @@ def setup(board, router_clearance, later=()):
     board.SynchronizeNetsAndNetClasses(True)
 
 
+def all_pads(board):
+    """Every pad, footprint by footprint: board.GetPads() now and then hands out objects without their type
+    (AttributeError on GetPosition) and the run dies."""
+    return [p for fp in board.GetFootprints() for p in fp.Pads()]
+
+
 def first_stage_nets(board):
     """Nets of the first router stage: every net of a power class and every net with a pad in the areas of the
     12 V parts (HV_AREAS). Freerouting stops for good after ten passes without a better score, and on the whole
     board at once that happened with about forty connections open; the two halves each come to an end."""
     nets = {n for name, v in CLASSES.items() if name != 'Plane' for n in v[4]}
-    for p in board.GetPads():
+    for p in all_pads(board):
         x, y = k.ToMM(p.GetPosition().x), k.ToMM(p.GetPosition().y)
         if p.GetNetname() and any(x0 <= x <= x1 and y0 <= y <= y1 for x0, y0, x1, y1 in HV_AREAS):
             nets.add(p.GetNetname())
@@ -398,6 +406,7 @@ def switch(c):
         return (SWITCH_AT[0] - x, SWITCH_AT[1] - y) if SWITCH_TURN else (x - SWITCH_AT[0], y - SWITCH_AT[1])
 
     px, e = 1.4375, 1.95                                            # pin columns of U5; bends just past the pad ends
+    q = pad_xy('Q3', 'S12_HGATE')[0] - 10.6                         # Q3 stands this much further out than Q2 (1.1 mm)
     # Fused 12 V: the three source pins of Q2 in one copper area, two vias to the feed on L4.
     area(-14.6, -2.4, -10.1, 0.95, 'V12_F')
     for y in (-1.7, 0.4):
@@ -408,34 +417,51 @@ def switch(c):
     area(v[0] - 0.6, -1.5, -14.5, 0.1, 'V12_F')
     c.track(P(g, (g[0] - 1.15, g[1])), 'GND', 0.4)
     via(g[0] - 1.15, g[1], 'GND')
+    # Place for the second TVS D20 (not fitted): its 12 V pad joins the source copper, ground through two vias.
+    v, g = pad_xy('D20', 'V12_F'), pad_xy('D20', 'GND')
+    assert v[0] < g[0] and abs(v[1] - g[1]) < 0.01, (v, g)
+    area(v[0] - 0.9, v[1] + 0.6, -14.0, -2.0, 'V12_F')
+    for dx in (-0.65, 0.65):
+        c.track(P((g[0] + dx, g[1]), (g[0] + dx, g[1] - 1.8)), 'GND', 0.6)
+        via(g[0] + dx, g[1] - 1.8, 'GND')
     # Common drain: a bar over each drain column, three vias beside it, one area on L4.
     for sx in (-1, 1):
-        c.track(P((sx * 6.125, -1.905), (sx * 6.125, 1.905)), 'V12_MID', 1.0)
+        o = q if sx > 0 else 0.0
+        c.track(P((sx * 6.125 + o, -1.905), (sx * 6.125 + o, 1.905)), 'V12_MID', 1.0)
         for y in ((-1.95, 0.7, 1.9) if sx < 0 else (-1.9, -0.7, 1.95)):
-            c.track(P((sx * 6.125, y), (sx * 7.6, y)), 'V12_MID', 0.6)
-            via(sx * 7.6, y, 'V12_MID', 0.8, 0.4)
-    area(-8.3, -2.9, 8.3, 2.9, 'V12_MID', B)
+            c.track(P((sx * 6.125 + o, y), (sx * 7.6 + o, y)), 'V12_MID', 0.6)
+            via(sx * 7.6 + o, y, 'V12_MID', 0.8, 0.4)
+    area(-8.3, -2.9, 8.3 + q, 2.9, 'V12_MID', B)
     area(5.6, 1.5, 7.2, 8.35, 'V12_MID', B)       # finger to C30 and R46, beside the ground via of C30
     area(2.5, 6.9, 7.2, 8.35, 'V12_MID', B)
     # VSYS: the three source pins of Q3 in one area, two vias to the trunk on L4.
-    area(10.1, -0.95, 14.6, 2.3, 'VSYS')
+    area(10.1 + q, -0.95, 14.6 + q, 2.3, 'VSYS')
     for y in (-0.3, 1.7):
-        via(13.9, y, 'VSYS', 0.8, 0.4)
+        via(13.9 + q, y, 'VSYS', 0.8, 0.4)
     # DGATE: pin 1, over the top end of the Q2 drain column, under the body to the gate at the bottom left.
     c.track(P((-px, -1.25), (-e, -1.25)), 'S12_DGATE', 0.2)
     c.track(P((-e, -1.25), (-2.7, -2.0)), 'S12_DGATE', 0.2)
     c.track(P((-2.7, -2.0), (-2.7, -3.0), (-8.55, -3.0), (-8.55, 1.905), (-10.6, 1.905)), 'S12_DGATE', 0.3)
     # A (pin 2): via beside U5, on L4 under Q2 to the source copper.
     c.track(P((-px, -0.75), (-e, -0.75)), 'V12_F', 0.15)
-    c.track(P((-e, -0.75), (-4.0, -1.25)), 'V12_F', 0.15)
+    c.track(P((-e, -0.75), (-2.9, -0.98), (-4.0, -1.25)), 'V12_F', 0.15)
     via(-4.0, -1.25, 'V12_F')
     c.track(P((-4.0, -1.25), (-4.6, -0.65), (-13.4, -0.65)), 'V12_F', 0.6, B)
     via(-13.4, -0.65, 'V12_F')
-    # VSNS (pin 3) and VS (pin 10) straight into the drain pads; VS also through a via 1.5 mm from the pin into
-    # the common-drain copper on L4, where the vias of C30 and C31 end.
-    c.track(P((-px, -0.25), (-5.6, -0.4)), 'V12_MID', 0.15)
-    c.track(P((px, -0.25), (5.6, -0.4)), 'V12_MID', 0.15)
-    via(2.9, -0.285, 'V12_MID')
+    # VSNS (pin 3) straight into the drain pads of Q2.
+    c.track(P((-px, -0.25), (-2.9, -0.29), (-4.5, -0.37)), 'V12_MID', 0.15)
+    c.track(P((-4.5, -0.37), (-5.6, -0.4)), 'V12_MID', 0.6)
+    # VS (pin 10) and its capacitor C30: the VS pad of C30 stands level with pin 10, 1.7 mm from the pin; a thin
+    # track out of the pin (0.25 mm pad), 0.6 mm wide from 0.9 mm beyond the pad ends on, where it is 0.6 mm from
+    # the neighbouring pins; from the pad of C30 on into the drain column of Q3 (the supply). The ground pad of C30
+    # has its via 1.25 mm below, 2.9 mm from the ground via of pin 7.
+    vs, gnd = pad_xy('C30', 'V12_MID'), pad_xy('C30', 'GND')
+    assert abs(vs[0] - 4.3) < 0.01 and abs(vs[1] + 1.0) < 0.01 and gnd[1] > vs[1], (vs, gnd)
+    c.track(P((px, -0.25), (2.1, -0.25), (2.8, -0.7)), 'V12_MID', 0.15)
+    c.track(P((2.8, -0.7), (vs[0], vs[1] + 0.1)), 'V12_MID', 0.6)
+    c.track(P(vs, (6.125 + q, vs[1])), 'V12_MID', 0.6)
+    c.track(P(gnd, (gnd[0], gnd[1] + 1.25)), 'GND', 0.4)
+    via(gnd[0], gnd[1] + 1.25, 'GND')
     # SW (pin 4) to the bottom pad of R30, OV (pin 5) to the top pads of R30 and R31, EN (pin 6) to a via.
     c.track(P((-px, 0.25), (-3.0, 0.25), (-3.0, 5.5125), (-1.5, 5.5125)), 'S12_SW', 0.2)
     c.track(P((-px, 0.75), (-e, 0.75)), 'S12_OV', 0.15)
@@ -452,39 +478,40 @@ def switch(c):
     c.track(P(gnd, (gnd[0], gnd[1] + 1.2)), 'GND', 0.4)
     via(gnd[0], gnd[1] + 1.2, 'GND')
     # C (pin 12) to the VS pad of C31 and through a via to the common drain; CAP (pin 11) to C31.
-    c.track(P((px, -1.25), (0.6, -2.9)), 'V12_MID', 0.2)
+    c.track(P((px, -1.25), (1.0, -2.0), (0.6, -2.9)), 'V12_MID', 0.2)
     c.track(P((0.25, -3.4), (0.25, -2.25)), 'V12_MID', 0.6)
     via(0.25, -2.25, 'V12_MID')
     c.track(P((px, -0.75), (e, -0.75)), 'S12_CAP', 0.15)
     c.track(P((e, -0.75), (2.7, -2.0)), 'S12_CAP', 0.15)
     c.track(P((2.7, -2.0), (2.5, -2.9), (2.15, -3.4)), 'S12_CAP', 0.3)
     # OUT (pin 9): via beside U5, on L4 under Q3 to the VSYS copper.
-    c.track(P((px, 0.25), (e, 0.25)), 'VSYS', 0.15)
-    c.track(P((e, 0.25), (4.0, 0.75)), 'VSYS', 0.15)
-    via(4.0, 0.75, 'VSYS')
-    c.track(P((4.0, 0.75), (12.9, 0.75)), 'VSYS', 0.6, B)
-    via(12.9, 0.75, 'VSYS')
+    c.track(P((px, 0.25), (2.75, 0.25)), 'VSYS', 0.15)
+    via(2.75, 0.25, 'VSYS')
+    c.track(P((2.75, 0.25), (3.25, 0.75), (12.9 + q, 0.75)), 'VSYS', 0.6, B)
+    via(12.9 + q, 0.75, 'VSYS')
     # HGATE (pin 8): past the bottom end of the Q3 drain column, under the body to the gate at the top right;
     # tap to R32, then R32-C32 (dV/dt) and the grounds.
     c.track(P((px, 0.75), (e, 0.75)), 'S12_HGATE', 0.15)
     c.track(P((e, 0.75), (2.7, 1.5)), 'S12_HGATE', 0.15)
-    c.track(P((2.7, 1.5), (2.7, 3.0), (8.55, 3.0), (8.55, -1.905), (10.6, -1.905)), 'S12_HGATE', 0.3)
-    c.track(P((6.2375, 3.0), (6.2375, 5.2)), 'S12_HGATE', 0.3)
-    c.track(P((8.0625, 5.2), (10.25, 5.2)), 'S12_DVDT', 0.3)
-    c.track(P((px, 1.25), (px, 2.5)), 'GND', 0.2)
+    c.track(P((2.7, 1.5), (2.7, 3.0), (8.55 + q, 3.0), (8.55 + q, -1.905), (10.6 + q, -1.905)), 'S12_HGATE', 0.3)
+    c.track(P((6.2375 + q, 3.0), (6.2375 + q, 5.2)), 'S12_HGATE', 0.3)
+    c.track(P((8.0625 + q, 5.2), (10.25 + q, 5.2)), 'S12_DVDT', 0.3)
+    c.track(P((px, 1.25), (px, 1.95), (px, 2.5)), 'GND', 0.2)
     via(px, 2.5, 'GND')
-    for (x0, y0), (x1, y1) in (((1.1, 5.5125), (1.1, 6.9)), ((3.75, 4.4), (4.9, 3.85)), ((12.15, 5.2), (13.5, 5.2))):
+    for (x0, y0), (x1, y1) in (((1.1, 5.5125), (1.1, 6.9)), ((12.15 + q, 5.2), (13.5 + q, 5.2))):
         c.track(P((x0, y0), (x1, y1)), 'GND', 0.4)
         via(x1, y1, 'GND')
-    c.track(P((3.75, 6.3), (3.75, 7.6)), 'V12_MID', 0.6)              # VS side of C30 to the common drain on L4
-    via(3.75, 7.6, 'V12_MID')
-    # Supply filter of the button controller: R46 from the same via, C35 and D10 behind it.
+    via(3.75, 7.6, 'V12_MID')                                         # common drain on L4 up to R46
+    # Supply filter of the button controller: R46 from that via, C35 and D10 behind it.
     c.track(P((3.75, 7.6), (3.7, 11.5)), 'V12_MID', 0.6)
     c.track(P((9.6225, 11.5), (11.95, 10.6)), 'V12_FLT', 0.3)
     c.track(P((9.6225, 11.5), (11.95, 13.5)), 'V12_FLT', 0.3)
     for (x0, y0), (x1, y1) in (((13.85, 10.6), (15.3, 10.6)), ((15.25, 13.5), (15.25, 12.0))):
         c.track(P((x0, y0), (x1, y1)), 'GND', 0.4)
         via(x1, y1, 'GND')
+
+
+Q3_OUT = SWITCH['Q3'][0] - 8.6           # Q3 stands this much further from U5 than Q2
 
 
 def vsys_trunk(c):
@@ -494,7 +521,7 @@ def vsys_trunk(c):
     c50 = c.b.FindFootprintByReference('C50').FindPadByNumber('1').GetPosition()
     cx, cy = k.ToMM(c50.x), k.ToMM(c50.y)
     assert (round(cx, 2), round(cy, 2)) == (133.65, 84.0), (cx, cy)
-    v0, v1 = switch_xy(13.9, -0.3), switch_xy(13.9, 1.7)
+    v0, v1 = switch_xy(13.9 + Q3_OUT, -0.3), switch_xy(13.9 + Q3_OUT, 1.7)
     c.track([v0, v1, (151.5, 104.7), (151.5, 101.0), (146.5, 94.4), (137.5, 94.4), (cx, 90.5), (cx, cy)], 'VSYS', 1.0, B)
     c.track([(cx, cy), (136.5, 81.2), (136.5, CONV_AT[1] + 4.6)], 'VSYS', 1.0, B)
     d7 = c.b.FindFootprintByReference('D7').FindPadByNumber('1').GetPosition()
@@ -527,7 +554,7 @@ def via_fits(c, x, y, net, r=0.3):
     if any(math.hypot(x - ax, y - ay) < ar + r + 0.3 for ax, ay, ar in
            [(mx, my, 3.2) for mx, my in MOUNTING] + [(mx, my, 11.0) for mx, my in PANEL] + [(*SERVICE, 10.0)]):
         return False
-    for p in c.b.GetPads():
+    for p in all_pads(c.b):
         if p.GetNetname() != net:
             x0, y0, x1, y1 = pad_box(p)
             gap = 0.62 if net in hv or p.GetNetname() in hv else 0.22
@@ -562,12 +589,42 @@ def narrow_pins(c):
     c.track([(pins[1][0], y), (pins[1][0], y + 1.0)], '+5V', 0.5)
     assert via_fits(c, pins[1][0], y + 1.0, '+5V')
     c.via(pins[1][0], y + 1.0, '+5V')
-    x, y = at('U2', '5')
-    side = 1 if x > k.ToMM(c.b.FindFootprintByReference('U2').GetPosition().x) else -1
-    c.track([(x, y), (x + side * 2.0, y)], '+5V', 0.5)
-    if via_fits(c, x + side * 2.0, y, '+5V'):
-        c.via(x + side * 2.0, y, '+5V')
-    c.anchor(x + side * 2.0, y, '+5V', 0.5)
+
+
+def boost(c):
+    """Copper of the 5 V boost (MCP1640 U2) by hand, group BOOST of make_pcb.py; coordinates relative to U2. The
+    switch node is one straight track on top from pin 1 to the inductor, no via. The input capacitor C8 feeds the
+    inductor and VIN (pin 6); the output capacitor C9 stands at pin 5; the feedback divider takes +5V from the
+    pad of C9 and lies below U2, on the side away from the switch node. GND and +3V3 pads get their plane vias
+    from plane_vias()."""
+    def at(ref, key):
+        fp = c.b.FindFootprintByReference(ref)
+        (pad,) = [p for p in fp.Pads() if p.GetNumber() == key] or [p for p in fp.Pads() if p.GetNetname() == key]
+        return k.ToMM(pad.GetPosition().x) - BOOST_AT[0], k.ToMM(pad.GetPosition().y) - BOOST_AT[1]
+
+    def T(pts, net, w):
+        c.track([(BOOST_AT[0] + x, BOOST_AT[1] + y) for x, y in pts], net, w)
+
+    sw, li = at('U2', '1'), at('L1', 'BST_SW')
+    assert abs(sw[1] - li[1]) < 0.01 and li[0] < sw[0], (sw, li)
+    T([sw, li], 'BST_SW', 0.5)
+    vin, cin, lin = at('U2', '6'), at('C8', '+3V3'), at('L1', '+3V3')
+    assert cin[0] < at('C8', 'GND')[0] and lin[1] < li[1], (cin, lin)
+    T([vin, (vin[0], -1.9), (cin[0], -1.9), cin], '+3V3', 0.5)
+    T([cin, (cin[0] - 0.9, lin[1]), lin], '+3V3', 0.5)
+    out, co = at('U2', '5'), at('C9', '+5V')
+    assert co[0] < at('C9', 'GND')[0] and abs(co[1]) < 0.01, co
+    T([out, co], '+5V', 0.5)
+    fb, r21, r22, c10 = at('U2', '4'), at('R21', 'BST_FB'), at('R22', 'BST_FB'), at('C10', 'BST_FB')
+    assert abs(r21[1] - r22[1]) < 0.1 and abs(r21[1] - c10[1]) < 0.1 and r22[0] < r21[0] < c10[0] and r21[1] < at('R21', '+5V')[1], (r21, r22, c10)
+    T([fb, (r21[0], fb[1] + 0.6), r21], 'BST_FB', 0.25)
+    T([r22, r21, c10], 'BST_FB', 0.25)
+    lo = at('R21', '+5V')[1]
+    T([co, (co[0], 1.5), (c10[0] + 1.6, 1.5), (c10[0] + 1.6, lo), at('C10', '+5V'), at('R21', '+5V')], '+5V', 0.4)
+    T([co, (co[0], -1.6)], '+5V', 0.5)                      # the router takes +5V on from this via
+    ex, ey = BOOST_AT[0] + co[0], BOOST_AT[1] - 1.6
+    c.via(ex, ey, '+5V')
+    c.anchor(ex, ey, '+5V', 0.5)
 
 
 FEED = [(110.5, 105.5), (118.0, 113.0), (150.0, 113.0)]     # the fused 12 V on L4 under the UV divider block
@@ -689,8 +746,18 @@ def escapes(c):
     return ends
 
 
+PIN_AREAS = {'piny U5': (SWITCH_AT, 3.1, 2.2), 'piny U6': (U6_AT, 3.5, 1.5)}
+
+
 def keepouts(c):
-    """Copper-free areas."""
+    """Copper-free areas, and the two named areas round the pins of U5 and U6 (no restriction of their own): the
+    high-voltage pad rule of the DRU leaves out pairs of pads, tracks and vias that both lie wholly inside one of
+    them. A track that only starts there and runs on is not left out."""
+    for name, ((x, y), hw, hh) in PIN_AREAS.items():
+        z = c.zone(rect(x - hw, y - hh, x + hw, y + hh), None, F, keepout=True, rule_name=name)
+        z.SetDoNotAllowTracks(False)
+        z.SetDoNotAllowVias(False)
+        z.SetDoNotAllowZoneFills(False)
     for i, (x, y) in enumerate(MOUNTING):
         for layer in (F, B, IN1, IN2):
             c.zone(circle(x, y, 3.2), None, layer, keepout=True, rule_name=f'otwór {i + 1}')
@@ -721,7 +788,7 @@ def plane_vias(c, ends):
     placed just outside the pad, away from the part, clear of every pad, track, via and kept-free area."""
     b = c.b
     hv = set(HV_POWER + HV_SIGNAL)
-    pads = list(b.GetPads())
+    pads = list(all_pads(b))
     blocked = []                        # (box, extra clearance) of foreign copper
     for p in pads:
         blocked.append((p, pad_box(p), HV_CLEARANCE if p.GetNetname() in hv else 0.2))
@@ -881,6 +948,14 @@ def export_dsn(stage, only=None):
     first_stage_nets(), the others wait in the class Later; stage 2 (checks/routing-2.dsn) is written from the
     board with the tracks of stage 1 and routes the rest."""
     board = k.LoadBoard(str(BOARD))     # a copy: the stand-in tracks never reach the saved board
+    # The named pin areas are for the DRC rules only and KiCad would export them as keepouts: on this copy they go
+    # to a layer without copper. (Removing them made pcbnew hand out footprints and pads without their type now
+    # and then, and the stage died.)
+    for z in board.Zones():
+        if z.GetZoneName() in PIN_AREAS:
+            off = k.LSET()
+            off.AddLayer(k.User_9)
+            z.SetLayerSet(off)
     first = first_stage_nets(board)
     every = {n.GetNetname() for n in board.GetNetInfo().NetsByNetcode().values() if n.GetNetname()}
     # A net that is complete already (hand-made copper, or an earlier stage) is never offered to the router: it
@@ -964,12 +1039,29 @@ def export_dsn(stage, only=None):
                            rule_name='krawędź')
         Copper(board).zone([(x0, y0), (x1, y1), (x1 + nx, y1 + ny), (x0 + nx, y0 + ny)], None, B, keepout=True,
                            rule_name='krawędź')
-    # No router tracks on L1 beside the switch-node copper under the inductor L2 (a signal ran 0.3 mm from it):
-    # the area of L2 and 1.2 mm round it is closed on L1; signals pass on L4, under the two planes.
-    bb = board.FindFootprintByReference('L2').GetBoundingBox(False)
-    x0, y0, x1, y1 = (k.ToMM(bb.GetX()) - 1.2, k.ToMM(bb.GetY()) - 1.2, k.ToMM(bb.GetRight()) + 1.2,
-                      k.ToMM(bb.GetBottom()) + 1.2)
-    Copper(board).zone([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], None, F, keepout=True, rule_name='cewka L2')
+    # No router tracks on L1 within SW_KEEP of the switch-node copper of the two converters (signals ran 0.2-0.4 mm
+    # from it): the areas are closed on L1 for the router; signals pass on L4, under the two planes. LTC3115-1: the
+    # inductor L2 and the copper of SW1 and SW2; MCP1640: the track from pin 1 to L1 and the inductor L1.
+    closed = []
+    for ref in ('L2', 'L1'):
+        bb = board.FindFootprintByReference(ref).GetBoundingBox(False)
+        closed.append((k.ToMM(bb.GetX()), k.ToMM(bb.GetY()), k.ToMM(bb.GetRight()), k.ToMM(bb.GetBottom())))
+    # (only the two large areas under L2: the small ones at the pins of U7 lie beside the RUN and PWM pins, which
+    # the router has to reach)
+    closed += [(*rel(x0, y0), *rel(x1, y1)) for x0, y0, x1, y1, n in CONV_COPPER
+               if n in ('CONV_SW1', 'CONV_SW2') and y1 - y0 > 5]
+    for t in board.GetTracks():
+        if t.GetNetname() == 'BST_SW':
+            xs, ys = sorted((k.ToMM(t.GetStart().x), k.ToMM(t.GetEnd().x))), sorted((k.ToMM(t.GetStart().y), k.ToMM(t.GetEnd().y)))
+            closed.append((xs[0] - 0.25, ys[0] - 0.25, xs[1] + 0.25, ys[1] + 0.25))
+    for i, (x0, y0, x1, y1) in enumerate(closed):
+        Copper(board).zone(rect(x0 - SW_KEEP, y0 - SW_KEEP, x1 + SW_KEEP, y1 + SW_KEEP), None, F, keepout=True,
+                           rule_name=f'węzeł przełączany {i + 1}')
+    # U6: the router may reach its pins only through the hand-made escape tracks at their ends. Entering the top
+    # or bottom pin from above or below, it laid a track that leaves the pin area 0.33 mm from the next pin.
+    ux, uy = U6_AT
+    for i, y in enumerate((uy - 1.75, uy + 1.75)):
+        Copper(board).zone(rect(ux - 2.0, y - 0.35, ux + 2.0, y + 0.35), None, F, keepout=True, rule_name=f'wejście U6 {i + 1}')
     dsn.parent.mkdir(exist_ok=True)
     if not k.ExportSpecctraDSN(board, str(dsn)):
         raise RuntimeError('DSN export failed')
@@ -999,7 +1091,7 @@ def check_hv_pads(board):
     apart. The DRC rule skips every pad pair (it cannot tell "same part": A.Parent.Reference makes kicad-cli drop
     the whole rule file), so this is checked here."""
     hv = set(HV_POWER + HV_SIGNAL)
-    pads = [(p, pad_box(p)) for p in board.GetPads() if p.GetNetname()]
+    pads = [(p, pad_box(p)) for p in all_pads(board) if p.GetNetname()]
     bad = []
     for i, (p, a) in enumerate(pads):
         for q, b in pads[i + 1:]:
@@ -1020,7 +1112,7 @@ def check_pours(board):
     on the outer layers, and from every other pad to high-voltage fills: nothing within 0.6 mm."""
     hv = set(HV_POWER + HV_SIGNAL)
     worst, bad = None, []
-    for p in board.GetPads():
+    for p in all_pads(board):
         for layer in (F, B):
             if not p.IsOnLayer(layer):
                 continue
@@ -1063,6 +1155,7 @@ def prepare():
     c = Copper(board)
     converter(c)
     switch(c)
+    boost(c)
     vsys_trunk(c)
     power_input(c)
     narrow_pins(c)
@@ -1083,6 +1176,40 @@ def prepare():
     c.track(path, 'VSYS', 0.6)                                               # ground vias of C40, C41; DRC checks it
     c36 = c.b.FindFootprintByReference('C36').FindPadByNumber('1').GetPosition()      # VCTL: fan of pin 6 into C36
     c.track([ends[('U6', '6')][:2], (k.ToMM(c36.x), k.ToMM(c36.y))], 'VCTL', 0.3)
+    # VCTL by hand: a short track and a via beside the pad of each two-pad part, then one tree on L4 that joins
+    # these vias, the via of Q8 and the via at pin 6 of U6. Left to itself the router joined only pieces of this
+    # net and left the rest open in every stage. DRC checks the tracks; a changed placement of these parts needs
+    # new points here.
+    at = {'Q8': ends[('Q8', '2')][:2], 'U6': ends[('U6', '6')][:2]}
+    for ref in ('D8', 'D9', 'D12', 'R48', 'R49'):
+        fp = c.b.FindFootprintByReference(ref)
+        pad = next(p for p in fp.Pads() if p.GetNetname() == 'VCTL')
+        px, py = k.ToMM(pad.GetPosition().x), k.ToMM(pad.GetPosition().y)
+        ox, oy = px - k.ToMM(fp.GetPosition().x), py - k.ToMM(fp.GetPosition().y)
+        n = math.hypot(ox, oy)
+        ox, oy = ox / n, oy / n                                     # away from the other pad
+        spots = [(px + dx * d, py + dy * d) for d in (1.5, 1.7, 1.9, 2.2)
+                 for dx, dy in ((ox, oy), (-oy, ox), (oy, -ox))]
+        spot = next((q for q in spots if via_fits(c, *q, 'VCTL')), None)
+        assert spot, f'{ref}: no room for the VCTL via'
+        c.track([(px, py), spot], 'VCTL', 0.3)
+        c.via(*spot, 'VCTL')
+        at[ref] = spot
+
+    def diag(a, b, first='d'):
+        """a to b as one 45 degree piece and one straight piece (first: 'd' diagonal first, 's' straight first)."""
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        m = min(abs(dx), abs(dy))
+        sx, sy = math.copysign(m, dx), math.copysign(m, dy)
+        mid = (a[0] + sx, a[1] + sy) if first == 'd' else (b[0] - sx, b[1] - sy)
+        return [a, mid, b]
+    for path in (diag(at['D12'], at['R49'], 's'), diag(at['R49'], at['R48'], 's'), diag(at['R49'], at['Q8']),
+                 [at['Q8'], (at['Q8'][0], at['Q8'][1] - 0.73), *diag((at['Q8'][0], at['Q8'][1] - 0.73), at['U6'])[1:]],
+                 diag(at['D8'], at['U6'], 's'),
+                 [at['D9'], (at['D9'][0], at['D9'][1] + 1.3),
+                  *diag((at['D9'][0], at['D9'][1] + 1.3), (at['D8'][0] - 1.5, at['D8'][1] - 2.0))[1:],
+                  (at['D8'][0], at['D8'][1] - 0.5), at['D8']]):
+        c.track(path, 'VCTL', 0.3, B)
     keepouts(c)
     missing = plane_vias(c, ends)
     big = set(PLANE_NETS) | set(HV_POWER) | set(CLASSES['VSYS'][4])
@@ -1102,7 +1229,7 @@ def prepare():
 def absorb_vias(board, final):
     """Vias that join copper on one layer only go away (plane vias stay)."""
     tracks = [t for t in board.GetTracks() if not isinstance(t, k.PCB_VIA)]
-    pads = list(board.GetPads())
+    pads = list(all_pads(board))
     for v in [t for t in board.GetTracks() if isinstance(t, k.PCB_VIA) and (final or not t.IsLocked())]:
         if v.GetNetname() in PLANE_NETS:
             continue
@@ -1148,7 +1275,7 @@ def incomplete(board):
     board.BuildConnectivity()
     conn = board.GetConnectivity()
     pads = {}
-    for p in board.GetPads():
+    for p in all_pads(board):
         if p.GetNetname() and p.GetNetname() not in PLANE_NETS:
             pads.setdefault(p.GetNetname(), []).append(p)
     found = set()
@@ -1203,7 +1330,7 @@ def next_stage(stage, ses):
     open_nets = incomplete(board)
     again = set(open_nets)
     if stage >= 3:
-        spots = [(k.ToMM(p.GetPosition().x), k.ToMM(p.GetPosition().y)) for p in board.GetPads()
+        spots = [(k.ToMM(p.GetPosition().x), k.ToMM(p.GetPosition().y)) for p in all_pads(board)
                  if p.GetNetname() in open_nets]
         for t in board.GetTracks():
             if t.GetNetname() in again or t.GetNetname() in PLANE_NETS or is_hand(t, keys):

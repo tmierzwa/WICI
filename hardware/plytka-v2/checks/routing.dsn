@@ -82,18 +82,20 @@
             136000 -49600))
     (plane V12_F (polygon F.Cu 0  178100 -107050  182600 -107050  182600 -110400  178100 -110400
             178100 -107050))
+    (plane V12_F (polygon F.Cu 0  182000 -110000  184050 -110000  184050 -113200  182000 -113200
+            182000 -110000))
     (plane V12_F (polygon F.Cu 0  182500 -107900  184250 -107900  184250 -109500  182500 -109500
             182500 -107900))
-    (plane V12_MID (polygon B.Cu 0  159700 -105100  176300 -105100  176300 -110900  159700 -110900
-            159700 -105100))
+    (plane V12_MID (polygon B.Cu 0  158125 -105100  176300 -105100  176300 -110900  158125 -110900
+            158125 -105100))
     (plane V12_MID (polygon B.Cu 0  160800 -99650  162400 -99650  162400 -106500  160800 -106500
             160800 -99650))
     (plane V12_MID (polygon B.Cu 0  160800 -99650  165500 -99650  165500 -101100  160800 -101100
             160800 -99650))
     (plane VSYS (polygon F.Cu 0  131750 -55850  136000 -55850  136000 -53900  144500 -53900
             144500 -63600  140900 -63600  140900 -56400  131750 -56400  131750 -55850))
-    (plane VSYS (polygon F.Cu 0  153400 -105700  157900 -105700  157900 -108950  153400 -108950
-            153400 -105700))
+    (plane VSYS (polygon F.Cu 0  151825 -105700  156325 -105700  156325 -108950  151825 -108950
+            151825 -105700))
     (keepout "" (polygon signal 0  19524.1 -78008.8  18891.3 -78059.1  18263.1 -78149.4
             17641.8 -78279.4  17030 -78448.6  16430.2 -78656.2  15844.8 -78901.4
             15276.1 -79183.2  14726.4 -79500.6  14198 -79852.2  13692.9 -80236.6
@@ -545,6 +547,18 @@
     (keepout "" (polygon B.Cu 0  12000 -12000  12000 0  12500 0  12500 -12000  12000 -12000))
     (keepout "" (polygon F.Cu 0  120290 -36925  136910 -36925  136910 -49875  120290 -49875
             120290 -36925))
+    (keepout "" (polygon F.Cu 0  54225 -59675  61475 -59675  61475 -66925  54225 -66925
+            54225 -59675))
+    (keepout "" (polygon F.Cu 0  120650 -42450  126400 -42450  126400 -53900  120650 -53900
+            120650 -42450))
+    (keepout "" (polygon F.Cu 0  130800 -42450  136550 -42450  136550 -53900  130800 -53900
+            130800 -42450))
+    (keepout "" (polygon F.Cu 0  56400 -63600  63312.5 -63600  63312.5 -66500  56400 -66500
+            56400 -63600))
+    (keepout "" (polygon F.Cu 0  150000 -33900  154000 -33900  154000 -34600  150000 -34600
+            150000 -33900))
+    (keepout "" (polygon F.Cu 0  150000 -37400  154000 -37400  154000 -38100  150000 -38100
+            150000 -37400))
     (via "Via[0-3]_600:300_um" "Via[0-3]_800:400_um")
     (rule
       (width 200)
@@ -553,10 +567,15 @@
     )
   )
   (placement
-    (component AN:anchor36
-      (place AN36 171900 -103750 front 0)
-      (place AN35 169437.5 -105550 front 0)
-      (place AN21 143175 -48330 front 0)
+    (component AN:anchor41
+      (place AN41 171900 -103750 front 0)
+      (place AN40 169437.5 -105550 front 0)
+      (place AN37 156675 -30625 front 0)
+      (place AN30 148870 -23175 front 0)
+      (place AN24 144475 -32117.5 front 0)
+      (place AN23 143175 -48330 front 0)
+      (place AN22 142475 -37117.5 front 0)
+      (place AN20 141770 -39175 front 0)
       (place AN18 137200 -57600 front 0)
       (place AN17 134400 -53300 front 0)
       (place AN16 134199.999 -57000 front 0)
@@ -571,21 +590,21 @@
       (place AN2 111400 -52400 front 0)
       (place AN0 41250 -71360 front 0)
     )
-    (component AN:anchor34
-      (place AN34 161225 -25580 front 0)
-      (place AN33 160275 -30330 front 0)
-      (place AN32 155875 -37950 front 0)
-      (place AN31 155875 -36650 front 0)
-      (place AN30 155875 -34050 front 0)
-      (place AN29 154830 -42225 front 0)
-      (place AN28 150080 -43175 front 0)
-      (place AN27 150080 -41275 front 0)
-      (place AN26 148125 -36650 front 0)
-      (place AN25 148125 -35350 front 0)
-      (place AN24 148125 -34050 front 0)
-      (place AN23 147725 -45580 front 0)
-      (place AN22 146775 -50330 front 0)
-      (place AN20 142225 -43580 front 0)
+    (component AN:anchor39
+      (place AN39 161225 -25580 front 0)
+      (place AN38 160275 -30330 front 0)
+      (place AN36 155875 -37950 front 0)
+      (place AN35 155875 -36650 front 0)
+      (place AN34 155875 -34050 front 0)
+      (place AN33 154830 -42225 front 0)
+      (place AN32 150080 -43175 front 0)
+      (place AN31 150080 -41275 front 0)
+      (place AN29 148125 -36650 front 0)
+      (place AN28 148125 -35350 front 0)
+      (place AN27 148125 -34050 front 0)
+      (place AN26 147725 -45580 front 0)
+      (place AN25 146775 -50330 front 0)
+      (place AN21 142225 -43580 front 0)
       (place AN19 141275 -48330 front 0)
       (place AN9 122330 -114725 front 0)
       (place AN8 122330 -109225 front 0)
@@ -594,7 +613,7 @@
       (place AN4 117580 -102775 front 0)
     )
     (component AN:anchor1
-      (place AN1 63212.5 -65900 front 0)
+      (place AN1 66500 -64400 front 0)
     )
     (component "HV:MagneticBuzzer_ProSignal_ABT-410-RC_BZ1"
       (place BZ1 177250 -9000 front 0 (PN "CEM-1203(42)"))
@@ -603,8 +622,10 @@
       (place C1 150225 -75005 front 0 (PN 10u))
       (place C2 150225 -71505 front 0 (PN 100n))
       (place C3 120225 -14504.999 front 0 (PN 100n))
-      (place C4 60225 -61505 front 0 (PN 10u))
-      (place C10 65224.999 -58005 front 0 (PN 100p))
+      (place C6 57225 -73005 front 0 (PN 100n))
+      (place C7 62225 -74505 front 0 (PN 100n))
+      (place C8 62700 -62450 front 0 (PN 10u))
+      (place C9 67450 -66000 front 0 (PN 10u))
       (place C11 115225 -9504.999 front 0 (PN 100n))
       (place C12 115225 -30505 front 0 (PN 100n))
       (place C31 166800 -111400 front 0 (PN 100n))
@@ -615,11 +636,10 @@
       (place C46 134900 -58800 front 0 (PN 100n))
       (place C47 131199.999 -62400 front 0 (PN 10u))
     )
-    (component HV:C_0805_2012Metric_C6
-      (place C6 64504.999 -65724.999 front 90 (PN 100n))
-      (place C7 55505 -65724.999 front 90 (PN 100n))
-      (place C8 65004.999 -70725 front 90 (PN 10u))
-      (place C9 55005 -70725 front 90 (PN 10u))
+    (component HV:C_0805_2012Metric_C4
+      (place C4 58005 -68725 front 90 (PN 10u))
+      (place C10 66849.999 -70100 front 90 (PN 100p))
+      (place C30 163700 -108050 front 90 (PN 100n))
       (place C33 104005 -18225 front 90 (PN 100n))
       (place C39 173200 -102800 front 90 (PN 10n))
       (place C44 134400 -51150 front 90 (PN 100n))
@@ -630,14 +650,8 @@
     (component HV:C_1210_3225Metric_C13
       (place C13 125825 -26625 front 0 (PN 100u))
     )
-    (component HV:C_0805_2012Metric_C30
-      (place C30 164250 -102650 front -90 (PN 100n))
-      (place C48 121600 -64599.999 front -90 (PN 82p))
-      (place C49 124300 -64599.999 front -90 (PN 3n9))
-      (place C51 113500 -64599.999 front -90 (PN 82p))
-    )
     (component HV:C_0805_2012Metric_C32
-      (place C32 156800 -102800 front 180 (PN 27n))
+      (place C32 155700 -102800 front 180 (PN 27n))
       (place C35 155100 -97400 front 180 (PN 1u))
     )
     (component HV:C_1210_3225Metric_C40
@@ -645,6 +659,11 @@
       (place C41 142299.999 -53200 front 90 (PN 10u))
       (place C42 118800 -53200 front 90 (PN 22u))
       (place C43 114899.999 -53200 front 90 (PN 22u))
+    )
+    (component HV:C_0805_2012Metric_C48
+      (place C48 121600 -64599.999 front -90 (PN 82p))
+      (place C49 124300 -64599.999 front -90 (PN 3n9))
+      (place C51 113500 -64599.999 front -90 (PN 82p))
     )
     (component HV:CP_Radial_D8.0mm_P3.50mm_C50
       (place C50 133652.65 -84000 back 0 (PN "100u 25V"))
@@ -671,6 +690,7 @@
     )
     (component HV:D_SMB_D4
       (place D4 86177.5 -108400 front 180 (PN SMBJ33CA))
+      (place D20 181000 -113800 front 180 (PN SMBJ33CA))
     )
     (component "HV:SOT-23_D6"
       (place D6 119955 -114725 front 0 (PN BAV199))
@@ -746,7 +766,7 @@
       (place JP3 170725 -70000 front 90 (PN "3V3 RADIO"))
     )
     (component "HV:L_Wuerth_WE-TPC-3816_L1"
-      (place L1 59925 -71425 front 0 (PN 4u7))
+      (place L1 57850 -63300 front 0 (PN 4u7))
     )
     (component HV:L_Bourns_SRP1038A_L2
       (place L2 128600 -43400 front 0 (PN 15u))
@@ -762,7 +782,7 @@
       (place Q2 176600 -108000 front 180 (PN AO4292E))
     )
     (component "HV:SOIC-8_3.9x4.9mm_P1.27mm_Q3"
-      (place Q3 159400 -108000 front 0 (PN AO4292E))
+      (place Q3 158300 -108000 front 0 (PN AO4292E))
     )
     (component HV:R_0805_2012Metric_R1
       (place R1 155975 -11705 front 90 (PN 1k))
@@ -772,8 +792,7 @@
       (place R8 17975 -72205 front 90 (PN 10k))
       (place R9 21475 -72205 front 90 (PN 10k))
       (place R10 24975 -72205 front 90 (PN 10k))
-      (place R13 55975 -60705 front 90 (PN 10k))
-      (place R22 67975 -65705 front 90 (PN 309k))
+      (place R21 64200 -70100 front 90 (PN 1M))
       (place R31 166900 -103400 front 90 (PN 8k06))
       (place R34 114975 -103705 front 90 (PN 100k))
       (place R35 110975 -109205 front 90 (PN 100k))
@@ -800,10 +819,10 @@
       (place R7 11705 -76475 front 0 (PN 10k))
       (place R11 150205 -78475 front 0 (PN 10k))
       (place R12 150205 -81975 front 0 (PN 1k))
+      (place R13 57205 -76475 front 0 (PN 10k))
       (place R18 125205 -13975 front 0 (PN 33R))
-      (place R19 65205 -61475 front 0 (PN 10k))
+      (place R19 58205 -58475 front 0 (PN 10k))
       (place R20 120205 -25475 front 0 (PN 10k))
-      (place R21 60205 -57975 front 0 (PN 1M))
       (place R33 125205 -114475 front 0 (PN 100k))
       (place R38 125205 -117975 front 0 (PN 10k))
       (place R39 122705 -98975 front 0 (PN 15k4))
@@ -827,7 +846,8 @@
       (place R82 103475 -80205 front 90 (PN 1k))
       (place R83 103975 -75705 front 90 (PN 1k))
     )
-    (component HV:R_0805_2012Metric_R30
+    (component HV:R_0805_2012Metric_R22
+      (place R22 61600 -70100 front -90 (PN 309k))
       (place R30 169500 -103400 front -90 (PN 102k))
       (place R50 157600 -33000 front -90 (PN 100k))
       (place R60 127000 -64599.999 front -90 (PN 47k5))
@@ -836,7 +856,7 @@
       (place R68 113500 -68800 front -90 (PN 20k))
     )
     (component HV:R_0805_2012Metric_R32
-      (place R32 160850 -102800 front 180 (PN 1k))
+      (place R32 159750 -102800 front 180 (PN 1k))
     )
     (component HV:R_2512_6332Metric_R40
       (place R40 62955 -106855 front 90 (PN 1R))
@@ -855,7 +875,7 @@
       (place U1 120175 -20029.999 front 0 (PN "CY15B104QN-50SXI"))
     )
     (component "Package_TO_SOT_SMD:SOT-23-6"
-      (place U2 60075 -65900 front 0 (PN MCP1640))
+      (place U2 63000 -66000 front 0 (PN MCP1640))
       (place U8 50075 -112900 front 0 (PN "USBLC6-2SC6"))
     )
     (component "Package_TO_SOT_SMD:SOT-23-5"
@@ -876,10 +896,10 @@
     )
   )
   (library
-    (image AN:anchor36
+    (image AN:anchor41
       (pin Round[T]Pad_600.000000_um 1 0 0)
     )
-    (image AN:anchor34
+    (image AN:anchor39
       (pin Round[T]Pad_250.000000_um 1 0 0)
     )
     (image AN:anchor1
@@ -966,7 +986,7 @@
       (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 1 -950 0)
       (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 2 950 0)
     )
-    (image HV:C_0805_2012Metric_C6
+    (image HV:C_0805_2012Metric_C4
       (outline (polygon signal 0  -1695 -975  -1695 975  1695 975  1695 -975))
       (outline (path signal 120  -261.252 735  261.252 735))
       (outline (path signal 120  -261.252 -735  261.252 -735))
@@ -981,14 +1001,6 @@
       (outline (path signal 100  -1600 1250  1600 1250  1600 -1250  -1600 -1250  -1600 1250))
       (pin RoundRect[T]Pad_1770.000000x3320.000000_386.246000_um_0.000000_0 1 -1475 0)
       (pin RoundRect[T]Pad_1770.000000x3320.000000_386.246000_um_0.000000_0 2 1475 0)
-    )
-    (image HV:C_0805_2012Metric_C30
-      (outline (polygon signal 0  1695 975  1695 -975  -1695 -975  -1695 975))
-      (outline (path signal 120  -261.252 -735  261.252 -735))
-      (outline (path signal 120  -261.252 735  261.252 735))
-      (outline (path signal 100  -1000 625  -1000 -625  1000 -625  1000 625  -1000 625))
-      (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 1 -950 0)
-      (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 2 950 0)
     )
     (image HV:C_0805_2012Metric_C32
       (outline (polygon signal 0  -1695 975  1695 975  1695 -975  -1695 -975))
@@ -1005,6 +1017,14 @@
       (outline (path signal 100  -1600 1250  -1600 -1250  1600 -1250  1600 1250  -1600 1250))
       (pin RoundRect[T]Pad_1770.000000x3320.000000_386.246000_um_0.000000_0 1 -1475 0)
       (pin RoundRect[T]Pad_1770.000000x3320.000000_386.246000_um_0.000000_0 2 1475 0)
+    )
+    (image HV:C_0805_2012Metric_C48
+      (outline (polygon signal 0  1695 975  1695 -975  -1695 -975  -1695 975))
+      (outline (path signal 120  -261.252 -735  261.252 -735))
+      (outline (path signal 120  -261.252 735  261.252 735))
+      (outline (path signal 100  -1000 625  -1000 -625  1000 -625  1000 625  -1000 625))
+      (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 1 -950 0)
+      (pin RoundRect[T]Pad_1620.000000x2070.000000_406.541000_um_0.000000_0 2 950 0)
     )
     (image HV:CP_Radial_D8.0mm_P3.50mm_C50
       (outline (polygon signal 0  1442.34 -4236.32  1034.9 -4186.85  634.155 -4098.29  243.827 -3971.46
@@ -1897,7 +1917,7 @@
       (pin RoundRect[T]Pad_1025.000000x1400.000000_250.951000_um_0.000000_0 1 -912.5 0)
       (pin RoundRect[T]Pad_1025.000000x1400.000000_250.951000_um_0.000000_0 2 912.5 0)
     )
-    (image HV:R_0805_2012Metric_R30
+    (image HV:R_0805_2012Metric_R22
       (outline (polygon signal 0  1675 945  1675 -945  -1675 -945  -1675 945))
       (outline (path signal 120  -227.064 -735  227.064 -735))
       (outline (path signal 120  -227.064 735  227.064 735))
@@ -2491,12 +2511,12 @@
       (pins C1-2 C2-2 C3-2 C4-2 C6-2 C7-2 C8-2 C9-2 C11-2 C12-2 C13-2 C30-2 C32-2
         C33-2 C34-2 C35-2 C36-2 C37-2 C38-2 C39-2 C40-2 C41-2 C42-2 C43-2 C46-2 C47-2
         C50-2 C52-2 C53-2 C60-2 C61-2 C62-2 C63-2 C64-2 C65-2 D1-1 D4-2 D6-1 D10-2
-        D11-1 D14-2 D15-2 D16-2 D17-2 D18-2 D19-2 J1-2 J2-2 J3-2 J4-A1 J4-A12 J4-B1
-        J4-B12 J4-SH J4-SH@1 J4-SH@2 J4-SH@3 J5-22 J6-1 J6-21 J6-22 J7-9 J7-10 J7-MP
-        J7-MP@1 J9-2 J10-5 J11-2 Q1-2 Q5-2 Q7-2 Q10-2 Q11-2 Q12-2 R4-2 R12-2 R13-2
-        R19-2 R22-2 R31-2 R36-2 R39-2 R43-2 R45-2 R54-2 R55-2 R60-2 R62-2 R63-2 R64-2
-        R65-2 R66-2 R71-2 R72-2 R74-2 R78-2 SW6-2 SW6-2@1 U1-4 U2-2 U3-3 U4-3 U5-7
-        U6-4 U7-1 U7-5 U7-6 U7-10 U7-11 U7-20 U7-21 U8-2 U9-2)
+        D11-1 D14-2 D15-2 D16-2 D17-2 D18-2 D19-2 D20-2 J1-2 J2-2 J3-2 J4-A1 J4-A12
+        J4-B1 J4-B12 J4-SH J4-SH@1 J4-SH@2 J4-SH@3 J5-22 J6-1 J6-21 J6-22 J7-9 J7-10
+        J7-MP J7-MP@1 J9-2 J10-5 J11-2 Q1-2 Q5-2 Q7-2 Q10-2 Q11-2 Q12-2 R4-2 R12-2
+        R13-2 R19-2 R22-2 R31-2 R36-2 R39-2 R43-2 R45-2 R54-2 R55-2 R60-2 R62-2 R63-2
+        R64-2 R65-2 R66-2 R71-2 R72-2 R74-2 R78-2 SW6-2 SW6-2@1 U1-4 U2-2 U3-3 U4-3
+        U5-7 U6-4 U7-1 U7-5 U7-6 U7-10 U7-11 U7-20 U7-21 U8-2 U9-2)
     )
     (net +3V3
       (pins C3-1 C8-1 C11-1 C12-1 C13-1 C42-1 C43-1 D6-2 D11-2 J5-1 J5-2 JP3-1 L1-1
@@ -2531,19 +2551,21 @@
       (pins C35-1 D9-2 D10-1 R46-2)
     )
     (net VCTL
-      (pins AN31-1 AN28-1 C36-1 D8-1 D9-1 D12-1 Q8-2 R48-1 R49-1 U6-6)
+      (pins AN37-1 AN35-1 AN32-1 AN30-1 AN24-1 AN22-1 AN20-1 C36-1 D8-1 D9-1 D12-1
+        Q8-2 R48-1 R49-1 U6-6)
     )
     (net PWR_TMR
-      (pins AN26-1 C37-1 U6-3)
+      (pins AN29-1 C37-1 U6-3)
     )
     (net V12_F
-      (pins AN6-1 C38-1 D4-1 D5-1 D13-2 F1-2 F1-2@1 Q2-1 Q2-2 Q2-3 Q4-2 R33-1 U5-2)
+      (pins AN6-1 C38-1 D4-1 D5-1 D13-2 D20-1 F1-2 F1-2@1 Q2-1 Q2-2 Q2-3 Q4-2 R33-1
+        U5-2)
     )
     (net S12_EN
-      (pins AN36-1 AN35-1 C39-1 R37-2 R38-1 U5-6)
+      (pins AN41-1 AN40-1 C39-1 R37-2 R38-1 U5-6)
     )
     (net VSYS
-      (pins AN21-1 C40-1 C41-1 C46-1 C50-1 D7-1 Q3-1 Q3-2 Q3-3 Q9-2 R51-1 U5-9 U7-13
+      (pins AN23-1 C40-1 C41-1 C46-1 C50-1 D7-1 Q3-1 Q3-2 Q3-3 Q9-2 R51-1 U5-9 U7-13
         U7-17)
     )
     (net CONV_BST1
@@ -2574,10 +2596,10 @@
       (pins C51-2 R68-1)
     )
     (net RUN
-      (pins AN20-1 AN12-1 AN3-1 C52-1 Q9-3 R55-1 U7-2)
+      (pins AN21-1 AN12-1 AN3-1 C52-1 Q9-3 R55-1 U7-2)
     )
     (net PWR_ON
-      (pins AN24-1 C53-1 R70-2 R71-1 U6-1)
+      (pins AN27-1 C53-1 R70-2 R71-1 U6-1)
     )
     (net BTN_UP
       (pins C60-1 J6-7 R5-2 R80-2)
@@ -2595,7 +2617,7 @@
       (pins C64-1 J6-4 R9-2 R16-2)
     )
     (net PWR_PB
-      (pins AN32-1 C65-1 R84-2 U6-5)
+      (pins AN36-1 C65-1 R84-2 U6-5)
     )
     (net LED_A
       (pins D1-2 R1-2)
@@ -2613,19 +2635,19 @@
       (pins D11-3 R44-2 R45-1 R77-1)
     )
     (net Q8_G
-      (pins AN27-1 D12-2 Q8-1 R49-2 R50-1)
+      (pins AN31-1 D12-2 Q8-1 R49-2 R50-1)
     )
     (net ON_DIV
       (pins D13-1 R70-1)
     )
     (net Q10_G
-      (pins AN22-1 D14-1 Q10-1 R53-2 R54-1)
+      (pins AN25-1 D14-1 Q10-1 R53-2 R54-1)
     )
     (net Q5_G
       (pins AN4-1 D15-1 Q5-1 R35-2 R36-1)
     )
     (net PWR_KILL
-      (pins AN34-1 AN25-1 D16-1 Q11-3 R48-2 U6-2)
+      (pins AN39-1 AN28-1 D16-1 Q11-3 R48-2 U6-2)
     )
     (net Q12_G
       (pins D17-1 Q12-1 R73-2 R74-1)
@@ -2706,10 +2728,10 @@
       (pins AN18-1 AN14-1 AN2-1 J6-15 R63-1 U7-19)
     )
     (net PWR_INT
-      (pins AN30-1 J6-16 R47-2 U6-8)
+      (pins AN34-1 J6-16 R47-2 U6-8)
     )
     (net KILL_MCU
-      (pins AN33-1 J6-17 Q11-1 R72-1)
+      (pins AN38-1 J6-17 Q11-1 R72-1)
     )
     (net RF_GPIO1
       (pins J6-18 J8-1)
@@ -2754,10 +2776,10 @@
       (pins Q6-3 R44-1)
     )
     (net ON
-      (pins AN29-1 Q8-3 R35-1 R53-1 R78-1)
+      (pins AN33-1 Q8-3 R35-1 R53-1 R78-1)
     )
     (net Q9_G
-      (pins AN23-1 AN19-1 Q9-1 Q10-3 R51-2)
+      (pins AN26-1 AN19-1 Q9-1 Q10-3 R51-2)
     )
     (net S12_SW
       (pins R30-1 U5-4)
@@ -2797,6 +2819,7 @@
       )
     )
     (class HV,LaterHV PWR_ENB S12_CAP S12_DGATE S12_DVDT S12_HGATE S12_SW
+      VCTL
       (circuit
         (use_via "Via[0-3]_600:300_um")
       )
@@ -2805,7 +2828,7 @@
         (clearance 310)
       )
     )
-    (class Power,Later CONV_VCC
+    (class Power,Later BST_SW CONV_VCC
       (circuit
         (use_via "Via[0-3]_600:300_um")
       )
@@ -2856,7 +2879,7 @@
         (clearance 200)
       )
     )
-    (class HV ON ON_DIV Q10_G Q4_G Q5_D Q5_G Q8_G V12_FLT V12_SW VCTL
+    (class HV ON ON_DIV Q10_G Q4_G Q5_D Q5_G Q8_G V12_FLT V12_SW
       (circuit
         (use_via "Via[0-3]_600:300_um")
       )
@@ -2865,7 +2888,7 @@
         (clearance 310)
       )
     )
-    (class Power +3V3_RF +5V BST_SW BZ_N BZ_P
+    (class Power +3V3_RF +5V BZ_N BZ_P
       (circuit
         (use_via "Via[0-3]_600:300_um")
       )
@@ -2885,10 +2908,11 @@
     )
   )
   (wiring
-    (wire (path F.Cu 3150  155025 -107325  156275 -107325)(net VSYS)(type fix))
+    (wire (path F.Cu 3150  153450 -107325  154700 -107325)(net VSYS)(type fix))
     (wire (path B.Cu 1350  161525 -100375  164775 -100375)(net V12_MID)(type fix))
     (wire (path B.Cu 1500  161600 -100450  161600 -105700)(net V12_MID)(type fix))
-    (wire (path B.Cu 5700  162600 -108000  173400 -108000)(net V12_MID)(type fix))
+    (wire (path B.Cu 5700  161025 -108000  173400 -108000)(net V12_MID)(type fix))
+    (wire (path F.Cu 1950  183025 -111025  183025 -112175)(net V12_F)(type fix))
     (wire (path F.Cu 1500  183300 -108700  183450 -108700)(net V12_F)(type fix))
     (wire (path F.Cu 3250  179775 -108725  180925 -108725)(net V12_F)(type fix))
     (wire (path F.Cu 2700  137600 -51200  142900 -51200)(net GND)(type fix))
@@ -3016,12 +3040,20 @@
     (wire (path F.Cu 400  139950 -58800  139950 -60100)(net GND)(type fix))
     (wire (path F.Cu 400  14475 -73117.5  14475 -74180)(net +3V3)(type fix))
     (wire (path F.Cu 300  141275 -46892.5  141275 -48330)(net Q9_G)(type fix))
+    (wire (path B.Cu 300  141770 -37822.5  142475 -37117.5)(net VCTL)(type fix))
+    (wire (path B.Cu 300  141770 -39175  141770 -37822.5)(net VCTL)(type fix))
     (wire (path F.Cu 300  142225 -45017.5  142225 -43580)(net RUN)(type fix))
     (wire (path F.Cu 600  142225 -49280  143175 -48330)(net VSYS)(type fix))
+    (wire (path B.Cu 300  142475 -34117.5  144475 -32117.5)(net VCTL)(type fix))
+    (wire (path F.Cu 300  142475 -35617.5  142475 -37117.5)(net VCTL)(type fix))
+    (wire (path B.Cu 300  142475 -37117.5  142475 -34117.5)(net VCTL)(type fix))
+    (wire (path B.Cu 300  142475 -37117.5  148532 -43175)(net VCTL)(type fix))
     (wire (path F.Cu 400  142975 -23792.5  142975 -22730)(net GND)(type fix))
     (wire (path F.Cu 600  143175 -46892.5  143175 -48330)(net VSYS)(type fix))
     (wire (path B.Cu 600  143175 -48330  144600 -49755)(net VSYS)(type fix))
+    (wire (path F.Cu 300  143270 -39175  141770 -39175)(net VCTL)(type fix))
     (wire (path B.Cu 800  143500 -58000  143500 -61600  141900 -61600)(net VSYS)(type fix))
+    (wire (path F.Cu 300  144475 -30617.5  144475 -32117.5)(net VCTL)(type fix))
     (wire (path B.Cu 600  144600 -49755  144600 -56900  143500 -58000)(net VSYS)(type fix))
     (wire (path F.Cu 400  145975 -35617.5  145975 -36680)(net +3V3)(type fix))
     (wire (path B.Cu 1000  146500 -94400  137500 -94400)(net VSYS)(type fix))
@@ -3034,12 +3066,17 @@
     (wire (path F.Cu 250  148425 -35350  148125 -35350)(net PWR_KILL)(type fix))
     (wire (path F.Cu 250  148425 -36650  148125 -36650)(net PWR_TMR)(type fix))
     (wire (path F.Cu 250  148425 -37950  148125 -37950)(net GND)(type fix))
+    (wire (path B.Cu 300  148532 -43175  150080 -43175)(net VCTL)(type fix))
     (wire (path F.Cu 300  148675 -48892.5  148675 -50330  148675 -50880)(net GND)(type fix))
     (wire (path F.Cu 250  148750 -35675  148425 -35350)(net PWR_KILL)(type fix))
     (wire (path F.Cu 250  148750 -36325  148425 -36650)(net PWR_TMR)(type fix))
+    (wire (path B.Cu 300  148870 -23175  148870 -24475  153020 -28625)(net VCTL)(type fix))
     (wire (path F.Cu 400  149292 -78475  148230 -78475)(net +3V3)(type fix))
     (wire (path F.Cu 250  149400 -35025  148425 -34050)(net PWR_ON)(type fix))
     (wire (path F.Cu 250  149400 -36975  148425 -37950)(net GND)(type fix))
+    (wire (path B.Cu 300  150080 -42445  155875 -36650)(net VCTL)(type fix))
+    (wire (path B.Cu 300  150080 -43175  150080 -42445)(net VCTL)(type fix))
+    (wire (path F.Cu 300  150370 -23175  148870 -23175)(net VCTL)(type fix))
     (wire (path F.Cu 250  150862 -35025  149400 -35025)(net PWR_ON)(type fix))
     (wire (path F.Cu 250  150862 -35675  148750 -35675)(net PWR_KILL)(type fix))
     (wire (path F.Cu 250  150862 -36325  148750 -36325)(net PWR_TMR)(type fix))
@@ -3053,6 +3090,9 @@
     (wire (path F.Cu 300  151517 -41275  150080 -41275)(net Q8_G)(type fix))
     (wire (path F.Cu 300  151517 -43175  150080 -43175)(net VCTL)(type fix))
     (wire (path F.Cu 400  152750 -94500  152750 -96000)(net GND)(type fix))
+    (wire (path B.Cu 1000  153000 -106300  151500 -104700)(net VSYS)(type fix))
+    (wire (path B.Cu 1000  153000 -108300  153000 -106300)(net VSYS)(type fix))
+    (wire (path B.Cu 300  153020 -28625  155175 -28625)(net VCTL)(type fix))
     (wire (path F.Cu 400  153118 -26975  154180 -26975)(net GND)(type fix))
     (wire (path F.Cu 250  153138 -35025  154600 -35025)(net PWR_INT)(type fix))
     (wire (path F.Cu 250  153138 -35675  155250 -35675)(net PWR_ENB)(type fix))
@@ -3060,11 +3100,11 @@
     (wire (path F.Cu 250  153138 -36975  154600 -36975)(net PWR_PB)(type fix))
     (wire (path F.Cu 400  153175 -30505  154225 -30505)(net GND)(type fix))
     (wire (path F.Cu 300  153392 -42225  154830 -42225)(net ON)(type fix))
-    (wire (path B.Cu 1000  154100 -106300  151500 -104700)(net VSYS)(type fix))
-    (wire (path B.Cu 1000  154100 -108300  154100 -106300)(net VSYS)(type fix))
     (wire (path F.Cu 400  154150 -97400  152700 -97400)(net GND)(type fix))
+    (wire (path F.Cu 400  154275 -102800  152925 -102800)(net GND)(type fix))
     (wire (path F.Cu 250  154600 -35025  155575 -34050)(net PWR_INT)(type fix))
     (wire (path F.Cu 250  154600 -36975  155575 -37950)(net PWR_PB)(type fix))
+    (wire (path B.Cu 300  155175 -28625  156675 -30125)(net VCTL)(type fix))
     (wire (path F.Cu 250  155250 -35675  155575 -35350)(net PWR_ENB)(type fix))
     (wire (path F.Cu 250  155250 -36325  155575 -36650)(net VCTL)(type fix))
     (wire (path F.Cu 400  155570 -47175  156570 -47175)(net GND)(type fix))
@@ -3072,66 +3112,76 @@
     (wire (path F.Cu 250  155575 -35350  155875 -35350)(net PWR_ENB)(type fix))
     (wire (path F.Cu 250  155575 -36650  155875 -36650)(net VCTL)(type fix))
     (wire (path F.Cu 250  155575 -37950  155875 -37950)(net PWR_PB)(type fix))
-    (wire (path F.Cu 400  155850 -102800  154500 -102800)(net GND)(type fix))
+    (wire (path B.Cu 300  155875 -36650  155875 -36650)(net VCTL)(type fix))
     (wire (path F.Cu 250  155875 -35350  156600 -34625)(net PWR_ENB)(type fix))
     (wire (path F.Cu 300  155875 -36650  158050 -36325)(net VCTL)(type fix))
     (wire (path F.Cu 250  156600 -34625  157600 -33912.5)(net PWR_ENB)(type fix))
+    (wire (path F.Cu 300  156675 -29125  156675 -30625)(net VCTL)(type fix))
+    (wire (path B.Cu 300  156675 -30125  156675 -30625  156675 -35850  155875 -36650)(net VCTL)(type fix))
     (wire (path F.Cu 400  157505 -41775  157505 -40725)(net GND)(type fix))
+    (wire (path F.Cu 300  157875 -105000  157875 -109905  155825 -109905)(net S12_HGATE)(type fix))
+    (wire (path F.Cu 300  158362 -102800  156175 -102800)(net S12_DVDT)(type fix))
     (wire (path F.Cu 300  158378 -96500  156050 -94500)(net V12_FLT)(type fix))
     (wire (path F.Cu 300  158378 -96500  156050 -97400)(net V12_FLT)(type fix))
-    (wire (path F.Cu 300  159450 -105000  159450 -109905  157400 -109905)(net S12_HGATE)(type fix))
-    (wire (path F.Cu 300  159938 -102800  157750 -102800)(net S12_DVDT)(type fix))
     (wire (path F.Cu 400  159950 -36325  161000 -36325)(net GND)(type fix))
+    (wire (path F.Cu 300  160188 -105000  160188 -102800)(net S12_HGATE)(type fix))
     (wire (path F.Cu 300  160275 -28892.5  160275 -30330)(net KILL_MCU)(type fix))
+    (wire (path F.Cu 600  160300 -106050  158825 -106050)(net V12_MID)(type fix))
+    (wire (path F.Cu 600  160300 -108700  158825 -108700)(net V12_MID)(type fix))
+    (wire (path F.Cu 600  160300 -109900  158825 -109900)(net V12_MID)(type fix))
+    (wire (path F.Cu 1000  160300 -109905  160300 -106095)(net V12_MID)(type fix))
     (wire (path F.Cu 400  161118 -20475  162180 -20475)(net GND)(type fix))
     (wire (path F.Cu 400  161175 -12892.5  161866 -13574.9)(net GND)(type fix))
     (wire (path F.Cu 300  161225 -27017.5  161225 -25580)(net PWR_KILL)(type fix))
-    (wire (path F.Cu 300  161762 -105000  161762 -102800)(net S12_HGATE)(type fix))
-    (wire (path F.Cu 600  161875 -106050  160400 -106050)(net V12_MID)(type fix))
-    (wire (path F.Cu 600  161875 -108700  160400 -108700)(net V12_MID)(type fix))
-    (wire (path F.Cu 600  161875 -109900  160400 -109900)(net V12_MID)(type fix))
-    (wire (path F.Cu 1000  161875 -109905  161875 -106095)(net V12_MID)(type fix))
     (wire (path F.Cu 300  162175 -28892.5  162175 -30330  162175 -30880)(net GND)(type fix))
     (wire (path F.Cu 400  162618 -32475  163680 -32475)(net GND)(type fix))
-    (wire (path B.Cu 600  164000 -107250  155100 -107250)(net VSYS)(type fix))
+    (wire (path F.Cu 400  163700 -107100  163700 -105850)(net GND)(type fix))
+    (wire (path F.Cu 600  163700 -109000  160300 -109000)(net V12_MID)(type fix))
     (wire (path F.Cu 600  164250 -100400  164300 -96500)(net V12_MID)(type fix))
-    (wire (path F.Cu 600  164250 -101700  164250 -100400)(net V12_MID)(type fix))
-    (wire (path F.Cu 400  164250 -103600  163100 -104150)(net GND)(type fix))
-    (wire (path F.Cu 300  165300 -105000  159450 -105000)(net S12_HGATE)(type fix))
+    (wire (path B.Cu 600  164750 -107250  153525 -107250)(net VSYS)(type fix))
+    (wire (path F.Cu 600  165200 -108700  163700 -108900)(net V12_MID)(type fix))
+    (wire (path B.Cu 600  165250 -107750  164750 -107250)(net VSYS)(type fix))
+    (wire (path F.Cu 300  165300 -105000  157875 -105000)(net S12_HGATE)(type fix))
     (wire (path F.Cu 300  165300 -106500  165300 -105000)(net S12_HGATE)(type fix))
     (wire (path F.Cu 300  165300 -110000  165500 -110900  165850 -111400)(net S12_CAP)(type fix))
+    (wire (path F.Cu 150  165900 -108250  165200 -108700)(net V12_MID)(type fix))
     (wire (path F.Cu 150  166050 -107250  165300 -106500)(net S12_HGATE)(type fix))
-    (wire (path F.Cu 150  166050 -107750  164000 -107250)(net VSYS)(type fix))
     (wire (path F.Cu 150  166050 -108750  165300 -110000)(net S12_CAP)(type fix))
-    (wire (path F.Cu 200  166562 -106750  166562 -105500)(net GND)(type fix))
+    (wire (path F.Cu 200  166562 -106050  166562 -105500)(net GND)(type fix))
+    (wire (path F.Cu 200  166562 -106750  166562 -106050)(net GND)(type fix))
     (wire (path F.Cu 150  166562 -107250  166050 -107250)(net S12_HGATE)(type fix))
-    (wire (path F.Cu 150  166562 -107750  166050 -107750)(net VSYS)(type fix))
-    (wire (path F.Cu 150  166562 -108250  162400 -108400)(net V12_MID)(type fix))
+    (wire (path F.Cu 150  166562 -107750  165250 -107750)(net VSYS)(type fix))
+    (wire (path F.Cu 150  166562 -108250  165900 -108250)(net V12_MID)(type fix))
     (wire (path F.Cu 150  166562 -108750  166050 -108750)(net S12_CAP)(type fix))
-    (wire (path F.Cu 200  166562 -109250  167400 -110900)(net V12_MID)(type fix))
+    (wire (path F.Cu 200  166562 -109250  167000 -110000)(net V12_MID)(type fix))
     (wire (path F.Cu 400  166900 -102488  166900 -101100)(net GND)(type fix))
+    (wire (path F.Cu 200  167000 -110000  167400 -110900)(net V12_MID)(type fix))
     (wire (path F.Cu 600  167750 -111400  167750 -110250)(net V12_MID)(type fix))
     (wire (path B.Cu 200  169438 -103750  171900 -103750)(net S12_EN)(type fix))
     (wire (path B.Cu 200  169438 -105550  169438 -103750)(net S12_EN)(type fix))
     (wire (path F.Cu 200  169438 -106750  169438 -105550)(net S12_EN)(type fix))
     (wire (path F.Cu 150  169438 -107250  169950 -107250)(net S12_OV)(type fix))
     (wire (path F.Cu 200  169438 -107750  171000 -107750)(net S12_SW)(type fix))
-    (wire (path F.Cu 150  169438 -108250  173600 -108400)(net V12_MID)(type fix))
+    (wire (path F.Cu 150  169438 -108250  170900 -108290)(net V12_MID)(type fix))
     (wire (path F.Cu 150  169438 -108750  169950 -108750)(net V12_F)(type fix))
     (wire (path F.Cu 200  169438 -109250  169950 -109250)(net S12_DGATE)(type fix))
     (wire (path F.Cu 200  169500 -104312  166900 -104312)(net S12_OV)(type fix))
     (wire (path F.Cu 200  169900 -104500  169500 -104312)(net S12_OV)(type fix))
     (wire (path F.Cu 150  169950 -107250  170450 -106700)(net S12_OV)(type fix))
-    (wire (path F.Cu 150  169950 -108750  172000 -109250)(net V12_F)(type fix))
+    (wire (path F.Cu 150  169950 -108750  170900 -108980)(net V12_F)(type fix))
     (wire (path F.Cu 200  169950 -109250  170700 -110000)(net S12_DGATE)(type fix))
     (wire (path F.Cu 400  17975 -73117.5  17975 -74180)(net +3V3)(type fix))
     (wire (path F.Cu 200  170450 -105000  169900 -104500)(net S12_OV)(type fix))
     (wire (path F.Cu 200  170450 -106700  170450 -105000)(net S12_OV)(type fix))
     (wire (path F.Cu 300  170700 -110000  170700 -111000  176550 -111000)(net S12_DGATE)(type fix))
+    (wire (path F.Cu 150  170900 -108290  172500 -108370)(net V12_MID)(type fix))
+    (wire (path F.Cu 150  170900 -108980  172000 -109250)(net V12_F)(type fix))
     (wire (path F.Cu 200  171000 -102488  169500 -102488)(net S12_SW)(type fix))
     (wire (path F.Cu 200  171000 -107750  171000 -102488)(net S12_SW)(type fix))
     (wire (path F.Cu 300  171900 -103750  173200 -103750)(net S12_EN)(type fix))
-    (wire (path B.Cu 600  172000 -109250  172600 -108650  181400 -108650)(net V12_F)(type fix))
+    (wire (path B.Cu 600  172000 -109250  172600 -108650)(net V12_F)(type fix))
+    (wire (path F.Cu 600  172500 -108370  173600 -108400)(net V12_MID)(type fix))
+    (wire (path B.Cu 600  172600 -108650  181400 -108650)(net V12_F)(type fix))
     (wire (path F.Cu 400  173200 -101850  173200 -100650)(net GND)(type fix))
     (wire (path F.Cu 600  174125 -106100  175600 -106100)(net V12_MID)(type fix))
     (wire (path F.Cu 600  174125 -107300  175600 -107300)(net V12_MID)(type fix))
@@ -3139,6 +3189,8 @@
     (wire (path F.Cu 600  174125 -109950  175600 -109950)(net V12_MID)(type fix))
     (wire (path F.Cu 300  176550 -106095  178600 -106095)(net S12_DGATE)(type fix))
     (wire (path F.Cu 300  176550 -111000  176550 -106095)(net S12_DGATE)(type fix))
+    (wire (path F.Cu 600  178200 -113800  178200 -115600)(net GND)(type fix))
+    (wire (path F.Cu 600  179500 -113800  179500 -115600)(net GND)(type fix))
     (wire (path B.Cu 1200  181900 -107600  181900 -109700)(net V12_F)(type fix))
     (wire (path B.Cu 1200  181900 -113000  181900 -107600)(net V12_F)(type fix))
     (wire (path F.Cu 400  185550 -108700  186700 -108700)(net GND)(type fix))
@@ -3161,25 +3213,37 @@
     (wire (path F.Cu 400  51117.5 -104975  52180 -104975)(net GND)(type fix))
     (wire (path F.Cu 400  51117.5 -108475  52180 -108475)(net GND)(type fix))
     (wire (path F.Cu 400  51212.5 -112900  52425 -112900)(net +3V3)(type fix))
-    (wire (path F.Cu 400  55005 -69775  55005 -68725)(net GND)(type fix))
-    (wire (path F.Cu 400  55505 -64775  55505 -63725)(net GND)(type fix))
-    (wire (path F.Cu 400  55975 -59792.5  55975 -58730)(net GND)(type fix))
+    (wire (path F.Cu 400  57850 -61550  57850 -60200)(net +3V3)(type fix))
+    (wire (path F.Cu 400  58005 -67775  58005 -66725)(net GND)(type fix))
+    (wire (path F.Cu 400  58117.5 -76475  59180 -76475)(net GND)(type fix))
+    (wire (path F.Cu 400  58175 -73005  59225 -73005)(net GND)(type fix))
     (wire (path F.Cu 400  58475 -100792  58475 -99730)(net GND)(type fix))
-    (wire (path F.Cu 400  58937.5 -65900  57725 -65900)(net GND)(type fix))
-    (wire (path F.Cu 400  58937.5 -66850  58156.1 -67502.6)(net +3V3)(type fix))
-    (wire (path F.Cu 400  59925 -69675  59925 -68325)(net +3V3)(type fix))
-    (wire (path F.Cu 400  61175 -61505  62225 -61505)(net GND)(type fix))
-    (wire (path F.Cu 400  61212.5 -64950  61993.9 -64297.4)(net +3V3)(type fix))
-    (wire (path F.Cu 500  61212.5 -65900  63212.5 -65900)(net +5V)(type fix))
+    (wire (path F.Cu 400  59117.5 -58475  60180 -58475)(net GND)(type fix))
+    (wire (path F.Cu 500  60850 -61550  57850 -61550)(net +3V3)(type fix))
+    (wire (path F.Cu 250  61600 -69187.5  64200 -69187.5)(net BST_FB)(type fix))
+    (wire (path F.Cu 400  61600 -71012.5  61600 -72075)(net GND)(type fix))
+    (wire (path F.Cu 400  61750 -62450  60700 -62450)(net +3V3)(type fix))
+    (wire (path F.Cu 500  61750 -62450  60850 -61550)(net +3V3)(type fix))
+    (wire (path F.Cu 500  61750 -64100  61750 -62450)(net +3V3)(type fix))
+    (wire (path F.Cu 500  61862.5 -65050  57850 -65050)(net BST_SW)(type fix))
+    (wire (path F.Cu 400  61862.5 -66000  60650 -66000)(net GND)(type fix))
+    (wire (path F.Cu 400  61862.5 -66950  61081.1 -67602.6)(net +3V3)(type fix))
     (wire (path F.Cu 400  62017.5 -100675  61335.1 -101366)(net GND)(type fix))
     (wire (path F.Cu 400  62117.5 -116475  63180 -116475)(net GND)(type fix))
+    (wire (path F.Cu 400  63175 -74505  64225 -74505)(net GND)(type fix))
     (wire (path F.Cu 400  63517.5 -92275  63188.4 -91465.5)(net GND)(type fix))
     (wire (path F.Cu 400  63517.5 -94175  62835.1 -94866.5)(net +3V3)(type fix))
-    (wire (path F.Cu 400  64505 -64775  64505 -63725)(net GND)(type fix))
-    (wire (path F.Cu 400  65005 -69775  65005 -68725)(net GND)(type fix))
-    (wire (path F.Cu 400  65005 -71675  65005 -72725)(net +3V3)(type fix))
-    (wire (path F.Cu 400  66117.5 -61475  67180 -61475)(net GND)(type fix))
-    (wire (path F.Cu 400  67975 -64792.5  67975 -63730)(net GND)(type fix))
+    (wire (path F.Cu 400  63650 -62450  64700 -62450)(net GND)(type fix))
+    (wire (path F.Cu 500  64137.5 -64100  61750 -64100)(net +3V3)(type fix))
+    (wire (path F.Cu 500  64137.5 -65050  64137.5 -64100)(net +3V3)(type fix))
+    (wire (path F.Cu 400  64137.5 -65050  64918.9 -64397.4)(net +3V3)(type fix))
+    (wire (path F.Cu 500  64137.5 -66000  66500 -66000)(net +5V)(type fix))
+    (wire (path F.Cu 250  64137.5 -66950  64200 -67550  64200 -69187.5  66850 -69150)(net BST_FB)(type fix))
+    (wire (path F.Cu 500  66500 -66000  66500 -64400)(net +5V)(type fix))
+    (wire (path F.Cu 400  66500 -66000  66500 -67500  68450 -67500)(net +5V)(type fix))
+    (wire (path F.Cu 400  66850 -71050  64200 -71012.5)(net +5V)(type fix))
+    (wire (path F.Cu 400  68400 -66000  69450 -66000)(net GND)(type fix))
+    (wire (path F.Cu 400  68450 -67500  68450 -71012.5  66850 -71050)(net +5V)(type fix))
     (wire (path F.Cu 800  71977.5 -107200  74200 -103000  99500 -103000)(net VSYS)(type fix))
     (wire (path B.Cu 1000  77100 -111400  77100 -100500)(net 12V_IN)(type fix))
     (wire (path B.Cu 1000  80200 -114470  77100 -111400)(net 12V_IN)(type fix))
@@ -3273,13 +3337,16 @@
     (via "Via[0-3]_600:300_um"  14475 -74180 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  141275 -48330 (net Q9_G)(type fix))
     (via "Via[0-3]_600:300_um"  141300 -50300 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  141770 -39175 (net VCTL)(type fix))
     (via "Via[0-3]_800:400_um"  141900 -61600 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  142225 -43580 (net RUN)(type fix))
+    (via "Via[0-3]_600:300_um"  142475 -37117.5 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  142975 -22730 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  143175 -48330 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  143300 -50300 (net GND)(type fix))
     (via "Via[0-3]_800:400_um"  143500 -58000 (net VSYS)(type fix))
     (via "Via[0-3]_800:400_um"  143500 -61600 (net VSYS)(type fix))
+    (via "Via[0-3]_600:300_um"  144475 -32117.5 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  145975 -36680 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  146675 -21225 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  146775 -50330 (net Q10_G)(type fix))
@@ -3291,40 +3358,41 @@
     (via "Via[0-3]_600:300_um"  148125 -36650 (net PWR_TMR)(type fix))
     (via "Via[0-3]_600:300_um"  148230 -78475 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  148675 -50880 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  148870 -23175 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  150080 -41275 (net Q8_G)(type fix))
     (via "Via[0-3]_600:300_um"  150080 -43175 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  152180 -67975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152180 -81975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152225 -71505 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152225 -75005 (net GND)(type fix))
+    (via "Via[0-3]_800:400_um"  152525 -106300 (net VSYS)(type fix))
+    (via "Via[0-3]_800:400_um"  152525 -108300 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  152700 -97400 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  152750 -96000 (net GND)(type fix))
-    (via "Via[0-3]_800:400_um"  154100 -106300 (net VSYS)(type fix))
-    (via "Via[0-3]_800:400_um"  154100 -108300 (net VSYS)(type fix))
+    (via "Via[0-3]_600:300_um"  152925 -102800 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  153525 -107250 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  154180 -26975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  154225 -30505 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  154500 -102800 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  154830 -42225 (net ON)(type fix))
-    (via "Via[0-3]_600:300_um"  155100 -107250 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  155875 -34050 (net PWR_INT)(type fix))
     (via "Via[0-3]_600:300_um"  155875 -36650 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  155875 -37950 (net PWR_PB)(type fix))
     (via "Via[0-3]_600:300_um"  156570 -47175 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  156675 -30625 (net VCTL)(type fix))
     (via "Via[0-3]_600:300_um"  157505 -40725 (net GND)(type fix))
+    (via "Via[0-3]_800:400_um"  158825 -106050 (net V12_MID)(type fix))
+    (via "Via[0-3]_800:400_um"  158825 -108700 (net V12_MID)(type fix))
+    (via "Via[0-3]_800:400_um"  158825 -109900 (net V12_MID)(type fix))
     (via "Via[0-3]_600:300_um"  160275 -30330 (net KILL_MCU)(type fix))
-    (via "Via[0-3]_800:400_um"  160400 -106050 (net V12_MID)(type fix))
-    (via "Via[0-3]_800:400_um"  160400 -108700 (net V12_MID)(type fix))
-    (via "Via[0-3]_800:400_um"  160400 -109900 (net V12_MID)(type fix))
     (via "Via[0-3]_600:300_um"  161000 -36325 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  161225 -25580 (net PWR_KILL)(type fix))
     (via "Via[0-3]_600:300_um"  161866 -13574.9 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  162175 -30880 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  162180 -20475 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  163100 -104150 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  163680 -32475 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  164000 -107250 (net VSYS)(type fix))
+    (via "Via[0-3]_600:300_um"  163700 -105850 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  164250 -100400 (net V12_MID)(type fix))
-    (via "Via[0-3]_600:300_um"  165100 -108285 (net V12_MID)(type fix))
+    (via "Via[0-3]_600:300_um"  165250 -107750 (net VSYS)(type fix))
     (via "Via[0-3]_600:300_um"  166562 -105500 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  166900 -101100 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  167750 -110250 (net V12_MID)(type fix))
@@ -3336,6 +3404,8 @@
     (via "Via[0-3]_800:400_um"  175600 -106100 (net V12_MID)(type fix))
     (via "Via[0-3]_800:400_um"  175600 -107300 (net V12_MID)(type fix))
     (via "Via[0-3]_800:400_um"  175600 -109950 (net V12_MID)(type fix))
+    (via "Via[0-3]_600:300_um"  178200 -115600 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  179500 -115600 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  181400 -108650 (net V12_F)(type fix))
     (via "Via[0-3]_800:400_um"  181900 -107600 (net V12_F)(type fix))
     (via "Via[0-3]_800:400_um"  181900 -109700 (net V12_F)(type fix))
@@ -3355,25 +3425,25 @@
     (via "Via[0-3]_600:300_um"  52180 -104975 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  52180 -108475 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  52425 -112900 (net +3V3)(type fix))
-    (via "Via[0-3]_600:300_um"  55005 -68725 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  55505 -63725 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  55975 -58730 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  57725 -65900 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  58156.1 -67502.6 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  57850 -60200 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  58005 -66725 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  58475 -99730 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  59925 -68325 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  59180 -76475 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  59225 -73005 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  60180 -58475 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  60650 -66000 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  60700 -62450 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  61081.1 -67602.6 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  61335.1 -101366 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  61993.9 -64297.4 (net +3V3)(type fix))
-    (via "Via[0-3]_600:300_um"  62225 -61505 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  61600 -72075 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  62835.1 -94866.5 (net +3V3)(type fix))
     (via "Via[0-3]_600:300_um"  63180 -116475 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  63188.4 -91465.5 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  63212.5 -65900 (net +5V)(type fix))
-    (via "Via[0-3]_600:300_um"  64505 -63725 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  65005 -68725 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  65005 -72725 (net +3V3)(type fix))
-    (via "Via[0-3]_600:300_um"  67180 -61475 (net GND)(type fix))
-    (via "Via[0-3]_600:300_um"  67975 -63730 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  64225 -74505 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  64700 -62450 (net GND)(type fix))
+    (via "Via[0-3]_600:300_um"  64918.9 -64397.4 (net +3V3)(type fix))
+    (via "Via[0-3]_600:300_um"  66500 -64400 (net +5V)(type fix))
+    (via "Via[0-3]_600:300_um"  69450 -66000 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  82100 -108400 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  83200 -110300 (net GND)(type fix))
     (via "Via[0-3]_600:300_um"  84900 -110300 (net GND)(type fix))
