@@ -595,6 +595,8 @@ EXTRAS = [
     ('J5, J6', 1, 'Espressif', 'ESP32-S3-DevKitC-1-N8R8', 'płytka MCU v1.1', 'zasilana przez piny 3V3'),
     ('D20', 2, 'Hongjiacheng (R+O)', 'SMBJ33CA (LCSC C19077587)', 'TVS dwukierunkowy 33 V, SMB',
      'do ręcznego montażu D20 na jednym z dwóch prototypów: 1 sztuka i 1 zapasowa; JLC go nie montuje'),
+    ('C50', 2, 'Nichicon', 'UKL1E101MPD', 'elektrolit o małym upływie 100 µF 25 V, 8 × 11,5 mm, raster 3,5 mm',
+     'na zapas: do wymiany C50, gdyby pomiar prądu w stanie wyłączonym na pierwszych sztukach wyszedł za duży'),
     ('F1', 1, 'Schurter', '0001.2504', 'bezpiecznik T1A 5x20 mm', 'wkładany w zaciski F1; drugi: Littelfuse 0477001'),
 ]
 

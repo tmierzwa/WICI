@@ -7,6 +7,7 @@ Left out: parts marked "do not fit" (D20), mounting holes and the parts of desig
 tools/design.py.
 """
 import csv
+import math
 from pathlib import Path
 import re
 
@@ -15,23 +16,51 @@ import pcbnew as k
 from design import PARTS
 
 ROOT = Path(__file__).resolve().parents[1]
-# Rotation JLC adds to the KiCad angle: the JLC library models of these parts are turned against the KiCad
-# footprints. First source: the two boards already assembled at JLC (SOIC, the LTC3115-1 TSSOP) and the public
-# table of the Fabrication Toolkit for KiCad (SOT-23 family). Then every part was compared with the JLC placement
-# preview of 2026-11-10 (pin 1 mark of the model against pin 1 of the board), which changed four entries: the WSON-12
-# model lies as the KiCad footprint (0, not 270 as for DFN), and the models of the TSOT-23-8, of the SC-70-6 and of
-# the USBLC6-2SC6 are a quarter turn away from the other SOT-23 parts (270, not 180).
-TURN = [(r'^TSOT-23', 270), (r'^SOT-363', 270), (r'^SOT-23', 180), (r'^SOIC-', 270), (r'^LTC3115-1_FE20', 270)]
-TURN_PART = {'C7519': 270}          # by LCSC number: USBLC6-2SC6 (U8), unlike the other SOT-23-6 (U2)
-# Position: JLC puts the centre of its model there. For these footprints the KiCad origin is not that centre and
-# the centre of all pads is used (USB-C socket: in the preview the model sat 1.5 mm off its pads).
-CENTRE_OF_PADS = (r'^USB_C_Receptacle_HRO_TYPE-C-31-M-12',)
-# Through-hole parts: the KiCad origin is pin 1, the position is the centre of the pads. Parts on the bottom side:
-# JLC wants the angle as seen from above the part, 180 - KiCad angle (as the Fabrication Toolkit for KiCad does).
-# Pin headers and sockets: a quarter turn, as on the converter test board (JLC preview of 2026-10-31).
-TURN_THT = [(r'^PinHeader_1x', 90), (r'^PinSocket_1x', 90)]
+# Rotation and position come from the JLC library footprint of each part (tools/jlc_models.txt): its pads are laid
+# over the pads of the board in the four rotations, the one that fits is the rotation, and the place where the
+# origin of the library footprint lands is the position. The library differs per part number, not per package
+# (two SOT-23-6 parts here need different rotations), so there is no table by package. The result agrees with
+# every rotation seen in the JLC placement previews of 2026-11-10 and of the earlier boards.
+# Parts on the bottom side: the angle is taken as seen from below, with the board turned over left to right; for
+# a model drawn as the KiCad footprint this gives 180 - KiCad angle, the rule of the Fabrication Toolkit for KiCad.
+# No board of this project had bottom parts fitted by JLC yet: the bottom parts need the JLC preview.
+# Plain chip resistors and capacitors have no entry: both libraries draw them along x, centre at the origin.
+CHIP = r'^[RC]_(0805|1206|1210|2512)_'
+FIT = 0.6        # mm, largest distance between a library pad and its pad on the board (pad sizes differ a little)
 # One footprint, two parts: the fuse holder is two clips, one at each pair of pads.
 SPLIT = {'F1': ('1', '2')}
+
+
+def models():
+    found = {}
+    for line in (ROOT / 'tools/jlc_models.txt').read_text().splitlines():
+        if line and not line.startswith('#'):
+            code, _, origin, _, pads = line.split()
+            ox, oy = map(float, origin.split(','))
+            found[code] = [(n, (float(x) - ox) * 0.254, (float(y) - oy) * 0.254)
+                           for n, x, y in (p.split(',') for p in pads.split(';'))]
+    return found
+
+
+def fit(model, pads, bottom):
+    """Rotation for the placement file and board position (mm) of the model origin.
+
+    model: (number, x, y) of the library pads around the library origin; pads: (number, x, y) on the board."""
+    best = []
+    for turn in (0, 90, 180, 270):
+        angle = math.radians(-turn if bottom else turn)
+        c, s = math.cos(angle), math.sin(angle)
+        # y points down: this turns counter-clockwise as seen from the top; bottom parts are mirrored first and turn the other way
+        moved = [(n, (-x if bottom else x) * c + y * s, -(-x if bottom else x) * s + y * c) for n, x, y in model]
+        once = [n for n, _, _ in moved if sum(m[0] == n for m in moved) == 1 and sum(p[0] == n for p in pads) == 1]
+        a = [m for m in moved if m[0] in once] or moved
+        b = [p for p in pads if p[0] in once] or pads
+        assert len(a) == len(b), 'a library footprint with repeated pad numbers must list all pads'
+        dx = sum(p[1] for p in b) / len(b) - sum(m[1] for m in a) / len(a)
+        dy = sum(p[2] for p in b) / len(b) - sum(m[2] for m in a) / len(a)
+        error = max(min(math.hypot(x + dx - px, y + dy - py) for pn, px, py in pads if pn == n) for n, x, y in moved)
+        best.append((round(error, 3), turn, dx, dy))
+    return min(best)
 
 
 def main():
@@ -40,6 +69,7 @@ def main():
     out = ROOT / 'fabrication'
     out.mkdir(exist_ok=True)
     rows = []
+    library = models()
     for fp in sorted(board.GetFootprints(), key=lambda f: (re.sub(r'\d', '', f.GetReference()),
                                                            int(re.sub(r'\D', '', f.GetReference()) or 0))):
         ref = fp.GetReference()
@@ -50,24 +80,20 @@ def main():
         assert tht or fp.GetAttributes() & k.FP_SMD, f'{ref}: the footprint is marked neither SMD nor through-hole'
         assert tht or not fp.IsFlipped(), f'{ref}: SMT part on the bottom side'
         name = fp.GetFPID().GetUniStringLibItemName()
-        table = TURN_THT if tht else TURN
-        turn = TURN_PART.get(fitted[ref]['lcsc'], next((t for pattern, t in table if re.match(pattern, name)), 0))
-        angle = 180 - fp.GetOrientationDegrees() if fp.IsFlipped() else fp.GetOrientationDegrees()
         side = 'Bottom' if fp.IsFlipped() else 'Top'
-
-        def centre(pads):
-            boxes = [p.GetBoundingBox() for p in pads]
-            return (k.ToMM(min(b.GetLeft() for b in boxes) + max(b.GetRight() for b in boxes)) / 2,
-                    k.ToMM(min(b.GetTop() for b in boxes) + max(b.GetBottom() for b in boxes)) / 2)
-        if ref in SPLIT:
-            for letter, number in zip('AB', SPLIT[ref]):
-                x, y = centre([p for p in fp.Pads() if p.GetNumber() == number])
-                rows.append([ref + letter, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{(angle + turn) % 360:.0f}'])
+        lcsc = fitted[ref]['lcsc']
+        if lcsc not in library:
+            assert re.match(CHIP, name), f'{ref}: no JLC footprint of {lcsc} in tools/jlc_models.txt'
+            rows.append([ref, f'{k.ToMM(fp.GetPosition().x):.3f}mm', f'{-k.ToMM(fp.GetPosition().y):.3f}mm', side,
+                         f'{fp.GetOrientationDegrees() % 360:.0f}'])
             continue
-        x, y = k.ToMM(fp.GetPosition().x), k.ToMM(fp.GetPosition().y)
-        if tht or any(re.match(pattern, name) for pattern in CENTRE_OF_PADS):
-            x, y = centre(list(fp.Pads()))
-        rows.append([ref, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{(angle + turn) % 360:.0f}'])
+        pads = [(p.GetNumber(), k.ToMM(p.GetPosition().x), k.ToMM(p.GetPosition().y)) for p in fp.Pads()]
+        for letter, number in zip('AB', SPLIT.get(ref, [None])):
+            part = [('x', x, y) for n, x, y in pads if n == number] if number else pads
+            numbers = {n for n, _, _ in library[lcsc]}
+            error, turn, x, y = fit(library[lcsc], [p for p in part if p[0] in numbers], fp.IsFlipped())
+            assert error < FIT, f'{ref}: the JLC footprint of {lcsc} does not fit the board pads ({error} mm)'
+            rows.append([ref + letter if number else ref, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{turn}'])
     names = lambda ref: [ref + letter for letter in 'AB'] if ref in SPLIT else [ref]
     assert {r[0] for r in rows} == {n for ref in fitted for n in names(ref)}
     with (out / 'jlc-cpl.csv').open('w', newline='', encoding='utf-8') as f:

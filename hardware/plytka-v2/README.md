@@ -444,6 +444,11 @@ Trzeci niezależny przegląd (2026-11-10) sprawdził schemat od zera (piny z kar
 
 Odnotowane przez przegląd na później, bez zmian w tej wersji: kondensatory panelu C4 i C6 stoją 14–16 mm od złącza ekranu; ścieżki bramek tranzystorów łącznika mają 10–11 mm; C45 stoi 8,5 mm od pinu BST2.
 
+Dwa zapasy odnotowane przy przeglądzie wykazu części (2026-11-10), bez zmian części:
+
+- **C47 (VCC przetwornicy U7, 10 µF 25 V X5R 0805):** karta LTC3115-1 wymaga co najmniej 4,7 µF skutecznej pojemności. Przy napięciu VCC około 4,5 V kondensator tej wielkości zachowuje według oceny przeglądu około 5–6 µF, czyli zapas jest mały, ale dodatni. To ta sama część co na [płytce testowej przetwornicy](../przetwornica-3v3/README.md), więc jej pomiary obejmują ten punkt.
+- **R40 (1 Ω, 2512, 1 W) przy wkładaniu ogniw:** rezystor ładuje około 120 µF na szynie (C50, C40, C41). Przy 7,3 V z nowych ogniw energia impulsu to najwyżej ½CV² ≈ 3,2 mJ, stała czasowa około 0,12 ms, moc chwilowa do 53 W przy pominięciu oporu ogniw (25 W przy 5 A). Rezystory grubowarstwowe 2512 znoszą pojedyncze impulsy tej długości z dużym zapasem względem mocy ciągłej, ale wartości z wykresu impulsowego karty Yageo RC nie odczytałem; do potwierdzenia przy pomiarze udaru na pierwszych sztukach.
+
 ### Jak router trzyma odstęp wysokiego napięcia
 
 Freerouting zna tylko jeden odstęp na klasę sieci, nie zna reguły „0,6 mm od padu”. Dlatego w zadaniu dla routera (tylko tam, płytka zostaje bez zmian):
@@ -505,7 +510,7 @@ DRC w KiCad liczy potem z prawdziwą regułą projektu i to ono jest sprawdziane
 
 ## Części w JLC i pliki produkcyjne (2026-11-10)
 
-Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty części SMD są potwierdzone w podglądzie JLC, części przewlekanych jeszcze nie; niżej).
+Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty części SMD poza cewką L1 są potwierdzone w podglądzie JLC, części przewlekanych i L1 jeszcze nie; niżej).
 
 ### Numery LCSC
 
@@ -530,7 +535,7 @@ Zmiany części względem wcześniejszego wykazu, wszystkie o tych samych parame
 | 1 nF 50 V X7R | Samsung CL21B102KBANNNC | Samsung CL21B102KBCNNNC | Basic, ta sama seria |
 | D10 (Zener 33 V) | Diodes BZT52C33-7-F | Hongjiacheng BZT52C33 | Preferred; dioda tylko ogranicza napięcie na pinie U6 przy przepięciu, przy 24–28,8 V nie przewodzi |
 | R37 (221 k), R44 (39 k), 0,1% 25 ppm/K | Yageo RT0805BRD | Viking AR05BTCW2213, ARG05BTC3902 | Yageo: stan 0; te same 0,1% i 25 ppm/K |
-| D2, Q1 (brzęczyk) | Diodes 1N4148W-7-F, onsemi MMBT3904LT1G | ST 1N4148W, Changjing MMBT3904 | Basic; bez wymagań na upływ |
+| D2, Q1 (brzęczyk) | Diodes 1N4148W-7-F, onsemi MMBT3904LT1G | ST(Semtech) 1N4148W (nie STMicroelectronics), Changjing MMBT3904 | Basic; bez wymagań na upływ |
 | D16 (Zener 5,1 V) | Diodes BZT52C5V1-7-F | Hongjiacheng BZT52C5V1 | Diodes: 3 sztuki; upływu przy 3,6 V nie podaje żadna z kart, więc pomiar KILL z [pierwszych sztuk](#na-pierwszych-sztukach-v2) dotyczy tej części |
 | U3 (nadzorca 2,7 V) | TPS3840PH27DBVR | TPS3840PH27DBVRQ1 | 45 sztuk zamiast 6; ten sam układ w wersji samochodowej |
 
@@ -540,7 +545,7 @@ Zamienniki części, których JLC nie ma w magazynie:
 
 | Część | W projekcie | W JLC | Różnica |
 |---|---|---|---|
-| U1 (FRAM 4 Mbit SPI) | Infineon CY15B104QN-50SXI | RAMXEED MB85RS4MTPF-G-BCERE1 (C42742723) | ta sama pojemność, SPI i obudowa SOP-8 z tym samym układem pinów; inny identyfikator producenta: jeśli program go sprawdza, musi przyjąć oba |
+| U1 (FRAM 4 Mbit SPI) | Infineon CY15B104QN-50SXI | RAMXEED MB85RS4MTPF-G-BCERE1 (C42742723) | ta sama pojemność, SPI i obudowa SOP-8 208 mil z tym samym układem pinów; program rozpoznaje oba układy po identyfikatorze (`firmware/src/fram_id.h`: MB85RS4MT, CY15B104Q, CY15B104QN). Stan 11 sztuk wystarcza na 8 płytek z zapasem 3; przy mniejszym stanie w dniu zamówienia U1 lutuje się ręcznie albo dostarcza do montażu. CY15B104QN zostaje równoważną alternatywą |
 | J5, J6 (gniazda 1×22) | Sullins PPTC221LFBN-RC | Hong Cheng HC-PM254-8.5H-1x22PZ (C41376161) | ten sam raster 2,54 mm i wysokość 8,5 mm |
 | J8, J9 (gniazda 1×7) | Sullins PPTC071LFBN-RC | hanxia HX PM2.54-1x7P ZC-Y (C22438157) | jak wyżej |
 | C50 (100 µF 25 V) | Nichicon UKL1E101MPD | SamYoung PXB 25V100 8×11,5 (C350221) | niżej |
@@ -557,7 +562,7 @@ Wybrany **Nichicon UKL1E101MPD**: 100 µF, 25 V, ±20%, 8 × 11,5 mm, raster 3,5
 - **temperatura:** −40…+85 °C wobec wymaganych −10…+40 °C;
 - **trwałość:** 2000 h w 85 °C. Według zwykłej reguły (dwa razy dłużej na każde 10 °C mniej) to około 45 tysięcy godzin w 40 °C i ponad 100 tysięcy w 25 °C, czyli kilka do kilkunastu lat pod napięciem.
 
-**JLC nie ma go w magazynie ani żadnego innego elektrolitu 100 µF/25 V o małym upływie.** Na prototypy montowany jest zwykły SamYoung PXB 25 V 100 µF w tej samej obudowie 8 × 11,5 mm i rastrze 3,5 mm (125 °C, 3000 h). Różnica: upływ według zwykłej normy, najwyżej 0,01 × C × V = 25 µA przy 25 V wobec 5 µA Nichicona; przy 6 V z ogniw jest kilka razy mniejszy, ale karta tego nie podaje. Rozstrzyga pomiar prądu w stanie wyłączonym z [pierwszych sztuk](#na-pierwszych-sztukach-v2): jeśli C50 zabiera z budżetu za dużo, do serii wraca Nichicon kupiony u dystrybutora. Pojemność 100 µF nadal czeka na potwierdzenie w próbie przełączania 12 V ↔ ogniwa ([pierwsze sztuki](#na-pierwszych-sztukach-v2)).
+**JLC nie ma go w magazynie ani żadnego innego elektrolitu 100 µF/25 V o małym upływie.** Na prototypy montowany jest zwykły SamYoung PXB 25 V 100 µF w tej samej obudowie 8 × 11,5 mm i rastrze 3,5 mm (125 °C, 3000 h). Różnica: upływ według zwykłej normy, najwyżej 0,01 × C × V = 25 µA przy 25 V wobec 5 µA Nichicona; przy 6 V z ogniw jest kilka razy mniejszy, ale karta tego nie podaje. Rozstrzyga pomiar prądu w stanie wyłączonym z [pierwszych sztuk](#na-pierwszych-sztukach-v2): jeśli C50 zabiera z budżetu za dużo, wymienia się go na Nichicon UKL (dwie sztuki są na liście zakupów w [bom.csv](bom.csv), wymiana to dwa punkty lutownicze). Właściciel pytał 2026-11-10 o powrót do Nichicona od razu: różnica ceny jest pomijalna, ale JLC go nie ma, więc oznaczałoby to lutowanie ręczne albo sprowadzanie części przez JLC; ryzyko zamiennika ogranicza się do większego prądu z ogniw przy wyłączonej stacji i jest mierzone na pierwszych sztukach. Seria UKL jest w katalogu Nichicon (CAT.8100M) oznaczona jako przewidziana do wycofania, więc do serii produkcyjnej część o małym upływie trzeba będzie wybrać z oferty dostępnej w tamtym czasie; w obudowie 8 × 11,5 mm z rastrem 3,5 mm nie znalazłem 2026-11-10 innej potwierdzonej serii o małym upływie (Würth WCAP-ATLL 100 µF/25 V ma 6,3 mm i raster 2,5 mm). Pojemność 100 µF nadal czeka na potwierdzenie w próbie przełączania 12 V ↔ ogniwa ([pierwsze sztuki](#na-pierwszych-sztukach-v2)).
 
 ### Pliki produkcyjne
 
@@ -570,29 +575,46 @@ Wybrany **Nichicon UKL1E101MPD**: 100 µF, 25 V, ±20%, 8 × 11,5 mm, raster 3,5
 | `jlc-cpl.csv` | pozycje: Designator, Mid X, Mid Y, Layer, Rotation |
 
 - W wykazie i pozycjach są wszystkie części poza D20 (nie montować) i otworami montażowymi. `fab.py` kończy się błędem, gdy część nie ma numeru LCSC, jej footprint nie jest oznaczony jako SMD ani przewlekany, albo część SMD jest od spodu.
-- Części przewlekane: pozycją jest środek padów (w KiCad punktem odniesienia jest pin 1). Od spodu są gniazda modułów, złącza przewodów, zaciski bezpiecznika i C50; mają warstwę „Bottom” i kąt 180° − kąt z KiCad, jak we wtyczce Fabrication Toolkit. Oprawka F1 jest w plikach jako dwa zaciski, F1A i F1B. **Ustawienie części przewlekanych nie jest jeszcze potwierdzone w podglądzie JLC** (złącza z kluczem, biegunowość C50 i diody, brzęczyk).
+- Oprawka F1 jest w plikach jako dwa zaciski, F1A i F1B. Obroty i pozycje: niżej.
 - Współrzędne we wszystkich plikach są bezwzględne, takie jak w pliku płytki (y w pozycjach to −y z KiCad, tak jak w Gerberach).
-- Pliki nie zawierają dat (są usuwane z nagłówków), a ZIP ma stałe czasy plików, więc zmieniają się tylko razem z płytką. Są w repozytorium, tak jak dla [płytki testowej](../przetwornica-3v3/README.md).
+- Pliki nie zawierają dat (są usuwane z nagłówków), a ZIP ma stałe czasy plików (ustawiane w UTC, żeby nie zależały od strefy czasowej komputera), więc zmieniają się tylko razem z płytką. Są w repozytorium, tak jak dla [płytki testowej](../przetwornica-3v3/README.md).
 - Cewka L2 miała w footprincie typ „inny” zamiast SMD i wypadłaby z pozycji; poprawione, a sprawdzenie zgodności typu footprintu z padami jest w DRC włączone jako błąd (wynik: 0).
 
-**Obroty części w pliku pozycji.** Modele w bibliotece JLC są dla części obudów obrócone względem footprintów KiCad, więc `fab.py` dodaje poprawkę do kąta. Pierwsza wersja poprawek pochodziła z wcześniejszych płytek i z publicznej tabeli wtyczki Fabrication Toolkit dla KiCad; potem wszystkie części zostały porównane z **podglądem rozmieszczenia JLC z 2026-11-10** (znacznik pinu 1 modelu wobec pinu 1 na płytce, na zrzucie podglądu), co zmieniło cztery poprawki i jedną pozycję:
+**Obroty i pozycje części w pliku pozycji.** Model w bibliotece JLC bywa obrócony względem footprintu KiCad i ma inny punkt odniesienia. Zależy to od numeru części, nie od obudowy: dwa układy SOT-23-6 na tej płytce (U2 i U8) wymagają różnych obrotów, a publiczne tabele poprawek według obudów nie zgadzały się z podglądem JLC. Dlatego `fab.py` nie ma tabeli poprawek, tylko liczy obrót i pozycję z footprintu JLC każdej części:
 
-| Obudowa | Części | Poprawka | Wynik porównania z podglądem |
-|---|---|---|---|
-| SOT-23, SOT-23-5 | tranzystory, D6, D11, U3, U4 | +180° | zgodne |
-| SOT-23-6 | U2 | +180° | zgodne |
-| SOT-23-6, USBLC6-2SC6 | U8 | +270° | było +180°: model leżał o ćwierć obrotu inaczej niż U2; poprawione |
-| TSOT-23-8 | U6 | +270° | było +180°; poprawione |
-| SC-70-6 (SOT-363) | U9 | +270° | było +180°; poprawione |
-| SOIC-8 | Q2, Q3 | +270° | zgodne |
-| TSSOP-20 (LTC3115-1) | U7 | +270° | zgodne |
-| WSON-12 | U5 | 0° | było +270° (przyjęte jak DFN); poprawione |
-| SOD-123, SOD-123F | diody i Zenery | 0° | zgodne: katoda na padzie 1 |
-| złącze taśmy J7, cewka L2 | | 0° | zgodne |
-| gniazdo USB-C J4 | | 0° | obrót zgodny; model leżał 1,5 mm poza padami, bo JLC liczy pozycję od środka padów, a nie od punktu zerowego footprintu; pozycja J4 jest teraz środkiem jego padów |
-| SMB (D4), X1SON (D18, D19), rezystory, kondensatory, cewka L1 | | 0° | części bez biegunowości (TVS dwukierunkowe) albo symetryczne |
+- **Źródło:** footprint z biblioteki JLC (EasyEDA) ze strony części `jlcpcb.com/partdetail/<numer LCSC>`, sekcja „PCB Footprint”, odczytany 2026-11-10: punkt odniesienia i położenie padów z numerami. Zapisany w [tools/jlc_models.txt](tools/jlc_models.txt) dla 38 numerów części, czyli wszystkich poza zwykłymi rezystorami i kondensatorami 0805, 1206, 1210 i 2512 (te w obu bibliotekach leżą wzdłuż osi x ze środkiem w punkcie odniesienia).
+- **Metoda:** pady z biblioteki są nakładane na pady na płytce w czterech obrotach; obrót, przy którym pad o każdym numerze trafia na swój pad (odchyłka poniżej 0,6 mm, w praktyce do 0,44 mm przez różnice wielkości padów), trafia do pliku, a pozycją jest miejsce, w które wypada punkt odniesienia modelu. Gdy żaden obrót nie pasuje albo części brakuje w pliku modeli, `fab.py` kończy się błędem.
+- **Zgodność z podglądem:** metoda daje te same obroty, które potwierdziły podglądy rozmieszczenia JLC z 2026-11-10 (dwa zrzuty, znacznik pinu 1 modelu przy pinie 1 na płytce) i wcześniejsze płytki: SOT-23 i SOT-23-5 +180° względem KiCad, U2 +180°, U8, U6, U9, SOIC-8 i U7 +270°, U5 0°, diody 0° (katoda na padzie 1), gniazdo USB-C ze stykami na padach.
+- **Co zmieniła względem pliku po podglądach:** cewka L1 (744031004) była w pliku pod kątem 0°, a model JLC ma pady obok siebie, nie jeden nad drugim: każda końcówka leżałaby na obu padach i zwierała węzeł przetwornicy 5 V z +3V3. Teraz 270°. Na podglądzie tego nie było widać, bo model jest kwadratowy. Wykrył to niezależny przegląd plików. Poza tym: L2 obrócona o 180° (bez znaczenia elektrycznego, pad 1 na padzie 1), złącze ekranu J7 przesunięte o 0,22 mm, gniazdo USB-C J4 o 0,11 mm, cztery tranzystory SOT-23 o 0,1 mm.
+- **Części od spodu** (gniazda modułów, złącza przewodów, zaciski bezpiecznika, C50): kąt jest liczony tak, jak część widać od spodu po odwróceniu płytki w lewo–prawo; dla modelu narysowanego jak footprint KiCad daje to regułę 180° − kąt KiCad, znaną z wtyczki Fabrication Toolkit. **Żadna płytka tego projektu nie miała dotąd części montowanych przez JLC od spodu, więc tej konwencji nie potwierdza jeszcze żaden podgląd.** Błąd oznaczałby obrót o 180°: złącza przewodów z odwróconym kluczem i C50 z odwróconą biegunowością.
+- **Nóżki obudowy gniazda USB-C** (cztery otwory, bez pasty): JLC nie opisuje, czy je lutuje. Po dostawie trzeba obejrzeć gniazdo od spodu; nóżki bez lutu dolutowuje się ręcznie, bo trzymają gniazdo przy wkładaniu wtyku.
 
-Po poprawce plik pozycji został wgrany do JLC jeszcze raz i **drugi podgląd (2026-11-10) potwierdził wszystkie pięć poprawek**: znacznik pinu 1 modeli U5, U6, U8 i U9 leży przy pinie 1 na płytce, a styki gniazda J4 leżą na swoich padach. Gniazda modułów są przewlekane i nie ma ich w pliku pozycji. Porównanie robi się na zrzucie podglądu; przy każdej zmianie części albo footprintu trzeba je powtórzyć.
+### Sprawdzenie w podglądzie JLC (dla właściciela)
+
+Ostatnie słowo ma podgląd rozmieszczenia w formularzu zamówienia JLC. Kolejno:
+
+1. W zamówieniu z montażem wgraj `fabrication/plytka-v2-gerber.zip`, potem `fabrication/jlc-bom.csv` i `fabrication/jlc-cpl.csv`. Wybierz montaż obu stron.
+2. Na liście części sprawdź, że każda linia ma status potwierdzony i że nie ma linii bez części.
+3. W podglądzie rozmieszczenia zrób zrzut ekranu strony górnej i dolnej, możliwie duży, i prześlij oba do sprawdzenia przed opłaceniem.
+
+Na co patrzeć (różowa kropka w podglądzie to pin 1 modelu, na płytce pin 1 układu oznacza biały trójkąt albo kropka na sitodruku):
+
+| Część | Gdzie | Dobrze, gdy |
+|---|---|---|
+| mała cewka L1 | strona górna, lewa część, na lewo od układu U2 | końcówki cewki leżą na górnym i dolnym padzie, nie w poprzek |
+| układy U1–U9, tranzystory Q2 i Q3 | strona górna | różowa kropka jest przy trójkącie albo kropce na sitodruku |
+| diody (małe prostokąty z paskiem) | strona górna | pasek modelu jest po tej stronie co pasek na sitodruku |
+| gniazdo USB-C J4 | dolna krawędź, strona górna | otwór gniazda wychodzi poza krawędź płytki, styki leżą na padach |
+| złącze ekranu J7 | lewa część, strona górna | styki leżą na rzędzie padów, zatrzask po przeciwnej stronie |
+| dioda alarmu D1 | prawy górny róg | ścięcie obudowy po stronie ścięcia na sitodruku |
+| brzęczyk BZ1 | prawy górny róg | znak „+” modelu przy znaku „+” na płytce |
+| złącza przewodów J1, J2, J3, J10, J11 | strona dolna | obrys modelu z wycięciem (kluczem) pokrywa się z obrysem na sitodruku strony dolnej |
+| kondensator C50 | strona dolna, środek | pasek „−” modelu po stronie przeciwnej do znaku „+” na płytce |
+| zaciski bezpiecznika F1 | strona dolna | dwa zaciski naprzeciw siebie, ograniczniki na zewnątrz, tak by bezpiecznik wchodził między nie |
+| gniazda modułów J5, J6, J8, J9 | strona dolna | każdy rząd pokrywa swój rząd otworów |
+| przycisk serwisowy SW6, zworka JP3 | strona górna | nóżki trafiają w otwory |
+
+Porównanie trzeba powtórzyć przy każdej zmianie części albo footprintu.
 
 ## Przed zamówieniem
 
@@ -600,7 +622,7 @@ Do rozstrzygnięcia przed pierwszym zamówieniem płytki:
 - przyciski: obsługa PV6 w rękawicach przy rozstawie 32 mm;
 - obudowa, przymiarka z prawdziwą skrzynką (obrys, otwory i wysokości są już dopasowane do modelu STEP, [Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)): mocowanie i położenie koszyka BH4AAW na klapce (płasko czy na obrzeżu); pięć PV6 i przełącznik CISZY w otworach Ø20 mm płytki; dźwignia przełącznika (18 mm) pod osłoną GT-4R (opis osłony: 17,5 mm) i zamykanie klapki; odstęp końcówek WSTECZ i GÓRA od koszyka z ogniwami (z modelu 1,4–2,7 mm przy koszyku na środku) przy cienkiej taśmie; kierunek CISZY miernikiem i czy sprężyna puszczonej klapki nie przerzuca dźwigni z położenia CISZA; tuleja przełącznika (do Ø12,24 mm) w otworze Ø12,2 mm płytki GT-4R; głośność BZ1 przez kratkę 7 × Ø1,5 mm; stos ekranu (szybka, światłowód, panel, pianka) i długość taśmy do J7; oś USB-C w otworze ściany, czoło gniazda 0–1 mm od niej i próba z kilkoma kablami o różnych osłonach wtyku (pełne włożenie, bez oporu o ścianę); oś EN3 0,8 mm pod płytką, korpus i przewody w wycięciu; oś SMA i przewód do u.FL; szlifowanie dwóch słupków pod oknem ekranu; tulejki 6 mm i wkręty 3 × 12 z podkładką (moment zerwania gwintu na pierwszej sztuce, czy słupek Ø4,75 mm nie pęka przy wkręcie 3 mm i czy płytka trzyma się po kilku miesiącach); D1 przez otwór Ø5,5 mm (widoczność z kilku metrów); oznaczenie strzałkami położenia pokrywy; zwrot Wio i położenie u.FL. Na obrazku Seeed od strony elementów J1 leży po lewej, pin 1 przy otworze Ø 2,2 mm, a u.FL przy pinie 7 J2. Gniazda (z góry J9 po lewej, J8 po prawej, piny 1 przy y 67,4) pasują, gdy listwy wychodzą od strony bez elementów, czyli moduł wisi elementami w dół; potwierdzić przymiarką;
 - D20 dolutowany ręcznie na jednym prototypie przed pierwszym podłączeniem 24 V, pomiar napięcia szczytowego przy łączniku i decyzja o D20 w serii ([plan](#ochrona-wejścia-przy-łączniku)); po przymiarce obudowy ewentualne poprawki rozmieszczenia i nowy przebieg routera;
-- potwierdzenie ustawienia części przewlekanych w podglądzie JLC ([Pliki produkcyjne](#pliki-produkcyjne));
+- potwierdzenie ustawienia cewki L1, części przewlekanych i części od spodu w podglądzie JLC ([lista](#sprawdzenie-w-podglądzie-jlc-dla-właściciela));
 - wnioski z kroku 4 i decyzja: moduły wpinane czy przylutowany ESP32-S3 i układ radiowy;
 - program stacji: piny GPIO3, GPIO4, GPIO5 i GPIO45–48, ADC ogniw i 12 V, KILL i INT, [czuwanie](../../docs/spec/oprogramowanie.md#czuwanie);
 - pomiary na [płytce testowej przetwornicy](../przetwornica-3v3/README.md): sprawność LTC3115-1 przy 3,3 V (Z11, [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)) i Burst Mode U7 (typowo poniżej 50 mA) przy starcie ESP32-S3 i panelu oraz przy 4 V na wejściu: 3,3 V nie może przy tym spaść do progu nadzorcy FRAM 2,7 V (U3). Płytka testowa nie ma ESP32-S3, panelu ani nadzorcy, więc do tej próby podłącza się L0 (DevKitC na płytce v1.1, z panelem i nadzorcą U3) pinem 3V3 i G do VOUT płytki testowej, bez USB (DevKitC dopuszcza tylko jedno źródło zasilania). Gdyby 3,3 V spadało: najpierw program włącza PWM (GPIO45) zaraz po starcie, przed panelem i radiem; gdyby spadek był już w czasie ładowania programu (przed kodem stacji), większa pojemność na 3V3. Ostatecznie można rozdzielić sieć PWM_SYNC i GPIO45 (rezystor 0 Ω od PWM/SYNC do VCC przetwornicy, GPIO45 odłączony z R63 do masy), ale PWM bez obciążenia bierze około 12 mA (karta LTC3115-1, wykres „PWM Mode No-Load Input Current”, 1 MHz, 5 V; przy 750 kHz i 3,3 V niewiele mniej) zamiast 50 µA w Burst Mode, także w czuwaniu i przy wyłączonym radiu, czyli około 60 mW przy 6 V, co przy zapasie modelu poniżej 1 h spycha czas pracy na ogniwach wyraźnie poniżej 48 h. GPIO45 wysoki przy resecie (R63 do 3V3) odpada, bo wybiera 1,8 V dla flash, a WROOM-1 N8R8 ma flash 3,3 V; eFuse VDD_SPI_FORCE i VDD_SPI_TIEH, które to obchodzą, są nieodwracalne i zostają tylko jako ostateczność;

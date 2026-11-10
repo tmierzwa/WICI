@@ -24,7 +24,7 @@ for f in "$G"/*; do
   sed -i.bak -e '/CreationDate/d' -e 's/^\(G04 Created by KiCad .*\) date .*\*$/\1*/' \
     -e 's/^\(; DRILL file .*\) date .*$/\1/' "$f" && rm "$f.bak"
   if grep -q "20[0-9][0-9]-[01][0-9]-[0-3][0-9]" "$f"; then echo "data w pliku $f" >&2; exit 1; fi
-  touch -t 200001010000 "$f"
+  TZ=UTC touch -t 200001010000 "$f"
 done
 (cd "$G" && TZ=UTC zip -q -X -D ../plytka-v2-gerber.zip $(ls | LC_ALL=C sort))
 (cd tools && "$KICAD_PY" fab.py)
