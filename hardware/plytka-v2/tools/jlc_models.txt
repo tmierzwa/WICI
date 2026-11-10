@@ -5,7 +5,10 @@
 # tools/fab.py lays these pads over the pads of the board and takes rotation and position from the fit.
 # Format: LCSC number, "O" x,y of the origin, "P" pads as number,x,y; units of the library (10 mil), y down.
 # Long rows of pins are given by their end pins only. Pad numbers follow the board where the library numbers
-# differ: C93157 (switch, library 1 2 / 3 4, board 1 1 / 2 2), C151075 (one fuse clip, any pad: x).
+# differ: C93157 (switch, library 1 2 / 3 4, board 1 1 / 2 2), C151075 (one fuse clip, any pad: x),
+# C6926004 (LED: library pad 1 is the anode, on the board pad 1 is the cathode, so 1 and 2 are swapped here).
+# Polarity checked on the library symbols and silkscreen: SMD diodes pad 1 cathode as on the board, C350221
+# pad 1 plus as on the board, JST connectors pin 1 and housing as on the board.
 C7519 O 4000,3000 P 1,3996.26,3004.52;2,4000,3004.52;3,4003.74,3004.52;4,4003.74,2995.48;5,4000,2995.48;6,3996.26,2995.48
 C10096 O 3978.2515,2993.751 P 5,3973.13,2997.49;4,3973.13,2990.01;3,3983.37,2990.01;2,3983.37,2993.75;1,3983.37,2997.49
 C10493 O 395.2755,303.29 P 2,399.8,299.55;3,390.75,303.29;1,399.8,307.03
@@ -37,7 +40,7 @@ C2649331 O 3974.089,2976.5 P 2,3979.4,2976.5;1,3968.77,2976.5
 C2915055 O 1595.5,-569.5 P 1,1590.5,-569.5;2,1600.5,-569.5
 C3215600 O 3982,2987.0005 P 7,3987.56,2991.92;8,3987.56,2989.95;6,3976.44,2991.92;5,3976.44,2989.95;1,3976.44,2982.08;2,3976.44,2984.05;3,3976.44,2986.02;9,3987.56,2987.99;10,3987.56,2986.02;11,3987.56,2984.05;12,3987.56,2982.08;4,3976.44,2987.99
 C3812098 O 4000,3000 P 1,3987.01,3000;2,4012.99,3000
-C6926004 O 399.3,300 P 1,394.3,300;2,404.3,300
+C6926004 O 399.3,300 P 2,394.3,300;1,404.3,300
 C19077401 O 4000,3000 P 2,4006.44,3000;1,3993.56,3000
 C19077419 O 4000,3000 P 2,4006.44,3000;1,3993.56,3000
 C19077587 O 4003.202,2997.5 P 2,4013.4,2997.5;1,3993,2997.5
