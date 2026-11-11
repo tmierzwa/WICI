@@ -88,6 +88,8 @@ constexpr const char* BOARD_NAME = board::NAME;
 #endif
 #if defined(WICI_XIAO)
 constexpr const char* BENCH = "XIAO";
+#elif defined(WICI_V2)
+constexpr const char* BENCH = "V2";
 #elif defined(WICI_L0)
 constexpr const char* BENCH = "L0";
 #elif defined(WICI_BENCH_B)
@@ -141,7 +143,7 @@ void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
 }
-#if defined(WICI_L0) || defined(WICI_XIAO)
+#if defined(WICI_L0) || defined(WICI_V2) || defined(WICI_XIAO)
 constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, usb-protocol.md)
 #else
 constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, usb-protocol.md)
@@ -1339,6 +1341,28 @@ bool parseArg(const char* text, uint32_t cap, uint32_t& out) {
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
+#if defined(WICI_MCU_SLEEP)
+// NAP <ms>: jedno lekkie uśpienie MCU (platform::sleep) do pomiaru prądu w czuwaniu, tylko w trybie
+// przygotowania i bez serii radiowej; zawsze z zegarem, bo EXTCOMIN ekranu (MCPWM) w uśpieniu stoi. Pętla czuwania z oprogramowanie.md („Czuwanie”) nie jest jeszcze wdrożona:
+// w zwykłej pracy stacja nie śpi. Budzi zegar po <ms> albo linia z board::SLEEP_WAKE (przycisk, CISZA, DIO1,
+// na v2 też wyłącznik i laptop). Przed uśpieniem odpowiedź {"nap_ms":...} i opróżnienie portów USB; po
+// wybudzeniu {"slept_ms":...,"cause":...,"line":...}. W uśpieniu MCU nie obsługuje USB, więc laptop może
+// zgłosić błąd portu albo połączyć go od nowa; odpowiedź po wybudzeniu idzie wtedy w nowe połączenie.
+void napCommand(const char* arg) {
+    uint32_t ms = 0;
+    if (!cmdargs::parseUint(arg, 1, 30000, ms)) { printError("NAP <1..30000 ms>"); return; }
+    if (!bench.prep) { printError("preparation mode off: PREP 1"); return; }
+    if (bench.busy()) { printError("busy: STOP first"); return; }
+    Serial.printf("{\"nap_ms\":%lu}\n", static_cast<unsigned long>(ms));
+    Serial.flush();
+    SerialData.flush();
+    const mcu_sleep::Result r = platform::sleep(ms);
+    const char* line = r.line >= 0 ? board::SLEEP_WAKE[r.line].name : nullptr;
+    Serial.printf("{\"slept_ms\":%lu,\"cause\":\"%s\",\"line\":%s%s%s}\n", static_cast<unsigned long>(r.sleptMs),
+                  mcu_sleep::causeName(r.cause), line ? "\"" : "", line ? line : "null", line ? "\"" : "");
+}
+#endif
+
 void printFram() {
     const fram::Id id = memory.identify();
     framOk = id.part != fram::Part::UNKNOWN;
@@ -1473,8 +1497,8 @@ void printHelp() {
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"EMC [<s> <len>|0]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\","
-#if !defined(WICI_BENCH_B) && !defined(WICI_L0)
-                 "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
+#if !defined(WICI_BENCH_B) && !defined(WICI_L0) && !defined(WICI_V2)
+                 "\"LED <1-4> <0|1>\","  // stanowisko B, L0 i v2 (DevKitC) nie mają diod stanu
 #endif
                  "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"REQ <n> [<text bytes>]\","
 #if !defined(WICI_HEADLESS)
@@ -1483,6 +1507,9 @@ void printHelp() {
                  "\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\",\"HACK [0]\""
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
+#endif
+#if defined(WICI_MCU_SLEEP)
+                 ",\"NAP <ms>\""
 #endif
 #if defined(WICI_RNS_CORE)
                  ",\"RNS SELFTEST\""
@@ -1817,6 +1844,9 @@ void handle(char* cmd) {
         else noTone(board::BUZZER);
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
     } else if (!strcmp(cmd, "VTEST")) platform::printVtest();
+#endif
+#if defined(WICI_MCU_SLEEP)
+    else if (!strcmp(cmd, "NAP") && n == 1) napCommand(words[0]);
 #endif
     else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
 #if !defined(WICI_HEADLESS)

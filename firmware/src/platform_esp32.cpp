@@ -8,6 +8,8 @@
 #include <esp_heap_caps.h>
 #include <esp_mac.h>
 #include <esp_random.h>
+#include <esp_sleep.h>
+#include <esp32-hal-periman.h>
 #include <esp_system.h>
 #include <esp_timer.h>
 #include <esp_task_wdt.h>
@@ -168,6 +170,98 @@ int32_t rxTaskStackFree() {
 int32_t heapSize() { return static_cast<int32_t>(heap_caps_get_total_size(MALLOC_CAP_DEFAULT)); }
 int32_t heapFree() { return static_cast<int32_t>(esp_get_free_heap_size()); }
 int32_t heapMinFree() { return static_cast<int32_t>(esp_get_minimum_free_heap_size()); }
+
+#if defined(WICI_MCU_SLEEP)
+// Lekkie uśpienie (platform.h, mcu_sleep.h). W lekkim uśpieniu domena cyfrowa ma zasilanie, więc przy obecnych
+// ustawieniach Arduino-ESP32 piny i tak zostają w stanie sprzed uśpienia; tu trzyma się je jawnie, żeby zmiana
+// ustawień ESP-IDF (izolacja GPIO w uśpieniu, CONFIG_PM_SLP_DISABLE_GPIO, wyłączanie domeny peryferiów) nie
+// zresetowała radia ani nie wygasiła ekranu:
+// - gpio_sleep_sel_dis: pin w uśpieniu zostaje przy zwykłej konfiguracji (kierunek, poziom, podciąganie), a nie
+//   przechodzi na osobną konfigurację uśpienia; dotyczy wyjść i linii budzenia (te muszą zostać wejściami);
+// - gpio_hold_en: zatrzaśnięcie stanu wyjścia na czas uśpienia; zwalniane po wybudzeniu, bo zatrzaśnięty pin
+//   nie zmienia stanu także w pracy (RXEN, CS, EXTCOMIN).
+// Budzenie poziomem (gpio_wakeup_enable): lekkie uśpienie ESP32-S3 nie budzi zboczem, więc poziomy wybiera
+// mcu_sleep::arm (zmiana stanu dla linii ANY_CHANGE, stan wysoki dla DIO1).
+mcu_sleep::Result sleep(uint32_t maxMs) {
+    constexpr size_t holdCount = sizeof(board::SLEEP_HOLD) / sizeof(board::SLEEP_HOLD[0]);
+    constexpr size_t lineCount = sizeof(board::SLEEP_WAKE) / sizeof(board::SLEEP_WAKE[0]);
+    static_assert(lineCount <= mcu_sleep::MAX_LINES, "linie budzenia mieszczą się w tablicach poziomów");
+    mcu_sleep::Result result{mcu_sleep::Cause::BUSY, -1, 0};
+
+    // Blokada radia: zadanie odbioru nie może być w środku transakcji SPI, gdy rdzenie stają. Próby bez czekania,
+    // bo nieudane czekanie z limitem liczy się jako błąd radia (radioLockTimeouts).
+    bool locked = false;
+    for (int i = 0; i < 20 && !(locked = radioLockTake(0)); ++i) delay(1);
+    if (!locked) return result;
+
+    uint8_t levels[mcu_sleep::MAX_LINES] = {};
+    uint8_t armed[mcu_sleep::MAX_LINES] = {};
+    for (size_t i = 0; i < lineCount; ++i) {
+        // Linie bez innego użytkownika (na v2 INT wyłącznika i USB_LAPTOP) stają się wejściami; podciągnięcia
+        // są na płytce (R47, R75). Linie ustawione już przez program (przyciski, DIO1) zostają bez zmian.
+        const uint8_t pin = board::SLEEP_WAKE[i].pin;
+        if (perimanGetPinBus(pin, ESP32_BUS_TYPE_GPIO) == nullptr) pinMode(pin, INPUT);
+        levels[i] = digitalRead(pin) ? 1 : 0;
+    }
+    const int active = mcu_sleep::arm(board::SLEEP_WAKE, lineCount, levels, armed);
+    if (active >= 0 || (maxMs == 0 && lineCount == 0)) {
+        radioLockGive();
+        result.line = static_cast<int8_t>(active);
+        return result;
+    }
+
+    // Brzęczyk wyłączony przed uśpieniem: LEDC stoi w uśpieniu, więc przebieg z tone() mógłby zatrzymać się
+    // w stanie wysokim (prąd przez brzęczyk). noTone() tylko wysyła polecenie do zadania tone(), które odłącza
+    // LEDC od pinu; w czasie dźwięku z czasem trwania zadanie czeka do jego końca. Program czeka więc najwyżej
+    // 50 ms na odłączenie, a przy trwającym dźwięku nie zasypia (BUSY), żeby nie zabrać pinu zadaniu tone()
+    // w trakcie jego zapisu. Potem pin niski i trzymany niżej razem z innymi wyjściami.
+    if (perimanGetPinBus(board::BUZZER, ESP32_BUS_TYPE_LEDC) != nullptr) {
+        noTone(board::BUZZER);
+        for (int i = 0; i < 50 && perimanGetPinBus(board::BUZZER, ESP32_BUS_TYPE_LEDC) != nullptr; ++i) delay(1);
+        if (perimanGetPinBus(board::BUZZER, ESP32_BUS_TYPE_LEDC) != nullptr) {
+            radioLockGive();
+            return result;
+        }
+    }
+    pinMode(board::BUZZER, OUTPUT);
+    digitalWrite(board::BUZZER, LOW);
+
+    for (size_t i = 0; i < holdCount; ++i) {
+        const gpio_num_t pin = static_cast<gpio_num_t>(board::SLEEP_HOLD[i]);
+        gpio_sleep_sel_dis(pin);
+        gpio_hold_en(pin);
+    }
+    for (size_t i = 0; i < lineCount; ++i) {
+        const gpio_num_t pin = static_cast<gpio_num_t>(board::SLEEP_WAKE[i].pin);
+        gpio_sleep_sel_dis(pin);
+        gpio_wakeup_enable(pin, armed[i] ? GPIO_INTR_HIGH_LEVEL : GPIO_INTR_LOW_LEVEL);
+    }
+    if (lineCount) esp_sleep_enable_gpio_wakeup();
+    if (maxMs) esp_sleep_enable_timer_wakeup(static_cast<uint64_t>(maxMs) * 1000);
+
+    feedWatchdog();
+    const int64_t startUs = esp_timer_get_time();
+    const esp_err_t err = esp_light_sleep_start();
+    const int64_t endUs = esp_timer_get_time();
+    const esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+
+    for (size_t i = 0; i < lineCount; ++i) levels[i] = digitalRead(board::SLEEP_WAKE[i].pin) ? 1 : 0;
+    for (size_t i = 0; i < lineCount; ++i) gpio_wakeup_disable(static_cast<gpio_num_t>(board::SLEEP_WAKE[i].pin));
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    for (size_t i = 0; i < holdCount; ++i) gpio_hold_dis(static_cast<gpio_num_t>(board::SLEEP_HOLD[i]));
+    feedWatchdog();
+    radioLockGive();
+
+    result.sleptMs = static_cast<uint32_t>((endUs - startUs) / 1000);
+    if (err != ESP_OK) result.cause = mcu_sleep::Cause::REJECTED;
+    else if (cause == ESP_SLEEP_WAKEUP_TIMER) result.cause = mcu_sleep::Cause::TIMER;
+    else if (cause == ESP_SLEEP_WAKEUP_GPIO) {
+        result.cause = mcu_sleep::Cause::LINE;
+        result.line = static_cast<int8_t>(mcu_sleep::woke(lineCount, levels, armed));
+    } else result.cause = mcu_sleep::Cause::OTHER;
+    return result;
+}
+#endif
 
 bool handle(const char* cmd, char* words[], size_t n) {
     if (strcmp(cmd, "DRIVE") || n > 1) return false;
