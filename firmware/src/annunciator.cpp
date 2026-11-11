@@ -34,4 +34,17 @@ uint32_t Annunciator::poll(uint32_t nowMs, const Inputs& in) {
     return beep;
 }
 
+uint32_t Annunciator::untilChangeMs(uint32_t nowMs) const {
+    uint32_t next = 0xFFFFFFFFu;
+    const auto left = [&](uint32_t sinceMs, uint32_t periodMs) {
+        const uint32_t elapsed = nowMs - sinceMs;
+        const uint32_t ms = elapsed >= periodMs ? 0 : periodMs - elapsed;
+        if (ms < next) next = ms;
+    };
+    if (led_) left(flashAt_, FLASH_MS);
+    else if (active_) left(flashAt_, flashed_ ? FLASH_EVERY_MS : 0);
+    if (alarmBeeped_) left(alarmBeepAt_, ALARM_BEEP_EVERY_MS);
+    return next;
+}
+
 }  // namespace annunciator

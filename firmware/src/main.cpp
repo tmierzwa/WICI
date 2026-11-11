@@ -64,6 +64,7 @@
 #if !defined(WICI_HEADLESS)
 #include "sharp.h"
 #endif
+#include "standby.h"
 #include "station.h"
 #include "store.h"
 #include "ui.h"
@@ -460,6 +461,10 @@ console::Console screenHost(stationStore, app, screenActions);
 bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
 // Zmiana danych ekranu: przerysowanie raz na obieg pętli, także po serii zapisów z USB.
 bool screenDirty = false;
+#if !defined(WICI_HEADLESS)
+bool displayPending = false;  // ostatni obieg wysłał wiersze ekranu: mogą czekać następne (pętla czuwania)
+#endif
+bool storeWork = false;       // porządkowanie magazynu po ZAMKNIJ ZDARZENIE trwa (pętla czuwania)
 
 void screenChanged() {
     screenHost.invalidate();
@@ -1342,9 +1347,16 @@ bool parseArg(const char* text, uint32_t cap, uint32_t& out) {
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
 
 #if defined(WICI_MCU_SLEEP)
+// Ramka w pierścieniu zadania odbioru wstrzymuje uśpienie, a po wybudzeniu sterownik radia liczy próbki od nowa
+// (bez tego ramka odebrana w uśpieniu szłaby do rx_late); NAP i pętla czuwania.
+const mcu_sleep::Hooks sleepHooks = {radiocon::rxPending, radiocon::resumed};
+#if defined(WICI_STANDBY)
+void printStandby();  // pętla czuwania, niżej
+#endif
+
 // NAP <ms>: jedno lekkie uśpienie MCU (platform::sleep) do pomiaru prądu w czuwaniu, tylko w trybie
-// przygotowania i bez serii radiowej; zawsze z zegarem, bo EXTCOMIN ekranu (MCPWM) w uśpieniu stoi. Pętla czuwania z oprogramowanie.md („Czuwanie”) nie jest jeszcze wdrożona:
-// w zwykłej pracy stacja nie śpi. Budzi zegar po <ms> albo linia z board::SLEEP_WAKE (przycisk, CISZA, DIO1,
+// przygotowania i bez serii radiowej; zawsze z zegarem, bo EXTCOMIN ekranu (MCPWM) w uśpieniu stoi. W zwykłej
+// pracy śpi pętla czuwania (standby.h, tylko v2), która w trybie przygotowania nie usypia. Budzi zegar po <ms> albo linia z board::SLEEP_WAKE (przycisk, CISZA, DIO1,
 // na v2 też wyłącznik i laptop). Przed uśpieniem odpowiedź {"nap_ms":...} i opróżnienie portów USB; po
 // wybudzeniu {"slept_ms":...,"cause":...,"line":...}. W uśpieniu MCU nie obsługuje USB, więc laptop może
 // zgłosić błąd portu albo połączyć go od nowa; odpowiedź po wybudzeniu idzie wtedy w nowe połączenie.
@@ -1356,7 +1368,7 @@ void napCommand(const char* arg) {
     Serial.printf("{\"nap_ms\":%lu}\n", static_cast<unsigned long>(ms));
     Serial.flush();
     SerialData.flush();
-    const mcu_sleep::Result r = platform::sleep(ms);
+    const mcu_sleep::Result r = platform::sleep(ms, &sleepHooks);
     const char* line = r.line >= 0 ? board::SLEEP_WAKE[r.line].name : nullptr;
     Serial.printf("{\"slept_ms\":%lu,\"cause\":\"%s\",\"line\":%s%s%s}\n", static_cast<unsigned long>(r.sleptMs),
                   mcu_sleep::causeName(r.cause), line ? "\"" : "", line ? line : "null", line ? "\"" : "");
@@ -1510,6 +1522,9 @@ void printHelp() {
 #endif
 #if defined(WICI_MCU_SLEEP)
                  ",\"NAP <ms>\""
+#endif
+#if defined(WICI_STANDBY)
+                 ",\"STANDBY\""
 #endif
 #if defined(WICI_RNS_CORE)
                  ",\"RNS SELFTEST\""
@@ -1848,6 +1863,9 @@ void handle(char* cmd) {
 #if defined(WICI_MCU_SLEEP)
     else if (!strcmp(cmd, "NAP") && n == 1) napCommand(words[0]);
 #endif
+#if defined(WICI_STANDBY)
+    else if (!strcmp(cmd, "STANDBY") && n == 0) printStandby();
+#endif
     else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
 #if !defined(WICI_HEADLESS)
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
@@ -2173,6 +2191,9 @@ void stationSetup() {
         if (pin >= 0) pinMode(static_cast<uint8_t>(pin), INPUT_PULLUP);
     }
 #endif
+#if defined(WICI_STANDBY)
+    pinMode(board::USB_LAPTOP, INPUT);  // R75 do 3,3 V; pętla czuwania czyta linię przed pierwszym uśpieniem
+#endif
     radiocon::attach(bench);
     radiocon::begin();  // CS radia w stan nieaktywny
 #if defined(WICI_FRAM_PSRAM)
@@ -2379,7 +2400,7 @@ void stationLoop() {
     if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd rejestru co 100 ms, nie w każdym obiegu
         lastApp = now;
         stationStore.now(serviceS());
-        stationStore.maintain();   // gniazda starej epoki po ZAMKNIJ ZDARZENIE (jedna transakcja na obieg)
+        storeWork = stationStore.maintain();   // gniazda starej epoki po ZAMKNIJ ZDARZENIE (jedna transakcja na obieg)
         if (linkAuto && radiocon::ok() && !nodeRole()) app.poll();
     }
     pollSerial();
@@ -2396,7 +2417,7 @@ void stationLoop() {
         updateScreen(false);
     }
 #if !defined(WICI_HEADLESS)
-    display.refresh();  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
+    displayPending = display.refresh() > 0;  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
     display.maintain(now);
 #endif
     // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
@@ -2471,6 +2492,144 @@ void stationLoop() {
     }
 }
 
+#if defined(WICI_STANDBY)
+// Pętla czuwania (docs/spec/oprogramowanie.md, „Czuwanie”; reguły w standby.h): po każdym obiegu pętli stacji
+// zamiast delay(1) lekkie uśpienie do najbliższego terminu albo zdarzenia. Terminy modułów stosu, WICI-Link
+// i aplikacji są w sekundach i nie mają osobnego odczytu: obsługuje je obieg po każdym wybudzeniu, a uśpienie
+// trwa najwyżej MAX_SLEEP_MS (1 s) i najwyżej do zmiany EXTCOMIN (0,5 s). Własne terminy w planie: łącze
+// radiowe (dług, odroczenie), dioda i sygnał alarmu, BEACON, okno 10 s VBUS. Krótkie terminy po zdarzeniu
+// (HACK, przekazanie, składanie ramek) pokrywa praca RADIO_HOLD_MS po ramce albo nadaniu.
+namespace {  // ta sama przestrzeń bez nazwy co wyżej (deklaracja printStandby)
+standby::Usb standbyUsb;
+standby::Vcom standbyVcom;
+standby::Hold radioHold;
+standby::Hold inputHold;
+standby::Counters standbyCounters;
+standby::Reason standbyReason = standby::Reason::WORK;
+bool usbOnBus = true;         // rdzeń podłącza USB przed setup()
+uint32_t radioEvents = 0;     // ramki odebrane i nadane (LinkCounters) przy ostatnim obiegu
+bool vcomFailed = false;      // sterownik odmówił wymuszenia EXTCOMIN: bez uśpienia przy włączonym ekranie
+
+bool panelHeld() {
+    for (int16_t pin : buttons)
+        if (pressed(pin)) return true;
+    return pressed(board::BTN_PREP);  // przytrzymanie 3 s przełącza tryb przygotowania
+}
+
+void standbyAttach(bool on) {
+    if (on == usbOnBus) return;
+    usbOnBus = on;
+    platform::usbAttach(on);
+}
+
+// Bez wymuszenia zatrzaśnięty EXTCOMIN dawałby panelowi składową stałą, więc po odmowie sterownika stacja
+// z włączonym ekranem nie śpi (powód SCREEN), a pin wraca do licznika.
+void standbyForceVcom() {
+    if (display.forceExtcomin(standbyVcom.level() ? 1 : 0)) return;
+    vcomFailed = true;
+    standbyVcom.release();
+    display.forceExtcomin(-1);
+    bench.log("standby: EXTCOMIN force failed, no sleep");
+}
+
+void printStandby() {
+    const standby::Counters& c = standbyCounters;
+    Serial.printf("{\"standby\":\"%s\",\"usb\":\"%s\",\"vbus\":%s,\"mounted\":%s,\"vcom\":\"%s\",\"sleeps\":%lu,"
+                  "\"slept_ms\":%llu,\"uptime_ms\":%llu,\"wake\":{\"timer\":%lu,\"radio\":%lu,\"input\":%lu,\"other\":%lu},"
+                  "\"rejected\":%lu,\"busy\":%lu}\n",
+                  standby::reasonName(standbyReason), usbOnBus ? "attached" : "detached",
+                  standbyUsb.vbus() ? "true" : "false", standbyUsb.mounted() ? "true" : "false",
+                  standbyVcom.forced() ? "loop" : "timer", static_cast<unsigned long>(c.sleeps),
+                  static_cast<unsigned long long>(c.sleptMs), static_cast<unsigned long long>(platform::uptimeMs()),
+                  static_cast<unsigned long>(c.wakeTimer), static_cast<unsigned long>(c.wakeRadio),
+                  static_cast<unsigned long>(c.wakeInput), static_cast<unsigned long>(c.wakeOther),
+                  static_cast<unsigned long>(c.rejected), static_cast<unsigned long>(c.busy));
+}
+
+void standbyStep() {
+    uint32_t now = millis();
+    standbyUsb.update(now, digitalRead(board::USB_LAPTOP) == LOW, platform::usbMounted(), platform::usbSuspended());
+    const measure::LinkCounters& link = bench.link();
+    const uint32_t events = link.rxOk + link.rxBad + link.txFragments;
+    if (events != radioEvents) {
+        radioEvents = events;
+        radioHold.extend(now, standby::RADIO_HOLD_MS);
+    }
+    const bool vcom = display.extcominOk();
+    if (standbyVcom.tick(now)) standbyForceVcom();
+
+    standby::Plan plan(now);
+    if (bench.prep) plan.block(standby::Reason::PREP);
+    if (nodeRole()) plan.block(standby::Reason::NODE);
+    if (standbyUsb.blocks()) plan.block(standby::Reason::USB);
+    const uint32_t linkMs = bench.sleepableMs();
+    const bool radioHeld = radioHold.active(now), inputHeld = inputHold.active(now);  // co obieg: stan nie starzeje się
+    if (!linkMs || radioHeld) plan.block(standby::Reason::RADIO);
+    plan.wakeIn(linkMs);
+    if (panelHeld() || inputHeld) plan.block(standby::Reason::PANEL);
+    // Bit VCOM z programu (EMD niski, przewody przy stole) odwraca Display::maintain w obiegu co 500 ms: bez uśpienia.
+    if (screenDirty || displayPending || (vcom && vcomFailed) || display.softwareVcom()) plan.block(standby::Reason::SCREEN);
+    if (storeWork || rebootAtMs) plan.block(standby::Reason::WORK);
+    plan.wakeIn(annunciation.untilChangeMs(now));
+    if (wiciActive && linkAuto && !bench.silence) plan.wakeAt(wiciNextBeaconMs);
+    plan.wakeIn(standbyUsb.untilMs(now));
+    if (vcom) plan.wakeIn(standbyVcom.untilEdgeMs(now));
+    standbyReason = plan.reason();
+
+    // Powód trwały kończy czuwanie: EXTCOMIN wraca do licznika, stacja na magistralę USB.
+    if (standby::persistent(standbyReason)) {
+        if (standbyVcom.forced()) {
+            standbyVcom.release();
+            display.forceExtcomin(-1);
+        }
+        standbyAttach(true);
+    }
+    const uint32_t ms = plan.sleepMs();
+    if (!ms) {
+        delay(1);
+        return;
+    }
+    standbyAttach(false);  // przed uśpieniem: laptop nie zaczyna połączenia ze śpiącym MCU
+    if (vcom && !standbyVcom.forced()) {
+        standbyVcom.take(now, display.extcominLevel());
+        standbyForceVcom();
+        if (vcomFailed) {
+            delay(1);
+            return;
+        }
+    }
+    const mcu_sleep::Result r = platform::sleep(ms, &sleepHooks);
+    standby::Counters& c = standbyCounters;
+    now = millis();
+    switch (r.cause) {
+    case mcu_sleep::Cause::BUSY: ++c.busy; delay(1); return;
+    case mcu_sleep::Cause::REJECTED: ++c.rejected; delay(1); return;
+    case mcu_sleep::Cause::TIMER: ++c.wakeTimer; break;
+    case mcu_sleep::Cause::LINE:
+        if (r.line >= 0 && board::SLEEP_WAKE[r.line].pin == board::RADIO_DIO1) {
+            ++c.wakeRadio;
+            radioHold.extend(now, standby::RADIO_HOLD_MS);
+        } else {
+            ++c.wakeInput;  // także linia, która wróciła przed odczytem (drganie styku): r.line = -1
+            inputHold.extend(now, standby::INPUT_HOLD_MS);
+        }
+        break;
+    case mcu_sleep::Cause::OTHER:
+        ++c.wakeOther;
+        inputHold.extend(now, standby::INPUT_HOLD_MS);
+        break;
+    }
+    ++c.sleeps;
+    c.sleptMs += r.sleptMs;
+    bench.resumed(now);  // okno CCA od wybudzenia: w uśpieniu zadanie odbioru nie zbierało znaczników
+    if (standbyVcom.tick(now)) standbyForceVcom();
+    // Takt FreeRTOS w lekkim uśpieniu stoi: zadanie odbioru (vTaskDelay(1)) i USB dostają rdzeń, zanim pętla
+    // znowu uśnie, więc odbiór ramki po DIO1 i nadzór zadania odbioru (rx_watch.h) działają jak w pracy.
+    delay(standby::AFTER_WAKE_MS);
+}
+}  // namespace
+#endif
+
 #if defined(ARDUINO_ARCH_NRF52)
 // Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
 // Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
@@ -2502,6 +2661,10 @@ void setup() { stationSetup(); }
 
 void loop() {
     stationLoop();
+#if defined(WICI_STANDBY)
+    standbyStep();  // uśpienie do terminu albo zdarzenia, a bez uśpienia delay(1) jak niżej
+#else
     delay(1);  // oddaje rdzeń innym zadaniom (USB, bezczynność); obieg pętli zostaje co około 1 ms
+#endif
 }
 #endif

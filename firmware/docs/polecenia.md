@@ -77,6 +77,7 @@ Port USB nRF (J3, nie port J-Link J2) zgłasza się jako urządzenie z dwoma int
 | `RNS SELFTEST` | tylko obrazy z rdzeniem (`bench-a`, `bench-n1`, `bench-b`, `l0`): wszystkie próby [samotestu rdzenia](stos.md#samotest-rdzenia-na-płytce), wiersz `{"selftest":…,"ok":…,"us":…}` na próbę i `{"selftest_ok":…,"entropy_ok":…,"version":…}`; pętla stacji stoi przez kilka sekund |
 | `ANNOUNCE` | ogłoszenie adresu na polecenie; wychodzi w najbliższym obiegu poza ciszą radiową i z kodem IFAC, potem `RNS` |
 | `NAP <ms>` | tylko `l0` i `v2`, tylko w trybie przygotowania: jedno lekkie uśpienie MCU do pomiaru prądu (1–30 000 ms); `{"nap_ms":…}` przed uśpieniem i `slept_ms`, `cause`, `line` po wybudzeniu ([opis](prototyp-l0-i-xiao.md#lekkie-uśpienie-nap)); na `v2` `VTEST` podaje napięcie 12 V (dzielnik 16) |
+| `STANDBY` | tylko `v2`: stan pętli czuwania (powód pracy bez uśpienia, USB, EXTCOMIN) i liczniki od startu: uśpienia, `slept_ms`, `uptime_ms`, przyczyny wybudzeń ([opis](prototyp-l0-i-xiao.md#pętla-czuwania-v2)) |
 
 Warunek przejścia kroku 6 z [lekcji R02](../../hardware/r02/lekcje.md#uruchomienie): `RADIO` daje `ready: true`, `partnumber: 0x48` i stan `IDLE`; `FRAM` daje `ok: true`. Bez modułu `partnumber` wynosi `0xFF` albo `0x00`, a `ready` jest `false`. Po starcie obraz sam zapisuje i kalibruje P1; LED2 świeci dopiero, gdy `RADIO` daje `ok: true` i `p1_ok: true`. Po otwarciu portu obraz wysyła też wynik `VERIFY` i `FREQ`.
 

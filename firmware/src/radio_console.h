@@ -43,6 +43,10 @@ bool check();
 // z pierścieniem ramek; układy P1 (stanowiska A i B) go nie mają: startRxTask() nic nie robi, rxStalled()
 // zawsze false, rxTaskInfo() puste.
 void startRxTask();        // po start(), przed odbiorem stosu
+// Lekkie uśpienie (mcu_sleep::Hooks, wołane pod blokadą radia): ramka czeka w pierścieniu na pętlę (bez
+// uśpienia) i powrót z uśpienia (sx1262_link.h, LinkDriver::resumed). Układy P1: false i nic.
+bool rxPending();
+void resumed(uint32_t nowMs);
 // Odbiór stosu uzbrojony (rxArmed): pętla ustala go w każdym obiegu przed kontrolą radia (Bench::stackRxArmed
 // i stos pracuje; polecenia diagnostyczne, tryb przygotowania i halt go kasują). Steruje tylko alarmem
 // i kontrolą trybu; zadanie odbioru obsługuje układ zawsze, gdy sterownik jest w odbiorze.

@@ -196,6 +196,8 @@ bool handle(const char* cmd, char* words[], size_t n) {
 
 // Bez zadania odbioru (radio_console.h, „Odbiór w tle”): pętla obsługuje układ sama.
 void startRxTask() {}
+bool rxPending() { return false; }
+void resumed(uint32_t) {}
 void setRxArmed(bool) {}
 bool rxStalled(bool, uint32_t) { return false; }
 RxTaskInfo rxTaskInfo() { return {}; }

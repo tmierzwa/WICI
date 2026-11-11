@@ -1022,6 +1022,22 @@ int main() {
     airEnd(40, 0x58);
     const sx1262::RxService afterGap = link.serviceRx(rxf, false);  // nagłówek tej ramki skasowany przy GAPLATE
     printf("AFTERGAP %d %d\n", static_cast<int>(afterGap), bytesFrom(rxf, 0x58));
+    // Lekkie uśpienie (pętla czuwania): nagłówek i koniec ramki w czasie uśpienia, przerwa w próbkach 500 ms.
+    // DIO1 budzi MCU tuż po RxDone, a resumed() (pod blokadą radia) przyjmuje wybudzenie za chwilę ostatniej
+    // próbki: ramka jest dobra. Bez resumed() ta sama ramka szłaby do rx_late (to drugie rx_late zostawia
+    // headerSeen_ jak przed następną ramką, więc przypadek z resumed() idzie pierwszy, a LATE1 i LATE2 liczą o jeden więcej).
+    for (const bool resumed : {true, false}) {
+        link.serviceRx(rxf, false);
+        fakeUs += 500000;
+        airHeader(0x60, 0);
+        airEnd(20, 0x60);
+        if (resumed) link.resumed(millis());
+        fakeUs += 1000;
+        const unsigned long lateBefore = link.rxLate();
+        const sx1262::RxService slept = link.serviceRx(rxf, false);
+        printf("SLEPT%d %d %zu %d %lu\n", resumed ? 1 : 0, static_cast<int>(slept), rxf.length, bytesFrom(rxf, 0x60),
+               link.rxLate() - lateBefore);
+    }
 
     // Spóźnienie: nagłówek ramki widziany wcześniej, a przy RxDone już nagłówek następnej (przed odczytem),
     // albo nagłówek w trakcie odczytu bufora (po odczycie). Ramka odrzucona i policzona, flagi widziane skasowane.
@@ -2090,6 +2106,32 @@ int main() {
                static_cast<unsigned long>(bench.link().rxBusy - busyBefore),
                static_cast<unsigned long>(lora::frameAirMs(wici_link::RADIO_HACK)));
     }
+    // Pętla czuwania (standby.h): łącze bez zadania pozwala spać bez końca, datagram czekający na dług do końca
+    // długu, okno CCA wcale. Po wybudzeniu (resumed) okno 50 ms liczy się od wybudzenia, bo w uśpieniu zadanie
+    // odbioru nie zbierało znaczników aktywności: decyzja o kanale dopiero po 50 ms pracy.
+    settle();
+    const uint32_t idleSleep = bench.sleepableMs();
+    bench.restoreDebt(1000);
+    txDone = -1;
+    radio.ops.clear();
+    radio.sent.clear();
+    bench.linkSend(d20.data(), d20.size(), true);
+    const uint32_t debtSleep = bench.sleepableMs();
+    fakeUs += 1000ull * 1000;  // uśpienie do końca długu, bez obiegów pętli
+    const uint32_t wokeMs = millis();
+    bench.resumed(wokeMs);
+    bench.poll();
+    const uint32_t ccaSleep = bench.sleepableMs();
+    runFor(48);
+    const std::string beforeWindow = ops();
+    while (radio.sent.empty() && millis() - wokeMs < 1000) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+    const uint32_t decidedMs = millis() - wokeMs;
+    untilDone(1000);
+    printf("STANDBY_LINK %d %lu %lu [%s] %lu %d\n", idleSleep == 0xFFFFFFFFu, static_cast<unsigned long>(debtSleep),
+           static_cast<unsigned long>(ccaSleep), beforeWindow.c_str(), static_cast<unsigned long>(decidedMs), txDone);
     return 0;
 }
 """
@@ -2587,11 +2629,16 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "GAPLATE"), "GAPLATE 3 0 1 0000")
         self.assertEqual(line(self.out, "AFTERGAP"), "AFTERGAP 1 1")
 
+    def test_frame_received_during_light_sleep_is_not_late_after_resumed(self):
+        # Without resumed(): the 500 ms gap makes the frame's own header unattributable (Late, 3); with it: Frame (1).
+        self.assertEqual(line(self.out, "SLEPT0"), "SLEPT0 3 0 0 1")
+        self.assertEqual(line(self.out, "SLEPT1"), "SLEPT1 1 20 1 0")
+
     def test_late_frame_dropped_and_counted(self):
         # Header seen earlier and a new HeaderValid with RxDone (before the read); HeaderValid during the
         # buffer read (after it).
-        self.assertEqual(line(self.out, "LATE1"), "LATE1 3 0 2 0000")
-        self.assertEqual(line(self.out, "LATE2"), "LATE2 3 0 3 0000")
+        self.assertEqual(line(self.out, "LATE1"), "LATE1 3 0 3 0000")
+        self.assertEqual(line(self.out, "LATE2"), "LATE2 3 0 4 0000")
 
     def test_only_seen_flags_are_cleared(self):
         # CrcErr set between GetIrqStatus and ClearIrqStatus survives and is reported by the next sample.
@@ -2883,6 +2930,11 @@ class LoraBenchTests(unittest.TestCase):
         # Six task cycles during the two frames skip (lock held by the loop), none waits or fails; after
         # the transmit the task gets the lock; the datagram went out and the loop released the lock.
         self.assertEqual(line(self.out, "TRYLOCK"), "TRYLOCK 6 1 1 0")
+
+    def test_standby_sleeps_through_debt_and_restarts_the_cca_window_after_a_wake(self):
+        # Idle link: no limit; queued datagram: the remaining debt (1000 ms); CCA: no sleep. No channel decision
+        # in the first 49 ms after the wake, the frame goes out at 50 ms of observation.
+        self.assertEqual(line(self.out, "STANDBY_LINK"), "STANDBY_LINK 1 1000 0 [] 50 1")
 
     def test_restart_with_debt_waits_the_journal_debt(self):
         self.assertEqual(line(self.out, "RESTART"), "RESTART 10056 0 1 1")

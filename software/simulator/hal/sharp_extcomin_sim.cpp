@@ -14,4 +14,6 @@ uint32_t Display::extcominCounter() const { return vb::extcominTicks(); }
 
 bool Display::extcominLevel() const { return digitalRead(pinExtcomin_) != 0; }
 
+bool Display::forceExtcomin(int) { return false; }  // symulator stanowiska B nie śpi
+
 }  // namespace sharp
