@@ -417,6 +417,22 @@ def zone_marks(board):
             board.Add(text)
 
 
+def fuse_marks(board):
+    """Bottom silkscreen: a bar past the outer end of each fuse clip. The clips (Littelfuse 111 501) have an end
+    stop on one side, the side nearer the pins; it has to face outward, towards the bar, or the fuse does not go in."""
+    pads = [p.GetPosition() for p in board.FindFootprintByReference('F1').Pads()]
+    middle = sum(p.x for p in pads) / len(pads)
+    for x in sorted({p.x for p in pads}):
+        ys = [p.y for p in pads if p.x == x]
+        bar = pcbnew.PCB_SHAPE(board, pcbnew.SHAPE_T_SEGMENT)
+        at = x + (mm(2.75) if x > middle else -mm(2.75))    # stop 2.04 mm from the pins, bar 0.7 mm further
+        bar.SetStart(pcbnew.VECTOR2I(at, min(ys)))
+        bar.SetEnd(pcbnew.VECTOR2I(at, max(ys)))
+        bar.SetLayer(pcbnew.B_SilkS)
+        bar.SetWidth(mm(0.4))
+        board.Add(bar)
+
+
 def stable(text):
     """Footprints sorted by reference and fixed UUIDs: a rebuild without changes gives the same file.
     KiCad orders footprints by their random UUID, which the Python API cannot set."""
@@ -587,6 +603,7 @@ def main():
                 if '.' not in b or q.GetNumber() == b.split('.')[1])
         if d > limit:
             sys.exit(f'{a} is {d:.1f} mm from {b}, limit {limit:g} mm')
+    fuse_marks(board)
     board.Save(str(OUT))
     OUT.write_text(stable(OUT.read_text()))
     print(f'{len(footprints)} footprints placed, outline {W:g} x {H:g} mm')

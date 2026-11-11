@@ -27,8 +27,12 @@ ROOT = Path(__file__).resolve().parents[1]
 # Plain chip resistors and capacitors have no entry: both libraries draw them along x, centre at the origin.
 CHIP = r'^[RC]_(0805|1206|1210|2512)_'
 FIT = 0.6        # mm, largest distance between a library pad and its pad on the board (pad sizes differ a little)
-# One footprint, two parts: the fuse holder is two clips, one at each pair of pads.
+# One footprint, two parts: the fuse holder is two clips, one at each pair of pads. The clip (Littelfuse 111 501,
+# data sheet of 12/19/13) has an end stop on the side nearer its pins, 2.04 mm from them; in the JLC footprint
+# that is the -x side (outline from -2.04 to +2.96 mm). Its two pads are alike, so two rotations fit: the one
+# taken turns the end stop away from the middle of the holder, or the fuse would not go in.
 SPLIT = {'F1': ('1', '2')}
+STOP = (-1.0, 0.0)
 
 
 def models():
@@ -42,10 +46,11 @@ def models():
     return found
 
 
-def fit(model, pads, bottom):
+def fit(model, pads, bottom, away=None):
     """Rotation for the placement file and board position (mm) of the model origin.
 
-    model: (number, x, y) of the library pads around the library origin; pads: (number, x, y) on the board."""
+    model: (number, x, y) of the library pads around the library origin; pads: (number, x, y) on the board.
+    away: board point the STOP side of the model has to face away from, when several rotations fit."""
     best = []
     for turn in (0, 90, 180, 270):
         angle = math.radians(-turn if bottom else turn)
@@ -59,8 +64,12 @@ def fit(model, pads, bottom):
         dx = sum(p[1] for p in b) / len(b) - sum(m[1] for m in a) / len(a)
         dy = sum(p[2] for p in b) / len(b) - sum(m[2] for m in a) / len(a)
         error = max(min(math.hypot(x + dx - px, y + dy - py) for pn, px, py in pads if pn == n) for n, x, y in moved)
-        best.append((round(error, 3), turn, dx, dy))
-    return min(best)
+        ux = (-STOP[0] if bottom else STOP[0]) * c + STOP[1] * s
+        uy = -(-STOP[0] if bottom else STOP[0]) * s + STOP[1] * c
+        inward = 0 if away is None else round(-(ux * (dx - away[0]) + uy * (dy - away[1])), 3)
+        best.append((round(error, 3), inward, turn, dx, dy))
+    error, _, turn, dx, dy = min(best)
+    return error, turn, dx, dy
 
 
 def main():
@@ -91,7 +100,8 @@ def main():
         for letter, number in zip('AB', SPLIT.get(ref, [None])):
             part = [('x', x, y) for n, x, y in pads if n == number] if number else pads
             numbers = {n for n, _, _ in library[lcsc]}
-            error, turn, x, y = fit(library[lcsc], [p for p in part if p[0] in numbers], fp.IsFlipped())
+            middle = (sum(p[1] for p in pads) / len(pads), sum(p[2] for p in pads) / len(pads)) if number else None
+            error, turn, x, y = fit(library[lcsc], [p for p in part if p[0] in numbers], fp.IsFlipped(), middle)
             assert error < FIT, f'{ref}: the JLC footprint of {lcsc} does not fit the board pads ({error} mm)'
             rows.append([ref + letter if number else ref, f'{x:.3f}mm', f'{-y:.3f}mm', side, f'{turn}'])
     names = lambda ref: [ref + letter for letter in 'AB'] if ref in SPLIT else [ref]
