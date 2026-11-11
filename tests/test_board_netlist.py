@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Board files of bench-n1 and bench-b against the KiCad netlist of carrier N1.
+"""Board files of bench-n1 and bench-b against the KiCad netlist of carrier N1, and of v2 against board v2.
 
 Each GPIO constant in firmware/src/board_bench_n1.h and board_bench_b.h is traced
 from the carrier net through the connector pin to the MCU pin. The header pinouts
@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 NETLIST = ROOT / "hardware" / "dev-bench" / "checks" / "netlist.xml"
+NETLIST_V2 = ROOT / "hardware" / "plytka-v2" / "checks" / "netlist.xml"
 
 
 def p(port, pin):
@@ -47,11 +48,17 @@ NETS = {
     "BTN_BACK": "BTN_BACK", "SW_SILENCE": "SW_CISZA", "BTN_PREP": "BTN_PREP", "VTEST": "VTEST",
     "RADIO_RESET": "RF_RESET", "RADIO_SDN": "RF_RESET",
 }
+# Board v2 (hardware/plytka-v2/polaczenia.md): the same DevKitC sockets, GPIO5 measures 12 V instead of VTEST, and
+# the new power-path signals; the Wio pins keep the v1.1 net names.
+NETS_V2 = {**{k: v for k, v in NETS.items() if k != "VTEST"},
+           "RADIO_BUSY": "RF_GPIO0", "RADIO_DIO1": "RF_GPIO1", "RADIO_RXEN": "RF_GPIO3",
+           "VTEST": "V_12_ADC", "BATTERY_ADC": "V_AA_ADC", "BATTERY_DIV_EN": "DIV_EN", "CONVERTER_PWM": "PWM_SYNC",
+           "POWER_INT": "PWR_INT", "POWER_KILL": "KILL_MCU", "USB_LAPTOP": "USB_LAPTOP"}
 
 
-def netlist():
+def netlist(path=NETLIST):
     """Net name -> set of (ref, pin); nets joined by a 33 ohm series resistor are merged."""
-    root = ET.parse(NETLIST).getroot()
+    root = ET.parse(path).getroot()
     values = {c.get("ref"): c.findtext("value") for c in root.iter("comp")}
     nets = {}
     for net in root.iter("net"):
@@ -77,11 +84,11 @@ def constants(header):
 
 
 class BoardNetlistTests(unittest.TestCase):
-    def check(self, header, pinout):
-        nets = netlist()
+    def check(self, header, pinout, path=NETLIST, names=NETS):
+        nets = netlist(path)
         found = constants(header)
         checked = 0
-        for name, net in NETS.items():
+        for name, net in names.items():
             if name not in found:
                 continue
             with self.subTest(header=header, constant=name):
@@ -95,6 +102,12 @@ class BoardNetlistTests(unittest.TestCase):
 
     def test_bench_b_on_esp32_s3_devkitc(self):
         self.assertEqual(self.check("board_bench_b.h", ESP_DEVKIT), 22)
+
+    def test_v2_on_board_v2(self):
+        # Every uint8_t pin constant of board_v2.h is checked (none left out of NETS_V2).
+        self.assertEqual(self.check("board_v2.h", ESP_DEVKIT, NETLIST_V2, NETS_V2), 27)
+        pins = {k for k, v in constants("board_v2.h").items() if not k.endswith(("_CHANNEL", "_DIVIDER", "_DRIVE"))}
+        self.assertEqual(pins - set(NETS_V2), set())
 
     def test_no_signal_on_strapping_usb_uart_or_psram_pins(self):
         nets = netlist()

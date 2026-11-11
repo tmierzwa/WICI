@@ -1,4 +1,4 @@
-# WICI: Prototyp L0 i zestaw XIAO
+# WICI: Prototyp L0, płytka v2 i zestaw XIAO
 
 Część opisu oprogramowania stacji; spis części jest w [README](../README.md).
 
@@ -155,6 +155,36 @@ Próby 1–8 z [przejścia na rdzeń](stos.md#przejście-na-rdzeń-i-powrót-do-
 6. Zanik zasilania i restart przez watchdog w trakcie zapisu tablicy: stacja startuje, wpis odbiorcy zostaje.
 7. Przekaźnik A–B–stanowisko przez LoRa (trzy prototypy, B jako przekaźnik) przez 24 h z okresowymi zgłoszeniami: bez restartów, RAM i liczniki stabilne (`RNS`, `INFO`: `loop_max_ms`, `rx_late`, `rx_ring_overflow`, `lock_timeouts`).
 8. Rola węzła stanowiska na ESP32-S3 z SX1262 (start stosu, interfejs USB i LoRa).
+
+## Prototyp płytki v2 (v2)
+
+Środowisko `v2` buduje ten sam program stacji co `l0` dla prototypu na [płytce v2](../../hardware/plytka-v2/README.md): ten sam DevKitC, Wio-SX1262, FRAM, ekran i panel, do tego tor zasilania z ogniw AA i z 12 V, wyłącznik i wykrywanie laptopa. Plik opisu płytki to `src/board_v2.h`. Piny pochodzą z tabeli „Sygnały MCU” w [polaczenia.md](../../hardware/plytka-v2/polaczenia.md), a test `tests/test_board_netlist.py` sprawdza każdy z nich z listą połączeń `hardware/plytka-v2/checks/netlist.xml`. Radio, FRAM, ekran i panel mają te same piny co w `l0`.
+
+| Sygnał | GPIO ESP32-S3 | Co robi program |
+|---|---|---|
+| pomiar 12 V (V_12_ADC) | 5 (ADC1_CH4) | polecenie `VTEST`: `vtest_mv` to napięcie 12 V, `divider` wynosi 16 |
+| pomiar ogniw (V_AA_ADC) i klucz dzielnika (DIV_EN) | 4 (ADC1_CH3) i 46 | jeszcze nic; DIV_EN niesterowany (R43 do masy), w uśpieniu zatrzaśnięty |
+| PWM przetwornicy (PWM_SYNC) | 45 | jeszcze nic; niesterowany (R63 do masy: Burst Mode), w uśpieniu zatrzaśnięty |
+| INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (polecenie `NAP`) |
+| wyłączenie stacji (KILL_MCU) | 47 | jeszcze nic; pin nie jest sterowany, R72 trzyma go w stanie niskim (stacja zostaje włączona), a w uśpieniu jest zatrzaśnięty |
+| laptop podłączony (USB_LAPTOP) | 3 | budzi z uśpienia (polecenie `NAP`) |
+
+**Przelicznik 12 V.** Pomiar korzysta z dzielnika UV sterownika U5: R37 221 kΩ, R38 10,0 kΩ i R39 15,4 kΩ, wszystkie 0,1%. Napięcie na pinie to 12 V × 15,4 / 246,4, czyli dokładnie 1/16 (na L0 dzielnik VTEST dawał 1/6). R76 10 kΩ i C33 100 nF to filtr przed pinem, a nie część dzielnika. Napięcie jest tylko przy włączonej stacji, bo dzielnik podłącza Q4 z szyny ON. 36 V daje 2,25 V, czyli mieści się w zakresie tłumienia 11 dB.
+
+Czego nie da się sprawdzić bez płytki v2: odczytu `VTEST` wobec woltomierza (upływ BAV199 i pinu EN/UVLO zmienia go do około 0,06 V, [README płytki](../../hardware/plytka-v2/README.md)), poziomu INT przy krótkim i długim naciśnięciu wyłącznika i poziomu USB_LAPTOP z laptopem i ładowarką.
+
+## Lekkie uśpienie (NAP)
+
+Stacja pilotażowa ma spać między zdarzeniami w lekkim uśpieniu ESP32-S3 ([czuwanie](../../docs/spec/oprogramowanie.md#czuwanie)). **Pętla czuwania nie jest jeszcze wdrożona**: w zwykłej pracy stacja nie śpi. Terminy stosu, odłączanie od magistrali USB i zasada 10 s dla VBUS to osobne zadanie. Program ma już wspólną dla `l0` i `v2` część, którą ta pętla wywoła: `platform::sleep(maxMs)` w `src/platform_esp32.cpp`. Funkcja usypia MCU do terminu albo do zdarzenia i zwraca przyczynę wybudzenia. Listy pinów są w pliku opisu płytki (`board::SLEEP_HOLD`, `board::SLEEP_WAKE`), a logika poziomów budzenia w `src/mcu_sleep.h`.
+
+- **Wyjścia trzymane w uśpieniu.** W lekkim uśpieniu domena cyfrowa ma zasilanie, więc przy obecnych ustawieniach Arduino-ESP32 piny i tak zostają w swoim stanie (`CONFIG_PM_SLP_DISABLE_GPIO` jest wyłączone). Program nie polega jednak na tym ustawieniu. Przed uśpieniem woła `gpio_sleep_sel_dis` (pin zostaje przy zwykłej konfiguracji) i `gpio_hold_en` (stan zatrzaśnięty) dla każdego wyjścia z listy. Po wybudzeniu zwalnia je przez `gpio_hold_dis`. Bez tego rezystory płytki ściągnęłyby NRESET radia do masy (R12 1 kΩ: reset radia), RXEN do masy (koniec odbioru) i DISP do masy (wygaszony ekran). Lista: CS radia, NRESET, RXEN, CS FRAM, CS ekranu, EXTCOMIN, DISP, dioda alarmu i brzęczyk, a na `v2` także DIV_EN, PWM_SYNC i KILL_MCU.
+- **Brzęczyk.** LEDC w uśpieniu stoi, więc przebieg z `tone()` mógłby zatrzymać się w stanie wysokim i brzęczyk pobierałby prąd. Przed uśpieniem program woła `noTone()` i czeka najwyżej 50 ms, aż zadanie `tone()` odłączy LEDC od pinu; potem ustawia pin w stan niski i trzyma go tak razem z innymi wyjściami. W czasie trwającego dźwięku nie zasypia (`busy`).
+- **Budzenie.** Lekkie uśpienie budzi poziomem, nie zboczem. Wyłącznik trzyma INT w stanie niskim, dopóki jest wciśnięty (do 5–19 s przy wymuszonym wyłączeniu), a laptop trzyma USB_LAPTOP w stanie niskim, dopóki jest podłączony. Budzenie stałym poziomem obudziłoby więc MCU w kółko. Dlatego przyciski, CISZA, INT i USB_LAPTOP budzą przy poziomie przeciwnym do obecnego, czyli przy każdej zmianie stanu: podłączenie laptopa budzi, laptop podłączony już nie, odłączenie budzi znowu. DIO1 radia budzi stanem wysokim (koniec odbieranej ramki); gdy już jest wysoki, uśpienia nie ma, bo ramka czeka na odczyt. Test `tests/test_mcu_sleep.py` sprawdza te poziomy i listy obu płytek.
+- **Radio.** Przed uśpieniem funkcja bierze blokadę operacji radia, więc zadanie odbioru nie jest w środku transakcji SPI, gdy rdzenie stają. SX1262 zostaje w odbiorze ciągłym.
+
+Polecenie `NAP <ms>` (1–30 000 ms) robi jedno takie uśpienie do pomiaru prądu w czuwaniu. Działa tylko w trybie przygotowania i bez trwającej serii radiowej. Przed uśpieniem odpowiada `{"nap_ms":…}`, a po wybudzeniu `{"slept_ms":…,"cause":…,"line":…}`. `cause` to `timer`, `line` (wtedy `line` podaje linię: `dio1`, `up`, `down`, `ok`, `back`, `silence`, `prep`, na `v2` także `power_int` i `laptop`), `busy` (DIO1 wysoki, blokada radia zajęta albo trwa dźwięk brzęczyka), `rejected` (ESP-IDF odmówił uśpienia, zwykle bo linia zmieniła stan tuż przed uśpieniem; pętla czuwania sprawdzi wtedy linie od nowa) albo `other`. Śpiący MCU nie obsługuje USB, więc laptop może zgłosić błąd portu albo połączyć go od nowa. EXTCOMIN ekranu (MCPWM) w uśpieniu stoi, dlatego `NAP` zawsze ma zegar i limit 30 s.
+
+Czego nie da się sprawdzić bez płytki: prądu w uśpieniu, tego, czy Wio-SX1262 zostaje w odbiorze i czy ekran nie gaśnie przy zatrzaśniętych pinach, zachowania portu USB w czasie `NAP` i budzenia przez INT i USB_LAPTOP (te linie ma tylko `v2`). Na `l0` da się sprawdzić budzenie przyciskami, CISZĄ i DIO1, gdy prototyp wróci od wykonawcy.
 
 ## Zestaw XIAO (xiao)
 

@@ -7,6 +7,8 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+#include "mcu_sleep.h"
+
 #if defined(ARDUINO_ARCH_ESP32)
 #include <esp_attr.h>
 // Pamięć RTC niezerowana przy restarcie programowym i przez watchdog (po włączeniu zasilania przypadkowa).
@@ -89,6 +91,15 @@ public:
 private:
     bool held_;
 };
+
+// Lekkie uśpienie ESP32-S3 do terminu albo do zdarzenia (docs/spec/oprogramowanie.md, „Czuwanie”): budzi zegar
+// po maxMs (0: tylko linie) albo linia z board::SLEEP_WAKE (mcu_sleep.h: ANY_CHANGE przy zmianie stanu, ACTIVE_HIGH
+// stanem wysokim). Przed uśpieniem bierze blokadę radia (zadanie odbioru nie jest wtedy w transakcji SPI),
+// wyłącza brzęczyk (noTone, pin niski) i trzyma wyjścia z board::SLEEP_HOLD (gpio_hold_en); po wybudzeniu zwalnia
+// blokady, wyłącza źródła budzenia i oddaje blokadę radia. Wołający kończy wcześniej transakcje FRAM i ekranu
+// i opróżnia porty USB. Bez uśpienia (Cause::BUSY), gdy blokada radia jest zajęta albo DIO1 już jest wysokie.
+// Wykonanie tylko na płytkach z WICI_MCU_SLEEP (board_l0.h, board_v2.h).
+mcu_sleep::Result sleep(uint32_t maxMs);
 
 // Polecenia tylko tego MCU (ESP32-S3: DRIVE); false, gdy polecenie nieznane.
 bool handle(const char* cmd, char* words[], size_t n);

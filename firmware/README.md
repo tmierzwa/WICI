@@ -11,6 +11,7 @@ Tu jest to, czego potrzeba na co dzień: wybór środowiska, budowa i wgranie ob
 | Środowisko | Sprzęt | Do czego | Stan |
 |---|---|---|---|
 | `l0`, `l0-port` | prototyp: ESP32-S3-DevKitC-1-N8R8 + Wio-SX1262 na płytce v1 | program stacji prototypu, profil LoRa, interfejs LoRa zgodny z RNode ([opis](docs/prototyp-l0-i-xiao.md#stacja-l0-l0)) | skompilowany; na prototypie jeszcze nie działał |
+| `v2` | prototyp płytki v2: to samo z torem zasilania z ogniw i 12 V, wyłącznikiem i wykrywaniem laptopa | program stacji jak `l0`, pomiar 12 V, lekkie uśpienie `NAP` ([opis](docs/prototyp-l0-i-xiao.md#prototyp-płytki-v2-v2)) | skompilowany; płytki v2 jeszcze nie ma |
 | `xiao` | zestaw Seeed XIAO ESP32-S3 + Wio-SX1262 (bez ekranu i FRAM) | dodatkowe stacje w próbach przy stole ([opis](docs/prototyp-l0-i-xiao.md#zestaw-xiao-xiao), [procedura](../hardware/xiao-wici/README.md)) | używany w próbach przy stole od 2026-11-02 |
 | `host`, `host-port` | komputer | węzeł stacji na komputerze: próby zgodności z Reticulum w Pythonie, próby wrogiego ruchu, emulator ([stos](docs/stos.md#próba-zgodności-z-reticulum)) | w CI |
 | `bench-a`, `bench-n1`, `bench-b` i ich `*-port` | stanowiska deweloperskie A i B (nRF52840 + CC1120, ESP32-S3 + S2-LP) | wstrzymany profil P1 ([opis](docs/stanowiska-a-b.md), [archiwum](../docs/archiwum/README.md)) | wstrzymane 2026-10-08; nie dla prototypu |
@@ -57,7 +58,7 @@ Obrazy z portem i podział są w [pomiarze RAM](docs/stos.md#pamięć-ram) i [pr
 
 | Plik | Zawartość |
 |---|---|
-| [Prototyp L0 i zestaw XIAO](docs/prototyp-l0-i-xiao.md) | piny, sterownik SX1262, interfejs LoRa stosu, krok 4 z radiem RNode, próby rdzenia na prototypie, zestaw XIAO |
+| [Prototyp L0, płytka v2 i zestaw XIAO](docs/prototyp-l0-i-xiao.md) | piny, sterownik SX1262, interfejs LoRa stosu, krok 4 z radiem RNode, próby rdzenia na prototypie, płytka v2, lekkie uśpienie, zestaw XIAO |
 | [Stos Reticulum, rdzeń i port](docs/stos.md) | stos, zależności i łaty, węzeł stanowiska, tożsamość i tablice w FRAM, próba zgodności z Reticulum, wybór stosu, przejście na rdzeń, samotest, pamięć RAM, rozmiar i wydajność |
 | [FRAM, ekran, protokół USB i warstwa aplikacji](docs/aplikacja.md) | dziennik i magazyny w FRAM, ekran i przyciski, przeglądy kodu, protokół USB laptop–stacja, warstwa aplikacji |
 | [Narzędzia i polecenia diagnostyki](docs/polecenia.md) | PlatformIO i wgrywanie, polecenia na porcie diagnostyki, polecenia pomiarowe, tryb do badań EMC |

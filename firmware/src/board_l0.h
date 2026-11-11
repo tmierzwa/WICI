@@ -9,7 +9,10 @@
 
 #include <Arduino.h>
 
+#include "mcu_sleep.h"
+
 #define WICI_BOARD_N1 1  // płytka nośna N1: panel i linia DISP ekranu (board.h)
+#define WICI_MCU_SLEEP 1  // lekkie uśpienie: listy SLEEP_HOLD i SLEEP_WAKE niżej, polecenie NAP
 
 namespace board {
 
@@ -61,6 +64,19 @@ constexpr int16_t LED_HEARTBEAT = -1;
 constexpr int16_t LED_RADIO = -1;
 constexpr int16_t LED_FRAM = -1;
 constexpr int16_t LED_USB = -1;
+
+// Lekkie uśpienie (mcu_sleep.h, platform::sleep): wyjścia trzymane w uśpieniu przez gpio_hold_en, bo rezystory
+// płytki ściągnęłyby je do stanu, który resetuje radio (R12 1 kΩ do masy na NRESET), wyłącza odbiór (RXEN do
+// masy) albo wygasza ekran (DISP do masy); CS-y nieaktywne, a brzęczyk w stanie niskim.
+constexpr uint8_t SLEEP_HOLD[] = {RADIO_CS, RADIO_RESET, RADIO_RXEN, FRAM_CS, DISPLAY_CS, DISPLAY_EXTCOMIN,
+                                 DISPLAY_DISP, LED_ALARM, BUZZER};
+// Linie budzenia: DIO1 (koniec odbieranej ramki) stanem wysokim, przyciski i CISZA przy każdej zmianie stanu.
+constexpr mcu_sleep::Line SLEEP_WAKE[] = {
+    {RADIO_DIO1, mcu_sleep::Wake::ACTIVE_HIGH, "dio1"}, {BTN_UP, mcu_sleep::Wake::ANY_CHANGE, "up"},
+    {BTN_DOWN, mcu_sleep::Wake::ANY_CHANGE, "down"},       {BTN_OK, mcu_sleep::Wake::ANY_CHANGE, "ok"},
+    {BTN_BACK, mcu_sleep::Wake::ANY_CHANGE, "back"},       {SW_SILENCE, mcu_sleep::Wake::ANY_CHANGE, "silence"},
+    {BTN_PREP, mcu_sleep::Wake::ANY_CHANGE, "prep"},
+};
 
 constexpr uint32_t SPI_HZ = 1000000;  // radio, jak w programie diagnostycznym L0
 constexpr uint32_t FRAM_SPI_HZ = 8000000;
