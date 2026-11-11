@@ -217,6 +217,12 @@ public:
     // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
     bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
     bool receiving() const { return rxMode_ != RxMode::NONE; }
+    // Pętla czuwania (standby.h): jak długo łącze może czekać bez MCU [ms]. Bez zadania 0xFFFFFFFF; datagram
+    // czekający na dług albo odroczenie: do końca czekania; okno CCA, nadawanie, nośna, seria i EMC: 0.
+    uint32_t sleepableMs() const;
+    // Po lekkim uśpieniu: zadanie odbioru nie zbierało znaczników aktywności kanału, więc okno CCA LoRa liczy
+    // się od wybudzenia, jak od początku odbioru.
+    void resumed(uint32_t nowMs);
     // Odbiór łącza stosu uzbrojony (rxArmed bez stanu stosu, plan interfejsu LoRa, L6): łącze w odbiorze na
     // skonfigurowanym układzie, poza trybem przygotowania i EMC. IDLE, RESET, REGW (stop), TXCW, TXPKT, RX
     // wzorcowy i EMC zmieniają tryb odbioru, więc odbiór przestaje być uzbrojony.
@@ -284,7 +290,7 @@ private:
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
     uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru łącza
-    uint32_t rxSinceMs_ = 0;     // początek odbioru łącza (okno CCA LoRa nie krótsze niż odbiór)
+    uint32_t rxSinceMs_ = 0;     // początek odbioru łącza albo wybudzenie (okno CCA LoRa nie krótsze niż obserwacja)
     uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca
     Counters counters_;
 

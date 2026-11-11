@@ -16,6 +16,9 @@
 // z tych samych ścieżek programu.
 #define WICI_BOARD_N1 1
 #define WICI_MCU_SLEEP 1  // lekkie uśpienie: listy SLEEP_HOLD i SLEEP_WAKE niżej, polecenie NAP
+// Pętla czuwania (standby.h): uśpienie między terminami w zwykłej pracy. Wymaga wykrywania napięcia na VBUS
+// (USB_LAPTOP) dla zasady 10 s, więc jest tylko na v2; L0 i XIAO śpią wyłącznie w poleceniu NAP.
+#define WICI_STANDBY 1
 
 namespace board {
 

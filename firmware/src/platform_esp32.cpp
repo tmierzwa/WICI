@@ -19,6 +19,9 @@
 
 #include <atomic>
 #include "board.h"
+#if defined(WICI_STANDBY)
+#include <esp32-hal-tinyusb.h>  // tud_mounted, tud_connect, tud_disconnect (pętla czuwania)
+#endif
 #include "cmdargs.h"
 
 namespace platform {
@@ -182,7 +185,7 @@ int32_t heapMinFree() { return static_cast<int32_t>(esp_get_minimum_free_heap_si
 //   nie zmienia stanu także w pracy (RXEN, CS, EXTCOMIN).
 // Budzenie poziomem (gpio_wakeup_enable): lekkie uśpienie ESP32-S3 nie budzi zboczem, więc poziomy wybiera
 // mcu_sleep::arm (zmiana stanu dla linii ANY_CHANGE, stan wysoki dla DIO1).
-mcu_sleep::Result sleep(uint32_t maxMs) {
+mcu_sleep::Result sleep(uint32_t maxMs, const mcu_sleep::Hooks* hooks) {
     constexpr size_t holdCount = sizeof(board::SLEEP_HOLD) / sizeof(board::SLEEP_HOLD[0]);
     constexpr size_t lineCount = sizeof(board::SLEEP_WAKE) / sizeof(board::SLEEP_WAKE[0]);
     static_assert(lineCount <= mcu_sleep::MAX_LINES, "linie budzenia mieszczą się w tablicach poziomów");
@@ -193,6 +196,10 @@ mcu_sleep::Result sleep(uint32_t maxMs) {
     bool locked = false;
     for (int i = 0; i < 20 && !(locked = radioLockTake(0)); ++i) delay(1);
     if (!locked) return result;
+    if (hooks && hooks->pending && hooks->pending()) {
+        radioLockGive();
+        return result;
+    }
 
     uint8_t levels[mcu_sleep::MAX_LINES] = {};
     uint8_t armed[mcu_sleep::MAX_LINES] = {};
@@ -250,6 +257,7 @@ mcu_sleep::Result sleep(uint32_t maxMs) {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     for (size_t i = 0; i < holdCount; ++i) gpio_hold_dis(static_cast<gpio_num_t>(board::SLEEP_HOLD[i]));
     feedWatchdog();
+    if (hooks && hooks->resumed) hooks->resumed(static_cast<uint32_t>(endUs / 1000));
     radioLockGive();
 
     result.sleptMs = static_cast<uint32_t>((endUs - startUs) / 1000);
@@ -260,6 +268,16 @@ mcu_sleep::Result sleep(uint32_t maxMs) {
         result.line = static_cast<int8_t>(mcu_sleep::woke(lineCount, levels, armed));
     } else result.cause = mcu_sleep::Cause::OTHER;
     return result;
+}
+#endif
+
+#if defined(WICI_STANDBY)
+bool usbMounted() { return tud_mounted(); }
+bool usbSuspended() { return tud_suspended(); }
+
+void usbAttach(bool on) {
+    if (on) tud_connect();
+    else tud_disconnect();
 }
 #endif
 

@@ -158,6 +158,23 @@ uint32_t Bench::debtRemainingMs() const {
     return 0;
 }
 
+uint32_t Bench::sleepableMs() const {
+    if (cwActive_ || pktActive_ || emcActive_) return 0;
+    switch (txState_) {
+        case TxState::IDLE: return 0xFFFFFFFFu;
+        case TxState::WAIT_DEBT: return debtRemainingMs();
+        case TxState::BACKOFF: {
+            const int32_t left = static_cast<int32_t>(backoffUntilMs_ - millis());
+            return left > 0 ? static_cast<uint32_t>(left) : 0;
+        }
+        default: return 0;
+    }
+}
+
+void Bench::resumed(uint32_t nowMs) {
+    if (rxMode_ == RxMode::LINK) rxSinceMs_ = nowMs;
+}
+
 bool Bench::confirm() {
     // Pętla stacji stoi w czasie oczekiwania, więc nośna albo seria nie może trwać dłużej niż jej dług.
     if (cwActive_ || pktActive_) {

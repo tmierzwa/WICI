@@ -177,6 +177,9 @@ bool check() {
     return false;
 }
 
+bool rxPending() { return driver.rxPending(); }
+void resumed(uint32_t nowMs) { driver.resumed(nowMs); }
+
 void startRxTask() {
     platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
     driver.setBackgroundRx(true);  // przed startem zadania: pollRx czyta tylko pierścień

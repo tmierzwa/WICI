@@ -165,9 +165,9 @@ Próby 1–8 z [przejścia na rdzeń](stos.md#przejście-na-rdzeń-i-powrót-do-
 | pomiar 12 V (V_12_ADC) | 5 (ADC1_CH4) | polecenie `VTEST`: `vtest_mv` to napięcie 12 V, `divider` wynosi 16 |
 | pomiar ogniw (V_AA_ADC) i klucz dzielnika (DIV_EN) | 4 (ADC1_CH3) i 46 | jeszcze nic; DIV_EN niesterowany (R43 do masy), w uśpieniu zatrzaśnięty |
 | PWM przetwornicy (PWM_SYNC) | 45 | jeszcze nic; niesterowany (R63 do masy: Burst Mode), w uśpieniu zatrzaśnięty |
-| INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (polecenie `NAP`) |
+| INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (`NAP` i [pętla czuwania](#pętla-czuwania-v2)); wyłączenia z programu jeszcze nie ma |
 | wyłączenie stacji (KILL_MCU) | 47 | jeszcze nic; pin nie jest sterowany, R72 trzyma go w stanie niskim (stacja zostaje włączona), a w uśpieniu jest zatrzaśnięty |
-| laptop podłączony (USB_LAPTOP) | 3 | budzi z uśpienia (polecenie `NAP`) |
+| laptop podłączony (USB_LAPTOP) | 3 | budzi z uśpienia; w [pętli czuwania](#pętla-czuwania-v2) zasada 10 s i odłączanie od magistrali USB |
 
 **Przelicznik 12 V.** Pomiar korzysta z dzielnika UV sterownika U5: R37 221 kΩ, R38 10,0 kΩ i R39 15,4 kΩ, wszystkie 0,1%. Napięcie na pinie to 12 V × 15,4 / 246,4, czyli dokładnie 1/16 (na L0 dzielnik VTEST dawał 1/6). R76 10 kΩ i C33 100 nF to filtr przed pinem, a nie część dzielnika. Napięcie jest tylko przy włączonej stacji, bo dzielnik podłącza Q4 z szyny ON. 36 V daje 2,25 V, czyli mieści się w zakresie tłumienia 11 dB.
 
@@ -175,16 +175,62 @@ Czego nie da się sprawdzić bez płytki v2: odczytu `VTEST` wobec woltomierza (
 
 ## Lekkie uśpienie (NAP)
 
-Stacja pilotażowa ma spać między zdarzeniami w lekkim uśpieniu ESP32-S3 ([czuwanie](../../docs/spec/oprogramowanie.md#czuwanie)). **Pętla czuwania nie jest jeszcze wdrożona**: w zwykłej pracy stacja nie śpi. Terminy stosu, odłączanie od magistrali USB i zasada 10 s dla VBUS to osobne zadanie. Program ma już wspólną dla `l0` i `v2` część, którą ta pętla wywoła: `platform::sleep(maxMs)` w `src/platform_esp32.cpp`. Funkcja usypia MCU do terminu albo do zdarzenia i zwraca przyczynę wybudzenia. Listy pinów są w pliku opisu płytki (`board::SLEEP_HOLD`, `board::SLEEP_WAKE`), a logika poziomów budzenia w `src/mcu_sleep.h`.
+Stacja pilotażowa śpi między zdarzeniami w lekkim uśpieniu ESP32-S3 ([czuwanie](../../docs/spec/oprogramowanie.md#czuwanie)). Wspólna dla `l0` i `v2` część to `platform::sleep(maxMs)` w `src/platform_esp32.cpp`; woła ją polecenie `NAP` (oba obrazy) i [pętla czuwania](#pętla-czuwania-v2) (tylko `v2`). Funkcja usypia MCU do terminu albo do zdarzenia i zwraca przyczynę wybudzenia. Listy pinów są w pliku opisu płytki (`board::SLEEP_HOLD`, `board::SLEEP_WAKE`), a logika poziomów budzenia w `src/mcu_sleep.h`.
 
 - **Wyjścia trzymane w uśpieniu.** W lekkim uśpieniu domena cyfrowa ma zasilanie, więc przy obecnych ustawieniach Arduino-ESP32 piny i tak zostają w swoim stanie (`CONFIG_PM_SLP_DISABLE_GPIO` jest wyłączone). Program nie polega jednak na tym ustawieniu. Przed uśpieniem woła `gpio_sleep_sel_dis` (pin zostaje przy zwykłej konfiguracji) i `gpio_hold_en` (stan zatrzaśnięty) dla każdego wyjścia z listy. Po wybudzeniu zwalnia je przez `gpio_hold_dis`. Bez tego rezystory płytki ściągnęłyby NRESET radia do masy (R12 1 kΩ: reset radia), RXEN do masy (koniec odbioru) i DISP do masy (wygaszony ekran). Lista: CS radia, NRESET, RXEN, CS FRAM, CS ekranu, EXTCOMIN, DISP, dioda alarmu i brzęczyk, a na `v2` także DIV_EN, PWM_SYNC i KILL_MCU.
 - **Brzęczyk.** LEDC w uśpieniu stoi, więc przebieg z `tone()` mógłby zatrzymać się w stanie wysokim i brzęczyk pobierałby prąd. Przed uśpieniem program woła `noTone()` i czeka najwyżej 50 ms, aż zadanie `tone()` odłączy LEDC od pinu; potem ustawia pin w stan niski i trzyma go tak razem z innymi wyjściami. W czasie trwającego dźwięku nie zasypia (`busy`).
 - **Budzenie.** Lekkie uśpienie budzi poziomem, nie zboczem. Wyłącznik trzyma INT w stanie niskim, dopóki jest wciśnięty (do 5–19 s przy wymuszonym wyłączeniu), a laptop trzyma USB_LAPTOP w stanie niskim, dopóki jest podłączony. Budzenie stałym poziomem obudziłoby więc MCU w kółko. Dlatego przyciski, CISZA, INT i USB_LAPTOP budzą przy poziomie przeciwnym do obecnego, czyli przy każdej zmianie stanu: podłączenie laptopa budzi, laptop podłączony już nie, odłączenie budzi znowu. DIO1 radia budzi stanem wysokim (koniec odbieranej ramki); gdy już jest wysoki, uśpienia nie ma, bo ramka czeka na odczyt. Test `tests/test_mcu_sleep.py` sprawdza te poziomy i listy obu płytek.
 - **Radio.** Przed uśpieniem funkcja bierze blokadę operacji radia, więc zadanie odbioru nie jest w środku transakcji SPI, gdy rdzenie stają. SX1262 zostaje w odbiorze ciągłym.
 
-Polecenie `NAP <ms>` (1–30 000 ms) robi jedno takie uśpienie do pomiaru prądu w czuwaniu. Działa tylko w trybie przygotowania i bez trwającej serii radiowej. Przed uśpieniem odpowiada `{"nap_ms":…}`, a po wybudzeniu `{"slept_ms":…,"cause":…,"line":…}`. `cause` to `timer`, `line` (wtedy `line` podaje linię: `dio1`, `up`, `down`, `ok`, `back`, `silence`, `prep`, na `v2` także `power_int` i `laptop`), `busy` (DIO1 wysoki, blokada radia zajęta albo trwa dźwięk brzęczyka), `rejected` (ESP-IDF odmówił uśpienia, zwykle bo linia zmieniła stan tuż przed uśpieniem; pętla czuwania sprawdzi wtedy linie od nowa) albo `other`. Śpiący MCU nie obsługuje USB, więc laptop może zgłosić błąd portu albo połączyć go od nowa. EXTCOMIN ekranu (MCPWM) w uśpieniu stoi, dlatego `NAP` zawsze ma zegar i limit 30 s.
+Polecenie `NAP <ms>` (1–30 000 ms) robi jedno takie uśpienie do pomiaru prądu w czuwaniu. Działa tylko w trybie przygotowania i bez trwającej serii radiowej. Przed uśpieniem odpowiada `{"nap_ms":…}`, a po wybudzeniu `{"slept_ms":…,"cause":…,"line":…}`. `cause` to `timer`, `line` (wtedy `line` podaje linię: `dio1`, `up`, `down`, `ok`, `back`, `silence`, `prep`, na `v2` także `power_int` i `laptop`), `busy` (DIO1 wysoki, blokada radia zajęta albo trwa dźwięk brzęczyka), `rejected` (ESP-IDF odmówił uśpienia, zwykle bo linia zmieniła stan tuż przed uśpieniem; pętla czuwania sprawdza wtedy linie od nowa w następnym obiegu) albo `other`. Śpiący MCU nie obsługuje USB, więc laptop może zgłosić błąd portu albo połączyć go od nowa. EXTCOMIN ekranu (MCPWM) w uśpieniu stoi, dlatego `NAP` zawsze ma zegar i limit 30 s.
 
 Czego nie da się sprawdzić bez płytki: prądu w uśpieniu, tego, czy Wio-SX1262 zostaje w odbiorze i czy ekran nie gaśnie przy zatrzaśniętych pinach, zachowania portu USB w czasie `NAP` i budzenia przez INT i USB_LAPTOP (te linie ma tylko `v2`). Na `l0` da się sprawdzić budzenie przyciskami, CISZĄ i DIO1, gdy prototyp wróci od wykonawcy.
+
+## Pętla czuwania (v2)
+
+Na `v2` stacja śpi także w zwykłej pracy. Po każdym obiegu pętli stacji, zamiast `delay(1)`, `standbyStep()` w `src/main.cpp` decyduje, czy uśpić MCU i na jak długo, a uśpienie wykonuje `platform::sleep`. Reguły są w `src/standby.h`, bez zależności od Arduino; sprawdza je `tests/test_standby.py`. Pętla jest tylko na `v2`, bo zasada 10 s wymaga wykrywania napięcia na VBUS (USB_LAPTOP). `l0` i `xiao` tej linii nie mają, więc śpią wyłącznie w `NAP`.
+
+**Kiedy stacja nie śpi.** Pierwszy pasujący powód wygrywa; jego nazwę podaje polecenie `STANDBY` w polu `standby`.
+
+| Powód | Warunek | Czuwanie |
+|---|---|---|
+| `prep` | tryb przygotowania | kończy się |
+| `node` | stacja węzła stanowiska | kończy się |
+| `usb` | laptop połączony (host wyliczył urządzenie) albo okno 10 s po pojawieniu się napięcia na VBUS, po zakończeniu połączenia przez host przy napięciu na VBUS i po starcie programu | kończy się |
+| `radio` | łącze w oknie CCA albo w nadawaniu, nośna, seria pomiarowa, EMC; do 2 s po odebranej albo nadanej ramce; ramka czeka w pierścieniu zadania odbioru (wtedy `platform::sleep` zwraca `busy`) | przerwa |
+| `panel` | przycisk wciśnięty (także przycisk przygotowania); do 1 s po wybudzeniu przyciskiem, CISZĄ, wyłącznikiem albo laptopem | przerwa |
+| `screen` | ekran ma wiersze do wysłania; sterownik odmówił wymuszenia EXTCOMIN; bit VCOM z programu (EMD niski, przewody przy stole) | przerwa |
+| `work` | porządkowanie magazynu po ZAMKNIJ ZDARZENIE, restart zaplanowany | przerwa |
+| `short` | najbliższy termin za mniej niż 10 ms | przerwa |
+
+Gdy czuwanie się kończy (`prep`, `node`, `usb`), EXTCOMIN wraca do licznika MCPWM, a stacja wraca na magistralę USB. Przerwa w czuwaniu niczego nie zmienia: po niej stacja zasypia dalej.
+
+**Jak długo śpi.** Do najbliższego terminu, najwyżej 1 s. Terminy w planie to: koniec długu ciszy albo odroczenia datagramu czekającego na nadanie, koniec błysku diody, następny błysk i następny sygnał ekranu alarmu, następny BEACON, koniec okna 10 s i następna zmiana EXTCOMIN (co 0,5 s, więc w praktyce uśpienie trwa najwyżej 0,5 s). Terminy modułów stosu Reticulum, WICI-Link i aplikacji (ogłoszenia, ponowienia, wygasanie tras, przegląd rejestru, zapis zegara co 60 s, kontrola radia co 10 s) nie mają osobnego odczytu. Wszystkie są w sekundach, a obieg po każdym wybudzeniu je obsługuje, więc spóźniają się najwyżej o 0,5 s. Krótkie terminy po zdarzeniu radiowym (HACK w 200 ms, czekanie na HACK 600 ms, składanie dwóch ramek do 1 s, losowe opóźnienie przekazania ogłoszenia) pokrywa 2 s pracy po każdej ramce.
+
+**USB i zasada 10 s.** Napięcie na VBUS (USB_LAPTOP w stanie niskim) otwiera okno 10 s, w którym stacja nie śpi i jest na magistrali. Gdy host wyliczy urządzenie, stacja nie śpi, dopóki połączenie trwa. PHY ESP32-S3 nie mierzy VBUS, więc wyjęty przewód wygląda dla TinyUSB jak zawieszenie magistrali, a urządzenie zostaje wyliczone. Dlatego połączenie trwa przy wyliczeniu bez zawieszenia albo przy wyliczeniu z napięciem na VBUS gniazda płytki (laptop uśpiony z przewodem w gnieździe dalej jest połączony). Wyjęcie przewodu z gniazda płytki zdejmuje napięcie, a przy stole na złączu DevKitC (bez napięcia na VBUS płytki) zawieszenie wystarcza. Bez połączenia w ciągu 10 s (np. ładowarka w gnieździe) napięcie nie wstrzymuje uśpienia. Przed uśpieniem stacja odłącza się od magistrali (`tud_disconnect`, bez podciągnięcia D+), więc laptop nie zaczyna połączenia ze śpiącym MCU, a wraca na nią (`tud_connect`) przy następnym oknie. Okno 10 s jest też po starcie programu. Laptop przy stole podłączony do złącza USB modułu DevKitC ma te same linie danych, ale nie daje napięcia na VBUS gniazda płytki, więc bez tego okna nie zdążyłby wyliczyć stacji ani wgrać programu (dotknięcie 1200 b/s). Gdy okno minęło, stacja wraca na magistralę w trybie przygotowania (przycisk przygotowania przez 3 s); program można też wgrać przez złącze UART modułu.
+
+**EXTCOMIN.** Licznik MCPWM w lekkim uśpieniu stoi, a pin jest zatrzaśnięty, więc długie uśpienie dałoby panelowi składową stałą. W czuwaniu pętla przejmuje pin: wymusza stan na generatorze MCPWM (`mcpwm_generator_set_force_level`, `Display::forceExtcomin`) i odwraca go co 500 ms czasu rzeczywistego, także w przerwach czuwania. Uśpienie kończy się najpóźniej na następnej zmianie. Odmowa sterownika zostawia pin licznikowi, a stacja z włączonym ekranem przestaje zasypiać (`screen`).
+
+**Radio.** SX1262 zostaje w odbiorze ciągłym. DIO1 budzi MCU na koniec odbieranej ramki. Ramka odebrana przez zadanie odbioru, a jeszcze nie przeczytana przez pętlę, wstrzymuje uśpienie: `platform::sleep` sprawdza pierścień ramek pod blokadą radia (`mcu_sleep::Hooks::pending`), więc ramka nie czeka całego uśpienia (HACK ma 200 ms). Sterownik SX1262 uznaje ramkę za spóźnioną (`rx_late`), gdy przy RxDone zastaje HeaderValid, a od poprzedniej próbki minęło ponad 25 ms, bo nie wie wtedy, czyj to nagłówek. Po uśpieniu ta przerwa jest zawsze dłuższa, więc po wybudzeniu, jeszcze pod blokadą radia, sterownik przyjmuje wybudzenie za chwilę ostatniej próbki (`LinkDriver::resumed`). To poprawne, bo DIO1 budzi MCU tuż po RxDone, a nagłówek następnej ramki przychodzi najwcześniej po jej preambule i nagłówku. Po każdym wybudzeniu pętla czeka 2 ms, bo takt FreeRTOS w uśpieniu stoi: zadanie odbioru (obieg co takt) czyta ramkę i próbkę RSSI, zanim MCU znowu uśnie, a nadzór zadania odbioru (`rx_watch.h`, 10 s bez obiegu to alarm `radio_awaria`) widzi jego obiegi. W uśpieniu zadanie odbioru nie zbiera znaczników aktywności kanału, więc po wybudzeniu okno CCA 50 ms liczy się od nowa (`Bench::resumed`): decyzja o kanale zapada dopiero po 50 ms pracy. MCU nie śpi w czasie samego nadawania. Nadanie LoRa trwa w obiegu pętli pod blokadą radia, a zysk byłby mały przy prądzie nadawania.
+
+**Polecenie `STANDBY`** (tylko `v2`, port diagnostyki) podaje stan i liczniki od startu. Uśpiona stacja nie ma USB, więc liczniki czyta się po podłączeniu laptopa (od tej chwili powód `usb`):
+
+```
+{"standby":"usb","usb":"attached","vbus":true,"mounted":true,"vcom":"timer","sleeps":171223,"slept_ms":85107430,
+ "uptime_ms":86421005,"wake":{"timer":169870,"radio":1201,"input":152,"other":0},"rejected":3,"busy":41}
+```
+
+`slept_ms` / `uptime_ms` to udział uśpienia w czasie pracy, potrzebny do oceny prądu czuwania. `wake` dzieli wybudzenia na zegar, DIO1, inne linie z listy i przyczyny nierozpoznane; `rejected` i `busy` to próby bez uśpienia (odmowa ESP-IDF; DIO1 wysokie, blokada radia albo dźwięk brzęczyka). `vcom` mówi, czy EXTCOMIN prowadzi pętla (`loop`), czy licznik (`timer`).
+
+**Co wymaga pomiaru na płytce v2.**
+
+1. Prąd czuwania: średni pobór z szyny 3,3 V w czuwaniu bez ruchu radiowego (model: lekkie uśpienie z SX1262 w odbiorze ciągłym) i z ruchem na granicy długu ciszy (cel z modelu: około 14 mA), razem z udziałem uśpienia z `STANDBY`. Stąd czas czuwania na ogniwach: **8 dni czuwania jest celem pomiarowym**, a wymaganiem pozostaje W23 (≥48 h na ogniwach).
+2. Koszt jednego wybudzenia: czas pracy po wybudzeniu przez zegar (obieg pętli i 2 ms dla zadania odbioru) i prąd w tym czasie. Przy dwóch wybudzeniach na sekundę od tego zależy, czy warto obniżyć zegar CPU albo budzić rzadziej (EXTCOMIN z licznika działającego w uśpieniu).
+3. Ekran przy EXTCOMIN prowadzonym przez pętlę: obraz bez zmian po wielu godzinach czuwania, przebieg 1 Hz na pinie oscyloskopem, brak zakłóceń przy przejściu między licznikiem a pętlą.
+4. Odbiór bez strat: seria ramek od sąsiedniej stacji w czuwaniu (liczniki `rx_ok` i `rx_late` przy odbiorcy wobec nadanych), także dwie ramki jednego datagramu tuż po sobie, oraz brak alarmu `radio_awaria` po dobie czuwania.
+5. USB: laptop podłączony do gniazda płytki w czuwaniu (wybudzenie, okno 10 s, wyliczenie), wyjęcie przewodu (stacja znowu śpi), laptop uśpiony z przewodem (stacja nie śpi), stan `tud_suspended` po wyjęciu przewodu ze złącza DevKitC, ładowarka w gnieździe (po 10 s stacja śpi i jest odłączona), zamiana ładowarki na laptopa, wgranie programu przez złącze DevKitC w oknie po starcie, ponowne połączenie po `tud_disconnect`/`tud_connect`.
+6. Wybudzenia przyciskami, CISZĄ i wyłącznikiem: reakcja ekranu bez opóźnienia, przytrzymanie przycisku przygotowania przez 3 s w czuwaniu, długie naciśnięcie wyłącznika (INT w stanie niskim przez 5–19 s).
+7. Zadanie odbioru i takt FreeRTOS po wybudzeniu: `rx_task_loops` w `INFO` rośnie w czuwaniu, a `loop_max_ms` nie rośnie.
 
 ## Zestaw XIAO (xiao)
 

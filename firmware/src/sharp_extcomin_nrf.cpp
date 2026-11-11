@@ -45,6 +45,8 @@ bool Display::extcominLevel() const {
     return (port->IN >> (pin & 0x1F)) & 1u;
 }
 
+bool Display::forceExtcomin(int) { return false; }  // RTC2 liczy w uśpieniu: pętla czuwania go nie wymusza
+
 }  // namespace sharp
 
 #endif

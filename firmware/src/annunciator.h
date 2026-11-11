@@ -34,6 +34,9 @@ public:
     uint32_t poll(uint32_t nowMs, const Inputs& in);
     bool led() const { return led_; }        // stan diody po ostatnim poll()
     bool active() const { return active_; }  // jest powód do migania
+    // Czas do najbliższej zmiany diody albo sygnału alarmu [ms] po ostatnim poll() (pętla czuwania, standby.h):
+    // koniec błysku, następny błysk, następny sygnał ekranu alarmu; 0xFFFFFFFF, gdy nic nie czeka.
+    uint32_t untilChangeMs(uint32_t nowMs) const;
 
 private:
     bool started_ = false;

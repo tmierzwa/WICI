@@ -97,9 +97,16 @@ private:
 // stanem wysokim). Przed uśpieniem bierze blokadę radia (zadanie odbioru nie jest wtedy w transakcji SPI),
 // wyłącza brzęczyk (noTone, pin niski) i trzyma wyjścia z board::SLEEP_HOLD (gpio_hold_en); po wybudzeniu zwalnia
 // blokady, wyłącza źródła budzenia i oddaje blokadę radia. Wołający kończy wcześniej transakcje FRAM i ekranu
-// i opróżnia porty USB. Bez uśpienia (Cause::BUSY), gdy blokada radia jest zajęta albo DIO1 już jest wysokie.
+// i opróżnia porty USB. Bez uśpienia (Cause::BUSY), gdy blokada radia jest zajęta, DIO1 już jest wysokie albo
+// hooks->pending() zgłasza pracę; hooks->resumed() po wybudzeniu, jeszcze pod blokadą radia (mcu_sleep::Hooks).
 // Wykonanie tylko na płytkach z WICI_MCU_SLEEP (board_l0.h, board_v2.h).
-mcu_sleep::Result sleep(uint32_t maxMs);
+mcu_sleep::Result sleep(uint32_t maxMs, const mcu_sleep::Hooks* hooks = nullptr);
+// Magistrala USB w pętli czuwania (standby.h, płytki z WICI_STANDBY): host wyliczył urządzenie (TinyUSB
+// tud_mounted) i podłączenie albo odłączenie stacji od magistrali (podciągnięcie D+: tud_connect,
+// tud_disconnect). Odłączona stacja nie istnieje dla laptopa, więc ten nie zaczyna połączenia ze śpiącym MCU.
+bool usbMounted();
+bool usbSuspended();  // magistrala zawieszona (TinyUSB tud_suspended): także wyjęty przewód, PHY nie mierzy VBUS
+void usbAttach(bool on);
 
 // Polecenia tylko tego MCU (ESP32-S3: DRIVE); false, gdy polecenie nieznane.
 bool handle(const char* cmd, char* words[], size_t n);

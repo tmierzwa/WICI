@@ -30,8 +30,16 @@ constexpr size_t MAX_LINES = 16;
 // Przyczyna wybudzenia: zegar (koniec maxMs), linia z listy, inna (np. przyczyna, której ESP-IDF nie
 // rozpoznał), uśpienie odrzucone (ESP-IDF odmówił, najczęściej bo linia zmieniła stan między odczytem poziomów
 // a wejściem w uśpienie: wołający sprawdza linie od nowa) albo bez uśpienia (BUSY): linia ACTIVE_HIGH już
-// aktywna, blokada radia zajęta, trwający dźwięk brzęczyka albo pusta lista linii przy maxMs = 0.
+// aktywna, blokada radia zajęta, Hooks::pending(), trwający dźwięk brzęczyka albo pusta lista linii przy maxMs = 0.
 enum class Cause : uint8_t { TIMER, LINE, OTHER, REJECTED, BUSY };
+
+// Wołane przez platform::sleep pod blokadą radia: pending() przed uśpieniem (true: bez uśpienia, BUSY, np.
+// ramka czeka w pierścieniu zadania odbioru), resumed(nowMs) po wybudzeniu, zanim zadanie odbioru dostanie
+// blokadę (sterownik radia przyjmuje wybudzenie za chwilę ostatniej próbki).
+struct Hooks {
+    bool (*pending)() = nullptr;
+    void (*resumed)(uint32_t nowMs) = nullptr;
+};
 
 struct Result {
     Cause cause;
