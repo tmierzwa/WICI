@@ -129,7 +129,7 @@ def precise(value, mpn):
 # New signals use GPIO45/46 (strapping, held low by pull-downs, which is their default boot level) and
 # GPIO47/48 (3.3 V on WROOM-1 N8R8; RGB LED of v1.1 is on GPIO38).
 DEVKIT = dict(mpn='PPTC221LFBN-RC', manufacturer='Sullins', spec='gniazdo żeńskie 1x22, 2,54 mm, proste, THT',
-              note='ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od góry; pin 1 od strony anteny')
+              note='ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od spodu płytki; pin 1 od strony anteny')
 part('J5', 'Connector_Generic:Conn_01x22', 'DEVKITC J1',
      'Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical',
      {1: '+3V3', 2: '+3V3', 4: 'V_AA_ADC', 5: 'V_12_ADC', 6: 'BTN_PREP', 7: 'LCD_CS', 8: 'BUZZER',

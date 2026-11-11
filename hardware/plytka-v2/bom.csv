@@ -1,5 +1,5 @@
 oznaczenia,ilość,wartość,producent,MPN,LCSC,montaż,specyfikacja,footprint,uwagi
-J5 J6,2,DEVKITC J1 / DEVKITC J3,Hong Cheng,HC-PM254-8.5H-1x22PZ,C41376161,JLC,"gniazdo żeńskie 1x22, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical,ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od góry; pin 1 od strony anteny
+J5 J6,2,DEVKITC J1 / DEVKITC J3,Hong Cheng,HC-PM254-8.5H-1x22PZ,C41376161,JLC,"gniazdo żeńskie 1x22, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical,ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od spodu płytki; pin 1 od strony anteny
 R18,1,33R,UNI-ROYAL,0805W8F330JT5E,C17634,JLC,33R 1% 0805,Resistor_SMD:R_0805_2012Metric,szeregowy SCK przy GPIO12 DevKitC
 J8 J9,2,WIO J1 / WIO J2,hanxia,HX PM2.54-1x7P ZC-Y,C22438157,JLC,"gniazdo żeńskie 1x7, 2,54 mm, proste, THT",Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical,"Wio SX1262 (z zestawu 102010611) na listwach 1x7, rozstaw rzędów 15,24 mm (model Seeed)"
 JP3,1,3V3 RADIO,Würth Elektronik,61300211121,C2915055,JLC,"listwa męska 1x2, 2,54 mm, ze zworką",Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical,"punkt pomiaru prądu radia (elektronika.md, wiersz „radio”)"

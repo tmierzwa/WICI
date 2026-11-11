@@ -1,11 +1,12 @@
 # WICI: płytka v2, schemat wstępny
 
-**Status 2026-11-10: schemat, rozmieszczenie i komplet ścieżek z czystym DRC, przed niezależnym przeglądem ([Ścieżki](#ścieżki-2026-11-10)). Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Ścieżki czekają na przymiarkę, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-zamówieniem)).
+**Status 2026-11-11: komplet ścieżek z czystym DRC po trzech niezależnych przeglądach ([Ścieżki](#ścieżki-2026-11-10)), pliki produkcyjne po końcowym przeglądzie i sprawdzeniu podglądu JLC ([Części w JLC i pliki produkcyjne](#części-w-jlc-i-pliki-produkcyjne-2026-11-10)). Zamówienie dwóch prototypów czeka na pomiar przetwornicy 3,3 V ([Przed zamówieniem](#przed-zamówieniem)); przymiarka z prawdziwą skrzynką odbędzie się po zamówieniu prototypów, z ryzykiem poprawki rozmieszczenia w następnej wersji. Pierwsze uruchomienie: [uruchomienie.md](uruchomienie.md).** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Przymiarka, pomiary na prototypach i krok 4 mogą jeszcze zmienić rozmieszczenie w następnej wersji ([Przed zamówieniem](#przed-zamówieniem)).
 
 | Plik | Zawartość |
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
+| [uruchomienie.md](uruchomienie.md) | pierwsze uruchomienie zmontowanego prototypu krok po kroku, z warunkami przerwania |
 | [bom.csv](bom.csv) | lista części z producentami, numerami i numerami LCSC, tam gdzie są już wybrane |
 | `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb`, `cad/plytka-v2.kicad_dru` | projekt KiCad 10.0.6: schemat, płytka 4-warstwowa ze ścieżkami i reguły projektu |
 | `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC (0 naruszeń poza sitodrukiem, 0 niepołączonych; [Ścieżki](#ścieżki-2026-11-10)) |
@@ -242,7 +243,7 @@ Numery LCSC są w kolumnie „LCSC” w [bom.csv](bom.csv); stany sprawdzone 202
 
 ## Ścieżki (2026-11-10)
 
-Płytka ma komplet ścieżek. **Wynik: 0 niepołączonych, 0 naruszeń DRC (poza sitodrukiem), 0 różnic między płytką a schematem, 0 naruszeń ERC**, przy pełnej regule odstępu wysokiego napięcia (0,6 mm od odsłoniętego padu, 0,3 mm pod maską). Wyjątki od reguł wynikają z geometrii części i wszystkie są wypisane w [Regułach](#reguły): para dwóch padów, miedź sygnałowa w dwóch nazwanych obszarach przy pinach U5 i U6 oraz cztery wyjątki szerokości ścieżki przy cienkich pinach. Wylewki masy nie mają żadnego wyjątku. Ścieżki są po trzech niezależnych przeglądach i po poprawkach z każdego ([po pierwszym](#poprawki-po-przeglądzie), [po drugim](#poprawki-po-drugim-przeglądzie), [po trzecim](#poprawki-po-trzecim-przeglądzie)). **Nie zamawiać** przed punktami z [Przed zamówieniem](#przed-zamówieniem).
+Płytka ma komplet ścieżek. **Wynik: 0 niepołączonych, 0 naruszeń DRC (poza sitodrukiem), 0 różnic między płytką a schematem, 0 naruszeń ERC**, przy pełnej regule odstępu wysokiego napięcia (0,6 mm od odsłoniętego padu, 0,3 mm pod maską). Wyjątki od reguł wynikają z geometrii części i wszystkie są wypisane w [Regułach](#reguły): para dwóch padów, miedź sygnałowa w dwóch nazwanych obszarach przy pinach U5 i U6 oraz cztery wyjątki szerokości ścieżki przy cienkich pinach. Wylewki masy nie mają żadnego wyjątku. Ścieżki są po trzech niezależnych przeglądach i po poprawkach z każdego ([po pierwszym](#poprawki-po-przeglądzie), [po drugim](#poprawki-po-drugim-przeglądzie), [po trzecim](#poprawki-po-trzecim-przeglądzie)). Stan zamówienia podaje status na początku pliku.
 
 ### Liczba warstw: 4
 
