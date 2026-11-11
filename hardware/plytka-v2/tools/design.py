@@ -304,7 +304,7 @@ part('J2', 'Connector_Generic:Conn_01x02', '12V', XH2, {1: '12V_IN', 2: 'GND'}, 
 part('F1', 'Device:Fuse', 'T1A', 'Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal',
      {1: '12V_IN', 2: 'V12_F'}, mpn='01110501Z', manufacturer='Littelfuse',
      spec='zacisk bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką',
-     note='2 zaciski na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)', lcsc='C151075',
+     note='2 zaciski na F1; od spodu płytki, montuje JLC; bezpiecznik T1A osobno (poniżej)', lcsc='C151075',
      qty=2)
 part('D4', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
      manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',

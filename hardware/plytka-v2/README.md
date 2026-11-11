@@ -252,7 +252,7 @@ Płytka ma komplet ścieżek. **Wynik: 0 niepołączonych, 0 naruszeń DRC (poza
 | przetwornica | rysunek 17 karty LTC3115-1 zakłada masę pod układem; płytka testowa jest 4-warstwowa i tylko ten układ jest zmierzony | ten sam układ co na zmierzonej płytce testowej |
 | USB (Full Speed) | działa, impedancja nie jest krytyczna | działa, ścieżka nad ciągłą masą |
 | gęstość | 164 elementy, cztery tory napięć, sześć otworów Ø20 mm i wycięcie EN3: dwie warstwy na ścieżki i masę nie wystarczą | dwie warstwy na ścieżki, dwie na płaszczyzny |
-| JLC, 200 × 120 mm, 1,6 mm, HASL, bez wysyłki (kalkulator 2026-11-10) | 5 szt. 15,60 USD, 10 szt. około 27 USD | 5 szt. 39,80 USD, 10 szt. 54,60 USD |
+| JLC, 200 × 120 mm, 1,6 mm, bez wysyłki (kalkulator 2026-11-10, ceny dla HASL; zamówienie z montażem ma mieć wykończenie ENIG ze względu na części bez nóżek U5, D18 i D19, więc będzie droższe) | 5 szt. 15,60 USD, 10 szt. około 27 USD | 5 szt. 39,80 USD, 10 szt. 54,60 USD |
 
 Wybór: **4 warstwy.** Dopłata to około 25–28 USD na całą serię, czyli około 3–5 USD na płytkę, a w zamian przetwornica ma ten sam układ co zmierzona płytka testowa i cała płytka ma ciągłą masę. Zdanie w [obudowie R02](../r02/obudowa.md), że płytka tej wielkości „opłaca się tylko jako dwuwarstwowa”, nie zgadza się z dzisiejszymi cenami JLC i trzeba je tam poprawić.
 
@@ -444,6 +444,11 @@ Trzeci niezależny przegląd (2026-11-10) sprawdził schemat od zera (piny z kar
 
 Odnotowane przez przegląd na później, bez zmian w tej wersji: kondensatory panelu C4 i C6 stoją 14–16 mm od złącza ekranu; ścieżki bramek tranzystorów łącznika mają 10–11 mm; C45 stoi 8,5 mm od pinu BST2.
 
+Do następnej wersji, po końcowym przeglądzie plików produkcyjnych (2026-11-11):
+
+- **D20 (niemontowany) ma otwory w warstwie pasty.** Jest to nieszkodliwe (pady zostaną pocynowane, co ułatwia ręczne dolutowanie), ale części oznaczone „nie montować” powinny być wyłączone z pasty.
+- **C50 przed serią pilotażową:** na prototypach montowany jest SamYoung PXB, a seria Nichicon UKL jest wycofywana. Jako część projektową trzeba wskazać dostępną serię o małym upływie w obudowie 8 × 11,5 mm z rastrem 3,5 mm ([Kondensator szyny C50](#kondensator-szyny-c50)).
+
 Dwa zapasy odnotowane przy przeglądzie wykazu części (2026-11-10), bez zmian części:
 
 - **C47 (VCC przetwornicy U7, 10 µF 25 V X5R 0805):** karta LTC3115-1 wymaga co najmniej 4,7 µF skutecznej pojemności. Przy napięciu VCC około 4,5 V kondensator tej wielkości zachowuje według oceny przeglądu około 5–6 µF, czyli zapas jest mały, ale dodatni. To ta sama część co na [płytce testowej przetwornicy](../przetwornica-3v3/README.md), więc jej pomiary obejmują ten punkt.
@@ -514,7 +519,7 @@ Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obu
 
 ### Numery LCSC
 
-**JLC montuje wszystkie części, także przewlekane** (decyzja właściciela z 2026-11-10; wcześniej części przewlekane i pamięć FRAM miały być lutowane ręcznie). Każda część na płytce poza D20 ma numer LCSC w [bom.csv](bom.csv): 165 pozycji montażu w 76 liniach wykazu dla JLC (148 SMD i 17 przewlekanych; oprawka bezpiecznika F1 to dwa zaciski, czyli dwie pozycje). Źródłem jest tabela `JLC` w `tools/design.py`: część z projektu → część w katalogu. Stany i klasy odczytane z katalogu części JLC 2026-11-10.
+**JLC montuje wszystkie części, także przewlekane** (decyzja właściciela z 2026-11-10; wcześniej części przewlekane i pamięć FRAM miały być lutowane ręcznie). Każda część na płytce poza D20 ma numer LCSC w [bom.csv](bom.csv): 165 pozycji montażu w 76 liniach wykazu dla JLC (149 SMD i 16 przewlekanych, czyli 15 footprintów przewlekanych, z których F1 liczy się dwa razy; oprawka bezpiecznika F1 to dwa zaciski, czyli dwie pozycje). Źródłem jest tabela `JLC` w `tools/design.py`: część z projektu → część w katalogu. Stany i klasy odczytane z katalogu części JLC 2026-11-10.
 
 Zasada wyboru: część z listy Basic albo Preferred, dostępna w magazynie, gdy ma tę samą wartość, tolerancję, napięcie, dielektryk i obudowę; w przeciwnym razie część z projektu jako Extended. Zwykłe rezystory i kondensatory biorą część Basic (są typowe i mają zamienniki u wielu producentów, więc większa partia nie zależy od jednej pozycji). Części, na których parametrach z karty opiera się projekt (upływ, dzielniki 0,1%, 100 V, obciążenie impulsowe), zostają przy wskazanym producencie.
 

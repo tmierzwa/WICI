@@ -33,7 +33,7 @@ U2,1,MCP1640,Microchip,MCP1640T-I/CHY,C44365,JLC,"przetwornica podwyższająca, 
 L1,1,4u7,Würth Elektronik,744031004,C2649331,JLC,"4,7 µH, Isat 0,9 A",Inductor_SMD:L_Wuerth_WE-TPC-3816,cewka U2
 R22,1,309k,UNI-ROYAL,0805W8F3093T5E,C57148,JLC,309k 1% 0805,Resistor_SMD:R_0805_2012Metric,RBOT dzielnika U2
 C10,1,100p,Samsung Electro-Mechanics,CL21C101JBANNNC,C1790,JLC,100 pF 50 V C0G 0805,Capacitor_SMD:C_0805_2012Metric,równolegle do R21
-F1,2,T1A,Littelfuse,01110501Z,C151075,JLC,"zacisk bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką",Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal,"2 zaciski na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)"
+F1,2,T1A,Littelfuse,01110501Z,C151075,JLC,"zacisk bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką",Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal,"2 zaciski na F1; od spodu płytki, montuje JLC; bezpiecznik T1A osobno (poniżej)"
 D4,1,SMBJ33CA,Hongjiacheng (R+O),SMBJ33CA,C19077587,JLC,"TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB",Diode_SMD:D_SMB,pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)
 U5,1,LM74800-Q1,Texas Instruments,LM74800QDRRRQ1,C3215600,JLC,"sterownik idealnej diody i łącznika 3–65 V, do −65 V, WSON-12 3 × 3 mm",Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm,"pad termiczny RTN zostaje niepodłączony (karta, tabela 6-1)"
 Q2 Q3,2,AO4292E,Alpha & Omega,AO4292E,C176743,JLC,"N-MOSFET 100 V, 23 mΩ, VGS ±20 V, SOIC-8",Package_SO:SOIC-8_3.9x4.9mm_P1.27mm,"Q2: idealna dioda (DGATE); przy odwrotnym impulsie do około 70 V; Q3: łącznik do VSYS (HGATE), odcina przy OVP i UV"
