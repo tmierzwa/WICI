@@ -159,11 +159,13 @@ struct AlarmInfo {
     bool ageKnown = true;
 };
 
-// Alarmy ekranu. Stacja bez magazynu podłącza tylko je (awaria radia, oprogramowanie.md, „Alarmy”).
+// Alarmy ekranu i ZNISZCZ DANE. Stacja bez magazynu podłącza tylko je: awarie (oprogramowanie.md, „Alarmy”)
+// i jedyną naprawę uszkodzonego magazynu albo bariery przeniesienia (oprogramowanie.md, „Pamięć FRAM”).
 struct Alarms {
     virtual ~Alarms() = default;
     virtual bool alarm(AlarmInfo& out) = 0;
     virtual void ackAlarm(const AlarmInfo& alarm) = 0;
+    virtual bool destroy() = 0;   // ZNISZCZ DANE: magazyn, dziennik, tożsamość; potem restart
 };
 
 // Dane i działania stacji dla ekranu.
@@ -188,7 +190,6 @@ struct Host : Alarms {
     virtual void cancelTest() = 0;
     virtual void pauseTest(bool paused) = 0;
     virtual bool switchBackup() = 0;
-    virtual bool destroy() = 0;
     virtual bool closeEvent() { return false; }   // ZAMKNIJ ZDARZENIE z menu: jak potwierdzone `close`
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
     virtual bool node() { return false; }       // konfiguracja węzła stanowiska
@@ -197,7 +198,7 @@ struct Host : Alarms {
 class Model {
 public:
     void attach(Host* host) { host_ = host; alarms_ = host; }
-    // Bez magazynu: tylko alarmy, ekran bez kreatora i wiadomości.
+    // Bez magazynu: alarmy i w USŁUGACH tylko WYCISZ DŹWIĘK i ZNISZCZ DANE; bez kreatora i wiadomości.
     void attachAlarms(Alarms* alarms) { alarms_ = alarms; }
     // Po włączeniu: ekran wyboru języka (lang to tylko położenie kursora).
     void start(Lang lang);

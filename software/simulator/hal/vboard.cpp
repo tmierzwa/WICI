@@ -42,8 +42,13 @@ USBCDC Serial(0);
 SPIClass SPI;
 EspClass ESP;
 
+#if defined(__APPLE__)
+extern char __start_wici_noinit[] __asm("section$start$__DATA$wici_noinit");
+extern char __stop_wici_noinit[] __asm("section$end$__DATA$wici_noinit");
+#else
 extern char __start_wici_noinit[];
 extern char __stop_wici_noinit[];
+#endif
 
 void setup();
 void loop();
