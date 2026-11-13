@@ -218,7 +218,6 @@
   "firmware/src/framfs.h": "24ffbeb7a574060d2a01bc4389449ce2dad161c8dc4a69bde009874086a3933d",
   "firmware/src/hexstr.h": "be8e42a34329572411fd402f3b5f738dcfb71d8ab1d59dd830cc3ca583fe2220",
   "firmware/src/host/node_host.cpp": "4ea26826afdf4cc35c18809cd741493d4d8f3f88c07c4ce66b614653e9413049",
-  "firmware/src/idf_component.yml.orig": "0c81f051a95fae36dc740fd13a568e206e09287b75cfc3c4d40e0eca19fda8cf",
   "firmware/src/journal.cpp": "52be7ef1135413efc2e8312996fb8ab33ffb6ce898abf7a635638cecbe4bdf35",
   "firmware/src/journal.h": "88e40098a098665677b0cb994540b19b244b2dfc3347e1f249d3640c9f2cf964",
   "firmware/src/jsonlite.cpp": "7eebacaa516a78222201ce423010620955c9a82cad887d9a41bf81be07a62e5f",
