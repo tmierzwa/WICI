@@ -265,11 +265,13 @@ uint8_t Model::menuIndex(ui_texts::Menu item) const {
 
 size_t Model::services(Service out[]) const {
     // Węzeł OSP nie ma adresu LXMF, karty OSP ani zgłoszeń: bez OGŁOŚ ADRES, KLUCZ ZAPASOWY i ZAMKNIJ ZDARZENIE.
+    // Stacja bez magazynu (attachAlarms) też ich nie ma: zostaje ZNISZCZ DANE, jedyna naprawa.
+    const bool station = host_ && !node();
     size_t n = 0;
-    if (!node()) out[n++] = Service::ANNOUNCE;
+    if (station) out[n++] = Service::ANNOUNCE;
     out[n++] = Service::MUTE;
-    if (!node()) out[n++] = Service::BACKUP;
-    if (!node()) out[n++] = Service::CLOSE;
+    if (station) out[n++] = Service::BACKUP;
+    if (station) out[n++] = Service::CLOSE;
     out[n++] = Service::DESTROY;
     return n;
 }
@@ -649,9 +651,8 @@ void Model::act(Button button, uint32_t nowMs) {
             if (back) go(Screen::SERVICES);
             else if (button == SEQUENCE[sequence_]) {
                 if (++sequence_ == 4) {
-                    const bool done = host_ && (screen_ == Screen::BACKUP ? host_->switchBackup()
-                                                : screen_ == Screen::CLOSE ? host_->closeEvent()
-                                                                           : host_->destroy());
+                    const bool done = screen_ == Screen::DESTROY ? alarms_ && alarms_->destroy()
+                                      : host_ && (screen_ == Screen::BACKUP ? host_->switchBackup() : host_->closeEvent());
                     if (done) {
                         if (screen_ == Screen::CLOSE) { resetDraft(); messagesCursor_ = 0; }   // zgłoszenia znikły
                         go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);

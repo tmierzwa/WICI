@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 import ui_texts  # noqa: E402
 
 SOURCES = ("testframe.cpp", "annunciator.cpp", "journal.cpp", "p1frame.cpp", "ui.cpp", "font.cpp", "jsonlite.cpp", "sa1.cpp",
-           "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp")
+           "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp",
+           "migration_state.cpp")
 
 HARNESS = r"""
 #include <cstdio>
@@ -47,6 +48,7 @@ HARNESS = r"""
 #include "fram_ram.h"
 #include "hexstr.h"
 #include "journal.h"
+#include "migration_state.h"
 #include "p1frame.h"
 #include "sa1.h"
 #include "sha2.h"
@@ -885,6 +887,24 @@ int world() {
             uint8_t saved[2] = {};
             w.ram.read(at, saved, sizeof(saved));
             printf("destroykeep %d %02x%02x %d\n", ok, saved[0], saved[1], w.store->identitySaved());
+        } else if (!strcmp(cmd, "garbage")) {
+            // Cała FRAM ze wzorem testowym (program diagnostyczny L0): bariera przeniesienia uszkodzona, więc jak
+            // w main.cpp dziennik jest tylko odczytany, a Store::begin nie jest wołane. Potem ZNISZCZ DANE
+            // (BenchHost::destroy) i restart: bariera pusta, dziennik i magazyn startują.
+            uint32_t x = 0x2545F491u;
+            for (uint8_t& b : w.ram.bytes) { x ^= x << 13; x ^= x >> 17; x ^= x << 5; b = static_cast<uint8_t>(x); }
+            migration_state::Barrier before(w.ram);
+            const bool barrierBefore = before.begin();
+            w.stop();
+            w.journal = new journal::Journal(w.ram);
+            const bool read = w.journal->begin();
+            w.store = new store::Store(w.ram, *w.journal, storeRandom, "p1");
+            const bool ok = w.store->destroy();
+            migration_state::Barrier after(w.ram);
+            const bool barrierAfter = after.begin();
+            const store::Begin result = w.start();
+            printf("garbage %d %d %d %d %d %s %d\n", barrierBefore, read, ok, barrierAfter, after.permitsTransmit(),
+                   store::beginName(result), w.journal->formatState() == journal::FormatState::READY);
         } else if (!strcmp(cmd, "ident")) {
             const bool ok = w.store->setIdentitySaved();
             printf("ident %d %d\n", ok, w.store->identitySaved());
@@ -1830,6 +1850,23 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(self.find(out, "destroykeep "),
                          ["destroykeep 1 57a5 0", "destroykeep 1 57a5 0"])
         self.assertIn("ident=0", self.find(out, "diag ")[0])
+
+    def test_destroy_repairs_fram_with_test_pattern(self):
+        # FRAM po programie diagnostycznym L0 (wzór testowy w całej pamięci): bariera przeniesienia uszkodzona,
+        # magazyn nie startuje, ekran ma tylko alarmy (main.cpp). ZNISZCZ DANE z panelu jest jedyną naprawą
+        # (oprogramowanie.md, „Pamięć FRAM”): USŁUGI bez pozycji wymagających magazynu, sekwencja GÓRA, DÓŁ,
+        # GÓRA, OK woła destroy, a po nim bariera jest pusta, dziennik ma format READY i magazyn startuje.
+        labels = ui_texts.load()["labels"]
+        to_services = ["K OK 0"] + ["K DOWN 0"] * 3 + ["K OK 0"] + ["K DOWN 0"] * 20 + ["K OK 0", "R"]
+        out = self.world(["garbage", "alarms", "L 0"] + to_services +
+                         ["K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag"])
+        # bariera przed: uszkodzona; dziennik odczytany; kasowanie; bariera po: pusta i bez przeniesienia; magazyn
+        self.assertEqual(self.find(out, "garbage "), ["garbage 0 1 1 1 1 ok 1"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["services", "destroy", "main"])
+        self.assertEqual(self.lines(s[0]), [labels["WYCISZ_DZWIEK"][0], labels["ZNISZCZ_DANE"][0], "", "", ""])
+        self.assertIn("destroyed 1", out)
+        self.assertIn("ok=1", self.find(out, "diag ")[0])
 
     def test_store_event_ring_close_maintain_and_destroy(self):
         out = self.world([

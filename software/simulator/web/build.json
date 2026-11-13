@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "12037b2449c10c779cf7ee14b0961ad29b2cd50f2c8ceb367117409fd62a355f",
-   "bytes": 782701,
+   "sha256": "a3cf7f7e896fa4a037765e923e0a26950c4747c1a4e673ea6273454ad237d195",
+   "bytes": 782501,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -228,7 +228,7 @@
   "firmware/src/lora_profile.h": "2806f6f80cf8c417ec359bc94e77d9a00e915f4222a6a67e794b5e5a95b6697f",
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
-  "firmware/src/main.cpp": "5d88be6bc6ebf72470e7f555e9e0c7bad7b55119b3fbc51792d918db8cb7f290",
+  "firmware/src/main.cpp": "50c999937c674f16154e3ec18c19217bcdb3e42c09252c12bbc6cf78b85e0c0f",
   "firmware/src/mcu_sleep.h": "e78eff146506c31780c643ed234d38915e4afa40e131b5d5a4f3b2d1e144f0c8",
   "firmware/src/measure.cpp": "967d7918936ab5a36f8a2f0d4faaef9cead66efd62c7fe5b5642b55062645aaa",
   "firmware/src/measure.h": "8f4b5192abd00939c647839ebacdcf9db47a6ded4d443941ea58215b38c73ff5",
@@ -287,8 +287,8 @@
   "firmware/src/sx1262_link.h": "579295b392100ded57cccceb83589f442327c4679e46229cd4e24f1a80fe2899",
   "firmware/src/testframe.cpp": "43f8f149a317f4a6c9f4c5aecf426204a88fcb98eb7f29c4f84e9845931402cf",
   "firmware/src/testframe.h": "d8a84994aebfd531fd24acbcef3c4b85eeae21865df552df290621cff24ff662",
-  "firmware/src/ui.cpp": "dbb6ab6134d65bafe33491ee700de8e3cdd9dc23aa957e935d8beade22ff0c52",
-  "firmware/src/ui.h": "ff92f981df68a92e5fa85e4046f5af48abcb120e80fc7baf7c56f9762f486bf7",
+  "firmware/src/ui.cpp": "08dd6b99c621aa2caefac00eec6d08c6a3fa0d6ffc0d3c4ed504decb2b9b5f54",
+  "firmware/src/ui.h": "2abead71525256345051104ca98e9b91455b1075af44efbd0b3b60c925275702",
   "firmware/src/ui_texts.h": "00acc2a9179aeb62d8fe4583bef77ab4c15cd25b1627d620cfb21e7962ee2cbd",
   "firmware/src/unicode_tables.h": "ef324616bebbcb72f111ce9453ed943d9b57fad9ae73cdc79d22a81161d88739",
   "firmware/src/usbproto.cpp": "430fc96fabb40b7182ad33c250d579cbbc43c381d4cc0953fc06a33df87e345d",
@@ -367,7 +367,7 @@
   "software/simulator/hal/USB.h": "06c7042a52c78550699d1e890a97aaef8e21d5231d7f39000c5a7677200d93a8",
   "software/simulator/hal/WString.h": "8506f23a05027ebdc814db0d6a32ee8a1ba9883daa368b76595a9403d94dca5b",
   "software/simulator/hal/chips.h": "5b4a278505a4bbd1cbf1564190877f88cb39aae48be4b234e5d167bc9f69f7c1",
-  "software/simulator/hal/esp_attr.h": "d0bd9fbfc7c3391597fbb4842a6c1fe4b6a6f96ec10d335aa7b384970e030195",
+  "software/simulator/hal/esp_attr.h": "7bfc3af8c43532183c4fca9cf9b3111d4fa60e6707d95494c900180cb0600557",
   "software/simulator/hal/esp_rom.cpp": "051edeac6f934421b39eb27e0195ccc9f8b05a710cbb40fc7bff09b7ce378be1",
   "software/simulator/hal/esp_task_wdt.h": "22bce0e08f9bf0f864682b8b19a2086b2fbf49bbb25797be26baea73a19a446e",
   "software/simulator/hal/fram_sharp_chip.cpp": "e607e8a3a23bdb669b53476fe0c911310a2f94c156ecdd9db3247cabe95c7c22",
@@ -376,7 +376,7 @@
   "software/simulator/hal/platform_sim.cpp": "7cdd8cd6d93a551fe84683301fbc5f3fa1d0adbae58f28d7b7df026e64cd6fc5",
   "software/simulator/hal/s2lp_chip.cpp": "43bbf8e1bf30e436de86046da591d2255672dc161e58f978869025d3468593ff",
   "software/simulator/hal/sharp_extcomin_sim.cpp": "78051b813077743a281ac724acb3b96832cdb6cfc38fbd6871f9d2ba9bc9324f",
-  "software/simulator/hal/vboard.cpp": "968124ebd9f54e9487cc6eb4ce5e89b5225cf007ba81a279f2f78c7b31e6b748",
+  "software/simulator/hal/vboard.cpp": "76c676b12c5ba49812298eaa59938d250535a05169c55cef7e5ef4f2bb8b3f85",
   "software/simulator/hal/vboard.h": "c9d6642034dd57ac6d3c3c38b37aba5361a88e8681266be5270b9e5006f3371b",
   "software/simulator/post/post.cpp": "91d47b5c5d2162e6506d666eb58cb7ad1d849ec0e18f7dc2fdf932a37956ef05",
   "software/simulator/build.py": "5eeafd92ed653a32a5b4f79de314255f2fbaad2c326c64109e81c4c69ca23b4d"

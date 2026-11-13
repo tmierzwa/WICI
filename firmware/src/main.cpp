@@ -1315,11 +1315,16 @@ void beginScreen() {
 void pollButtons(uint32_t now) {
     if (now - buttonPollMs < BUTTON_POLL_MS) return;
     buttonPollMs = now;
+    // Przeniesienie w toku (bariera w stanie przejściowym) zamraża panel poza pytaniem polecenia USB. Uszkodzona
+    // albo nieczytelna bariera go nie zamraża: magazyn wtedy nie startuje, więc ekran ma tylko alarmy
+    // i ZNISZCZ DANE, jedyną naprawę (oprogramowanie.md, „Pamięć FRAM”).
+    const bool panel = !migrationBarrier.ready() || migrationBarrier.permitsTransmit() ||
+                       screenModel.screen() == ui::Screen::CONFIRM;
     // Zmiana stanu dopiero po dwóch jednakowych próbkach (eliminacja drgań styków, około 20 ms).
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
         if (is == buttonSample[i] && is != buttonWas[i]) {
-            if (is && (migrationBarrier.permitsTransmit() || screenModel.screen() == ui::Screen::CONFIRM))
+            if (is && panel)
                 screenModel.down(static_cast<ui::Button>(i), now);
             else screenModel.up(static_cast<ui::Button>(i), now);
             buttonWas[i] = is;
@@ -2275,7 +2280,7 @@ void stationSetup() {
     if (!extcominOk) bench.log("EXTCOMIN timer failed");
 #endif
 #endif
-    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarm awarii radia działa.
+    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarmy i ZNISZCZ DANE działają.
     if (storeOk) screenModel.attach(&screenHost);
     else screenModel.attachAlarms(&screenHost);
     beginScreen();
