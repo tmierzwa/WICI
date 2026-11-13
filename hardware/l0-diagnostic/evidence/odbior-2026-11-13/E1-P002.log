@@ -1,0 +1,2 @@
+17:01:33  1 /dev/cu.usbmodem21101 | INFO l0-0.5 50112F6B4580 1 0 D8C8114D 869.525 125 7 5 0 1.8 | STATUS radio=1 fram=1 ext=1 ext_counter=9037 inputs=00 silence=0 mixed=0 guard=0 cycles=0 errors=0 frames=1 buzzer=1
+17:02:35  2 /dev/cu.usbmodem21101 | INFO l0-0.5 50112F6B4580 1 0 4A375FA4 869.525 125 7 5 0 1.8 | STATUS radio=1 fram=1 ext=1 ext_counter=9065 inputs=00 silence=0 mixed=0 guard=0 cycles=0 errors=0 frames=1 buzzer=1

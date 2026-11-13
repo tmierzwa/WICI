@@ -1,0 +1,8 @@
+CMD MIXSTART ERASE
+MIX_START 900000
+Test zatrzymany: A: restart lub zmiana konfiguracji od rozpoczęcia próby.
+Raport: results/20261113-171028-2bdcb5c6-radio/20261113-171028-a07f84e8ae6f41de.json
+WYNIK: NEGATYWNY / NIEUKOŃCZONY
+CMD STOP
+STOPPED
+NIEZALICZONE / NIEUKOŃCZONE: Test radiowy niezaliczony; szczegóły w logach.

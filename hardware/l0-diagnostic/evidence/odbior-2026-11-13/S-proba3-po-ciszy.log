@@ -1,0 +1,3 @@
+22:14:32 P002 > RX 20 | {"rx":true,"len":20} || {"state":"RX","status":"0x52","rxen":true,"busy":false}
+22:14:36 P001 > TXPKT 11 20 | {"txpkt":"started","n":11,"len":20,"ms":0,"conducted":false,"tx_ms_planned":836} || {"txpkt":"done","sent":11,"failed":0,"len":20,"series_ms":837,"tx_ms":812,"tx_wait_ms":10032,"sync_gpio":false,"lead_ms":0.00,"on_air_ms":0.00,"tail_ms":0.00,"expected_on_air_ms":72.96}
+22:14:51 P002 > RXPER | {"rx_ok":11,"rx_bad":0,"missing":0,"reordered":0,"overflow":0,"last_seq":10,"per_percent":0.00,"rssi_avg_dbm":-37.4,"lqi_avg":0.0,"len":20,"seconds":18,"rx":true} || {"snr_avg_db":12.23,"rx_ok":11}
