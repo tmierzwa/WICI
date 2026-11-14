@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.53</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.54</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.53</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.54</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -123,7 +123,7 @@
         <li>numer stacji się powtarza lub pokrywa z numerem odbiorcy; dwie przygotowane tożsamości tego samego roota stanowią wyjątek i mają jeden wspólny numer;</li>
         <li>listy <code>behind</code> i <code>behind_backup</code> nie odpowiadają rodzicom stacji;</li>
         <li>którejś stacji brakuje kluczy obu rootów albo klucza rodzica z planu lub zapasowego w <code>priority_keys</code>;</li>
-        <li>klucze sąsiadów nie są parami: stacja ma klucz sąsiada, który nie ma jej klucza; klucz roota służący tylko do sprawdzania podpisu epoki nie wymaga pary;</li>
+        <li>klucze sąsiadów nie są parami: stacja ma klucz sąsiada, który nie ma jej klucza. Klucz roota jest kluczem sąsiada tylko u stacji, dla której root jest rodzicem z planu albo zapasowym; u pozostałych służy wyłącznie do sprawdzania podpisu epoki i nie wymaga pary. Rolę klucza wyznacza plan, bez osobnego pola;</li>
         <li>konfiguracja którejkolwiek stacji przekracza 50 kluczy albo łącznie 128 wpisów <code>behind</code> i <code>behind_backup</code>, lub jej najdłuższa droga planowa bądź zapasowa przekracza własne <code>network.ttl</code> w zakresie 1–15.</li>
       </ul>
       <p class="explain"><strong>Przypadki odrzucenia.</strong> Stacja 12 z rodzicem 5 i stacja 5 z zapasowym rodzicem 12 tworzą cykl, choć każdy dokument może przejść osobne sprawdzenie. Tak samo odrzuca się drogę bez roota, powtórzony numer oraz listę <code>behind</code> niezgodną z rodzicami. Wektory tych planów wymagają utrwalenia (<a href="system-wici-decyzje.html#wici-inv-050">WICI-INV-050</a>).</p>
@@ -272,7 +272,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.53 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.54 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
