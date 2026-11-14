@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.52</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.53</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.52</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.53</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -472,14 +472,14 @@
           <h4>WICI-INV-061</h4>
           <dl>
             <div><dt>Stan</dt><dd>Wyniki prób przy stole z 14 listopada 2026 r. (prototypy <code>l0</code>, program z <code>8dd305f2</code>) są w raporcie <code>hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md</code> na gałęzi prób, jeszcze poza <code>main</code>. Przekaźnik odrzuca bez HACK około połowy pierwszych kopii DATA, gdy ruch płynie naraz w górę i w dół; program nie podaje licznika takich odrzuceń (zmiana w toku, PR 216). Kryteria próby „Wrogi węzeł” w <a href="odbior.md">planie odbioru</a> wymagają licznika odrzuceń po tagu pary, udziałów K1, K2 i BEACON w oknie godzinnym oraz liczby gniazd K1 na sąsiada; program ich nie wypisuje.</dd></div>
-            <div><dt>Luka</dt><dd>Rejestr zgodności wpisze wynik po scaleniu raportu. Każda wielkość w kryteriach prób ma wskazane źródło (polecenie i pole programu albo pomiar z podsłuchu); dziś wskazania brak.</dd></div>
+            <div><dt>Luka</dt><dd>Rejestr zgodności wpisze wynik po scaleniu raportu. Związek W10 z liczbą stacji za jednym przekaźnikiem (limit w planie sieci albo większa kolejka) właściciel rozstrzygnie po danych z licznika odrzuceń i z emulatora; do tego czasu tekst rozdziału 6 się nie zmienia (decyzja z 14 listopada 2026 r.). Przyspieszone ponowienie po kontakcie z rodzicem (<a href="#wici-dec-017">WICI-DEC-017</a>) jest w przygotowaniu w sesji programu; brak próby emulatora przy 30 stacjach za przekaźnikiem. Każda wielkość w kryteriach prób ma wskazane źródło (polecenie i pole programu albo pomiar z podsłuchu); dziś wskazania brak.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-062">
           <h4>WICI-INV-062</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>Każda stacja ma klucz roota, żeby sprawdzać podpis epoki, więc uznaje słyszanego roota za kandydata dynamicznego. Root zna tylko sąsiadów ze swojego planu i takiej stacji nie potwierdza. Na stole stacja po trzech skokach bez HACK przechodziła na roota i wracała; w próbach 59–157 ramek zostało bez HACK. Poprawka w toku (PR 214): root jest rodzicem tylko z planu.</dd></div>
-            <div><dt>Luka</dt><dd>Reguła wyboru kandydata dynamicznego w <a href="system-wici-siec.html#trasy">rozdziale 6</a> nie wyklucza sąsiada, który stacji nie potwierdzi; rozstrzygnięcie czeka na decyzję właściciela.</dd></div>
+            <div><dt>Luka</dt><dd>Reguła z <a href="#wici-dec-017">WICI-DEC-017</a>: kandydatem dynamicznym jest tylko sąsiad z kluczem sąsiada, a przygotowanie odrzuca plan bez par kluczy. PR 214 pokrywa przypadek roota; sprawdzenie par w całym planie czeka na wdrożenie razem z <a href="#wici-inv-050">WICI-INV-050</a>.</dd></div>
           </dl>
         </article>
       </div>
@@ -546,12 +546,14 @@
           </td></tr>
           <tr id="wici-dec-015"><td>WICI-DEC-015</td><td><strong>Przegląd rozdziału 3, 9 listopada 2026 r.</strong> Wynik następnego skoku radiowego nazywa się „w drodze”, a nie „przekazane”, żeby nie mylił się ze stanem 4 „przekazane dalej”. Znaczenie się nie zmienia: przekaźnik przejął ramkę, co nie jest doręczeniem ani RECEIVED. Zmienia to nazwę ustaloną w WICI-DEC-005; zmiana nazwy w kodzie i polu <code>stage</code> USB pozostaje luką <a href="#wici-inv-017">WICI-INV-017</a>. Odrzucono pozostawienie „przekazane” z samym zdaniem wyjaśniającym. Wymaganie ma czwarty rodzaj, <a href="system-wici-o-dokumencie.html#metamodel">wymaganie funkcji</a>: zachowanie stacji albo aplikacji wobec ludzi i danych, które nie jest regułą protokołu, parametrem profilu ani właściwością wyrobu. Uzupełnia to kształt wymagania ustalony 8 listopada.</td></tr>
           <tr id="wici-dec-016"><td>WICI-DEC-016</td><td><strong>Pytania przed czytaniem rozdziałów 1–3, 9 listopada 2026 r.</strong> Nazwy: „stanowisko” oznacza miejsce, komputer, aplikację i podmiot wymagań; „<a href="system-wici-slownik.html#odbiorca">odbiorca</a>” oznacza tylko stanowisko jako stronę protokołu SA1, jego tożsamość i klucze, tak jak stacja jest w wiadomości nadawcą. Tabele SA1, nazwy kluczy i napisy na ekranie stacji zostają bez zmian. Odrzucono jedną nazwę „stanowisko” (około 90 zmian, rozjazd z kodem, a ekran stacji i tak mówi „odbiorca”) i jedną nazwę „odbiorca” (podmiot wymagań brzmiałby jak człowiek). „W drodze” pozostaje zapisanym etapem wysyłki w stacji, bo ustala czas czekania przed ponowieniem; ekrany go nie pokazują, widać go tylko w diagnostyce. Odrzucono napis na ekranie stacji: sąsiad roota dostaje HACK także wtedy, gdy stanowisko niczego nie zapisało, więc napis uspokajałby bez powodu. Koperta rodzaju 1 od stacji nazywa się „<a href="system-wici-slownik.html#pokwitowanie">pokwitowanie</a>”, bo obejmuje też wiadomość trwale odrzuconą, a „doręczenie” sugerowało przyjęcie. Bajty się nie zmieniają; dokumenty źródłowe i kod (<em>delivery proof</em>) poprawi się przy ich porządkowaniu. Odrzucono „dowód rozstrzygnięcia” (słowo oznacza też decyzje), „dowód zapisu” (odrzucenia nie zapisuje się), „dowód odbioru” i „dowód przyjęcia” (kolizje z odbiorcą i przyjęciem na stanowisku). Pod tabelą założeń w rozdziale 1 zapisano, że założenia o protokołach WICI i obcych protokołach zależą od wyniku próby przy stole, a zapasem jest Reticulum. Odrzucono usunięcie zapasu i opisywanie z góry, co Reticulum by zastąpił. Jedno wymaganie opisuje jedno zachowanie: MUSI i NIE MOŻE mogą stać w jednym zdaniu, gdy opisują tę samą rzecz z dwóch stron i sprawdza je ta sama próba w tym samym przebiegu; inne zachowania zapisuje się osobno. Odrzucono stałe rozdzielanie (para „tylko tak, nigdy inaczej” rozpadłaby się na dwa niepełne wymagania) i dowolne łączenie (sprawdzenie obejmowałoby tylko połowę zdania).</td></tr>
+          <tr id="wici-dec-017"><td>WICI-DEC-017</td><td><strong>Wnioski z prób przy stole, 14 listopada 2026 r.</strong> Związek W10 z liczbą stacji za przekaźnikiem rozstrzyga się po danych z licznika odrzuceń i z emulatora (<a href="#wici-inv-061">WICI-INV-061</a>). Stacja z czekającą wiadomością przyspiesza ponowienie po HACK albo BEACON-ie bieżącego rodzica, z BEACON-u najwyżej raz na okres z profilu (<a href="system-wici-siec.html#kanal">rozdział 6</a>). Odrzucono dłuższe przechowanie ramki w przekaźniku: cisza może trwać dni, a kolejka ma 4 miejsca. Odrzucono pozostawienie powrotu do 18 min po ciszy rodzica. Kandydatem dynamicznym może być tylko sąsiad, którego klucz stacja ma jako klucz sąsiada; klucz roota tylko do podpisu epoki tego nie daje, więc root jest rodzicem tylko z planu. Przygotowanie odrzuca plan, w którym klucze sąsiadów nie są parami. Odrzucono sam wyjątek dla roota (nie chroni przed kluczami danymi w jedną stronę) i ogłaszanie planu w BEACON-ie (zmiana bajtów w eterze).</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.53</td><td>Zapisano WICI-DEC-017: W10 a liczba stacji za przekaźnikiem czeka na dane; przyspieszone ponowienie po HACK albo BEACON-ie rodzica z parametrami profilu; kandydat dynamiczny tylko z kluczem sąsiada i odrzucanie planu bez par kluczy (rozdział 6).</td></tr>
           <tr><td>0.52</td><td>Wyniki prób przy stole z 14 listopada 2026 r.: stan D21 w rozdziale 6 „częściowo”, wygasanie ramek tranzytowych w ciszy, każde ponowienie jako nowa koperta; WICI-INV-036 z wynikiem próby trzech skoków; nowe WICI-INV-061 (raport poza <code>main</code>, brak liczników kryteriów) i WICI-INV-062 (root jako kandydat dynamiczny).</td></tr>
           <tr><td>0.51</td><td>Rozdział 3: usunięto zdanie powtarzające samo siebie przy odsyłaczu do rozstrzygnięcia o gwarancjach.</td></tr>
           <tr><td>0.50</td><td>Zapisano WICI-DEC-016: podział nazw „stanowisko” i „odbiorca” w słowniku, klasach zgodności i rozdziale 2; strona odbierająca kopertę lub ramkę nie nazywa się już „odbiorcą”. Etap „w drodze” ma w rozdziale 3 uzasadnienie. Kopertę rodzaju 1 od stacji nazwano „pokwitowaniem” zamiast „dowodem doręczenia”. Założenia o protokołach mają w rozdziale 1 warunek próby przy stole. Przedmowa podaje zasadę jednego zachowania w wymaganiu; w rozdziale 3 rozdzielono anulowanie, ciszę radiową, komunikat ogólny, zmianę tożsamości odbiorcy i odtworzenie kopii (identyfikatory robocze z literą, razem 48 wymagań).</td></tr>
@@ -604,7 +606,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.52 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.53 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
