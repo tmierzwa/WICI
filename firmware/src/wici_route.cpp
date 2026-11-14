@@ -221,9 +221,13 @@ bool Table::usable(uint16_t id, uint32_t nowS) const {
 }
 
 uint16_t Table::bestDynamic(uint32_t nowS) const {
+    // The root is never a dynamic neighbour: every station holds its key (the
+    // epoch signature) and so a pairwise key with it, but the root pairs only
+    // with its planned neighbours and would never acknowledge the others.
+    // The plan makes it a parent as the planned or backup one.
     const Neighbor* best = nullptr;
     for (const Neighbor& n : neighbors_) {
-        if (n.id == config_.planned || n.id == config_.backup || !usable(n.id, nowS)) continue;
+        if (n.id == config_.planned || n.id == config_.backup || n.id == config_.root || !usable(n.id, nowS)) continue;
         if (!best || static_cast<uint32_t>(n.rank) + n.cost < static_cast<uint32_t>(best->rank) + best->cost)
             best = &n;
     }
