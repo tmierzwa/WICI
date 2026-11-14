@@ -1066,6 +1066,14 @@ void Model::renderText(Text& text, size_t window, Lines& out, size_t first) {
     renderList(items, text.count, window, out, first, false);
 }
 
+bool Model::resultItem(Item& item) const {
+    if (!host_ || !resultNumber_) return false;
+    const size_t count = host_->itemCount();
+    for (size_t i = 0; i < count; ++i)   // najnowsze najpierw: zwykle pierwsza pozycja
+        if (host_->item(i, item, true) && item.own && item.number == resultNumber_) return true;
+    return false;
+}
+
 bool Model::openItem(Item& item) {
     // Nowa wiadomość przesuwa listę (najnowsze najpierw): pozycja szukana po numerze rekordu.
     if (!host_) return false;
@@ -1405,10 +1413,18 @@ void Model::renderScreen(const Status& s, Lines& out, size_t first, size_t windo
             break;
         case Screen::RESULT:
             switch (result_) {
-                case Submit::STORED:
-                    t.add(text(resultSilence_ ? Id::ZAPISANE_W_CISZY : Id::ZAPISANE_W_STACJI, lang_));
+                case Submit::STORED: {
+                    // Bieżący etap wysłanego zgłoszenia, jak w WIADOMOŚCIACH (próby przy stole 2026-11-14:
+                    // stały napis „czeka na wysłanie” stał po przyjęciu i decyzji). Bez wpisu (anulowany,
+                    // zamknięte zdarzenie) zostaje wynik zapisu.
+                    Item item;
+                    if (resultItem(item)) {
+                        stageText(item, s, tmp, sizeof(tmp));
+                        t.add(tmp);
+                    } else t.add(text(resultSilence_ ? Id::ZAPISANE_W_CISZY : Id::ZAPISANE_W_STACJI, lang_));
                     t.addShort(Id::ZAPISZ_NUMER, resultNumber_, lang_);
                     break;
+                }
                 case Submit::NO_ADDRESS: t.add(text(Id::ADRES_BRAK, lang_)); break;
                 case Submit::FULL: t.add(text(Id::KOLEJKA_PELNA, lang_)); break;
                 case Submit::ERROR: t.add(text(Id::BLAD_PAMIECI, lang_)); break;

@@ -3191,6 +3191,24 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual((b["rmax"], b["stage"], b["dec"], b["closed"]), (1, 0, 6, 0))
         self.assertIn(f"log request {number} revision 1", out)
 
+    def test_result_screen_follows_stage(self):
+        # Próby przy stole 2026-11-14: ekran wyniku stał na „czeka na wysłanie” po przyjęciu i decyzji.
+        # Teraz pokazuje bieżący etap zgłoszenia, jak WIADOMOŚCI: cisza, wysyłanie, stan z decyzji.
+        texts = ui_texts.load()["texts"]
+        wizard = self.HOSTED + ["now 100", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                                "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "R"]
+        reg = list(self.regs(self.ui(wizard + ["reg a"]), "a").values())[0]
+        number, x = reg["num"], reg["id"]
+        out = self.ui(wizard + ["Q 1", "R", "Q 0", "poll", "R", "in " + compact([1, 2, x, 0, 10, 2]), "R"])
+        saved, silent, sending, decided = self.screens(out)
+        tail = " " + texts["zapisz_numer"][0].replace("[xxxx]", number)[:20]   # dalej pod ▼
+        self.assertEqual([x[0] for x in (saved, silent, sending, decided)], ["result"] * 4)
+        self.assertTrue(self.shown(saved).startswith(texts["zapisane_w_stacji"][0] + tail), self.shown(saved))
+        self.assertTrue(self.shown(silent).startswith(texts["zapisane_w_ciszy"][0] + tail), self.shown(silent))
+        step = texts["wysylanie"][0].replace("[n]", "1").replace("[m]", "1")
+        self.assertTrue(self.shown(sending).startswith(step + tail), self.shown(sending))
+        self.assertTrue(self.shown(decided).startswith(texts["stan_2"][0] + tail), self.shown(decided))   # STATUS: odebrane
+
     def test_cancel_removes_item_and_test_screen_states(self):
         texts = ui_texts.load()["texts"]
         # Nowe zgłoszenie, WIADOMOŚCI → pozycja → ANULUJ WYSYŁKĘ: znika z listy.
