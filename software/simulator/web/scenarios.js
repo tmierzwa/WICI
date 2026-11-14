@@ -120,7 +120,8 @@ export const SCENARIOS = [
       { pl: "Najpierw pierwsza pomoc. Równolegle wyślij POMOC MEDYCZNA, 1 osoba, ZAGROŻENIE ŻYCIA.", en: "First aid first. In parallel send MEDICAL HELP, 1 person, LIFE THREAT.",
         done: (o, ctx) => {
           if (shown(o, "POMOC MEDYCZNA") && shown(o, "1 ZAGROŻENIE")) ctx.summary = true;
-          return !!ctx.summary && shown(o, "ZAPISANE W STACJI");
+          // Ekran wyniku pokazuje bieżący etap: bez łączności zaraz po zapisie przechodzi na WYSYŁANIE.
+          return !!ctx.summary && (shown(o, "ZAPISANE W STACJI") || shown(o, "WYSYŁANIE"));
         } },
       { pl: "Przyspiesz czas (+15 min) i obserwuj ekran oraz diodę ALARM.", en: "Speed up time (+15 min) and watch the screen and the ALARM LED.",
         done: (o) => shown(o, "BRAK POTWIERDZENIA") },
