@@ -255,7 +255,7 @@ def check(doc):
 
 def check_plan(docs):
     """List of (place, message) problems of the whole network plan: one `configure` document per numbered
-    station and one for the root (docs/spec/system-wici-siec.html, chapter 6, „Sprawdzenie całego planu”).
+    station and one for the root (system specification, chapter 6, „Sprawdzenie całego planu”).
 
     A document that fails `check` is reported by its position and left out of the rest. Checked across the
     plan: one network and root, no repeated station number, the parent graph ends at the root without a

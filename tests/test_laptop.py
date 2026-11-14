@@ -239,7 +239,7 @@ def l0_plan(overrides=None):
 
 
 class PlanTest(unittest.TestCase):
-    """The whole network plan (docs/spec/system-wici-siec.html, chapter 6): what single documents cannot show."""
+    """The whole network plan (system specification, chapter 6): what single documents cannot show."""
 
     def problems(self, docs):
         return configdoc.check_plan(docs)
