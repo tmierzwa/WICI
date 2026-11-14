@@ -258,6 +258,7 @@ private:
     // Wiersze wejść w tryb przygotowania: licznik z czasem, ostatnia zmiana (pusta bez wejść).
     void prepText(const Status& status, char* entries, char* change, size_t size) const;
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
+    bool resultItem(Item& item) const;  // wpis wysłanego zgłoszenia z ekranu wyniku
     bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
     size_t phraseListCount() const;   // brak (poza kategorią 9), frazy, WŁASNY TEKST
     void textAct(bool up, bool down, bool ok, bool back);
