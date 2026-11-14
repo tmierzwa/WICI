@@ -655,6 +655,21 @@ Prototyp v2 w 2 sztukach, jak L0, przed zamówieniem serii pilotażowej. Poniżs
 
 Odrzucone: osobne stanowisko do pomiarów pojedynczych części (µA, podgrzewanie), bo daje wynik kilku sztuk, a nie najgorszy przypadek z kart, i kosztuje więcej, niż daje; części mierzy się na prototypach v2.
 
+## Próby przy stole na L0 a płytka v2 (2026-11-14)
+
+Próby przy stole z 2026-11-14 na dwóch prototypach L0 (płytka v1) nie wymagają żadnej zmiany w płytce v2. Raport zbiorczy: `hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md` ([PR 213](https://github.com/tmierzwa/WICI/pull/213), w dniu wpisu jeszcze niescalony). Wszystkie cztery usterki zgłoszone w raporcie dotyczą programu stacji.
+
+Co próby potwierdzają dla v2:
+- **Pamięć FRAM:** układ MB85RS4MT na prototypie L0 przetrwał sześć ręcznych odcięć zasilania bez uszkodzonego rekordu (`corrupt_slots` 0 po każdym starcie), a zgłoszenie przyjęte tuż przed odcięciem wyszło z pamięci po starcie. Na v2 JLC montuje ten sam typ pamięci ([zamienniki](#numery-lcsc)), więc program rozpoznaje go i zapisuje na nim poprawnie.
+- **Moduły wpinane:** ramki do 255 B, łańcuch trzech skoków i 66% zajętej pamięci RAM pod obciążeniem przeszły na modułach procesora i radia takich jak na v2. To argument za modułami wpinanymi na prototypach v2. Decyzji „moduły wpinane czy przylutowany ESP32-S3 i układ radiowy” ([Przed zamówieniem](#przed-zamówieniem)) próby nie zamykają: nie badały zasięgu, temperatury ani poboru prądu.
+
+Czego próby nie objęły:
+- **Tor zasilania:** stacje były zasilane z USB. O wejściu 12 V, ogniwach, przetwornicy 3,3 V i sterowniku wyłącznika próby nic nie mówią. Warunki z sekcji [Przed zamówieniem](#przed-zamówieniem) i pomiary z sekcji [Na pierwszych sztukach v2](#na-pierwszych-sztukach-v2) zostają bez zmian.
+
+Uwagi do stanowiska prób, bez zmiany płytki:
+- **Odcięcie zasilania w zadanej chwili:** próba zaniku zasilania przekaźnika wyszła w zakresie 6 odcięć zamiast 15, bo ręką nie da się trafić w okno około 100 ms między odebraniem ramki a potwierdzeniem. Na v2 program może sam wyłączyć stację (GPIO47 przez Q11 ściąga KILL sterownika wyłącznika). Czy nadaje się to na punkt testowy tej próby, nie było sprawdzane; do oceny przy programie stacji dla v2 (zachowanie przy obecnym 12 V i przy podłączonym USB, opóźnienie wyłączenia).
+- **Próba z węzłem wrogim:** wymaga toru przewodowego między radiami albo komory ekranowanej. Antenę podłącza się do modułu radiowego, nie do płytki, więc potrzebne są kable i tłumiki, a nie zmiana w v2.
+
 ## Źródła
 
 - TI LM7480-Q1 (SNOSD95C): tabela 6-1 (wyprowadzenia DRR), 7.5 (prądy, progi EN/UVLO i OV), 9.3.2–9.4 (ograniczenie prądu włączania, wyłączenie, dioda podłożowa).
