@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.51</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.52</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.51</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.52</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -303,6 +303,7 @@
           <dl>
             <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/wici_route.cpp">Nauka dróg</a> wymaga <code>planned()</code> i nie zastępuje cudzej drogi u przekaźnika. <a href="../../firmware/src/wici_hop.cpp">Przekazywanie</a> może zamienić ramkę rozsyłaną na jednoadresową. <a href="../../firmware/src/config.cpp">Konfiguracja stacji</a> i <a href="../../software/laptop/wici/configdoc.py">walidacja</a> dopuszczają <code>behind</code> tylko u roota; dziś również root potrzebuje tej listy do nauki drogi.</dd></div>
             <div><dt>Luka</dt><dd><a href="system-wici-siec.html#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala naukę dróg u przekaźników bez planu, ochronę drogi do uwierzytelnionego sąsiada i zachowanie rozsyłania. Czy usunąć wymóg <code>behind</code> u roota, pozostaje do rozstrzygnięcia przy wdrożeniu; decyzja go nie określa.</dd></div>
+            <div><dt>Próba</dt><dd>14 listopada 2026 r., trzy skoki A → C → B → root: B nie znało drogi do A i każde RECEIVED dla A rozsyłało (16 rozesłań na 10 zgłoszeń). Przy 15 skokach każda ramka w dół za pierwszym przekaźnikiem stałaby się rozsyłaniem, dopóki nauka dróg u przekaźników nie zostanie wdrożona.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-037">
@@ -467,6 +468,20 @@
             <div><dt>Luka</dt><dd>Stanowisko ma wysłać krótką wiadomość od nowej tożsamości każdej zaufanej stacji, rozkładając nadania w czasie jak TEST po starcie (<a href="#wici-dec-014">decyzja o przełączeniu WICI-DEC-014</a>). Nie wymaga to nowego rodzaju wiadomości ani zmiany bajtów w eterze; nie jest warunkiem D21.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-061">
+          <h4>WICI-INV-061</h4>
+          <dl>
+            <div><dt>Stan</dt><dd>Wyniki prób przy stole z 14 listopada 2026 r. (prototypy <code>l0</code>, program z <code>8dd305f2</code>) są w raporcie <code>hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md</code> na gałęzi prób, jeszcze poza <code>main</code>. Przekaźnik odrzuca bez HACK około połowy pierwszych kopii DATA, gdy ruch płynie naraz w górę i w dół; program nie podaje licznika takich odrzuceń (zmiana w toku, PR 216). Kryteria próby „Wrogi węzeł” w <a href="odbior.md">planie odbioru</a> wymagają licznika odrzuceń po tagu pary, udziałów K1, K2 i BEACON w oknie godzinnym oraz liczby gniazd K1 na sąsiada; program ich nie wypisuje.</dd></div>
+            <div><dt>Luka</dt><dd>Rejestr zgodności wpisze wynik po scaleniu raportu. Każda wielkość w kryteriach prób ma wskazane źródło (polecenie i pole programu albo pomiar z podsłuchu); dziś wskazania brak.</dd></div>
+          </dl>
+        </article>
+        <article class="record" id="wici-inv-062">
+          <h4>WICI-INV-062</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Każda stacja ma klucz roota, żeby sprawdzać podpis epoki, więc uznaje słyszanego roota za kandydata dynamicznego. Root zna tylko sąsiadów ze swojego planu i takiej stacji nie potwierdza. Na stole stacja po trzech skokach bez HACK przechodziła na roota i wracała; w próbach 59–157 ramek zostało bez HACK. Poprawka w toku (PR 214): root jest rodzicem tylko z planu.</dd></div>
+            <div><dt>Luka</dt><dd>Reguła wyboru kandydata dynamicznego w <a href="system-wici-siec.html#trasy">rozdziale 6</a> nie wyklucza sąsiada, który stacji nie potwierdzi; rozstrzygnięcie czeka na decyzję właściciela.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
       <p><a href="system-wici-o-dokumencie.html#zatwierdzanie">Trzy stopnie</a> to szkic, zatwierdzenie do próby i stan normatywny. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
@@ -537,6 +552,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.52</td><td>Wyniki prób przy stole z 14 listopada 2026 r.: stan D21 w rozdziale 6 „częściowo”, wygasanie ramek tranzytowych w ciszy, każde ponowienie jako nowa koperta; WICI-INV-036 z wynikiem próby trzech skoków; nowe WICI-INV-061 (raport poza <code>main</code>, brak liczników kryteriów) i WICI-INV-062 (root jako kandydat dynamiczny).</td></tr>
           <tr><td>0.51</td><td>Rozdział 3: usunięto zdanie powtarzające samo siebie przy odsyłaczu do rozstrzygnięcia o gwarancjach.</td></tr>
           <tr><td>0.50</td><td>Zapisano WICI-DEC-016: podział nazw „stanowisko” i „odbiorca” w słowniku, klasach zgodności i rozdziale 2; strona odbierająca kopertę lub ramkę nie nazywa się już „odbiorcą”. Etap „w drodze” ma w rozdziale 3 uzasadnienie. Kopertę rodzaju 1 od stacji nazwano „pokwitowaniem” zamiast „dowodem doręczenia”. Założenia o protokołach mają w rozdziale 1 warunek próby przy stole. Przedmowa podaje zasadę jednego zachowania w wymaganiu; w rozdziale 3 rozdzielono anulowanie, ciszę radiową, komunikat ogólny, zmianę tożsamości odbiorcy i odtworzenie kopii (identyfikatory robocze z literą, razem 48 wymagań).</td></tr>
           <tr><td>0.49</td><td>Przegląd przed czytaniem właściciela. Rozdział 3: dane i stany wysyłki przed operacjami; zamknięcie zdarzenia także poleceniem USB potwierdzonym przyciskiem; anulowanie po pierwszej wysyłce opisane dla menu i USB; alarm TEST jako wymaganie funkcji z czasem z profilu; panel w wymaganiach jako „Stanowisko”; uczciwsze sprawdzenia (część testów sprawdza tylko fragment wymagania); poprawione uzasadnienia przełączenia tożsamości i ponowienia REPLY. Słownik: intencję kończy dowód adresata albo zamknięcie zdarzenia, decyzja człowieka tylko wstrzymuje wysyłkę; wyjątek od ciszy tylko z panelu przy ciszy operacyjnej. Zdania o stanie kodu w rozdziałach 4, 6 i 7 zastąpione odnośnikami do inwentaryzacji; WICI-INV-059 obejmuje próbę „Zaufanie” do dostosowania. Prostszy język w przedmowie, rozdziale 2 i słowniku.</td></tr>
@@ -588,7 +604,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.51 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.52 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

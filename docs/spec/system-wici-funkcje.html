@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.51</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.52</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.51</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.52</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -207,7 +207,7 @@
         <div class="req" id="r3-13b">
           <p class="req-head"><span class="req-id">R3-13b</span> roboczy · Stacja · reguła protokołu</p>
           <p class="req-text">W ciszy radiowej stacja MUSI dalej odbierać ramki, zapisywać zgłoszenia i utrzymywać kolejkę.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Zapis pozwala wysłać zaległą kolejkę po odwołaniu ciszy.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Zapis pozwala wysłać zaległą kolejkę po odwołaniu ciszy. Własne zgłoszenia stacji nie wygasają; ramki tranzytowe przekaźnika wygasają po czasie przechowania (<a href="system-wici-siec.html#kanal">rozdział 6</a>).</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Cisza radiowa” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="system-wici-siec.html#kanal">rozdział 6</a>.</p>
         </div>
         <div class="req" id="r3-14">
@@ -480,7 +480,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.51 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.52 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
