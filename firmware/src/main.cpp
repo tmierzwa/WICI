@@ -1884,14 +1884,20 @@ void handle(char* cmd) {
         }
         // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
         // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
-        char beacon[192] = "";
+        // Kolejka przekaźnika: odmowy DATA bez wolnego gniazda (bez HACK) w górę i w dół oraz zajęte gniazda.
+        char beacon[256] = "";
         const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
-        if (wiciShelter)
+        if (wiciShelter) {
+            const wici_hop::QueueStats& q = wiciShelter->queueStats();
             snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
-                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u",
+                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u,"
+                     "\"queue_full_up\":%lu,\"queue_full_down\":%lu,\"queue_pending\":%u",
                      static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
                      static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
-                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()));
+                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()),
+                     static_cast<unsigned long>(q.fullUp), static_cast<unsigned long>(q.fullDown),
+                     static_cast<unsigned>(wiciShelter->queuePending()));
+        }
         bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();

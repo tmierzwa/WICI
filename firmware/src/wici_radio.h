@@ -77,7 +77,9 @@ public:
     // Before the first receive(); clock (may be nullptr) times the checks.
     void useBeaconCheck(BeaconCheck* check, ClockFn clock) { beaconCheck_ = check; clock_ = clock; }
     const BeaconStats& beaconStats() const { return beaconStats_; }
-    void resetBeaconStats() { beaconStats_ = BeaconStats(); }
+    void resetBeaconStats() { beaconStats_ = BeaconStats(); relay_.resetQueueStats(); }
+    const wici_hop::QueueStats& queueStats() const { return relay_.queueStats(); }
+    uint8_t queuePending() const { return relay_.queuePending(); }
     // One own SA1 intent at a time. Its nonce and link sequences are reserved
     // durably before any frame is offered to the radio. Completion means that
     // every fragment received a next-hop HACK; SA1 confirmation is separate.

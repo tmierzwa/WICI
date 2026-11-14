@@ -41,6 +41,12 @@ bool Relay::begin() {
            sequence_.begin(config_.network, config_.own) && flood_.begin(config_.network);
 }
 
+uint8_t Relay::queuePending() const {
+    uint8_t n = 0;
+    for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) n += queue_.pending(slot);
+    return n;
+}
+
 bool Relay::ready() const {
     return keyReady_ && queue_.ready() && routes_.ready() && sequence_.ready() && flood_.ready();
 }
@@ -82,6 +88,7 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
     wici_relay::Admission stored = k1 ? queue_.admit(wire, length, nowS, frame.source, &slot, routedOnly) :
                                         wici_relay::Admission::FULL;
     if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot, routedOnly);
+    if (stored == wici_relay::Admission::FULL) ++((frame.flags & wici_link::DOWN) ? queueStats_.fullDown : queueStats_.fullUp);
     if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
         stored != wici_relay::Admission::FORWARDED)
         return Receipt::REJECTED;

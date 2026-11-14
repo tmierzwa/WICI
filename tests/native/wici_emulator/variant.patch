@@ -1,5 +1,5 @@
 diff --git a/firmware/src/wici_gateway.cpp b/firmware/src/wici_gateway.cpp
-index 3f214a0..d865939 100644
+index 3f214a08..d8659397 100644
 --- a/firmware/src/wici_gateway.cpp
 +++ b/firmware/src/wici_gateway.cpp
 @@ -176,7 +176,7 @@ Event Root::transmit(const uint8_t* wire, size_t length, const wici_link::Frame&
@@ -12,7 +12,7 @@ index 3f214a0..d865939 100644
      // A retry to the same next hop goes again unchanged, as on every hop
      // (rule 3): only the same bytes get the owed HACK there when the HACK was
 diff --git a/firmware/src/wici_gateway.h b/firmware/src/wici_gateway.h
-index 006691a..7ed9dbb 100644
+index 006691a5..7ed9dbb9 100644
 --- a/firmware/src/wici_gateway.h
 +++ b/firmware/src/wici_gateway.h
 @@ -48,6 +48,8 @@ public:
@@ -33,6 +33,7 @@ index 006691a..7ed9dbb 100644
  
  }  // namespace wici_gateway
 diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
+index 07a1e241..527cbc03 100644
 --- a/firmware/src/wici_hop.cpp
 +++ b/firmware/src/wici_hop.cpp
 @@ -2,6 +2,7 @@
@@ -43,7 +44,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
  
  namespace wici_hop {
  namespace {
-@@ -72,10 +73,28 @@
+@@ -78,10 +79,28 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
      // and the whole network would flood them. The current parent counts too
      // (also a dynamic one): without it a detour through a neighbouring chain
      // is lost.
@@ -75,9 +76,9 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
      // A neighbour that already holds its K1 slot competes for K2 space.
      uint8_t slot = wici_relay::SLOTS;
      const bool k1 = priority(frame);
-@@ -83,8 +102,10 @@
-                                         wici_relay::Admission::FULL;
+@@ -90,8 +109,10 @@ Receipt Relay::receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
      if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot, routedOnly);
+     if (stored == wici_relay::Admission::FULL) ++((frame.flags & wici_link::DOWN) ? queueStats_.fullDown : queueStats_.fullUp);
      if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
 -        stored != wici_relay::Admission::FORWARDED)
 +        stored != wici_relay::Admission::FORWARDED) {
@@ -87,7 +88,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
      const uint8_t bit = static_cast<uint8_t>(slot < wici_relay::SLOTS ? 1u << slot : 0);
      if (stored == wici_relay::Admission::STORED && !(frame.flags & wici_link::DOWN)) {
          // Its down-route hint is learned once, after the HACK (learnPending).
-@@ -120,7 +141,10 @@
+@@ -127,7 +148,10 @@ bool Relay::learnPending(uint32_t nowS) {
      while (learn_) {
          uint8_t slot = wici_relay::SLOTS;
          for (uint8_t i = 0; i < wici_relay::SLOTS; ++i)
@@ -99,7 +100,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
                  slot = i;
          learn_ &= static_cast<uint8_t>(~(1u << slot));
          size_t length = 0;
-@@ -194,7 +218,9 @@
+@@ -201,7 +225,9 @@ bool Relay::prepare(uint32_t nowS) {
          downTo_ = frame.flags & wici_link::DOWN ? get16(frame.payload + 3) : 0;
          nextSlot_ = static_cast<uint8_t>((slot + 1) % wici_relay::SLOTS);
          noAck_ = next == wici_link::BROADCAST || !(frame.flags & wici_link::ACKREQ);
@@ -110,7 +111,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
          outgoingLength_ = n;
          sent_ = false; active_ = true;
          return true;
-@@ -210,10 +236,12 @@
+@@ -217,10 +243,12 @@ const uint8_t* Relay::outgoing(size_t& length) const {
  uint16_t Relay::nextHop(uint8_t slot, const uint8_t* wire, uint32_t nowS) const {
      // Stored items were authenticated at admission: the header and the
      // envelope recipient are read from the bytes without a second MAC check.
@@ -125,7 +126,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
      // A frame admitted only for its route waits when the route goes (three
      // failed rounds forget it): for a route back or the 30-min expiry.
      if (next == wici_link::BROADCAST) return allowFlood_ && !queue_.routedOnly(slot) ? next : 0;
-@@ -232,6 +260,16 @@
+@@ -239,6 +267,16 @@ bool Relay::fromParent(uint16_t neighbor) const {
      return neighbor == config_.planned || neighbor == config_.backup || neighbor == routes_.parent();
  }
  
@@ -142,7 +143,7 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
  bool Relay::contendedK2(uint32_t nowS) const {
      if (!active_ || activePriority_) return false;
      for (uint8_t slot = 0; slot < wici_relay::SLOTS; ++slot) {
-@@ -298,6 +336,7 @@
+@@ -305,6 +343,7 @@ bool Relay::timeout(uint32_t nowS) {
          return true;
      }
      active_ = false;  // No HACK: keep the durable queue item for another route.
@@ -151,9 +152,10 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
      failedRound(next_, nowS);
      // A relay learns no route over a working one (Table::learn), so a station
 diff --git a/firmware/src/wici_hop.h b/firmware/src/wici_hop.h
+index fc398ada..476d484a 100644
 --- a/firmware/src/wici_hop.h
 +++ b/firmware/src/wici_hop.h
-@@ -74,6 +74,8 @@
+@@ -84,6 +84,8 @@ public:
      // cannot go at all: counting either kept K2, floods included, at the 25%
      // cap until the K1 frame expired, and the relay went silent.
      bool contendedK2(uint32_t nowS) const;
@@ -163,10 +165,10 @@ diff --git a/firmware/src/wici_hop.h b/firmware/src/wici_hop.h
      // exception) is retired after a successful TX; unicast waits for a
      // matching authenticated HACK. After a failed TX the item stays queued.
 diff --git a/firmware/src/wici_radio.h b/firmware/src/wici_radio.h
-index f8b223f..3b10ce7 100644
+index e944a788..a845dda1 100644
 --- a/firmware/src/wici_radio.h
 +++ b/firmware/src/wici_radio.h
-@@ -97,6 +97,7 @@ public:
+@@ -99,6 +99,7 @@ public:
      // Delivery proofs lost to a full list; the receiver resends those messages.
      uint16_t proofsDropped() const { return proofsDropped_; }
      wici_route::Table& routes() { return relay_.routes(); }
@@ -175,7 +177,7 @@ index f8b223f..3b10ce7 100644
  private:
      uint32_t backoff() const;
 diff --git a/firmware/src/wici_route.cpp b/firmware/src/wici_route.cpp
-index a0ec850..7daf692 100644
+index a0ec8506..7daf6920 100644
 --- a/firmware/src/wici_route.cpp
 +++ b/firmware/src/wici_route.cpp
 @@ -2,6 +2,7 @@
@@ -236,7 +238,7 @@ index a0ec850..7daf692 100644
      // The planned and backup parents need no BEACON; a fresh one that names
      // this station as its parent excludes them (a loop) until it goes stale.
 diff --git a/firmware/src/wici_route.h b/firmware/src/wici_route.h
-index faaf705..fc0b7ca 100644
+index faaf7052..fc0b7cac 100644
 --- a/firmware/src/wici_route.h
 +++ b/firmware/src/wici_route.h
 @@ -89,6 +89,9 @@ public:
@@ -261,7 +263,7 @@ index faaf705..fc0b7ca 100644
  }  // namespace wici_route
 diff --git a/firmware/src/wici_variant.cpp b/firmware/src/wici_variant.cpp
 new file mode 100644
-index 0000000..49395e9
+index 00000000..49395e90
 --- /dev/null
 +++ b/firmware/src/wici_variant.cpp
 @@ -0,0 +1,6 @@
@@ -273,7 +275,7 @@ index 0000000..49395e9
 +}  // namespace wici_variant
 diff --git a/firmware/src/wici_variant.h b/firmware/src/wici_variant.h
 new file mode 100644
-index 0000000..6606a59
+index 00000000..35e48c6b
 --- /dev/null
 +++ b/firmware/src/wici_variant.h
 @@ -0,0 +1,22 @@
