@@ -26,6 +26,13 @@ constexpr uint32_t HOLD_MAX_S = 300;
 // (wici_route::Table::learn): 3 downward attempts without HACK forget it.
 // Configuration gives `behind` only to the root, so a station relay learns
 // routes only to its neighbours; any other station is reached by flooding.
+// DATA refused because the queue had no slot for it (no HACK; the sender
+// retries), by direction, since start or the last reset. Trials 2026-11-14
+// could infer these only from code and sniffer.
+struct QueueStats {
+    uint32_t fullUp = 0, fullDown = 0;
+};
+
 class Relay {
 public:
     // Flooding requires SA1 retries independent of local TX success (a flood
@@ -42,6 +49,9 @@ public:
     bool ready() const;
     // Damaged non-security records (seen and flood rings) cleared by begin().
     uint16_t clearedRecords() const { return queue_.clearedRecords() + flood_.cleared(); }
+    const QueueStats& queueStats() const { return queueStats_; }
+    void resetQueueStats() { queueStats_ = QueueStats(); }
+    uint8_t queuePending() const;  // occupied queue slots now
     // HACK_READY only after the incoming frame is durably held or was already
     // forwarded. `hack` is a complete radio frame; the caller applies silence.
     Receipt receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
@@ -95,6 +105,7 @@ public:
     wici_route::Table& routes() { return routes_; }
 
 private:
+    QueueStats queueStats_;
     // The last transfer prepared for one queue item (RAM only). `generation`
     // binds it to that item; `late` keeps an attempt that was on air before
     // the item was prepared again for another next hop.

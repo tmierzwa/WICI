@@ -75,9 +75,10 @@ diff --git a/firmware/src/wici_hop.cpp b/firmware/src/wici_hop.cpp
      // A neighbour that already holds its K1 slot competes for K2 space.
      uint8_t slot = wici_relay::SLOTS;
      const bool k1 = priority(frame);
-@@ -83,8 +102,10 @@
+@@ -83,9 +102,11 @@
                                          wici_relay::Admission::FULL;
      if (stored == wici_relay::Admission::FULL) stored = queue_.admit(wire, length, nowS, 0, &slot, routedOnly);
+     if (stored == wici_relay::Admission::FULL) ++((frame.flags & wici_link::DOWN) ? queueStats_.fullDown : queueStats_.fullUp);
      if (stored != wici_relay::Admission::STORED && stored != wici_relay::Admission::DUPLICATE &&
 -        stored != wici_relay::Admission::FORWARDED)
 +        stored != wici_relay::Admission::FORWARDED) {
