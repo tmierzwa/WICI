@@ -239,8 +239,12 @@ private:
     void act(Button button, uint32_t nowMs);
     void moveCursor(int delta, size_t count, size_t window);
     void renderMain(const Status& status, char out[][LINE_BYTES], size_t count) const;
+    // Lista dłuższa niż okno: ▲ w ostatniej kolumnie górnego wiersza, gdy coś jest wyżej, ▼ w dolnym, gdy niżej.
     void renderList(const char* const* items, size_t count, size_t window, Lines& out, size_t first, bool mark);
+    // Tekst dłuższy niż okno łamie się na COLS - 1 znaków (drugi przebieg renderScreen), żeby strzałki nie
+    // zasłaniały treści; tekst, który się mieści, zostaje przy COLS.
     void renderText(Text& text, size_t window, Lines& out, size_t first);
+    void renderScreen(const Status& status, Lines& out, size_t first, size_t window, size_t cols);
     // Fraza po polsku (z SA1) w wybranym języku: lista fraz stacji, potem frazy domyślne, inaczej bez zmian.
     const char* shownPhrase(const char* polish) const;
     int8_t phraseIndex(const char* polish) const;   // indeks na liście fraz stacji albo PHRASE_*
@@ -273,6 +277,7 @@ private:
     uint16_t cursor_ = 0;
     uint16_t top_ = 0;
     uint16_t lastCount_ = 0;      // liczba wierszy ostatnio pokazanej listy albo tekstu
+    bool textOverflow_ = false;   // renderText: tekst łamany na COLS nie zmieścił się w oknie
     uint8_t item_ = 0;            // pozycja menu, z której wybrano ekran
     uint32_t lastPressMs_ = 0;
     bool changed_ = false;
@@ -318,8 +323,8 @@ private:
 };
 
 // Pomocnicze (sprawdzane osobno).
-// Łamanie tekstu na wiersze po najwyżej COLS znaków, na spacjach; zwraca liczbę wierszy.
-size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines);
+// Łamanie tekstu na wiersze po najwyżej `cols` znaków, na spacjach; zwraca liczbę wierszy.
+size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines, size_t cols = COLS);
 // [czas]: minuty do 99 MIN, potem godziny (H), od 48 H doby (D, do 99 D), jednostki języka.
 void duration(uint32_t seconds, Lang lang, char* out, size_t size);
 // Napięcie z jednym miejscem po przecinku (kropka w EN).

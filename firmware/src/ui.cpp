@@ -120,16 +120,19 @@ void formatShort(char* out, size_t size, uint16_t number) { snprintf(out, size, 
 
 }  // namespace
 
-// Wiersze tekstu do przewijania: łamane teksty i pojedyncze wiersze.
+// Wiersze tekstu do przewijania: łamane teksty i pojedyncze wiersze. cols = COLS - 1 w drugim przebiegu
+// renderScreen (tekst dłuższy niż okno): ostatnia kolumna zostaje na strzałki, więc dłuższy wiersz też się łamie.
 struct Model::Text {
     char line[TEXT_MAX_LINES][LINE_BYTES];
     size_t count = 0;
+    size_t cols = COLS;
     void add(const char* text) {
         if (count >= TEXT_MAX_LINES) return;
-        count += wrap(text, line + count, TEXT_MAX_LINES - count);
+        count += wrap(text, line + count, TEXT_MAX_LINES - count, cols);
     }
     void addLine(const char* text) {
-        if (count < TEXT_MAX_LINES) copyLine(line[count++], LINE_BYTES, text);
+        if (utf8Chars(text) > cols) add(text);
+        else if (count < TEXT_MAX_LINES) copyLine(line[count++], LINE_BYTES, text);
     }
     void addNumber(Id id, const char* key, uint32_t value, Lang lang) {
         char tmp[320];
@@ -194,6 +197,19 @@ void copyLine(char* out, size_t size, const char* text) {
     out[bytes] = '\0';
 }
 
+// Strzałka przewijania w ostatniej kolumnie wiersza: treść ucięta do COLS - 1 znaków i dopełniona spacjami.
+constexpr const char* ARROW_UP = "\u25B2";    // ▲
+constexpr const char* ARROW_DOWN = "\u25BC";  // ▼
+void arrow(char* line, const char* glyph) {
+    size_t bytes = utf8Bytes(line, COLS - 1);
+    size_t chars = utf8Chars(line);
+    if (chars > COLS - 1) chars = COLS - 1;
+    for (; chars < COLS - 1; ++chars) line[bytes++] = ' ';
+    const size_t n = strlen(glyph);
+    memcpy(line + bytes, glyph, n);
+    line[bytes + n] = '\0';
+}
+
 void substitute(const char* text, const char* key, const char* value, char* out, size_t size) {
     const char* at = strstr(text, key);
     if (!at) {
@@ -218,13 +234,13 @@ void voltage(uint16_t millivolts, Lang lang, char* out, size_t size) {
     snprintf(out, size, "%u%c%u", tenths / 10, ui_texts::DECIMAL[static_cast<size_t>(lang)], tenths % 10);
 }
 
-size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
+size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines, size_t cols) {
     size_t lines = 0;
     const char* p = text;
     while (*p && lines < maxLines) {
         while (*p == ' ') ++p;
         if (!*p) break;
-        // Najdłuższy przedrostek do COLS znaków kończący się przed spacją albo na końcu tekstu.
+        // Najdłuższy przedrostek do cols znaków kończący się przed spacją albo na końcu tekstu.
         size_t bestBytes = 0;
         size_t chars = 0;
         size_t bytes = 0;
@@ -232,12 +248,12 @@ size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
         while (p[bytes]) {
             if (p[bytes] == ' ') bestBytes = bytes;
             const size_t width = utf8Bytes(p + bytes, 1);
-            if (chars == COLS) { fits = false; break; }
+            if (chars == cols) { fits = false; break; }
             bytes += width;
             ++chars;
         }
         if (fits) bestBytes = bytes;  // reszta tekstu mieści się w wierszu
-        if (bestBytes == 0) bestBytes = utf8Bytes(p, COLS);  // słowo dłuższe niż wiersz: podział twardy
+        if (bestBytes == 0) bestBytes = utf8Bytes(p, cols);  // słowo dłuższe niż wiersz: podział twardy
         memcpy(out[lines], p, bestBytes);
         out[lines][bestBytes] = '\0';
         ++lines;
@@ -993,7 +1009,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
         duration(s.contactS, lang_, value, sizeof(value));
         substitute(text(s.contactKnown ? Id::OSTATNI_KONTAKT : Id::OSTATNI_KONTAKT_PONAD, lang_), "[czas]", value, tmp, sizeof(tmp));
         char lines[4][LINE_BYTES];
-        const size_t wrapped = wrap(tmp, lines, 4);
+        const size_t wrapped = wrap(tmp, lines, 4, COLS - 1);   // STAN jest zawsze dłuższy niż okno: strzałki
         for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
     if (s.mains12) {
@@ -1013,7 +1029,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     const char* const prepLines[] = {entries, change};
     for (const char* line : prepLines) {
         char lines[3][LINE_BYTES];
-        const size_t wrapped = line[0] ? wrap(line, lines, 3) : 0;
+        const size_t wrapped = line[0] ? wrap(line, lines, 3, COLS - 1) : 0;
         for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
     put(s.version);
@@ -1039,19 +1055,15 @@ void Model::renderList(const char* const* items, size_t count, size_t window, Li
         copyLine(out.text[first + i], LINE_BYTES, index < count ? items[index] : "");
         out.inverted[first + i] = mark && index == cursor_;
     }
+    if (window && top > 0) arrow(out.text[first], ARROW_UP);
+    if (window && top + window < count) arrow(out.text[first + window - 1], ARROW_DOWN);
 }
 
 void Model::renderText(Text& text, size_t window, Lines& out, size_t first) {
+    if (text.cols == COLS && text.count > window) textOverflow_ = true;   // render() łamie go jeszcze raz
     const char* items[TEXT_MAX_LINES];
     for (size_t i = 0; i < text.count; ++i) items[i] = text.line[i];
-    const bool continued = (screen_ == Screen::SUMMARY || screen_ == Screen::ITEM) && text.count > window;
-    renderList(items, text.count, continued ? window - 1 : window, out, first, false);
-    if (continued) {
-        const bool more = top_ + window - 1 < text.count;
-        const char* next[] = {"DÓŁ: DALSZA TREŚĆ", "ВНИЗ: ДАЛІ", "DOWN: MORE TEXT"};
-        const char* previous[] = {"GÓRA: WCZEŚNIEJ", "ВГОРУ: НАЗАД", "UP: PREVIOUS TEXT"};
-        copyLine(out.text[first + window - 1], LINE_BYTES, (more ? next : previous)[static_cast<size_t>(lang_)]);
-    }
+    renderList(items, text.count, window, out, first, false);
 }
 
 bool Model::openItem(Item& item) {
@@ -1270,10 +1282,23 @@ void Model::render(const Status& s, Lines& out) {
         out.inverted[first++] = true;
     }
     const size_t window = LINES - first;
-    const size_t L = static_cast<size_t>(lang_);
     lastStatus_ = s;
+    // Tekst dłuższy niż okno: drugi przebieg z wierszami COLS - 1 (strzałki w ostatniej kolumnie), od tego
+    // samego przewinięcia, bo pierwszy przebieg docina je do krótszego tekstu.
+    const uint16_t top = top_;
+    textOverflow_ = false;
+    renderScreen(s, out, first, window, COLS);
+    if (!textOverflow_) return;
+    for (size_t i = first; i < LINES; ++i) { out.text[i][0] = '\0'; out.inverted[i] = false; }
+    top_ = top;
+    renderScreen(s, out, first, window, COLS - 1);
+}
+
+void Model::renderScreen(const Status& s, Lines& out, size_t first, size_t window, size_t cols) {
+    const size_t L = static_cast<size_t>(lang_);
     char tmp[320];
     Text t;
+    t.cols = cols;
     switch (screen_) {
         case Screen::LANGUAGE:
         case Screen::LANGUAGE_MENU:

@@ -471,7 +471,7 @@ Ekran pokazuje u góry koniec wpisanego tekstu z kursorem `_` (przy pustym tekś
 
 ### Teksty ekranu
 
-Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cytują teksty tylko z niej, a T1 sprawdza zgodność. Ekran łamie tekst na wiersze ≤20 znaków; tekst dłuższy niż 5 wierszy dzieli się na kolejne ekrany (do sprawdzenia w T1). [x], [n], [m], [mm], [czas] i [xxxx] to wartości wstawiane przez stację. W tekście ciągłym dokumentów dopuszczalne są małe litery w cudzysłowie. Słowo „OKOŁO” pisze się w całości, bo „OK.” myliłoby się z przyciskiem. Kolumny UK i EN są tłumaczeniem roboczym: przed T1 sprawdza je osoba, dla której ukraiński lub angielski jest językiem ojczystym, a T8 z osobą ukraińskojęzyczną; zmiana brzmienia nie może wydłużyć krótkich form ponad 20 znaków. Jednostki `[czas]`: MIN / H / D po polsku i angielsku, ХВ / ГОД / Д po ukraińsku. Napięcie w wersji EN ma kropkę dziesiętną. „ПРИБЛИЗНО” i „ABOUT” pisze się w całości jak „OKOŁO”. Karta obsługi ([karta](../obsluga/karta-stacji.html)) cytuje teksty z tej tabeli.
+Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cytują teksty tylko z niej, a T1 sprawdza zgodność. Ekran łamie tekst na wiersze ≤20 znaków. Tekst dłuższy niż ekran łamie się na wiersze ≤19 znaków i przewija przyciskami GÓRA i DÓŁ; ostatnia kolumna górnego wiersza pokazuje ▲, gdy wyżej jest dalsza treść, a dolnego ▼, gdy niżej. Tak samo lista dłuższa niż ekran (menu, STAN, kategorie, frazy, wiadomości). Tekst, który mieści się na ekranie, nie ma strzałek (do sprawdzenia w T1). [x], [n], [m], [mm], [czas] i [xxxx] to wartości wstawiane przez stację. W tekście ciągłym dokumentów dopuszczalne są małe litery w cudzysłowie. Słowo „OKOŁO” pisze się w całości, bo „OK.” myliłoby się z przyciskiem. Kolumny UK i EN są tłumaczeniem roboczym: przed T1 sprawdza je osoba, dla której ukraiński lub angielski jest językiem ojczystym, a T8 z osobą ukraińskojęzyczną; zmiana brzmienia nie może wydłużyć krótkich form ponad 20 znaków. Jednostki `[czas]`: MIN / H / D po polsku i angielsku, ХВ / ГОД / Д po ukraińsku. Napięcie w wersji EN ma kropkę dziesiętną. „ПРИБЛИЗНО” i „ABOUT” pisze się w całości jak „OKOŁO”. Karta obsługi ([karta](../obsluga/karta-stacji.html)) cytuje teksty z tej tabeli.
 
 | ID | Ekran PL | Ekran UK | Ekran EN | Znaczenie |
 |---|---|---|---|---|
@@ -558,7 +558,7 @@ Jedyna kanoniczna lista tekstów stacji i strony mieszkańca; inne dokumenty cyt
 | `pytanie_przenies` | PRZENIEŚ STACJĘ DO [xxxx]? PORÓWNAJ ODCISK NA CELU. OK = TAK | ПЕРЕНЕСТИ СТАНЦІЮ ДО [xxxx]? ЗВІРТЕ ВІДБИТОК. OK = ТАК | MOVE STATION TO [xxxx]? COMPARE TARGET FINGERPRINT. OK = YES | fizyczne potwierdzenie eksportu |
 | `pytanie_anuluj_przenies` | USUNĄĆ ODEBRANĄ STACJĘ? OK = TAK | ВИДАЛИТИ ОТРИМАНУ СТАНЦІЮ? OK = ТАК | ERASE IMPORTED STATION? OK = YES | fizyczne potwierdzenie wycofania importu |
 
-Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. Krótkie formy ekranu głównego, pozycje menu i etykiety kategorii mają ≤20 znaków po wstawieniu największych wartości w każdym języku; T1 sprawdza to dla PL, UK i EN.
+Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. Krótkie formy ekranu głównego mają ≤20 znaków, a pozycje menu, etykiety i kategorie ≤19 znaków (ostatnia kolumna listy należy do strzałki przewijania) po wstawieniu największych wartości w każdym języku; T1 sprawdza to dla PL, UK i EN.
 
 | PL | UK | EN |
 |---|---|---|
@@ -578,7 +578,7 @@ Pozycje menu, nazwy przycisków i etykiety kategorii są częścią tej listy. K
 | ZAMKNIJ ZDARZENIE | ЗАКРИТИ ПОДІЮ | CLOSE EVENT |
 | ZNISZCZ DANE | ЗНИЩИТИ ДАНІ | DESTROY DATA |
 | ZMIEŃ LICZBĘ OSÓB | КІЛЬКІСТЬ ЛЮДЕЙ | CHANGE PEOPLE COUNT |
-| ZMIEŃ PILNOŚĆ | ЗМІНИТИ ТЕРМІНОВІСТЬ | CHANGE URGENCY |
+| ZMIEŃ PILNOŚĆ | ЗМІНА ТЕРМІНОВОСТІ | CHANGE URGENCY |
 | POTRZEBA USTAŁA | ПОТРЕБА ЗНИКЛА | NEED RESOLVED |
 | ANULUJ WYSYŁKĘ | СКАСУВАТИ ВІДПРАВКУ | CANCEL SENDING |
 | INNA LICZBA (liczba osób) | ІНША КІЛЬКІСТЬ | OTHER NUMBER |
@@ -591,14 +591,14 @@ Etykiety kategorii na ekranie, obok piktogramu (pełny opis kategorii: [wiadomo�
 | Kategoria | PL | UK | EN |
 |---|---|---|---|
 | 0 | POMOC MEDYCZNA | МЕДИЧНА ДОПОМОГА | MEDICAL HELP |
-| 1 | LEKI I SPRZĘT MED. | ЛІКИ, МЕДОБЛАДНАННЯ | MEDICINES, EQUIPMENT |
-| 2 | EWAKUACJA, TRANSPORT | ЕВАКУАЦІЯ, ТРАНСПОРТ | EVACUATION/TRANSPORT |
+| 1 | LEKI I SPRZĘT MED. | ЛІКИ, МЕДОБЛАДНАННЯ | MEDICINE, EQUIPMENT |
+| 2 | EWAKUACJA/TRANSPORT | ЕВАКУАЦІЯ/ТРАНСПОРТ | EVACUATE/TRANSPORT |
 | 3 | WODA PITNA | ПИТНА ВОДА | DRINKING WATER |
 | 4 | ŻYWNOŚĆ | ХАРЧУВАННЯ | FOOD |
 | 5 | OGRZEWANIE, ENERGIA | ОПАЛЕННЯ, ЕНЕРГІЯ | HEATING, POWER |
 | 6 | SANITARNE, HIGIENA | САНІТАРІЯ, ГІГІЄНА | SANITATION, HYGIENE |
 | 7 | ZAGROŻENIE BUDYNKU | ЗАГРОЗА БУДІВЛІ | BUILDING HAZARD |
-| 8 | POSZUKIWANIE, INFO | ПОШУК ЛЮДЕЙ, ІНФО | MISSING PEOPLE, INFO |
+| 8 | POSZUKIWANIE, INFO | ПОШУК ЛЮДЕЙ, ІНФО | MISSING PEOPLE/INFO |
 | 9 | INNE | ІНШЕ | OTHER |
 
 Grupy znaków wpisu tekstu, po pozycjach GOTOWE i SPACJA. Ekran pokazuje grupę ze spacjami między znakami. Grupy PL obejmują też Q, V i X (wyrazy obce, nazwy), grupy UK apostrof.

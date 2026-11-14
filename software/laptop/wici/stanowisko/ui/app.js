@@ -2,7 +2,7 @@
 // Panel dyżurnego stanowiska odbiorczego (wici/stanowisko/panel.py). Bez bibliotek; treść tylko przez textContent.
 "use strict";
 
-var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT", "WODA PITNA", "ŻYWNOŚĆ",
+var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA/TRANSPORT", "WODA PITNA", "ŻYWNOŚĆ",
   "OGRZEWANIE, ENERGIA", "SANITARNE, HIGIENA", "ZAGROŻENIE BUDYNKU", "POSZUKIWANIE, INFO", "INNE"];
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var URGENCY_PILL = ["", "pill-warn", "pill-alarm pill-solid"];
