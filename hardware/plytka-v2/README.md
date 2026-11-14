@@ -1,18 +1,22 @@
 # WICI: płytka v2, schemat wstępny
 
-**Status 2026-10-31: schemat i rozmieszczenie wstępne, bez ścieżek. Nie zamawiać.** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Ścieżki czekają na przymiarkę, wyniki pomiarów i krok 4 (sekcja [Przed ścieżkami i zamówieniem](#przed-ścieżkami-i-zamówieniem)).
+**Status 2026-11-11: komplet ścieżek z czystym DRC po trzech niezależnych przeglądach ([Ścieżki](#ścieżki-2026-11-10)), pliki produkcyjne po końcowym przeglądzie i sprawdzeniu podglądu JLC ([Części w JLC i pliki produkcyjne](#części-w-jlc-i-pliki-produkcyjne-2026-11-10)). Zamówienie dwóch prototypów czeka na pomiar przetwornicy 3,3 V ([Przed zamówieniem](#przed-zamówieniem)); przymiarka z prawdziwą skrzynką odbędzie się po zamówieniu prototypów, z ryzykiem poprawki rozmieszczenia w następnej wersji. Pierwsze uruchomienie: [uruchomienie.md](uruchomienie.md).** Schemat zbiera w jednym projekcie KiCad płytkę v1.1 prototypu i tor zasilania stacji pilotażowej ([elektronika](../../docs/spec/elektronika.md#stacja-pilotażowa)). Wartości elementów pochodzą z [projektu zasilania](../r02/zasilanie.md) i z [płytki testowej przetwornicy](../przetwornica-3v3/README.md). Obrys i rozmieszczenie są wstępne. Obrys, otwory i złącza na dolnej krawędzi są dopasowane do modelu STEP obudowy Hammond 1599KBAT ([Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)). Przymiarka, pomiary na prototypach i krok 4 mogą jeszcze zmienić rozmieszczenie w następnej wersji ([Przed zamówieniem](#przed-zamówieniem)).
 
 | Plik | Zawartość |
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
+| [uruchomienie.md](uruchomienie.md) | pierwsze uruchomienie zmontowanego prototypu krok po kroku, z warunkami przerwania |
 | [bom.csv](bom.csv) | lista części z producentami, numerami i numerami LCSC, tam gdzie są już wybrane |
-| `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb` | projekt KiCad 10.0.6: schemat i płytka z rozmieszczeniem wstępnym, bez ścieżek |
-| `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC rozmieszczenia (tylko uwagi o sitodruku i niepołączone pady) |
+| `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb`, `cad/plytka-v2.kicad_dru` | projekt KiCad 10.0.6: schemat, płytka 4-warstwowa ze ścieżkami i reguły projektu |
+| `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC (0 naruszeń poza sitodrukiem, 0 niepołączonych; [Ścieżki](#ścieżki-2026-11-10)) |
+| `checks/routing*.dsn`, `checks/routing*.ses`, `checks/routing*.ses.sha256`, `checks/routing*.log`, `checks/routing-anchors.json` | dla każdego etapu routera: zadanie dla Freeroutingu, zachowana sesja ścieżek, suma zadania, z którego powstała, i dziennik przebiegu; lista punktów, w których router może dołączyć do miedzi ręcznej |
+| [render-sciezki-gora.png](render-sciezki-gora.png), [render-sciezki-spod.png](render-sciezki-spod.png) | render płytki ze ścieżkami od góry i od spodu |
 | `tools/design.py` | jedyne źródło: części, piny, sieci i sprawdzenia przydziału pinów |
 | `tools/make_pcb.py` | obrys, otwory i rozmieszczenie: założenia, położenia stałe i obszary bloków |
+| `tools/route_pcb.py`, `tools/route.sh` | klasy sieci, reguły, warstwy, miedź ręczna i płaszczyzny, zadania dla routera; uruchomienie Freeroutingu etapami |
 
-Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC, rysuje PDF, rozmieszcza elementy na płytce i uruchamia DRC. Plików w `cad/` nie edytuje się ręcznie.
+Odtworzenie: `hardware/plytka-v2/tools/build.sh` (KiCad 10.0.6). Skrypt sprawdza przydział pinów, generuje schemat, BOM i listę połączeń, uruchamia ERC, rysuje PDF, rozmieszcza elementy na płytce, dokłada miedź ręczną, wczytuje zachowaną sesję ścieżek (gdy pasuje do zadania) i uruchamia DRC. Plików w `cad/` nie edytuje się ręcznie.
 
 ## Co zmienia się względem v1.1
 
@@ -59,12 +63,13 @@ Wszystkie inne piny DevKitC są zajęte, dlatego użyto pinów konfiguracji star
 
 ## Rozmieszczenie wstępne
 
-Płytka ma obrys i rozmieszczenie wszystkich 164 elementów, bez ścieżek. Służy do sprawdzenia, czy całość mieści się w obudowie, i do renderu, a nie do zamówienia. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
+Płytka ma obrys i rozmieszczenie wszystkich 164 elementów (ścieżki opisuje [Ścieżki](#ścieżki-2026-11-10)). Zamówienie dopiero po przeglądzie ścieżek i przymiarce obudowy. `make_pcb.py` ustawia elementy panelu i złącza na sztywno, a małe elementy każdego bloku układa automatycznie w jego obszarze, każdy najbliżej poprzedniego. Zatrzymuje się, gdy coś nachodzi na inny element, na strefę albo na krawędź, i gdy element ochronny lub odsprzęgający leży za daleko od swojego układu (sprawdzenia `CLOSE`, odległość pad–pad):
 - ESD U8 ≤10 mm od USB-C J4, ESD U9 ≤10 mm od J10, TVS D4 ≤10 mm od J2 (zasada z [obudowy R02](../r02/obudowa.md#płyta-bazowa-obrys-i-ograniczenia));
-- kondensatory wejściowe i wyjściowe przetwornicy ≤5–6 mm od U7;
+- przetwornica U7 jest stałą grupą według rysunku 17 karty LTC3115-1, wzorowaną na płytce testowej, z różnicami opisanymi w [miedzi ręcznej](#miedź-ręczna-przed-routerem) (`CONVERTER` w `make_pcb.py`); kondensatory C44–C47 ≤5–6 mm od U7, C40–C43 ≤7,5–11,5 mm;
+- C30 i C31 ≤4 mm od U5, C38 ≤5 mm od Q2, C39 ≤6 mm od U5;
 - C1 i C2 ≤8 mm od gniazda Wio, C36 ≤5 mm od U6, C11 ≤5 mm od U4.
 
-Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. DRC zgłasza tylko uwagi o sitodruku i niepołączone pady, bo ścieżek jeszcze nie ma. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1) i piny 4 i 5 U3, których schemat nie używa.
+Każdy element jest powiązany ze swoim symbolem w schemacie (ścieżka z tego samego UUID co w `make_schematic.py`), więc KiCad widzi płytkę i schemat jako jeden projekt. Wynik jest powtarzalny: dwa przebiegi dają ten sam plik. Bez sieci są celowo: pad termiczny U5 (karta LM74800, tabela 6-1) i piny 4 i 5 U3, których schemat nie używa.
 
 Nazwy stron obudowy są jak u Hammonda: **skrzynka** („Box”) ma front ze wgłębieniem na folię panelu, a **pokrywa** („Lid”) to tył z klapką ogniw, przykręcany do skrzynki od tyłu. Współrzędne obudowy liczy się od zewnętrznego lewego górnego narożnika frontu, patrząc od frontu. Założenia (liczby z modelu STEP Hammonda, do potwierdzenia na przymiarce):
 
@@ -132,7 +137,7 @@ Płytkę z rozmieszczeniem wstępnym porównano z modelem STEP i rysunkiem Hammo
 - dioda D1 osadzona kołnierzem na płytce, pod otworem Ø5,5 mm we froncie;
 - elementy na miejscach słupków (U1 i R20, D11 i R44, D5, D15 i Q4) i J3 przy H6 przesunięto, a pady SMD odsunięto od padów THT na ≥2,5 mm (wcześniej siedem par bliżej, np. R64 przy J8, C33 przy J5, D4 i U5 przy F1). Bloki układa skrypt jak dotąd, a wszystkie sprawdzenia odległości (`CLOSE`) i strefy panelu zostały;
 - strefa koszyka według klapki z modelu;
-- język pod USB-C, otwór w ścianie na osłonę wtyku i wycięcie pod EN3; J2 przeniesiono z x 100 na prawo od wycięcia (x 116), a TVS D4 leży przy nim.
+- język pod USB-C, otwór w ścianie na osłonę wtyku i wycięcie pod EN3; J2 przeniesiono z x 100 na prawo od wycięcia (x 116), a TVS D4 leży przy nim (od 2026-11-10 J2, F1 i D4 są po lewej stronie wycięcia, [Ścieżki](#ścieżki-2026-11-10)).
 
 Sprawdzenie: płytkę z `kicad-cli pcb export step` złożono z modelem obudowy razem z bryłami zastępczymi koszyka, EN3, SMA, PV6 (nakrętka, gwint, wyprowadzenia i przewody), osłony wtyku USB-C, tulejek, łbów wkrętów, wkrętaka, wtyczek z przewodami na J1–J3 i diody D1 według karty. Kolizji nie ma. Sam obrys płytki sprawdzono osobną bryłą (z otworami), a próba kontrolna z wydłużonym językiem wykrywa kolizję ze ścianą. Elementy bez modelu 3D sprawdzono bryłami o przyjętej wysokości: przyciski B3F 7,3 mm, USB-C 3,26 mm, F1 10 mm, moduły w gniazdach. SW5 nie ma bryły, więc jego wysokości nie sprawdzono.
 
@@ -236,12 +241,396 @@ Numery LCSC są w kolumnie „LCSC” w [bom.csv](bom.csv); stany sprawdzone 202
 - **R32 zostaje 1 kΩ.** Przy wyłączaniu C32 dokłada przez R32 najwyżej 14,5 mA (napęd HGATE do 14,5 V) do prądu, który musi ściągnąć HGATE, a źródło HGATE 39–75 µA daje na nim tylko 75 mV. Karta LM7480 (7.5) podaje ściąganie HGATE ≥168 mA tylko przy przepięciu (OV); dla wyłączenia przez EN/UVLO nie podaje prądu. Płytka TI LM74800EVM-CD ma 100 Ω z 10 nF, ale u nas 100 Ω pozwoliłoby C32 dokładać do 145 mA.
 - **Bez zmian:** SI2309CDS, BSS84AK, BAS116H, BZT52C15/C33/C5V1 (Diodes Incorporated), USBLC6-2SC6 i gniazdo HRO TYPE-C-31-M-12 są w LCSC na stanie (od kilku do kilkuset tysięcy sztuk). Footprint gniazda w KiCad jest dla tej właśnie części; ma cztery przewlekane nóżki obudowy, lutowane razem z SMD. Zenery mają w puli preferowanej JLC odpowiedniki SOD-123 z tymi samymi granicami upływu w kartach; zostają części Diodes Incorporated, bo przy 10 płytkach różnica kosztu jest pomijalna.
 
-## Przed ścieżkami i zamówieniem
+## Ścieżki (2026-11-10)
 
-Do rozstrzygnięcia przed ścieżkami i pierwszym zamówieniem płytki:
+Płytka ma komplet ścieżek. **Wynik: 0 niepołączonych, 0 naruszeń DRC (poza sitodrukiem), 0 różnic między płytką a schematem, 0 naruszeń ERC**, przy pełnej regule odstępu wysokiego napięcia (0,6 mm od odsłoniętego padu, 0,3 mm pod maską). Wyjątki od reguł wynikają z geometrii części i wszystkie są wypisane w [Regułach](#reguły): para dwóch padów, miedź sygnałowa w dwóch nazwanych obszarach przy pinach U5 i U6 oraz cztery wyjątki szerokości ścieżki przy cienkich pinach. Wylewki masy nie mają żadnego wyjątku. Ścieżki są po trzech niezależnych przeglądach i po poprawkach z każdego ([po pierwszym](#poprawki-po-przeglądzie), [po drugim](#poprawki-po-drugim-przeglądzie), [po trzecim](#poprawki-po-trzecim-przeglądzie)). Stan zamówienia podaje status na początku pliku.
+
+### Liczba warstw: 4
+
+| | 2 warstwy | 4 warstwy |
+|---|---|---|
+| masa | wylewki przecinane ścieżkami; prąd powrotny przetwornicy i 12 V szuka drogi naokoło | ciągła warstwa masy pod całą płytką |
+| przetwornica | rysunek 17 karty LTC3115-1 zakłada masę pod układem; płytka testowa jest 4-warstwowa i tylko ten układ jest zmierzony | ten sam układ co na zmierzonej płytce testowej |
+| USB (Full Speed) | działa, impedancja nie jest krytyczna | działa, ścieżka nad ciągłą masą |
+| gęstość | 164 elementy, cztery tory napięć, sześć otworów Ø20 mm i wycięcie EN3: dwie warstwy na ścieżki i masę nie wystarczą | dwie warstwy na ścieżki, dwie na płaszczyzny |
+| JLC, 200 × 120 mm, 1,6 mm, bez wysyłki (kalkulator 2026-11-10, ceny dla HASL; zamówienie z montażem ma mieć wykończenie ENIG ze względu na części bez nóżek U5, D18 i D19, więc będzie droższe) | 5 szt. 15,60 USD, 10 szt. około 27 USD | 5 szt. 39,80 USD, 10 szt. 54,60 USD |
+
+Wybór: **4 warstwy.** Dopłata to około 25–28 USD na całą serię, czyli około 3–5 USD na płytkę, a w zamian przetwornica ma ten sam układ co zmierzona płytka testowa i cała płytka ma ciągłą masę. Zdanie w [obudowie R02](../r02/obudowa.md), że płytka tej wielkości „opłaca się tylko jako dwuwarstwowa”, nie zgadza się z dzisiejszymi cenami JLC i trzeba je tam poprawić.
+
+Warstwy: L1 (góra) elementy i ścieżki; In1 ciągła masa; In2 płaszczyzna +3V3 (przechodzą przez nią tylko krótkie ścieżki BST przetwornicy, jak na płytce testowej); L4 (spód) ścieżki. Stos JLC04161H-7628, 1,6 mm.
+
+### Reguły
+
+Reguły zapisuje `tools/route_pcb.py` (klasy sieci w projekcie, reguły własne w `cad/plytka-v2.kicad_dru`); w `cad/` nic nie zmienia się ręcznie.
+
+| Klasa | Ścieżka | Przelotka (otwór) | Sieci | Skąd |
+|---|---|---|---|---|
+| 12 V | 0,6 mm | 0,8 (0,4) mm | 12V_IN, V12_F, V12_MID | do 1 A ciągle; IPC-2152 dla 1 oz daje przy 0,6 mm przyrost około 10 °C; impuls TVS około 190 A przez 1 ms ścieżka 0,6 mm wytrzymuje (wzór Onderdonka) |
+| HV | 0,3 mm | 0,6 (0,3) mm | węzły sterowania 12 V: V12_FLT, V12_SW, bramki i dzielniki LM74800 i LTC4368, ON i inne | małe prądy, ale napięcie jak 12 V |
+| VSYS | 0,8 mm | 0,8 (0,4) mm | VSYS, BAT_IN, BAT_R | prąd wejściowy przetwornicy rośnie przy niskim napięciu ogniw; szerzej niż 12 V |
+| zasilanie | 0,5 mm | 0,6 (0,3) mm | +5V, +3V3_RF, brzęczyk, BST_SW, CONV_VCC | prądy do kilkuset mA |
+| USB | 0,25 mm | 0,6 (0,3) mm | USB_DP, USB_DN | Full Speed; 0,25/0,15 mm nad masą daje około 90 Ω (szacunek ze wzoru), dla 12 Mb/s bez znaczenia |
+| płaszczyzna | 0,4 mm | 0,6 (0,3) mm | GND, +3V3 | krótkie odcinki do przelotek |
+| pozostałe | 0,2 mm | 0,6 (0,3) mm | sygnały 3,3 V | |
+
+Najmniejsze wartości: odstęp 0,15 mm, ścieżka 0,15 mm, przelotka 0,6/0,3 mm, pierścień 0,15 mm, od krawędzi 0,5 mm, otwór od otworu 0,3 mm. JLC dopuszcza mniejsze wartości, więc płytka mieści się w podstawowym procesie bez dopłat.
+
+**Odstęp wysokiego napięcia.** Dla sieci 12 V i HV obowiązuje **0,6 mm od odsłoniętego padu i 0,3 mm między miedzią pod maską**, na warstwach zewnętrznych. To wiersz 31–100 V tabeli 6-1 IPC-2221B (B2 dla odsłoniętych przewodników: 0,6 mm; B4 dla przewodników pod powłoką: 0,13 mm, wzięte z zapasem jako 0,3 mm). Napięcia, które pokrywa: 33 V ciągle (instalacja 24 V, ładowanie do 28,8 V), ograniczenie TVS 53,3 V w impulsie, −53,3 V przy odwrotnym podłączeniu i do około 70 V na Q2 (suma przy odwróceniu). Ścieżki 12 V, VSYS i zasilania mają też najmniejszą szerokość w DRC (0,6, 0,6 i 0,4 mm).
+
+Wyjątki od tej reguły. W miejscach objętych wyjątkiem zostają tylko zwykłe odstępy: najmniejszy odstęp płytki 0,15 mm między padem a ścieżką i odstęp klasy 0,3 mm między dwiema ścieżkami sieci 12 V albo HV.
+
+- **para dwóch padów.** Rozstaw pinów jednej części ustala jej producent. Reguły DRC nie da się zawęzić do „padów tej samej części” (takie warunki sprawiają, że `kicad-cli` cicho pomija cały plik reguł), więc pady różnych części sprawdza osobno `route_pcb.py`: pady różnych części na różnych sieciach, z których choć jedna jest wysokiego napięcia, muszą być co najmniej 0,6 mm od siebie, inaczej budowanie kończy się błędem;
+- **pad, ścieżka albo przelotka w parze z padem, ścieżką albo przelotką, gdy obie leżą w całości w tym samym nazwanym obszarze pinów.** Obszary są dwa i mają stałe wymiary: „piny U5” (6,2 × 4,4 mm wokół środka U5) i „piny U6” (7,0 × 3,0 mm wokół środka U6). Piny tych układów mają rozstaw 0,5 i 0,65 mm, a odsłonięte pady sąsiednich pinów są od siebie 0,25 mm (U5) i 0,15 mm (U6), więc ścieżka wychodząca z pinu nie może być 0,6 mm od sąsiedniego pinu. Ścieżka, która w obszarze tylko się zaczyna i biegnie dalej, wyjątku nie ma: dlatego ręczne ścieżki są podzielone na odcinek wewnątrz obszaru i odcinek poza nim, a ten drugi spełnia pełną regułę. W pierwszej wersji wyjątek opierał się na obrysie części i długa ścieżka, która obrys tylko dotykała, też go dostawała; drugi przegląd to wytknął. Zmierzone najmniejsze odległości wewnątrz obszarów są w [Wyniku](#wynik);
+- **wylewki nie mają wyjątku.** Wylewka masy trzyma 0,6 mm od każdego odsłoniętego padu wysokiego napięcia, także w obszarach pinów U5 i U6. W pierwszej wersji wyjątek obejmował też wylewki i masa na L1 podchodziła na 0,15 mm do pinów U5 i U6; to był błąd znaleziony w pierwszym przeglądzie. Oprócz DRC `route_pcb.py check` (wywoływany przez `build.sh`) mierzy na gotowym wypełnieniu odległość każdej wylewki od każdego padu po drugiej stronie wysokiego napięcia i kończy się błędem poniżej 0,6 mm.
+
+Wyjątki od najmniejszej szerokości ścieżki (wszystkie cztery; powód jest zawsze ten sam: pad pinu jest węższy niż ścieżka klasy):
+
+| Klasa (najmniejsza szerokość) | Gdzie nie obowiązuje | Co tam jest |
+|---|---|---|
+| 12 V (0,6 mm) | obszar „piny U5” | odcinki 0,15–0,2 mm z pinów A, VSNS, VS i C układu U5 (pady 0,25 mm); płynie nimi tylko prąd zasilania i pomiaru układu, prąd 12 V płynie przez Q2 i Q3 |
+| VSYS (0,6 mm) | obszar „piny U5” | odcinek 0,15 mm z pinu OUT układu U5 do przelotki; pin tylko mierzy napięcie |
+| VSYS (0,6 mm) | obrys U7 i obrys C46 | wejście VIN przetwornicy (pin 13, raster 0,65 mm) i jego kondensator C46 |
+| zasilanie (0,4 mm) | obrys U7 | pin VCC przetwornicy (CONV_VCC) |
+
+### Co zmieniło się w rozmieszczeniu
+
+Szkic pokazał, że ścieżki 12 V nie mieszczą się w korytarzu przy wycięciu EN3 i że bloki 12 V są za gęste. Zmiany (wszystkie w `make_pcb.py`; pozycje panelu z [założeń obudowy](../obudowa/zalozenia.py) są bez zmian i test obudowy przechodzi):
+
+- **Wejście 12 V po lewej stronie wycięcia EN3:** J2 (86, 115), bezpiecznik F1 (86, 103) i TVS D4 (86, 108) leżą teraz razem, 3 mm od siebie. Wcześniej J2 był po prawej, a F1 po lewej stronie wycięcia. D7 (dioda toru ogniw) przesunięta obok, do (71, 107).
+- **Łącznik 12 V jako jedna stała grupa w prawym dolnym rogu** (środek U5 w (168, 108)): Q2, U5, Q3 w jednej linii, C31, R30, R31, C30, R32, C32 przy pinach U5, a filtr R46, C35, D10 tuż obok wspólnego drenu (wcześniej 70 mm dalej, przy U6). Miedź grupy jest narysowana ręcznie.
+- **C50** przeniesiony do (132, 84), między łącznik, tor ogniw i przetwornicę.
+- **Sterownik wyłącznika U6 z C36 i R50** jako stała grupa w wolnym miejscu u góry po prawej (152, 36), jego części i przełącznik zezwolenia przetwornicy (Q9, Q10) w tym samym obszarze, obok przetwornicy.
+- **Dzielniki napięcia 12 V i samoczynnego startu** (Q4, Q5 i sąsiedzi) po prawej stronie wycięcia EN3, bezpośrednio nad linią 12 V na L4.
+- **Większe odstępy:** części strony 12 V stoją co najmniej 1,3 mm od siebie (tranzystory SOT-23 1,7 mm, U6 2,6 mm), pozostałe małe części układane automatycznie 1,2 mm (było 0,6 mm). Wyjątek: filtry i ochrona ESD przy złączach zostają przy 0,6 mm, bo muszą leżeć do 10 mm od złącza.
+- Obszar bloku toru ogniw powiększony w górę (y 80–119,5).
+- **Po drugim przeglądzie:** C30 stoi teraz obok pinu 10 (VS) układu U5, 1,7 mm od niego; Q3 przesunięty o 1,1 mm dalej od U5, żeby C30 się zmieścił; przy źródłach Q2 doszło miejsce na drugi TVS (D20, niemontowany); przetwornica 5 V (U2, L1, C8, C9, R21, R22, C10) jest stałą grupą ułożoną ręcznie w (63, 66). Kondensatory panelu (C4, C6, C7) zostają przy złączu ekranu.
+- Korpus części przewlekanej blokuje teraz tylko swoją stronę płytki; po drugiej stronie liczą się jej pady z odstępem 2,5 mm od padów SMD.
+
+### Jak powstają ścieżki
+
+`build.sh` dalej buduje płytkę od zera, a w `cad/` nic nie zmienia się ręcznie:
+
+1. `make_pcb.py` rozmieszcza elementy.
+2. `route_pcb.py prepare` ustawia 4 warstwy, klasy i reguły, rysuje miedź ręczną (niżej) i zapisuje pierwsze zadanie dla routera, `checks/routing.dsn`.
+3. `route_pcb.py stage N` wczytuje wynik etapu N−1 i zapisuje zadanie etapu N (`checks/routing-N.dsn`). Gdy wszystko jest połączone, pisze „open nets: none” i etapy się kończą.
+4. `route_pcb.py finish` usuwa nieużyte odcinki pomocnicze, wylewa płaszczyzny masy i +3V3.
+5. DRC z regułami projektu i z porównaniem płytki ze schematem (`--schematic-parity`); `build.sh` kończy się błędem także wtedy, gdy zostaje choć jedno niepołączone miejsce albo płytka różni się od schematu. Z porównania pominięte są tylko trzy rodzaje różnic bez znaczenia: pola opisowe, których obudowy na płytce nie mają, ukośnik na początku nazw sieci (schemat pisze „/GND”, płytka „GND”) i pady oznaczone na schemacie jako niepodłączone.
+
+Ścieżki liczy osobno `tools/route.sh` (Freerouting 2.5.0, Java 25; około 6 minut). Skrypt sam zaczyna od `make_pcb.py` i `route_pcb.py prepare`, więc można go uruchomić w każdym stanie płytki, także po `build.sh`. Wynik każdego etapu (`checks/routing*.ses`) jest zachowany razem z sumą zadania, z którego powstał. `build.sh` wczytuje sesję tylko wtedy, gdy suma się zgadza, więc po każdej zmianie rozmieszczenia albo miedzi ręcznej trzeba uruchomić `route.sh` od nowa; inaczej `build.sh` zbuduje płytkę bez ścieżek i zakończy się błędem. Dwa przebiegi `build.sh` dają ten sam plik.
+
+Etapy routera:
+
+1. sieci zasilania i wszystkie sieci, które mają pad w obszarach części 12 V;
+2. reszta; sieci gotowe po etapie 1 są już stałą miedzią;
+3. i dalej, tylko gdy coś zostało otwarte: sieci otwarte prowadzone od nowa razem z sieciami, których ścieżki leżą do 3 mm od ich padów. W tym wyniku wystarczyły dwa etapy. Gdy krok między etapami się nie powiedzie, `route.sh` zatrzymuje się z błędem (wcześniej liczył dalej na starym zadaniu).
+
+Router nigdy nie dostaje sieci, która jest już kompletna (miedź ręczna albo wcześniejszy etap), więc nie dokłada drugiej drogi, na przykład na węzłach przetwornicy.
+
+### Miedź ręczna (przed routerem)
+
+- **Przetwornica** według rysunku 17 karty LTC3115-1, w tym samym układzie co płytka testowa: wylewki SW1 i SW2 pod cewką, wejście VSYS i wyjście +3V3 przy kondensatorach, wyspy masy z przelotkami do In1, BST1 i BST2 na In2, sprzężenie zwrotne pod układem. Nie jest to kopia. Różnice względem zmierzonej płytki testowej: cewka L2 stoi 2,1 mm dalej od U7 (13,6 zamiast 11,5 mm), kondensatory wejściowe i wyjściowe 0,8 mm (C40, C42) i 1,3 mm (C41, C43) dalej, kondensatory BST (C44, C45) są w obudowie 0805 zamiast 0402, a części sprzężenia zwrotnego stoją w innym rozstawie. Powód: większe odstępy montażowe i obudowy 0805 na całej płytce. Kondensator pinu VIN (C46) stoi 0,9 mm dalej od U7 niż na płytce testowej (6,3 zamiast 5,4 mm od środka układu). Odległości kondensatorów od ich pinów są w tabeli w [Poprawkach po drugim przeglądzie](#poprawki-po-drugim-przeglądzie). Pętle prądu są więc trochę dłuższe niż na płytce testowej i jej pomiarów (tętnienia, sprawność, zakłócenia) nie wolno przenosić na v2 bez powtórzenia ich na pierwszych sztukach.
+- **Łącznik 12 V (U5, Q2, Q3):** pola miedzi na źródłach i drenach, wspólny dren na L4 przez trzy przelotki z każdej strony, ścieżki bramek i pomiarowe, kondensatory przy pinach: C31 (pompa ładunku) nad pinami 10–12; C30 (zasilanie VS, pin 10) obok pinu 10, połączony z nim ścieżką na L1 bez przelotki (z pinu 0,15 mm, od 0,9 mm za padem 0,6 mm) i dalej z drenem Q3, a jego pad masy ma własną przelotkę 2,9 mm od przelotki masy pinu 7; C38 i miejsce na D20 przy źródłach Q2; C39 pod pinem 6 (opis w [Ochronie wejścia przy łączniku](#ochrona-wejścia-przy-łączniku)). Wyjścia z pinów U5 zaginają się 0,075 mm za końcem padu.
+- **Przetwornica 5 V (U2, MCP1640)** według zaleceń układu ścieżek z karty: cewka L1 obrócona padem węzła przełączanego do pinu 1 (SW), węzeł to jedna prosta ścieżka 0,5 mm na L1, 4,0 mm między środkami padów, bez przelotki; kondensator wejściowy C8 przy pinie 6 (VIN) i przy cewce, wyjściowy C9 przy pinie 5 (VOUT); dzielnik sprzężenia (R21, R22, C10) pod układem przy pinie 4 (FB), po stronie przeciwnej do węzła przełączanego, zasilany z padu C9.
+- **Filtr RUN przetwornicy (C52, 1 nF)** stoi w grupie przetwornicy, 9,3 mm od pinu 2 (RUN) układu U7, w rogu pola wyjściowego +3V3, około 5,5 mm od pola SW2. Bliżej się nie da: pin 2 leży między polem SW2 a polem wyjściowym, jak na rysunku 17 karty. Ścieżka RUN biegnie do niego po L4, pod płaszczyzną masy. Wcześniej C52 stał 32 mm od pinu.
+- **Zasilanie sterownika wyłącznika (sieć VCTL)** w całości ręcznie: krótki odcinek i przelotka przy padzie każdej z pięciu części (D8, D9, D12, R48, R49) i jedno drzewo ścieżek 0,3 mm na L4. Router zostawiał tę sieć otwartą w każdym etapie.
+- **Linie zasilania na L4:** 12 V z J2 do bezpiecznika 1,0 mm; 12 V za bezpiecznikiem 1,2 mm do źródeł Q2; VSYS 1,0 mm od Q3 przez C50 do przetwornicy; tor ogniw 0,8 mm od D7 do C50.
+- **Odgałęzienia od tych linii:** Q4, R33, D5 i D13 mają własną przelotkę i odcinek 0,6 mm do linii 12 V; Q9 i R51 odcinek 0,6 mm do wejścia przetwornicy.
+- **Wyjścia z pinów:** z każdego pinu tranzystora SOT-23 po stronie 12 V wychodzi krótki odcinek ustawiony tak, żeby był 0,62 mm od sąsiedniego padu; z pinów U6 odcinki wychodzą prosto na 0,8 mm poza pad i dopiero tam rozchodzą się do rozstawu 1,3 mm (wcześniej rozchodziły się od samego pinu i dwa z nich mijały sąsiedni pin o 0,18 mm); R50 stoi przy pinie 7 (PWR_ENB) i jest z nim połączony ręcznie, bo router zamykał ten pin między ścieżkami sąsiedniego pinu; trzy piny +5V złącza ekranu (raster 0,5 mm) łączy wspólna szyna.
+- **Płaszczyzny:** przelotka do In1 albo In2 przy każdym padzie SMD masy i +3V3 (razem 128 przelotek masy i +3V3), wylewki masy na L1 i L4.
+- **Strefy bez miedzi:** otwory montażowe (wszystkie warstwy), otwory panelu i przycisk przygotowania (warstwy zewnętrzne), pas 0,5 mm przy krawędzi.
+
+### Ochrona wejścia przy łączniku
+
+TVS D4 stoi przy złączu J2 i bezpieczniku, a łącznik (Q2, U5) około 105 mm dalej. D4 zostaje przy wejściu: tam prąd udaru (do około 190 A) zamyka się najkrótszą drogą i nie płynie przez płytkę. Przegląd zwrócił uwagę, że przy samym łączniku nie było żadnego elementu, który tłumi szybkie zbocza. Dodane części:
+
+- **C38, 100 nF / 100 V X7R 0805** (Samsung CL21B104KCFNNNE) z V12_F do masy, przy źródłach Q2, z przelotką masy 1,15 mm od padu. Karta LM7480-Q1 wymaga co najmniej 0,1 µF na wejściu (pin A do masy; tabela 7.3 i punkt 11.1). Wcześniej tego kondensatora nie było.
+- **C39, 10 nF / 50 V X7R 0805** z S12_EN do masy przy pinie EN/UVLO (pin 6). Dzielnik tego sygnału stoi około 110 mm dalej, więc bez kondensatora długa ścieżka o dużej oporności zbierałaby zakłócenia. Z dzielnikiem daje stałą czasową około 0,23 ms.
+
+**Ile napięcia może przybyć przy łączniku.** Karta LM7480-Q1 (punkt 11.1) podaje wzór: napięcie szczytowe = napięcie wejścia + prąd × √(L/C). Liczą się dwie indukcyjności:
+
+- ścieżka od D4 do łącznika (105 mm, 1,2 mm szeroka, nad masą): około 20–40 nH, do szacunku przyjęte 0,1 µH. Z C38 (100 nF) daje to 1 V na każdy amper;
+- przewód od źródła 12 V do złącza: przyjęte około 1 µH (mniej więcej metr przewodu). Z C38 daje to 3,2 V na każdy amper.
+
+D4 (SMBJ33CA) zaczyna przewodzić od około 37 V, a **53,3 V z karty to napięcie na D4 tylko przy prądzie do 11,3 A** (impuls 10/1000 µs). Przy większym prądzie napięcie na D4 jest wyższe. Pierwsza wersja tego opisu liczyła 53,3 V jako stałą granicę i stąd wyszedł „czterokrotny zapas”; drugi przegląd pokazał, że ten wniosek jest błędny.
+
+- **Podłączenie pod napięcie (najgorszy przypadek).** Wtyk dotyka zasilonego źródła, a C38 jest pusty. Przewód 1 µH i C38 tworzą obwód drgający: prąd ładowania dochodzi do napięcie / 3,2 Ω, czyli około 9 A przy 28,8 V i 10,4 A przy 33 V, a przy krótszym przewodzie (0,5 µH) do 13–15 A. Bez tłumienia napięcie na C38 dochodzi do dwukrotności napięcia wejścia: **57,6 V przy 28,8 V i 66 V przy 33 V**. D4 zabiera część energii, ale przy 10–15 A sam ma już 53 V albo więcej, więc nie można liczyć, że utrzyma wynik wyraźnie niżej. Do granicy 70 V zostaje przy 33 V **około 4 V**, a drgające styki wtyku (kilka połączeń pod rząd przy naładowanym już C38) mogą dać więcej niż dwukrotność. Tego nie da się policzyć z kart; rozstrzyga pomiar.
+- Udar 1,2/50 µs: C38 ładuje się prądem C × dV/dt = 100 nF × 53 V / 1,2 µs ≈ 4,4 A, więc na ścieżce od D4 przybywa około 4,4 V ponad napięcie na D4. Samo napięcie na D4 zależy od prądu udaru (wyżej).
+- Zwykły pobór stacji (do 1 A): około 1 V.
+- Bardzo krótkie impulsy (seria 5/50 ns) są krótsze niż okres drgań ścieżki z C38 (około 0,6 µs) i C38 je wygładza.
+
+Granice z kart: piny A, VS, C i OUT układu U5 do 70 V (A do −65 V), Q2 i Q3 100 V. To szacunek z kart i wzoru, nie pomiar.
+
+**Miejsce na drugi TVS (D20).** Przy źródłach Q2, obok C38, jest miejsce na drugi SMBJ33CA (obudowa SMB, z V12_F do masy, dwie przelotki masy 1,8 mm od padu). Zamontowany ogranicza napięcie przy samym układzie U5, ale część prądu udaru płynie wtedy 105 mm przez płytkę (linia 1,2 mm na L4), czego D4 przy wejściu unika.
+
+Decyzja po trzecim przeglądzie (2026-11-10):
+
+- **W montażu JLC D20 nie jest montowany** (nie ma go w wykazie części ani w pliku pozycji, na schemacie i płytce ma znacznik „nie montować”).
+- **Na jednym z dwóch prototypów D20 jest od początku dolutowany ręcznie, drugi zostaje bez niego.** Powód: własny szacunek wyżej daje 66 V przy 33 V wobec granicy 70 V pinu A, więc dwadzieścia podłączeń pod napięcie przy 33 V na płytce bez D20 mogłoby zniszczyć U5. Prototyp z D20 jest zabezpieczony, a prototyp bez D20 daje pomiar, który rozstrzyga o serii.
+- Do ręcznego montażu kupuje się 2 sztuki SMBJ33CA (jedna i zapas); są w [wykazie części](bom.csv).
+
+**Pomiar** (na pierwszych sztukach):
+
+1. Oscyloskop na C38, sonda z krótką sprężynką masy, wyzwalanie na zboczu, zapis wartości szczytowej.
+2. Źródło o małej oporności (akumulator albo zasilacz z kondensatorem co najmniej 1000 µF na zaciskach), bo zasilacz z ograniczeniem prądu zaniża wynik. Źródło włączone i ustawione, wtyk wkładany ręcznie, raz z docelowym przewodem, raz z krótkim (około 0,3 m).
+3. **Najpierw płytka bez D20, napięcie stopniowo w górę:** 20 podłączeń przy 24 V, potem 20 przy 28,8 V. **Do 33 V przechodzi się tylko wtedy, gdy żaden wcześniejszy wynik nie przekroczył 60 V.** Jeśli przekroczył, próby przy 33 V na tej płytce się nie robi.
+4. Te same próby, razem z 33 V, na płytce z D20: pokazują, o ile D20 obniża napięcie.
+5. Impuls do ograniczenia TVS z próby odbiorczej ([T6 „Zasilanie stacji – progi”](../../docs/spec/odbior.md#próby)) najpierw na płytce z D20.
+6. **Decyzja o serii:** D20 wchodzi do montażu (dopisany do wykazu części i pliku pozycji), jeśli na płytce bez D20 którykolwiek wynik przekroczył 65 V albo próby przy 33 V nie dało się na niej wykonać (wynik powyżej 60 V już przy niższym napięciu). W przeciwnym razie seria zostaje bez D20.
+
+Odrzucone:
+
+- **Przeniesienie D4 do łącznika:** prąd udaru płynąłby 105 mm przez płytkę.
+- **D20 na obu prototypach:** nie byłoby pomiaru bez D20, więc nie byłoby podstawy do decyzji o serii; D20 zostałby w projekcie „na wszelki wypadek” razem z prądem udaru prowadzonym przez płytkę.
+- **Oba prototypy bez D20 i pełna próba do 33 V** (plan po drugim przeglądzie): przy szacunku 66 V wobec granicy 70 V próba mogłaby zniszczyć U5 na płytce, na której ma się odbyć reszta pomiarów.
+- **Większy kondensator (1 µF i więcej) albo elektrolit przy łączniku:** większy prąd ładowania przy podłączeniu pod napięcie; 100 nF spełnia wymaganie karty.
+
+### Poprawki po przeglądzie
+
+Niezależny przegląd pierwszej wersji ścieżek (2026-11-10) znalazł błędy, które poprawiono w tej wersji:
+
+1. **Masa za blisko pinów wysokiego napięcia** (0,15 mm przy U5 i U6): wyjątek reguły obejmował wylewki. Poprawione w regule, dodany niezależny pomiar ([Reguły](#reguły)).
+2. **Wyjścia z pinów U6** mijały sąsiedni pin o 0,18 mm. Teraz wychodzą prosto na 0,8 mm poza pad i dopiero tam się rozchodzą; dodane sprawdzenie odstępu padów różnych części.
+3. **Brak kondensatora przy wejściu łącznika:** dodany C38 i szacunek ([Ochrona wejścia przy łączniku](#ochrona-wejścia-przy-łączniku)).
+4. **C30:** opis podawał zły pin (zasilanie VS to pin 10, pin 12 to C, wspólny dren). C30 przeniesiony między piny 7 i 10, dopuszczona odległość od U5 wróciła do 4 mm.
+5. **`route.sh` uruchomiony po `build.sh` psuł stan repozytorium.** Teraz sam zaczyna od rozmieszczenia i miedzi ręcznej.
+6. **Opis przetwornicy** mówił „bez zmian względem płytki testowej”; różnice są teraz wypisane ([Miedź ręczna](#miedź-ręczna-przed-routerem)).
+7. **Sygnał przy cewce L2:** obszar cewki z marginesem 1,2 mm jest na L1 zamknięty dla routera; dodany filtr C39 na EN/UVLO.
+8. **Sitodruk:** nazwy małych części w grupach układanych ręcznie (przetwornica, łącznik, U6) i przy filtrach złączy są na warstwie rysunku montażowego (F.Fab) zamiast na sitodruku, bo nie mieściły się między padami. Z 55 uwag DRC zostały 3.
+
+### Poprawki po drugim przeglądzie
+
+Drugi niezależny przegląd (2026-11-10, na wersji po pierwszych poprawkach) znalazł kolejne błędy. Poprawione:
+
+1. **C30 dalej stał źle.** Jego pad masy był blisko U5, ale pad zasilania łączyło z pinem 10 (VS) 6,9 mm miedzi, a sprawdzenie odległości mierzyło do najbliższego padu, więc przechodziło. Teraz pad zasilania C30 stoi 1,7 mm od pinu 10 i łączy się z nim ścieżką na L1. Sprawdzenie w `make_pcb.py` mierzy dla każdego kondensatora odsprzęgającego odległość od jego padu **na wskazanej sieci** do pinu **na tej samej sieci**, krawędź do krawędzi. Wszystkie kondensatory sprawdzone nową miarą:
+
+   | Kondensator | Do czego | Zmierzone | Dopuszczone |
+   |---|---|---|---|
+   | C30 | U5 pin 10 (VS) | 1,70 mm | 2,0 mm |
+   | C31 | U5 pin 11 (CAP) / pin 12 (C) | 1,80 / 1,32 mm | 2,0 / 1,5 mm |
+   | C38 | źródła Q2 | 3,10 mm | 3,5 mm |
+   | C39 | U5 pin 6 (EN/UVLO) | 3,52 mm | 4,0 mm |
+   | C36 | U6 pin 6 (VIN) | 3,75 mm | 4,0 mm |
+   | C11 | U4 | 2,54 mm | 3,0 mm |
+   | C46 | U7 pin 13 (VIN) | 1,25 mm | 1,5 mm |
+   | C47 | U7 (VCC) | 2,20 mm | 2,5 mm |
+   | C44 | U7 pin 16 (BST1) | 4,15 mm | 4,5 mm |
+   | C45 | U7 pin 15 (BST2) | 8,50 mm | 9,0 mm |
+   | C40, C41 | U7 pin 17 (wejście) | 4,88 i 8,77 mm | 5,0 i 9,0 mm |
+   | C42, C43 | U7 pin 4 (wyjście) | 4,88 i 8,77 mm | 5,0 i 9,0 mm |
+   | C1, C2 | gniazdo modułu radiowego, pin 3 | 5,61 i 5,53 mm | 6,0 mm |
+   | C8 | U2 pin 6 (VIN) | 2,00 mm | 2,2 mm |
+   | C9 | U2 pin 5 (VOUT) | 1,20 mm | 1,5 mm |
+
+   C45 jest daleko, bo pin BST2 leży po przeciwnej stronie U7 niż pole SW2; tak samo jest na rysunku 17 karty i na płytce testowej (ścieżka na In2). Odległości przy U7 są większe niż na płytce testowej ([różnice](#miedź-ręczna-przed-routerem)).
+2. **Szacunek przepięcia przy łączniku był błędny** (53,3 V liczone jako stała granica). Poprawiony; doszło miejsce na drugi TVS (D20) i plan pomiaru ([Ochrona wejścia przy łączniku](#ochrona-wejścia-przy-łączniku)).
+3. **Przetwornica 5 V była ułożona automatycznie**, z węzłem przełączanym obok sygnałów (SPI_SCK 0,21 mm, LCD_DISP 0,23 mm, SPI_MOSI 0,41 mm od miedzi węzła). Teraz jest stałą grupą ułożoną ręcznie ([Miedź ręczna](#miedź-ręczna-przed-routerem)), a L1 wokół węzłów przełączanych obu przetwornic jest zamknięta dla routera. Wynik pomiaru jest w [Wyniku](#wynik).
+4. **Opis mijał się z płytką w kilku liczbach:** wyjścia z pinów U5 zaginają się 0,075 mm za końcem padu (opis mówił 0,8 mm; 0,8 mm dotyczy tylko U6); ścieżka sieci S12_CAP mija pin 12 układu U5 o 0,206 mm; pady sąsiednich pinów U6 są od siebie 0,15 mm, nie 0,25 mm; wyjątków szerokości ścieżki jest cztery, a opis wymieniał jeden; C46 stoi 0,9 mm dalej niż na płytce testowej. Wszystko poprawione w [Regułach](#reguły), [Miedzi ręcznej](#miedź-ręczna-przed-routerem) i [Wyniku](#wynik).
+5. **Wyjątek reguły oparty na obrysie części** obejmował też długą ścieżkę, która obrys tylko dotykała. Teraz wyjątek mają tylko elementy leżące w całości w nazwanym obszarze pinów ([Reguły](#reguły)).
+6. **`build.sh` nie porównywał płytki ze schematem.** Teraz porównuje i kończy się błędem przy różnicy; wynik: 0 różnic.
+
+Przy tych poprawkach wyszły dwa błędy narzędzi, też poprawione: krok między etapami routera mógł się po cichu nie wykonać, a router liczył wtedy na starym zadaniu ([Pułapki narzędzi](#pułapki-narzędzi)); sieć zasilania sterownika wyłącznika router zostawiał otwartą, więc jest teraz narysowana ręcznie.
+
+Nie zrobione w tej zmianie: **numery LCSC dla około 70 części, które ich jeszcze nie mają.** To osobna praca (sprawdzenie dostępności i zamienników dla każdej części), do osobnej zmiany. Zasada doboru: części dostępne w magazynie, typowe, z zamiennikami od kilku producentów, żeby większa partia nie zależała od jednej pozycji.
+
+### Poprawki po trzecim przeglądzie
+
+Trzeci niezależny przegląd (2026-11-10) sprawdził schemat od zera (piny z kartami, progi, odstępy na wylewkach, zgodność płytki ze schematem, powtarzalność, pozycje panelu) i nie znalazł błędu elektrycznego. Werdykt: gotowe do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki, niegotowe do zamówienia z montażem. Zrobione po nim:
+
+1. **Cewka L2** miała footprint bez typu SMD i wypadłaby z pliku pozycji; poprawione, sprawdzenie typu footprintu w DRC włączone jako błąd (0 uwag, bez fałszywych alarmów).
+2. **C52 (filtr RUN)** przeniesiony z 32 mm do 9,3 mm od pinu RUN ([Miedź ręczna](#miedź-ręczna-przed-routerem)).
+3. **D20:** dolutowany ręcznie na jednym z dwóch prototypów, pomiar stopniowany ([Ochrona wejścia przy łączniku](#ochrona-wejścia-przy-łączniku)).
+4. **Pliki produkcyjne** dla JLC i poprawki obrotów ([Pliki produkcyjne](#pliki-produkcyjne)).
+5. **Numery LCSC** dla wszystkich części montowanych automatycznie i wybór C50 ([Numery LCSC](#numery-lcsc), [Kondensator szyny C50](#kondensator-szyny-c50)).
+6. **Liczby w opisie:** 164 elementy (było 166 w jednym miejscu), 128 przelotek do płaszczyzn (było 126 i 128), dopisana odległość 0,269 mm w obszarze pinów U5 ([Wynik](#wynik)).
+
+Odnotowane przez przegląd na później, bez zmian w tej wersji: kondensatory panelu C4 i C6 stoją 14–16 mm od złącza ekranu; ścieżki bramek tranzystorów łącznika mają 10–11 mm; C45 stoi 8,5 mm od pinu BST2.
+
+Do następnej wersji, po końcowym przeglądzie plików produkcyjnych (2026-11-11):
+
+- **D20 (niemontowany) ma otwory w warstwie pasty.** Jest to nieszkodliwe (pady zostaną pocynowane, co ułatwia ręczne dolutowanie), ale części oznaczone „nie montować” powinny być wyłączone z pasty.
+- **C50 przed serią pilotażową:** na prototypach montowany jest SamYoung PXB, a seria Nichicon UKL jest wycofywana. Jako część projektową trzeba wskazać dostępną serię o małym upływie w obudowie 8 × 11,5 mm z rastrem 3,5 mm ([Kondensator szyny C50](#kondensator-szyny-c50)).
+
+Dwa zapasy odnotowane przy przeglądzie wykazu części (2026-11-10), bez zmian części:
+
+- **C47 (VCC przetwornicy U7, 10 µF 25 V X5R 0805):** karta LTC3115-1 wymaga co najmniej 4,7 µF skutecznej pojemności. Przy napięciu VCC około 4,5 V kondensator tej wielkości zachowuje według oceny przeglądu około 5–6 µF, czyli zapas jest mały, ale dodatni. To ta sama część co na [płytce testowej przetwornicy](../przetwornica-3v3/README.md), więc jej pomiary obejmują ten punkt.
+- **R40 (1 Ω, 2512, 1 W) przy wkładaniu ogniw:** rezystor ładuje około 120 µF na szynie (C50, C40, C41). Przy 7,3 V z nowych ogniw energia impulsu to najwyżej ½CV² ≈ 3,2 mJ, stała czasowa około 0,12 ms, moc chwilowa do 53 W przy pominięciu oporu ogniw (25 W przy 5 A). Rezystory grubowarstwowe 2512 znoszą pojedyncze impulsy tej długości z dużym zapasem względem mocy ciągłej, ale wartości z wykresu impulsowego karty Yageo RC nie odczytałem; do potwierdzenia przy pomiarze udaru na pierwszych sztukach.
+
+### Jak router trzyma odstęp wysokiego napięcia
+
+Freerouting zna tylko jeden odstęp na klasę sieci, nie zna reguły „0,6 mm od padu”. Dlatego w zadaniu dla routera (tylko tam, płytka zostaje bez zmian):
+
+- klasy 12 V i HV mają odstęp 0,31 mm (miedź pod maską);
+- pady w obszarach części 12 V, pady wszystkich części przewlekanych (także nieużywane, bez sieci) i pady małych części (do trzech padów) na całej płytce są powiększone o 0,31 mm z każdej strony, co razem daje 0,62 mm od padu. Wyjątek: filtry przy złączach (stoją za gęsto, ścieżka HV tam nie wchodzi; DRC i tak to sprawdza);
+- koniec każdego ręcznego odcinka wyjściowego jest dla routera zwykłym padem („kotwica”), bo router nie umie zacząć ścieżki od końca stałego odcinka;
+- L1 jest dla routera zamknięta 1,2 mm wokół miedzi węzłów przełączanych: obie cewki (L2, L1), dwa duże pola SW1 i SW2 pod cewką L2 i ścieżka węzła przetwornicy 5 V. Małe pola SW przy samych pinach U7 nie są zamknięte, bo tuż obok leżą piny RUN i PWM/SYNC, do których router musi dojść;
+- stałe przelotki sieci sterowania wysokiego napięcia mają w zadaniu routera średnicę 0,8 mm zamiast 0,6 mm: router zostawiał 0,25 mm między zwykłą ścieżką a taką przelotką, a reguła wymaga 0,3 mm;
+- nad i pod rzędami pinów U6 router nie ma wstępu (pasy 4,0 × 0,7 mm), więc do pinów dochodzi tylko przez ręczne wyjścia; wchodząc na skrajny pin z góry zostawiał odcinek 0,33 mm od sąsiedniego pinu, częściowo poza obszarem pinów.
+
+DRC w KiCad liczy potem z prawdziwą regułą projektu i to ono jest sprawdzianem.
+
+### Pułapki narzędzi
+
+- Freerouting traktuje warstwy wewnętrzne bez płaszczyzny jako sygnałowe, a jego strefa zakazu blokuje też przelotki. `route_pcb.py` usuwa więc In1 i In2 z zadania i podaje routerowi tylko L1 i L4.
+- Wylewki dostaje jako szerokie ścieżki zastępcze (niewypełnionej wylewki nie widzi, a strefa zakazu nad stałymi przelotkami odrzuca całe sieci).
+- Nie łączy nowej ścieżki ze środkiem ani końcem stałej ścieżki. Stąd kotwice, ręczne odgałęzienia od linii zasilania i prowadzenie otwartej sieci od nowa zamiast jej uzupełniania.
+- Kończy pracę po 10 przebiegach bez poprawy wyniku, a do wyniku liczy też sieci, których nie prowadzi (płaszczyzny). Stąd etapy.
+- Zwężanie ścieżki przy cienkim pinie musi zostać włączone: bez niego zostawiał kilkanaście sieci otwartych. Po wczytaniu każda ścieżka dostaje z powrotem co najmniej najmniejszą szerokość swojej klasy, a DRC sprawdza odstępy poszerzonych ścieżek.
+- Jeden kształt padu na nazwę obudowy: część z powiększonymi padami dostaje w zadaniu własną nazwę obudowy.
+- W wyniku powtarza kawałki stałych ścieżek; `route_pcb.py` bierze z sesji tylko sieci, które przed etapem były otwarte.
+- KiCad przy wczytaniu sesji usuwa wszystkie niezablokowane ścieżki i czyta przelotki routera jako ślepe. Dlatego po każdym etapie ścieżki są blokowane, a przelotki zamieniane na przelotowe; przelotki łączące tylko jedną warstwę są usuwane.
+- KiCad zapisuje do zadania routera każdy obszar reguł jako strefę zakazu, także taki bez żadnego zakazu. Nazwane obszary pinów U5 i U6 są więc na kopii płytki dla routera przenoszone na warstwę bez miedzi. Usuwanie ich z kopii sprawiało, że biblioteka `pcbnew` co jakiś czas zwracała obiekty bez typu i krok kończył się błędem, którego `route.sh` nie pokazywał.
+- Warunek reguły w `kicad_dru` rozbity na dwie linie sprawia, że `kicad-cli` cicho pomija cały plik reguł. `build.sh` sprawdza więc przed DRC, czy reguły w ogóle działają (reguła próbna).
+
+### Wynik
+
+- **Połączenia:** 0 niepołączonych. **DRC:** 0 naruszeń poza sitodrukiem (3 uwagi o sitodruku). **Płytka i schemat:** 0 różnic. **ERC:** 0.
+- **Warstwy:** L1 2,92 m ścieżek, L4 3,07 m, In1 ciągła masa bez ścieżek, In2 płaszczyzna +3V3 i 17 mm ścieżek BST przetwornicy. Razem 1456 odcinków i 330 przelotek (w tym 128 do płaszczyzn). Na płytce są 164 elementy (148 montowanych automatycznie i 16 lutowanych ręcznie), do tego miejsce na D20 i 6 otworów montażowych.
+- **Odstępy zmierzone osobno, poza DRC:** najmniejsza odległość wylewki od padu po drugiej stronie wysokiego napięcia 0,600 mm; przy U5 pin 1 0,600 mm, pin 8 0,600 mm, pin 12 0,619 mm; przy U6 pin 6 0,601 mm, pin 7 0,937 mm.
+- **Najmniejsze odległości wewnątrz obszarów pinów** (tam, gdzie reguła 0,6 mm ma wyjątek; pary na różnych sieciach, z których choć jedna jest wysokiego napięcia). Obszar „piny U5”: pad od ścieżki 0,206 mm (pin 12 i ścieżka S12_CAP z sąsiedniego pinu 11), potem 0,269 mm (pin 7, masa, i ścieżka bramki S12_HGATE z sąsiedniego pinu 8) i 0,275 mm przy dwóch kolejnych pinach; ścieżka od ścieżki 0,311 mm, pad od przelotki 0,673 mm, pady sąsiednich pinów 0,25 mm. Obszar „piny U6”: pad od ścieżki 0,275 mm, ścieżka od ścieżki 0,400 mm, pady sąsiednich pinów 0,15 mm. Napięcie między tymi sieciami jest takie samo jak między samymi pinami, których rozstaw ustala producent układu.
+- **Sygnały przy węzłach przełączanych (L1):** do 2,5 mm od miedzi węzła przetwornicy 5 V nie ma żadnej obcej ścieżki (wcześniej SPI_SCK 0,21 mm, LCD_DISP 0,23 mm, SPI_MOSI 0,41 mm; BTN_PREP też już tam nie biegnie). Przy miedzi SW1 i SW2 przetwornicy 3,3 V najbliżej są: RUN i PWM_SYNC 0,15 mm (to własne piny U7, sąsiednie z pinami SW; bliżej się nie da), CONV_VC 2,03 mm, Q9_G 2,30 mm, ON 2,43 mm. RF_CS jest dalej niż 2,5 mm. Na L4 sygnały biegną pod tymi węzłami, pod dwiema płaszczyznami.
+- **Szerokości torów prądowych:** 12V_IN 1,0 mm; V12_F 1,0–1,2 mm (odgałęzienia do dzielników 0,6 mm); V12_MID pola miedzi i 0,6–1,0 mm; VSYS 0,6–1,0 mm; BAT_IN i BAT_R 0,8 mm; +5V, +3V3_RF i brzęczyk 0,4–0,5 mm. Węższe (0,15–0,25 mm) są tylko odcinki pomiarowe przy pinach U5 i U7, wewnątrz ich obrysów.
+- **Spadki napięcia (miedź 35 µm):** 12 V za bezpiecznikiem, około 105 mm przy 1,2 mm: 43 mΩ, czyli 43 mV przy 1 A. VSYS od Q3 przez C50 do przetwornicy, około 60 mm przy 1,0 mm: 29 mΩ, 16 mV przy 0,55 A. Tor ogniw od D7 do C50, około 70 mm przy 0,8 mm: 43 mΩ, 24 mV przy 0,55 A.
+- **USB:** USB_DP 90,5 mm z 1 przelotką, USB_DN 83,2 mm z 2 przelotkami (różnica 7,3 mm, dla Full Speed bez znaczenia).
+- Rendery: [od góry](render-sciezki-gora.png), [od spodu](render-sciezki-spod.png).
+
+### Odrzucone warianty
+
+- **Złagodzenie reguły HV albo wyłączenie jej w blokach 12 V:** odrzucone, reguła jest wymaganiem. Zamiast tego większe odstępy części i ręczne wyjścia z pinów.
+- **Router z odstępem 0,6 mm dla klas HV:** nie wychodzi z pinów SOT-23 i U6. Stąd 0,31 mm w klasie i powiększone pady.
+- **Jeden przebieg routera na całą płytkę:** zostawiał około 40 otwartych połączeń.
+- **Wyłączone zwężanie przy pinach:** kilkanaście otwartych sieci (wyżej).
+- **Starszy algorytm Freeroutingu (v19) i wyłączony etap „fanout”:** bez poprawy.
+- **Ręczne dokańczanie ścieżek po routerze:** odrzucone, bo zależałoby od wyniku routera i nie dałoby się go powtórzyć. Ręczna miedź powstaje tylko przed routerem.
+- **Wszystkie części toru 12 V w jednej grupie po lewej stronie wycięcia** (propozycja ze szkicu): wymagałaby przesunięcia toru ogniw i bloku USB. Wybrano mniejszą zmianę: wejście (J2, F1, D4) po lewej, łącznik w wolnym prawym dolnym rogu, a między nimi jedna linia 1,2 mm na L4.
+
+### Ryzyka i co zostaje
+
+- **Przegląd wykazu części i plików produkcyjnych:** numery LCSC, wybór C50 i pliki dla JLC z tej wersji nie były jeszcze oglądane niezależnie (ten PR zostaje szkicem).
+- **Ścieżki są z automatu.** Elektrycznie spełniają reguły, ale nikt nie układał ich ręcznie pod zakłócenia: sygnały sterowania 12 V biegną daleko (S12_EN około 107 mm, z filtrem C39 przy U5; V12_FLT 83 mm; RUN przetwornicy 62 mm, z filtrem C52 przy U7). Przy cewkach i węzłach przełączanych obu przetwornic nie ma obcych ścieżek na L1 (obszary zamknięte dla routera, liczby w [Wyniku](#wynik)); wyjątkiem są piny RUN i PWM/SYNC układu U7, które sąsiadują z pinami SW. Pod przetwornicami sygnały idą tylko po L4, pod dwiema płaszczyznami. Do oceny na pierwszych sztukach.
+- **Wynik routera jest wrażliwy na drobne zmiany.** Po zmianie rozmieszczenia `route.sh` może potrzebować więcej etapów albo zostawić otwartą sieć; wtedy `build.sh` kończy się błędem i trzeba poprawić rozmieszczenie w tym miejscu. Zachowane sesje gwarantują tylko powtarzalność obecnego wyniku.
+- **Wiązka 12 V:** J2 jest teraz po lewej stronie wycięcia EN3 i obrócony; długość i ułożenie przewodów od EN3 do J2 oraz kolejność żył we wtyczce sprawdzić na przymiarce ([polaczenia.md](polaczenia.md) podaje piny J2).
+- **Sitodruk:** zostały 3 uwagi DRC (ramka J4 przy krawędzi płytki, nazwa U5 na padzie C31). Małe części w gęstych grupach (także przetwornica 5 V z układem U2) nie mają nazwy na płytce, tylko na rysunku montażowym; przy uruchamianiu trzeba mieć ten rysunek pod ręką.
+- **Impedancja USB i stos warstw:** zapisać stos (`checks/stackup.json`) i policzyć w kalkulatorze JLC zamiast ze wzoru; dla Full Speed niekrytyczne.
+- **Zdanie w [obudowie R02](../r02/obudowa.md)**, że płytka tej wielkości „opłaca się tylko jako dwuwarstwowa”, nie zgadza się z dzisiejszymi cenami JLC i trzeba je tam poprawić (osobna zmiana).
+- Pomiary z [Na pierwszych sztukach v2](#na-pierwszych-sztukach-v2) bez zmian.
+
+## Części w JLC i pliki produkcyjne (2026-11-10)
+
+Stan po trzecim niezależnym przeglądzie: płytka jest gotowa do przymiarki obudowy i do sprawdzenia produkcyjnego samej płytki (bez elementów). **Nie jest gotowa do zamówienia z montażem**: zostają punkty z [Przed zamówieniem](#przed-zamówieniem) (obroty wszystkich części są potwierdzone w podglądzie JLC albo, dla cewki L1, na rysunku padów z biblioteki JLC; niżej).
+
+### Numery LCSC
+
+**JLC montuje wszystkie części, także przewlekane** (decyzja właściciela z 2026-11-10; wcześniej części przewlekane i pamięć FRAM miały być lutowane ręcznie). Każda część na płytce poza D20 ma numer LCSC w [bom.csv](bom.csv): 165 pozycji montażu w 76 liniach wykazu dla JLC (149 SMD i 16 przewlekanych, czyli 15 footprintów przewlekanych, z których F1 liczy się dwa razy; oprawka bezpiecznika F1 to dwa zaciski, czyli dwie pozycje). Źródłem jest tabela `JLC` w `tools/design.py`: część z projektu → część w katalogu. Stany i klasy odczytane z katalogu części JLC 2026-11-10.
+
+Zasada wyboru: część z listy Basic albo Preferred, dostępna w magazynie, gdy ma tę samą wartość, tolerancję, napięcie, dielektryk i obudowę; w przeciwnym razie część z projektu jako Extended. Zwykłe rezystory i kondensatory biorą część Basic (są typowe i mają zamienniki u wielu producentów, więc większa partia nie zależy od jednej pozycji). Części, na których parametrach z karty opiera się projekt (upływ, dzielniki 0,1%, 100 V, obciążenie impulsowe), zostają przy wskazanym producencie.
+
+- **Basic (20 linii):** rezystory 0805 1% UNI-ROYAL (33 Ω, 1 k, 5,1 k, 10 k, 20 k, 100 k, 220 k, 470 k, 1 M) i 1206 22 Ω; kondensatory 0805: 10 µF 25 V X5R, 100 nF 50 V X7R, 100 nF 100 V X7R, 10 nF, 470 nF i 1 µF 50 V X7R, 100 pF C0G, 1 nF 50 V X7R; dioda 1N4148W; tranzystor MMBT3904.
+- **Preferred (3 linie):** TVS SMBJ33CA (D4), Zenery BZT52C5V1 (D16) i BZT52C33 (D10).
+- **Extended (53 linie):** pozostałe, w tym 11 linii części przewlekanych.
+
+JLC dolicza opłatę za każdą linię Extended w zamówieniu (raz na typ części, niezależnie od liczby płytek). Sprawdzone 2026-11-10, czy da się ją zmniejszyć: na Basic przeszedł kondensator 1 nF, na Preferred Zener 33 V. Reszta zostaje, bo w Basic i Preferred nie ma odpowiedników: układy scalone, złącza, cewki, rezystory 0,1%, 2512 i o wartościach spoza listy (47,5 k, 309 k, 432 k), kondensatory 1210, 2,2 µF, 27 nF, 3,9 nF i 82 pF, diody o małym upływie (BAV199, BAS116), BSS138, BZT52C15, 74LVC1G32, USBLC6. Dwie zamiany odrzucone: 2N7002 z listy Basic (karta nie podaje upływu w 60 °C, na którym opiera się budżet KILL) i BSS84 z listy Preferred (wyższa granica upływu niż BSS84AK, liczy się w prądzie stanu wyłączonego).
+
+Zmiany części względem wcześniejszego wykazu, wszystkie o tych samych parametrach:
+
+| Części | Było | Jest | Powód |
+|---|---|---|---|
+| rezystory 0805 1% i R2 | Yageo RC0805FR / RC1206FR | UNI-ROYAL 0805W8F / 1206W4F | Basic; 309 k i 432 k: większy stan niż Yageo |
+| 10 µF 25 V X5R | Samsung CL21A106KAYNNNG | Samsung CL21A106KAYNNNE | Basic, ta sama seria |
+| 100 nF 50 V X7R | Samsung CL21B104KBCNNNC | Yageo CC0805KRX7R9BB104 | Basic |
+| 3,9 nF, 27 nF 50 V X7R, 82 pF NP0 | Samsung | Yageo CC0805 | Samsung bez stanu albo poza katalogiem |
+| 1 nF 50 V X7R | Samsung CL21B102KBANNNC | Samsung CL21B102KBCNNNC | Basic, ta sama seria |
+| D10 (Zener 33 V) | Diodes BZT52C33-7-F | Hongjiacheng BZT52C33 | Preferred; dioda tylko ogranicza napięcie na pinie U6 przy przepięciu, przy 24–28,8 V nie przewodzi |
+| R37 (221 k), R44 (39 k), 0,1% 25 ppm/K | Yageo RT0805BRD | Viking AR05BTCW2213, ARG05BTC3902 | Yageo: stan 0; te same 0,1% i 25 ppm/K |
+| D2, Q1 (brzęczyk) | Diodes 1N4148W-7-F, onsemi MMBT3904LT1G | ST(Semtech) 1N4148W (nie STMicroelectronics), Changjing MMBT3904 | Basic; bez wymagań na upływ |
+| D16 (Zener 5,1 V) | Diodes BZT52C5V1-7-F | Hongjiacheng BZT52C5V1 | Diodes: 3 sztuki; upływu przy 3,6 V nie podaje żadna z kart, więc pomiar KILL z [pierwszych sztuk](#na-pierwszych-sztukach-v2) dotyczy tej części |
+| U3 (nadzorca 2,7 V) | TPS3840PH27DBVR | TPS3840PH27DBVRQ1 | 45 sztuk zamiast 6; ten sam układ w wersji samochodowej |
+
+Mały stan w dniu sprawdzenia (wystarcza na 2 prototypy, przed większą partią trzeba sprawdzić ponownie albo kupić części z wyprzedzeniem do magazynu JLC): U1 FRAM 11 sztuk, U7 LTC3115-1 23, U6 LTC2955 33, U3 45, BZ1 brzęczyk 103, R62 (432 k) 236, C13 (100 µF 10 V) 436, U2 MCP1640 516, D1 603, L2 646, L1 899.
+
+Zamienniki części, których JLC nie ma w magazynie:
+
+| Część | W projekcie | W JLC | Różnica |
+|---|---|---|---|
+| U1 (FRAM 4 Mbit SPI) | Infineon CY15B104QN-50SXI | RAMXEED MB85RS4MTPF-G-BCERE1 (C42742723) | ta sama pojemność, SPI i obudowa SOP-8 208 mil z tym samym układem pinów; program rozpoznaje oba układy po identyfikatorze (`firmware/src/fram_id.h`: MB85RS4MT, CY15B104Q, CY15B104QN). Stan 11 sztuk wystarcza na 8 płytek z zapasem 3; przy mniejszym stanie w dniu zamówienia U1 lutuje się ręcznie albo dostarcza do montażu. CY15B104QN zostaje równoważną alternatywą |
+| J5, J6 (gniazda 1×22) | Sullins PPTC221LFBN-RC | Hong Cheng HC-PM254-8.5H-1x22PZ (C41376161) | ten sam raster 2,54 mm i wysokość 8,5 mm |
+| J8, J9 (gniazda 1×7) | Sullins PPTC071LFBN-RC | hanxia HX PM2.54-1x7P ZC-Y (C22438157) | jak wyżej |
+| C50 (100 µF 25 V) | Nichicon UKL1E101MPD | SamYoung PXB 25V100 8×11,5 (C350221) | niżej |
+
+Pozostałe części przewlekane są w JLC w wersji z projektu albo równoważnej: złącza JST, zaciski bezpiecznika, przycisk serwisowy, dioda alarmu, brzęczyk, listwa JP3 (numery w [bom.csv](bom.csv)).
+
+### Kondensator szyny C50
+
+Wybrany **Nichicon UKL1E101MPD**: 100 µF, 25 V, ±20%, 8 × 11,5 mm, raster 3,5 mm (zgodny z footprintem). Z karty serii UKL:
+
+- **napięcie:** VSYS dochodzi do 17,3 V (próg OVP), 25 V daje 31% zapasu;
+- **upływ:** najwyżej 0,002 × C × V = 5 µA przy 25 V po minucie; to seria o małym upływie i dlatego jest wybrana, bo C50 jest pod napięciem ogniw także w stanie wyłączonym. Przy 6 V z ogniw upływ jest dużo mniejszy; mierzy go punkt o prądzie w stanie wyłączonym z [pierwszych sztuk](#na-pierwszych-sztukach-v2);
+- **tętnienia:** dopuszczalne 280 mA (120 Hz). Prąd tętnień przetwornicy 750 kHz biorą kondensatory ceramiczne C40 i C41 przy U7 (opór kilkudziesięciu mΩ wobec około 1 Ω elektrolitu), na C50 przypada szacunkowo poniżej 10 mA;
+- **temperatura:** −40…+85 °C wobec wymaganych −10…+40 °C;
+- **trwałość:** 2000 h w 85 °C. Według zwykłej reguły (dwa razy dłużej na każde 10 °C mniej) to około 45 tysięcy godzin w 40 °C i ponad 100 tysięcy w 25 °C, czyli kilka do kilkunastu lat pod napięciem.
+
+**JLC nie ma go w magazynie ani żadnego innego elektrolitu 100 µF/25 V o małym upływie.** Na prototypy montowany jest zwykły SamYoung PXB 25 V 100 µF w tej samej obudowie 8 × 11,5 mm i rastrze 3,5 mm (125 °C, 3000 h). Różnica: upływ według zwykłej normy, najwyżej 0,01 × C × V = 25 µA przy 25 V wobec 5 µA Nichicona; przy 6 V z ogniw jest kilka razy mniejszy, ale karta tego nie podaje. Rozstrzyga pomiar prądu w stanie wyłączonym z [pierwszych sztuk](#na-pierwszych-sztukach-v2): jeśli C50 zabiera z budżetu za dużo, wymienia się go na Nichicon UKL (dwie sztuki są na liście zakupów w [bom.csv](bom.csv), wymiana to dwa punkty lutownicze). Właściciel pytał 2026-11-10 o powrót do Nichicona od razu: różnica ceny jest pomijalna, ale JLC go nie ma, więc oznaczałoby to lutowanie ręczne albo sprowadzanie części przez JLC; ryzyko zamiennika ogranicza się do większego prądu z ogniw przy wyłączonej stacji i jest mierzone na pierwszych sztukach. Seria UKL jest w katalogu Nichicon (CAT.8100M) oznaczona jako przewidziana do wycofania, więc do serii produkcyjnej część o małym upływie trzeba będzie wybrać z oferty dostępnej w tamtym czasie; w obudowie 8 × 11,5 mm z rastrem 3,5 mm nie znalazłem 2026-11-10 innej potwierdzonej serii o małym upływie (Würth WCAP-ATLL 100 µF/25 V ma 6,3 mm i raster 2,5 mm). Pojemność 100 µF nadal czeka na potwierdzenie w próbie przełączania 12 V ↔ ogniwa ([pierwsze sztuki](#na-pierwszych-sztukach-v2)).
+
+### Pliki produkcyjne
+
+`tools/fab.sh` (wywoływany na końcu `build.sh`, po czystym DRC) zapisuje w `fabrication/`:
+
+| Plik | Zawartość |
+|---|---|
+| `gerbers/` i `plytka-v2-gerber.zip` | Gerbery 4 warstw miedzi, masek, pasty, sitodruku i obrysu oraz pliki wierceń (osobno otwory metalizowane i niemetalizowane) |
+| `jlc-bom.csv` | wykaz do montażu: Comment, Designator, Footprint, LCSC Part # |
+| `jlc-cpl.csv` | pozycje: Designator, Mid X, Mid Y, Layer, Rotation |
+
+- W wykazie i pozycjach są wszystkie części poza D20 (nie montować) i otworami montażowymi. `fab.py` kończy się błędem, gdy część nie ma numeru LCSC, jej footprint nie jest oznaczony jako SMD ani przewlekany, albo część SMD jest od spodu.
+- Oprawka F1 jest w plikach jako dwa zaciski, F1A i F1B. Obroty i pozycje: niżej.
+- Współrzędne we wszystkich plikach są bezwzględne, takie jak w pliku płytki (y w pozycjach to −y z KiCad, tak jak w Gerberach).
+- Pliki nie zawierają dat (są usuwane z nagłówków), a ZIP ma stałe czasy plików (ustawiane w UTC, żeby nie zależały od strefy czasowej komputera), więc zmieniają się tylko razem z płytką. Są w repozytorium, tak jak dla [płytki testowej](../przetwornica-3v3/README.md).
+- Cewka L2 miała w footprincie typ „inny” zamiast SMD i wypadłaby z pozycji; poprawione, a sprawdzenie zgodności typu footprintu z padami jest w DRC włączone jako błąd (wynik: 0).
+
+**Obroty i pozycje części w pliku pozycji.** Model w bibliotece JLC bywa obrócony względem footprintu KiCad i ma inny punkt odniesienia. Zależy to od numeru części, nie od obudowy: dwa układy SOT-23-6 na tej płytce (U2 i U8) wymagają różnych obrotów, a publiczne tabele poprawek według obudów nie zgadzały się z podglądem JLC. Dlatego `fab.py` nie ma tabeli poprawek, tylko liczy obrót i pozycję z footprintu JLC każdej części:
+
+- **Źródło:** footprint z biblioteki JLC (EasyEDA) ze strony części `jlcpcb.com/partdetail/<numer LCSC>`, sekcja „PCB Footprint”, odczytany 2026-11-10: punkt odniesienia i położenie padów z numerami. Zapisany w [tools/jlc_models.txt](tools/jlc_models.txt) dla 38 numerów części, czyli wszystkich poza zwykłymi rezystorami i kondensatorami 0805, 1206, 1210 i 2512 (te w obu bibliotekach leżą wzdłuż osi x ze środkiem w punkcie odniesienia).
+- **Metoda:** pady z biblioteki są nakładane na pady na płytce w czterech obrotach; obrót, przy którym pad o każdym numerze trafia na swój pad (odchyłka poniżej 0,6 mm, w praktyce do 0,44 mm przez różnice wielkości padów), trafia do pliku, a pozycją jest miejsce, w które wypada punkt odniesienia modelu. Gdy żaden obrót nie pasuje albo części brakuje w pliku modeli, `fab.py` kończy się błędem.
+- **Zgodność z podglądem:** metoda daje te same obroty, które potwierdziły podglądy rozmieszczenia JLC z 2026-11-10 (dwa zrzuty, znacznik pinu 1 modelu przy pinie 1 na płytce) i wcześniejsze płytki: SOT-23 i SOT-23-5 +180° względem KiCad, U2 +180°, U8, U6, U9, SOIC-8 i U7 +270°, U5 0°, diody 0° (katoda na padzie 1), gniazdo USB-C ze stykami na padach.
+- **Co zmieniła względem pliku po podglądach:** cewka L1 (744031004) była w pliku pod kątem 0°, a model JLC ma pady obok siebie, nie jeden nad drugim: każda końcówka leżałaby na obu padach i zwierała węzeł przetwornicy 5 V z +3V3. Teraz 270°. Na podglądzie tego nie było widać, bo model jest kwadratowy. Wykrył to niezależny przegląd plików. Poza tym: L2 obrócona o 180° (bez znaczenia elektrycznego, pad 1 na padzie 1), złącze ekranu J7 przesunięte o 0,22 mm, gniazdo USB-C J4 o 0,11 mm, cztery tranzystory SOT-23 o 0,1 mm.
+- **Numer padu to nie zawsze ta sama końcówka.** Dioda alarmu D1 (WP7113ID): w bibliotece JLC pad 1 jest anodą, w KiCad katodą, więc dopasowanie po numerach odwracało diodę. Wyszło to na trzecim podglądzie JLC (2026-11-10, znak „+” modelu przy katodzie na płytce); w pliku modeli pady tej części są zamienione. Przy pozostałych częściach z biegunowością sprawdzone na symbolach i sitodruku biblioteki JLC: diody SMD mają katodę na padzie 1 jak na płytce, C50 plus na padzie 1 jak na płytce, złącza JST pin 1 i obrys obudowy jak na płytce; brzęczyk potwierdza podgląd (plus przy plusie).
+- **Części od spodu** (gniazda modułów, złącza przewodów, zaciski bezpiecznika, C50): kąt jest liczony tak, jak część widać od spodu po odwróceniu płytki w lewo–prawo; dla modelu narysowanego jak footprint KiCad daje to regułę 180° − kąt KiCad, znaną z wtyczki Fabrication Toolkit. **Potwierdzone podglądem JLC z 2026-11-10 (montaż obu stron):** znak „+” modelu C50 leży przy znaku „+” na sitodruku, strona z wycięciami obudów złączy JST leży po stronie wycięć na obrysie sitodruku (J1, J2, J3, J10, J11), gniazda modułów leżą na swoich rzędach, zaciski bezpiecznika na końcach oprawki. Ustawienie zacisków ten podgląd pokazał błędnie jako dobre: niżej. Podgląd rysuje części od spodu z przesunięciem perspektywy (do około 1,2 mm przy krawędziach płytki); położenia oceniano po stronie wycięć, nie po przesunięciu obrysu.
+- **Zaciski bezpiecznika F1 (Littelfuse 111 501, numer 01110501Z) mają ogranicznik z jednej strony.** Wcześniejszy wpis w tym pliku, że są symetryczne, był błędny (przyjęty z opisu „ear” bez rysunku); wykrył to przegląd. Według karty serii 111 (wydanie 12/19/13): korpus zacisku ma wzdłuż osi bezpiecznika 5,0 mm, nóżki są 2,04 mm od krawędzi z płytką ogranicznika (1,50 mm do nóżki o szerokości 1,08 mm) i 2,96 mm od krawędzi otwartej. Footprint JLC ma ten sam niesymetryczny obrys (−2,04…+2,96 mm), więc ogranicznik jest po jego stronie −x. Oba pady zacisku są jednakowe, pasują więc dwa obroty; `fab.py` wybiera ten, przy którym ogranicznik jest odwrócony od środka oprawki. W pliku pozycji: **F1A (przy x = 77,1 mm) 180°, F1B (przy x = 94,9 mm) 0°**; wcześniej oba miały 0° i ogranicznik F1A wypadał do środka, około 6,9 mm od środka oprawki przy 10 mm połowy długości bezpiecznika, czyli bezpiecznik by nie wszedł. Na sitodruku strony dolnej za zewnętrznym końcem każdego zacisku jest kreska 0,4 mm: ogranicznik ma być po stronie kreski.
+- **Rozstaw zacisków:** footprint (Bel FC-203-22) ma 17,8 mm między rzędami nóżek, Littelfuse zaleca dla 5 × 20 mm 18,8 mm (0,74"). Przy 17,8 mm i ogranicznikach na zewnątrz zewnętrzne krawędzie zacisków są 10,94 mm od środka oprawki; po odjęciu grubości płytki ogranicznika (z rysunku około 0,4–0,5 mm, karta jej nie wymiaruje) wewnętrzne powierzchnie są około 10,45–10,55 mm od środka. Bezpiecznik 5 × 20 mm ma 20 mm ± 0,5 mm, czyli połowę 10,0–10,25 mm: luz 0,2–0,55 mm na stronę (przy 18,8 mm byłoby o 0,5 mm więcej). Korpus zacisku obejmuje odcinek 5,94–10,94 mm od środka, a kapturek bezpiecznika około 5–10 mm, więc bezpiecznik leży na obu zaciskach. Luz jest mały: na pierwszej płytce trzeba włożyć bezpiecznik i sprawdzić, czy wchodzi bez siły; do następnej wersji footprint o rozstawie 18,8 mm.
+- **Nóżki obudowy gniazda USB-C** (cztery otwory, bez pasty): JLC nie opisuje, czy je lutuje. Po dostawie trzeba obejrzeć gniazdo od spodu; nóżki bez lutu dolutowuje się ręcznie, bo trzymają gniazdo przy wkładaniu wtyku.
+
+### Sprawdzenie w podglądzie JLC (dla właściciela)
+
+Ostatnie słowo ma podgląd rozmieszczenia w formularzu zamówienia JLC. Kolejno:
+
+1. W zamówieniu z montażem wgraj `fabrication/plytka-v2-gerber.zip`, potem `fabrication/jlc-bom.csv` i `fabrication/jlc-cpl.csv`. Wybierz montaż obu stron.
+2. Na liście części sprawdź, że każda linia ma status potwierdzony i że nie ma linii bez części.
+3. W podglądzie rozmieszczenia zrób zrzut ekranu strony górnej i dolnej, możliwie duży, i prześlij oba do sprawdzenia przed opłaceniem.
+
+Na co patrzeć (różowa kropka w podglądzie to pin 1 modelu, na płytce pin 1 układu oznacza biały trójkąt albo kropka na sitodruku):
+
+| Część | Gdzie | Dobrze, gdy |
+|---|---|---|
+| mała cewka L1 | strona górna, lewa część, na lewo od układu U2 | końcówki cewki leżą na górnym i dolnym padzie, nie w poprzek |
+| układy U1–U9, tranzystory Q2 i Q3 | strona górna | różowa kropka jest przy trójkącie albo kropce na sitodruku |
+| diody (małe prostokąty z paskiem) | strona górna | pasek modelu jest po tej stronie co pasek na sitodruku |
+| gniazdo USB-C J4 | dolna krawędź, strona górna | otwór gniazda wychodzi poza krawędź płytki, styki leżą na padach |
+| złącze ekranu J7 | lewa część, strona górna | styki leżą na rzędzie padów, zatrzask po przeciwnej stronie |
+| dioda alarmu D1 | prawy górny róg | ścięcie obudowy po stronie ścięcia na sitodruku |
+| brzęczyk BZ1 | prawy górny róg | znak „+” modelu przy znaku „+” na płytce |
+| złącza przewodów J1, J2, J3, J10, J11 | strona dolna | obrys modelu z wycięciem (kluczem) pokrywa się z obrysem na sitodruku strony dolnej |
+| kondensator C50 | strona dolna, środek | pasek „−” modelu po stronie przeciwnej do znaku „+” na płytce |
+| zaciski bezpiecznika F1 | strona dolna | dwa zaciski jako lustrzane odbicia: płytka ogranicznika każdego po stronie zewnętrznej, przy białej kresce na nadruku; nóżki bliżej zewnętrznego końca |
+| gniazda modułów J5, J6, J8, J9 | strona dolna | każdy rząd pokrywa swój rząd otworów |
+| przycisk serwisowy SW6, zworka JP3 | strona górna | nóżki trafiają w otwory |
+
+Stan 2026-11-10: obie strony sprawdzone na zrzutach podglądu z plikami z commita `55f6746d`; poprawki po podglądzie to obrót diody D1 i, po przeglądzie z 2026-11-11, obrót zacisku F1A (commit późniejszy; podgląd trzeba dla F1 powtórzyć). W zestawieniu części JLC wszystkie 76 linii dopasowane; linia zacisków F1A, F1B wymaga ręcznego zaznaczenia (ostrzeżenie formularza o możliwych różnych typach części). Porównanie trzeba powtórzyć przy każdej zmianie części albo footprintu.
+
+## Przed zamówieniem
+
+Do rozstrzygnięcia przed pierwszym zamówieniem płytki:
 - przyciski: obsługa PV6 w rękawicach przy rozstawie 32 mm;
 - obudowa, przymiarka z prawdziwą skrzynką (obrys, otwory i wysokości są już dopasowane do modelu STEP, [Dopasowanie do obudowy](#dopasowanie-do-obudowy-2026-11-09)): mocowanie i położenie koszyka BH4AAW na klapce (płasko czy na obrzeżu); pięć PV6 i przełącznik CISZY w otworach Ø20 mm płytki; dźwignia przełącznika (18 mm) pod osłoną GT-4R (opis osłony: 17,5 mm) i zamykanie klapki; odstęp końcówek WSTECZ i GÓRA od koszyka z ogniwami (z modelu 1,4–2,7 mm przy koszyku na środku) przy cienkiej taśmie; kierunek CISZY miernikiem i czy sprężyna puszczonej klapki nie przerzuca dźwigni z położenia CISZA; tuleja przełącznika (do Ø12,24 mm) w otworze Ø12,2 mm płytki GT-4R; głośność BZ1 przez kratkę 7 × Ø1,5 mm; stos ekranu (szybka, światłowód, panel, pianka) i długość taśmy do J7; oś USB-C w otworze ściany, czoło gniazda 0–1 mm od niej i próba z kilkoma kablami o różnych osłonach wtyku (pełne włożenie, bez oporu o ścianę); oś EN3 0,8 mm pod płytką, korpus i przewody w wycięciu; oś SMA i przewód do u.FL; szlifowanie dwóch słupków pod oknem ekranu; tulejki 6 mm i wkręty 3 × 12 z podkładką (moment zerwania gwintu na pierwszej sztuce, czy słupek Ø4,75 mm nie pęka przy wkręcie 3 mm i czy płytka trzyma się po kilku miesiącach); D1 przez otwór Ø5,5 mm (widoczność z kilku metrów); oznaczenie strzałkami położenia pokrywy; zwrot Wio i położenie u.FL. Na obrazku Seeed od strony elementów J1 leży po lewej, pin 1 przy otworze Ø 2,2 mm, a u.FL przy pinie 7 J2. Gniazda (z góry J9 po lewej, J8 po prawej, piny 1 przy y 67,4) pasują, gdy listwy wychodzą od strony bez elementów, czyli moduł wisi elementami w dół; potwierdzić przymiarką;
-- ścieżki po potwierdzeniu rozmieszczenia: tor RF krótko od Wio, przetwornica z dala od ekranu, ESD i TVS ≤10 mm od złączy;
+- D20 dolutowany ręcznie na jednym prototypie przed pierwszym podłączeniem 24 V, pomiar napięcia szczytowego przy łączniku i decyzja o D20 w serii ([plan](#ochrona-wejścia-przy-łączniku)); po przymiarce obudowy ewentualne poprawki rozmieszczenia i nowy przebieg routera;
 - wnioski z kroku 4 i decyzja: moduły wpinane czy przylutowany ESP32-S3 i układ radiowy;
 - program stacji: piny GPIO3, GPIO4, GPIO5 i GPIO45–48, ADC ogniw i 12 V, KILL i INT, [czuwanie](../../docs/spec/oprogramowanie.md#czuwanie);
 - pomiary na [płytce testowej przetwornicy](../przetwornica-3v3/README.md): sprawność LTC3115-1 przy 3,3 V (Z11, [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)) i Burst Mode U7 (typowo poniżej 50 mA) przy starcie ESP32-S3 i panelu oraz przy 4 V na wejściu: 3,3 V nie może przy tym spaść do progu nadzorcy FRAM 2,7 V (U3). Płytka testowa nie ma ESP32-S3, panelu ani nadzorcy, więc do tej próby podłącza się L0 (DevKitC na płytce v1.1, z panelem i nadzorcą U3) pinem 3V3 i G do VOUT płytki testowej, bez USB (DevKitC dopuszcza tylko jedno źródło zasilania). Gdyby 3,3 V spadało: najpierw program włącza PWM (GPIO45) zaraz po starcie, przed panelem i radiem; gdyby spadek był już w czasie ładowania programu (przed kodem stacji), większa pojemność na 3V3. Ostatecznie można rozdzielić sieć PWM_SYNC i GPIO45 (rezystor 0 Ω od PWM/SYNC do VCC przetwornicy, GPIO45 odłączony z R63 do masy), ale PWM bez obciążenia bierze około 12 mA (karta LTC3115-1, wykres „PWM Mode No-Load Input Current”, 1 MHz, 5 V; przy 750 kHz i 3,3 V niewiele mniej) zamiast 50 µA w Burst Mode, także w czuwaniu i przy wyłączonym radiu, czyli około 60 mW przy 6 V, co przy zapasie modelu poniżej 1 h spycha czas pracy na ogniwach wyraźnie poniżej 48 h. GPIO45 wysoki przy resecie (R63 do 3V3) odpada, bo wybiera 1,8 V dla flash, a WROOM-1 N8R8 ma flash 3,3 V; eFuse VDD_SPI_FORCE i VDD_SPI_TIEH, które to obchodzą, są nieodwracalne i zostają tylko jako ostateczność;
@@ -261,8 +650,25 @@ Prototyp v2 w 2 sztukach, jak L0, przed zamówieniem serii pilotażowej. Poniżs
 - **upływ D7 do ogniw na ciepło:** szacunek dla najgorszej sztuki mieści się w 2 µA z karty L91 do około 50 °C (1,2 µA w 45 °C), typowo do 60 °C. Pomiar prądu w gałęzi ogniw przy 12 V w 45 i 60 °C na obu sztukach ([T6 „Zasilanie stacji – progi”](../../docs/spec/odbior.md#próby) i [T6 „Tor zasilania stacji pilotażowej”](../../docs/spec/odbior.md#próby): ≤1 µA); gdyby w 45 °C przekroczył 1 µA, wraca wybór diody;
 - **spadek D13 i próg ON:** próg samoczynnego włączenia to 0,76–0,84 V wejścia ON przez dzielnik R70/R71 plus spadek BAS116H przy około 27 µA, szacunkowo 8,2–9,6 V. Pomiar zbocza włączenia na obu sztukach ([T6 „Zasilanie stacji – progi”](../../docs/spec/odbior.md#próby): nie poniżej 8,0 V, najpóźniej przy 9,8 V). Gdyby wypadło poza pasmo, zmienia się R70 (wartość E96 wyliczona z pomiaru spadku D13; musi być w LCSC w tolerancji 0,1%, jak dziś RT0805BRD07280KL);
 - **ujemny impuls przy 16 V** ([T6 „Zasilanie stacji – progi”](../../docs/spec/odbior.md#próby)): granica OUT, C i VSNS LM74800 (SNOSD95C 7.1: ≤70 V + V(A), czyli 16,7 V przy V(A) = −53,3 V) jest spełniona w całym zakresie pracy do 16 V, także w próbie T6 z ujemnym impulsem przy 16 V. Przekracza ją o najwyżej 0,6 V tylko wejście 16–17,3 V, tuż pod progiem OVP. Taniej poprawki nie ma: próg OVP ma tolerancję ±2,9% (16,32–17,30 V), więc nie zmieści się w paśmie 16,0–16,7 V, a TVS jednokierunkowy zamiast SMBJ33CA przewodziłby przy odwróconym 33 V i przepaliłby bezpiecznik, czego T6 zabrania. Zostaje jako znane ograniczenie. Gdyby próba przy 16 V uszkodziła LM74800, wraca projekt ochrony wejścia 12 V.
+- **napięcie szczytowe przy łączniku:** oscyloskopem na C38 przy podłączaniu pod napięcie, najpierw na prototypie bez D20 i stopniowo: 24 V, 28,8 V, a 33 V tylko wtedy, gdy wcześniejsze wyniki nie przekroczyły 60 V; potem na prototypie z ręcznie dolutowanym D20. Szacunek dla podłączenia pod napięcie to 57,6 V przy 28,8 V i 66 V przy 33 V, granica U5 to 70 V ([plan pomiaru i decyzja](#ochrona-wejścia-przy-łączniku)). **Powyżej 65 V D20 wchodzi do montażu serii.**
+- **przetwornica na v2:** tętnienia, sprawność i zakłócenia zmierzyć od nowa; układ części różni się od płytki testowej ([różnice](#miedź-ręczna-przed-routerem)).
 
 Odrzucone: osobne stanowisko do pomiarów pojedynczych części (µA, podgrzewanie), bo daje wynik kilku sztuk, a nie najgorszy przypadek z kart, i kosztuje więcej, niż daje; części mierzy się na prototypach v2.
+
+## Próby przy stole na L0 a płytka v2 (2026-11-14)
+
+Próby przy stole z 2026-11-14 na dwóch prototypach L0 (płytka v1) nie wymagają żadnej zmiany w płytce v2. Raport zbiorczy: `hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md` ([PR 213](https://github.com/tmierzwa/WICI/pull/213), w dniu wpisu jeszcze niescalony). Wszystkie cztery usterki zgłoszone w raporcie dotyczą programu stacji.
+
+Co próby potwierdzają dla v2:
+- **Pamięć FRAM:** układ MB85RS4MT na prototypie L0 przetrwał sześć ręcznych odcięć zasilania bez uszkodzonego rekordu (`corrupt_slots` 0 po każdym starcie), a zgłoszenie przyjęte tuż przed odcięciem wyszło z pamięci po starcie. Na v2 JLC montuje ten sam typ pamięci ([zamienniki](#numery-lcsc)), więc program rozpoznaje go i zapisuje na nim poprawnie.
+- **Moduły wpinane:** ramki do 255 B, łańcuch trzech skoków i 66% zajętej pamięci RAM pod obciążeniem przeszły na modułach procesora i radia takich jak na v2. To argument za modułami wpinanymi na prototypach v2. Decyzji „moduły wpinane czy przylutowany ESP32-S3 i układ radiowy” ([Przed zamówieniem](#przed-zamówieniem)) próby nie zamykają: nie badały zasięgu, temperatury ani poboru prądu.
+
+Czego próby nie objęły:
+- **Tor zasilania:** stacje były zasilane z USB. O wejściu 12 V, ogniwach, przetwornicy 3,3 V i sterowniku wyłącznika próby nic nie mówią. Warunki z sekcji [Przed zamówieniem](#przed-zamówieniem) i pomiary z sekcji [Na pierwszych sztukach v2](#na-pierwszych-sztukach-v2) zostają bez zmian.
+
+Uwagi do stanowiska prób, bez zmiany płytki:
+- **Odcięcie zasilania w zadanej chwili:** próba zaniku zasilania przekaźnika wyszła w zakresie 6 odcięć zamiast 15, bo ręką nie da się trafić w okno około 100 ms między odebraniem ramki a potwierdzeniem. Na v2 program może sam wyłączyć stację (GPIO47 przez Q11 ściąga KILL sterownika wyłącznika). Czy nadaje się to na punkt testowy tej próby, nie było sprawdzane; do oceny przy programie stacji dla v2 (zachowanie przy obecnym 12 V i przy podłączonym USB, opóźnienie wyłączenia).
+- **Próba z węzłem wrogim:** wymaga toru przewodowego między radiami albo komory ekranowanej. Antenę podłącza się do modułu radiowego, nie do płytki, więc potrzebne są kable i tłumiki, a nie zmiana w v2.
 
 ## Źródła
 

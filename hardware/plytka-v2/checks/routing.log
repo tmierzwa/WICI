@@ -1,0 +1,386 @@
+2026-11-10 21:04:44.006 INFO   Freerouting v2.5.0 (build-date: 2026-10-05)
+2026-11-10 21:04:44.270 INFO   Hardware: 18 CPU cores, 524 CPU score, 16384 MB RAM
+2026-11-10 21:04:44.274 WARN   GUI is disabled and you don't have a console available, so the only feedback from Freerouting is in the log.
+2026-11-10 21:04:45.582 INFO   [89AC71\F97CD6] Loading board file 'routing.dsn'...
+2026-11-10 21:04:45.667 WARN   DSN file 'routing.dsn' was loaded with 1 warning(s).
+2026-11-10 21:04:45.710 INFO   [89AC71\F97CD6] Job '89AC71\F97CD6' started at 2026-11-10T20:04:45.710458Z.
+2026-11-10 21:04:45.808 WARN   Design Warning: Board has 421 pre-existing clearance violation(s) in the loaded design (before routing):
+  - 421 unfixable violation(s) (cannot be resolved by Freerouting):
+      * 141 pin-to-pin clearance violations (first 5 shown):
+          - U6.8 [net PWR_INT] <-> U6.7 [net PWR_ENB]
+          - U6.7 [net PWR_ENB] <-> U6.6 [net VCTL]
+          - U6.6 [net VCTL] <-> U6.5 [net PWR_PB]
+          - U6.4 [net GND] <-> U6.3 [net PWR_TMR]
+          - U5.13 <-> U5.6 [net S12_EN]
+          ... and 136 more
+      * 280 fixed trace/via clearance violations (first 5 shown):
+          - FixedVia#2406 [net +3V3] <-> ObstacleArea#80
+          - FixedVia#2405 [net GND] <-> ObstacleArea#83
+          - FixedVia#2405 [net GND] <-> ObstacleArea#80
+          - FixedVia#2400 [net GND] <-> ObstacleArea#83
+          - FixedVia#2400 [net GND] <-> ObstacleArea#80
+          ... and 275 more
+  - 0 potentially fixable violations
+Notice: Freerouting does not modify component placement, board outlines, or fixed items.
+Resolving these 421 unfixable violation(s) is the responsibility of the board author in their EDA tool (e.g. KiCad).
+2026-11-10 21:04:45.832 INFO   [89AC71\F97CD6] Pipeline thread limits: autorouter pass is single-threaded, optimizer.max_threads=17.
+2026-11-10 21:04:45.909 INFO   [89AC71\F97CD6] Fanout stage started on board 'e6c1c3d63e2685c15993a3dc95762b70' with 443 of 451 SMD pins needing fanout (2 already connected, 6 netless).
+2026-11-10 21:04:47.282 INFO   [89AC71\F97CD6] Fanout pass #1 on board 'b2252e08350eb8ef9d7f1a13589d6cfa' completed in 1.32 seconds with 260 SMD pins fanouted, 18 not routed, 0 insert errors, +95 extra vias (0 SMD pins still to check in pass, ripup costs=100).
+2026-11-10 21:04:47.568 INFO   [89AC71\F97CD6] Fanout pass #2 on board '694e9af123b96b983d68ccd17eedb6c2' completed in 0.26 seconds with 97 SMD pins fanouted, 15 not routed, 0 insert errors, +9 extra vias (0 SMD pins still to check in pass, ripup costs=200).
+2026-11-10 21:04:47.794 INFO   [89AC71\F97CD6] Fanout pass #3 on board 'e4e85e21af8113766cefa5b969c118c6' completed in 0.20 seconds with 84 SMD pins fanouted, 15 not routed, 0 insert errors, +1 extra via (0 SMD pins still to check in pass, ripup costs=300).
+2026-11-10 21:04:47.969 INFO   [89AC71\F97CD6] Fanout pass #4 on board '9b76eb6bfda6b5f52e3a49f78f7e001d' completed in 0.16 seconds with 82 SMD pins fanouted, 15 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=400).
+2026-11-10 21:04:48.134 INFO   [89AC71\F97CD6] Fanout pass #5 on board '3a48f56bc6f90d34b0e3c85f85a64e54' completed in 0.15 seconds with 82 SMD pins fanouted, 15 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=500).
+2026-11-10 21:04:48.300 INFO   [89AC71\F97CD6] Fanout pass #6 on board '8f6e662cea4fd33b6fa329d87dbd5270' completed in 0.15 seconds with 82 SMD pins fanouted, 15 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=600).
+2026-11-10 21:04:48.488 INFO   [89AC71\F97CD6] Fanout pass #7 on board '4a99b4cdbb7384d0a40f4f5a7df41570' completed in 0.17 seconds with 82 SMD pins fanouted, 15 not routed, 0 insert errors, +0 extra vias (0 SMD pins still to check in pass, ripup costs=700).
+2026-11-10 21:04:48.488 INFO   Fanout stopped after 7 passes: no progress for 3 consecutive passes.
+2026-11-10 21:04:48.501 INFO   [89AC71\F97CD6] Fanout stage completed: started with 445 total SMD pins, completed in 2.56 seconds, escaped pins: 353/445 (79.3%), using 2.54 total CPU seconds, 3.47 GB total allocated, and 415.8 MB peak heap usage.
+2026-11-10 21:04:48.631 INFO   [89AC71\F97CD6] Auto-routing stage started on board '4a99b4cdbb7384d0a40f4f5a7df41570' with baseline score 179.29 for 304 unrouted items.
+2026-11-10 21:04:55.300 INFO   [89AC71\F97CD6] Auto-routing pass #1 on board '4a99b4cdbb7384d0a40f4f5a7df41570' was completed in 6.60 seconds with score 236.86 (266 unrouted and 421 violations), using 8.72 CPU seconds and the job allocated 14.87 GB of memory so far.
+2026-11-10 21:05:00.347 INFO   [89AC71\F97CD6] Auto-routing pass #2 on board 'dbf0484d739d43cf67c0ff7009e11ffb' was completed in 4.99 seconds with score 241.41 (263 unrouted and 421 violations), using 13.69 CPU seconds and the job allocated 24.97 GB of memory so far.
+2026-11-10 21:05:05.177 INFO   [89AC71\F97CD6] Auto-routing pass #3 on board 'a3a34333de5821846f824478f5c28bea' was completed in 4.78 seconds with score 250.50 (257 unrouted and 421 violations), using 18.68 CPU seconds and the job allocated 35.34 GB of memory so far.
+2026-11-10 21:05:10.373 INFO   [89AC71\F97CD6] Auto-routing pass #4 on board '273e2db18fec2851bbfb08a13d97776e' was completed in 5.14 seconds with score 247.47 (259 unrouted and 421 violations), using 23.66 CPU seconds and the job allocated 45.46 GB of memory so far.
+2026-11-10 21:05:15.177 INFO   [89AC71\F97CD6] Auto-routing pass #5 on board 'ecb6ac415a2998630394a812e12bb637' was completed in 4.75 seconds with score 252.01 (256 unrouted and 421 violations), using 28.64 CPU seconds and the job allocated 55.88 GB of memory so far.
+2026-11-10 21:05:19.402 INFO   [89AC71\F97CD6] Auto-routing pass #6 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 4.17 seconds with score 248.98 (258 unrouted and 421 violations), using 32.60 CPU seconds and the job allocated 63.83 GB of memory so far.
+2026-11-10 21:05:24.502 INFO   [89AC71\F97CD6] Auto-routing pass #7 on board 'ad6376188a025bb051952aa906204844' was completed in 5.05 seconds with score 250.50 (257 unrouted and 421 violations), using 37.56 CPU seconds and the job allocated 73.68 GB of memory so far.
+2026-11-10 21:05:29.879 INFO   [89AC71\F97CD6] Auto-routing pass #8 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 0.00 seconds with score 252.01 (256 unrouted and 421 violations), using 42.46 CPU seconds and the job allocated 82.78 GB of memory so far.
+2026-11-10 21:05:33.520 INFO   [89AC71\F97CD6] Auto-routing pass #9 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 3.63 seconds with score 248.98 (258 unrouted and 421 violations), using 46.35 CPU seconds and the job allocated 90.17 GB of memory so far.
+2026-11-10 21:05:37.326 INFO   [89AC71\F97CD6] Auto-routing pass #10 on board 'ba7670e713d7cbed28a5a6b033130714' was completed in 3.75 seconds with score 250.50 (257 unrouted and 421 violations), using 50.33 CPU seconds and the job allocated 98.87 GB of memory so far.
+2026-11-10 21:05:40.863 INFO   [89AC71\F97CD6] Auto-routing pass #11 on board '4fd22f25b02d016b9c908783cd37e429' was completed in 3.44 seconds with score 247.47 (259 unrouted and 421 violations), using 53.33 CPU seconds and the job allocated 105.28 GB of memory so far.
+2026-11-10 21:05:44.439 INFO   [89AC71\F97CD6] Auto-routing pass #12 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 0.00 seconds with score 252.01 (256 unrouted and 421 violations), using 57.32 CPU seconds and the job allocated 114.14 GB of memory so far.
+2026-11-10 21:05:47.550 INFO   [89AC71\F97CD6] Auto-routing pass #13 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 3.10 seconds with score 248.98 (258 unrouted and 421 violations), using 60.30 CPU seconds and the job allocated 120.54 GB of memory so far.
+2026-11-10 21:05:51.943 INFO   [89AC71\F97CD6] Auto-routing pass #14 on board '9e2387dfb7a5944a6a5ce692cb8377de' was completed in 4.34 seconds with score 250.50 (257 unrouted and 421 violations), using 64.17 CPU seconds and the job allocated 128.10 GB of memory so far.
+2026-11-10 21:05:56.363 INFO   [89AC71\F97CD6] Auto-routing pass #15 on board 'ddcbb2aaee48ca433d880f62ef831198' was completed in 4.36 seconds with score 247.47 (259 unrouted and 421 violations), using 69.01 CPU seconds and the job allocated 137.55 GB of memory so far.
+2026-11-10 21:06:00.590 INFO   [89AC71\F97CD6] Auto-routing pass #16 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 0.00 seconds with score 252.01 (256 unrouted and 421 violations), using 72.92 CPU seconds and the job allocated 145.50 GB of memory so far.
+2026-11-10 21:06:03.973 INFO   [89AC71\F97CD6] Auto-routing pass #17 on board 'e791e6a271124e8a2e9e61c8a11fe643' was completed in 3.37 seconds with score 248.98 (258 unrouted and 421 violations), using 75.85 CPU seconds and the job allocated 151.31 GB of memory so far.
+2026-11-10 21:06:08.221 INFO   [89AC71\F97CD6] Auto-routing pass #18 on board '9e2387dfb7a5944a6a5ce692cb8377de' was completed in 4.24 seconds with score 250.50 (257 unrouted and 421 violations), using 80.69 CPU seconds and the job allocated 161.02 GB of memory so far.
+2026-11-10 21:06:08.231 INFO   [89AC71\F97CD6] The router's best score (252.01) has not improved by more than 0.5 points since pass #8. Stopping the auto-router after 18 passes (256 items still unconnected).
+The following connections could not be routed -- please review your design (e.g. check pad clearances, trace width rules, and available routing space):
+  Net '+3V3' (29 unrouted connections):
+    - U1-7  ->  U1-8
+    - J5-2  ->  J5-1
+    - U2-6  ->  U2-3
+    - R5-1  ->  R7-1
+    - U4-5  ->  C3-1
+    - R6-1  ->  R5-1
+    - R8-1  ->  R6-1
+    - R8-1  ->  R9-1
+    - R9-1  ->  R10-1
+    - C11-1  ->  U4-5
+    - U3-2  ->  C12-1
+    - R68-2  ->  R61-1
+    - conductionarea  ->  R61-1
+    - C13-1  ->  R20-1
+    - R20-1  ->  U3-2
+    - C11-1  ->  J5-1
+    - R20-1  ->  U1-3
+    - C3-1  ->  U1-8
+    - U1-3  ->  C3-1
+    - U8-5  ->  R75-1
+    - U8-5  ->  D11-2
+    - JP3-1  ->  R11-1
+    - R47-1  ->  C13-1
+    - C12-1  ->  conductionarea
+    - D11-2  ->  U2-3
+    - conductionarea  ->  R11-1
+    - L1-1  ->  R10-1
+    - D6-2  ->  R68-2
+    - conductionarea  ->  U2-6
+  Net 'GND' (103 unrouted connections):
+    - J7-9  ->  J7-10
+    - C65-2  ->  D18-2
+    - J6-21  ->  J6-22
+    - C47-2  ->  U7-11
+    - C64-2  ->  D19-2
+    - U7-10  ->  U7-6
+    - U7-1  ->  U7-5
+    - C30-2  ->  U5-7
+    - C60-2  ->  C63-2
+    - C35-2  ->  D10-2
+    - C33-2  ->  C34-2
+    - C6-2  ->  R13-2
+    - R65-2  ->  R74-2
+    - C1-2  ->  C2-2
+    - R64-2  ->  C2-2
+    - C37-2  ->  R71-2
+    - Q7-2  ->  R43-2
+    - R72-2  ->  Q11-2
+    - U8-2  ->  R66-2
+    - D17-2  ->  R66-2
+    - R22-2  ->  C7-2
+    - U3-3  ->  C12-2
+    - C6-2  ->  R22-2
+    - C8-2  ->  U2-2
+    - R78-2  ->  D16-2
+    - C46-2  ->  R63-2
+    - U7-21  ->  U7-20
+    - U7-11  ->  U7-21
+    - J4-SH@1  ->  J4-SH
+    - J4-SH@3  ->  J4-SH@2
+    - C4-2  ->  U2-2
+    - U5-7  ->  R31-2
+    - C61-2  ->  C63-2
+    - U7-11  ->  C46-2
+    - C36-2  ->  R72-2
+    - conductionarea  ->  U7-1
+    - conductionarea  ->  U7-20
+    - C4-2  ->  R22-2
+    - R65-2  ->  U8-2
+    - R55-2  ->  R54-2
+    - J1-2  ->  R45-2
+    - D15-2  ->  Q5-2
+    - C53-2  ->  R71-2
+    - C32-2  ->  C35-2
+    - conductionarea  ->  Q10-2
+    - R60-2  ->  U7-10
+    - C11-2  ->  U4-3
+    - U9-2  ->  J10-5
+    - R19-2  ->  C8-2
+    - U3-3  ->  U1-4
+    - J4-A1  ->  R66-2
+    - C52-2  ->  R62-2
+    - R31-2  ->  C39-2
+    - J4-A1  ->  J4-A12
+    - SW6-2@1  ->  SW6-2
+    - J3-2  ->  C65-2
+    - C61-2  ->  U9-2
+    - D16-2  ->  C53-2
+    - Q1-2  ->  D1-1
+    - Q12-2  ->  R66-2
+    - J5-22  ->  C52-2
+    - U6-4  ->  C37-2
+    - C61-2  ->  C62-2
+    - R12-2  ->  C1-2
+    - C11-2  ->  C3-2
+    - D14-2  ->  Q10-2
+    - Q5-2  ->  R39-2
+    - D15-2  ->  D6-1
+    - U4-3  ->  U1-4
+    - Q1-2  ->  R4-2
+    - D4-2  ->  J2-2
+    - conductionarea  ->  C52-2
+    - R45-2  ->  J4-SH@2
+    - J11-2  ->  C64-2
+    - C38-2  ->  D20-2
+    - R22-2  ->  C9-2
+    - R43-2  ->  R74-2
+    - R4-2  ->  Q11-2
+    - R55-2  ->  R78-2
+    - Q7-2  ->  D11-1
+    - SW6-2  ->  R36-2
+    - C36-2  ->  C37-2
+    - R64-2  ->  J9-2
+    - C34-2  ->  U4-3
+    - C30-2  ->  C32-2
+    - R36-2  ->  Q5-2
+    - R63-2  ->  J9-2
+    - C13-2  ->  U1-4
+    - C36-2  ->  D14-2
+    - C32-2  ->  SW6-2@1
+    - C13-2  ->  R55-2
+    - D10-2  ->  R12-2
+    - C39-2  ->  D20-2
+    - C61-2  ->  J5-22
+    - J7-MP  ->  R19-2
+    - C63-2  ->  J6-22
+    - C50-2  ->  R39-2
+    - D11-1  ->  R13-2
+    - C9-2  ->  J6-22
+    - J1-2  ->  D4-2
+    - C34-2  ->  J6-1
+    - D18-2  ->  D19-2
+    - C38-2  ->  J3-2
+  Net 'V12_F' (11 unrouted connections):
+    - via  ->  conductionarea
+    - conductionarea  ->  conductionarea
+    - via  ->  via
+    - via  ->  R33-1
+    - Q4-2  ->  via
+    - via  ->  U5-2
+    - via  ->  via
+    - F1-2  ->  F1-2@1
+    - Q4-2  ->  via
+    - F1-2@1  ->  D4-1
+    - D13-2  ->  F1-2@1
+  Net 'V12_MID' (10 unrouted connections):
+    - conductionarea  ->  Q3-8
+    - U5-12  ->  U5-10
+    - Q3-7  ->  Q3-6
+    - Q2-7  ->  Q2-8
+    - Q2-7  ->  Q2-6
+    - via  ->  Q2-5
+    - U5-12  ->  via
+    - U5-3  ->  via
+    - conductionarea  ->  C30-1
+    - R46-1  ->  conductionarea
+  Net 'VSYS' (6 unrouted connections):
+    - conductionarea  ->  U7-17
+    - via  ->  U5-9
+    - U7-13  ->  conductionarea
+    - C50-1  ->  conductionarea
+    - conductionarea  ->  C50-1
+    - via  ->  C50-1
+  Net 'LCD_DISP' (3 unrouted connections):
+    - C7-1  ->  R19-1
+    - J7-5  ->  R19-1
+    - R19-1  ->  J5-9
+  Net 'BST_FB' (1 unrouted connection):
+    - U2-4  ->  R21-2
+  Net 'S12_CAP' (1 unrouted connection):
+    - C31-1  ->  U5-11
+  Net 'S12_DVDT' (1 unrouted connection):
+    - C32-1  ->  R32-2
+  Net 'V_AA_ADC' (2 unrouted connections):
+    - J5-4  ->  C34-1
+    - J5-4  ->  R77-2
+  Net 'VCTL' (2 unrouted connections):
+    - via  ->  Q8-2
+    - via  ->  U6-6
+  Net 'CONV_BST1' (2 unrouted connections):
+    - U7-16  ->  AN17-1
+    - AN18-1  ->  AN17-1
+  Net 'CONV_BST2' (2 unrouted connections):
+    - U7-15  ->  AN16-1
+    - U7-15  ->  AN11-1
+  Net 'CONV_VCC' (2 unrouted connections):
+    - U7-14  ->  U7-12
+    - U7-12  ->  C47-1
+  Net 'CONV_FB' (5 unrouted connections):
+    - R61-2  ->  R62-1
+    - C48-1  ->  C49-1
+    - R61-2  ->  C51-1
+    - C48-1  ->  R62-1
+    - U7-8  ->  C49-1
+  Net 'CONV_VC' (2 unrouted connections):
+    - via  ->  C48-2
+    - via  ->  R67-2
+  Net 'CONV_CMP1' (1 unrouted connection):
+    - R67-1  ->  C49-2
+  Net 'CONV_CMP2' (1 unrouted connection):
+    - C51-2  ->  R68-1
+  Net 'BTN_UP' (3 unrouted connections):
+    - C60-1  ->  R80-2
+    - C60-1  ->  J6-7
+    - R5-2  ->  C60-1
+  Net 'BTN_DOWN' (2 unrouted connections):
+    - J6-8  ->  C61-1
+    - R81-2  ->  R6-2
+  Net 'BTN_OK' (2 unrouted connections):
+    - J6-9  ->  R82-2
+    - J6-9  ->  R7-2
+  Net 'BTN_BACK' (3 unrouted connections):
+    - R83-2  ->  C63-1
+    - J6-5  ->  C63-1
+    - C63-1  ->  R8-2
+  Net 'SW_CISZA' (2 unrouted connections):
+    - R9-2  ->  J6-4
+    - J6-4  ->  R16-2
+  Net 'LED_A' (1 unrouted connection):
+    - D1-2  ->  R1-2
+  Net 'Q4_G' (1 unrouted connection):
+    - AN6-1  ->  Q4-1
+  Net 'V_12_DIV' (1 unrouted connection):
+    - AN10-1  ->  D6-3
+  Net 'V_AA_DIV' (2 unrouted connections):
+    - R44-2  ->  D11-3
+    - R77-1  ->  D11-3
+  Net 'Q5_G' (1 unrouted connection):
+    - via  ->  Q5-1
+  Net 'Q12_G' (1 unrouted connection):
+    - R73-2  ->  D17-1
+  Net 'PWR_PB_IN' (1 unrouted connection):
+    - D18-1  ->  J3-1
+  Net '12V_IN' (1 unrouted connection):
+    - F1-1@1  ->  F1-1
+  Net 'USB_VBUS' (2 unrouted connections):
+    - J4-A4  ->  J4-B4
+    - J4-A4  ->  R73-1
+  Net 'USB_CC1' (1 unrouted connection):
+    - J4-A5  ->  R65-1
+  Net 'USB_CC2' (1 unrouted connection):
+    - R66-1  ->  J4-B5
+  Net 'BTN_PREP' (3 unrouted connections):
+    - SW6-1@1  ->  SW6-1
+    - SW6-1  ->  J5-6
+    - R10-2  ->  J5-6
+  Net 'LCD_CS' (2 unrouted connections):
+    - R13-1  ->  J7-3
+    - R13-1  ->  J5-7
+  Net 'BUZZER' (1 unrouted connection):
+    - R3-1  ->  J5-8
+  Net 'LCD_EXTCOMIN' (1 unrouted connection):
+    - J7-4  ->  J5-10
+  Net 'LED_ALARM' (1 unrouted connection):
+    - J5-11  ->  R1-1
+  Net 'FRAM_CS' (2 unrouted connections):
+    - R20-2  ->  U4-1
+    - J5-12  ->  R20-2
+  Net 'USB_LAPTOP' (1 unrouted connection):
+    - J5-13  ->  Q12-3
+  Net 'DIV_EN' (1 unrouted connection):
+    - J5-14  ->  Q7-1
+  Net 'RF_RESET' (2 unrouted connections):
+    - J8-3  ->  R12-1
+    - J5-15  ->  R12-1
+  Net 'RF_CS' (1 unrouted connection):
+    - J5-16  ->  R11-2
+  Net 'SPI_MOSI' (3 unrouted connections):
+    - U1-5  ->  J5-17
+    - J5-17  ->  J9-4
+    - J7-2  ->  J5-17
+  Net 'SPI_SCK_DEVKIT' (1 unrouted connection):
+    - J5-18  ->  R18-1
+  Net 'SPI_MISO' (2 unrouted connections):
+    - J5-19  ->  U1-2
+    - J5-19  ->  J9-5
+  Net 'RF_GPIO0' (1 unrouted connection):
+    - J8-2  ->  J5-20
+  Net 'RF_GPIO3' (2 unrouted connections):
+    - R64-1  ->  J8-5
+    - R64-1  ->  J6-6
+  Net 'PWM_SYNC' (3 unrouted connections):
+    - U7-19  ->  via
+    - AN19-1  ->  R63-1
+    - via  ->  J6-15
+  Net 'RF_GPIO1' (1 unrouted connection):
+    - J8-1  ->  J6-18
+  Net 'SPI_SCK' (2 unrouted connections):
+    - U1-6  ->  J9-6
+    - J7-1  ->  U1-6
+  Net 'BTN_UP_IN' (1 unrouted connection):
+    - J10-1  ->  U9-1
+  Net 'BTN_DOWN_IN' (1 unrouted connection):
+    - J10-2  ->  U9-3
+  Net 'BTN_OK_IN' (1 unrouted connection):
+    - R82-1  ->  J10-3
+  Net 'BTN_BACK_IN' (1 unrouted connection):
+    - J10-4  ->  U9-6
+  Net 'S12_DGATE' (1 unrouted connection):
+    - Q2-4  ->  U5-1
+  Net 'S12_HGATE' (2 unrouted connections):
+    - R32-1  ->  U5-8
+    - R32-1  ->  Q3-4
+  Net 'V12_SW' (1 unrouted connection):
+    - Q4-3  ->  AN9-1
+  Net 'Q5_D' (1 unrouted connection):
+    - AN8-1  ->  Q5-3
+  Net 'Q6_G' (2 unrouted connections):
+    - Q6-1  ->  R41-2
+    - Q6-1  ->  Q7-3
+  Net 'ON' (1 unrouted connection):
+    - AN34-1  ->  Q8-3
+  Net 'S12_SW' (1 unrouted connection):
+    - U5-4  ->  R30-1
+  Net 'S12_OV' (2 unrouted connections):
+    - R30-2  ->  R31-1
+    - R30-2  ->  U5-5
+  Net 'PWR_ENB' (1 unrouted connection):
+    - U6-7  ->  R50-2
+  Net 'CONV_RT' (1 unrouted connection):
+    - U7-9  ->  R60-1
+  Net 'FRAM_GUARD' (1 unrouted connection):
+    - U3-1  ->  U4-2
+2026-11-10 21:06:08.496 INFO   [89AC71\F97CD6] Auto-routing stage completed: started with 370 unrouted nets, completed in 82.62 seconds, final score: 252.01 (256 unrouted and 421 violations), using 80.69 total CPU seconds, 161.02 GB total allocated, and 663.8 MB peak heap usage.
+2026-11-10 21:06:08.542 INFO   [89AC71\F97CD6] Skipping optimization stage: the board has 256 unrouted connection(s) (optimizer only runs on completely routed boards).
+2026-11-10 21:06:08.569 INFO   [89AC71\F97CD6] Job '89AC71\F97CD6' finished with state: COMPLETED (elapsed: 1 minute 22.86 seconds, finished at UTC: 2026-11-10T20:06:08.569195Z).
+2026-11-10 21:06:08.584 INFO   Saving output file 'checks/routing.ses' (SES)...
+2026-11-10 21:06:08.585 INFO   Successfully saved output file 'checks/routing.ses' (65898 bytes).

@@ -15,13 +15,94 @@ XH2 = 'Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical'
 
 PARTS = []
 
+# Part in the JLC/LCSC catalogue for each design part: design MPN -> (LCSC number, manufacturer, MPN); None keeps the
+# design manufacturer and MPN. Checked in the JLC parts catalogue on 2026-11-10 (class and stock in the comments).
+# Rule: a Basic or Preferred part in stock where one has the same value, tolerance, voltage, dielectric and
+# package; otherwise the design part itself as Extended. Generic passives take the Basic part, so that a larger
+# batch does not hang on one manufacturer; the parts whose data-sheet figures the design relies on (leakage,
+# 0.1% dividers, 100 V, pulse rating) stay with the named manufacturer.
+JLC = {
+    # 0805 1% thick film, 125 mW
+    'RC0805FR-0733RL': ('C17634', 'UNI-ROYAL', '0805W8F330JT5E'),       # Basic, 1.2 M
+    'RC0805FR-0710KL': ('C17414', 'UNI-ROYAL', '0805W8F1002T5E'),       # Basic, 49 M
+    'RC0805FR-071KL': ('C17513', 'UNI-ROYAL', '0805W8F1001T5E'),        # Basic, 40 M
+    'RC0805FR-075K1L': ('C27834', 'UNI-ROYAL', '0805W8F5101T5E'),       # Basic, 2.5 M
+    'RC0805FR-07100KL': ('C149504', 'UNI-ROYAL', '0805W8F1003T5E'),     # Basic, 2.5 M
+    'RC0805FR-071ML': ('C17514', 'UNI-ROYAL', '0805W8F1004T5E'),        # Basic, 1.6 M
+    'RC0805FR-07470KL': ('C17709', 'UNI-ROYAL', '0805W8F4703T5E'),      # Basic, 330 k
+    'RC0805FR-07220KL': ('C17556', 'UNI-ROYAL', '0805W8F2203T5E'),      # Basic, 490 k
+    'RC0805FR-0720KL': ('C4328', 'UNI-ROYAL', '0805W8F2002T5E'),        # Basic, 2.0 M
+    'RC0805FR-07309KL': ('C57148', 'UNI-ROYAL', '0805W8F3093T5E'),      # Extended, 10 k (Yageo: 681)
+    'RC0805FR-07432KL': ('C17693', 'UNI-ROYAL', '0805W8F4323T5E'),      # Extended, 236 (Yageo: 34); no 432k in quantity
+    'RC0805FR-0747K5L': ('C137519', None, None),                        # Extended, 5.4 k
+    'RC1206FR-0722RL': ('C17958', 'UNI-ROYAL', '1206W4F220JT5E'),       # Basic, 590 k; 1206 250 mW
+    'RC2512FK-071RL': ('C181756', None, None),                          # Extended, 5.2 k
+    'RC2512FK-071KL': ('C189504', None, None),                          # Extended, 11 k
+    # 0805 0.1% 25 ppm/K thin film (dividers of the thresholds and of the ADC)
+    'RT0805BRD07102KL': ('C865126', None, None),                        # Extended, 8.2 k
+    'RT0805BRD078K06L': ('C865685', None, None),                        # Extended, 5.2 k
+    'RT0805BRD07221KL': ('C2984388', 'Viking Tech', 'AR05BTCW2213'),    # Extended, 4.1 k (Yageo: 0); 0.1% 25 ppm/K
+    'RT0805BRD0710KL': ('C110775', None, None),                         # Extended, 670 k
+    'RT0805BRD0715K4L': ('C865207', None, None),                        # Extended, 3.7 k
+    'RT0805BRD0739KL': ('C2828718', 'Viking Tech', 'ARG05BTC3902'),     # Extended, 14 k (Yageo: 0); 0.1% 25 ppm/K
+    'RT0805BRD07280KL': ('C865351', None, None),                        # Extended, 4.4 k
+    'RT0805BRD0730K1L': ('C865392', None, None),                        # Extended, 3.3 k
+    # ceramic capacitors
+    'CL21A106KAYNNNG': ('C15850', 'Samsung Electro-Mechanics', 'CL21A106KAYNNNE'),   # Basic, 8.5 M; 10 uF 25 V X5R
+    'CL21A106KAYNNNE': ('C15850', None, None),
+    'CL21B104KBCNNNC': ('C49678', 'Yageo', 'CC0805KRX7R9BB104'),        # Basic, 26 M; 100 nF 50 V X7R
+    'CL21B104KCFNNNE': ('C28233', None, None),                          # Basic, 3.1 M; 100 nF 100 V X7R
+    'CL21B103KBANNNC': ('C1710', None, None),                           # Basic, 2.0 M
+    'CL21B105KBFNNNE': ('C28323', None, None),                          # Basic, 3.9 M
+    'CL21B474KBFNNNE': ('C13967', None, None),                          # Basic, 820 k
+    'CL21C101JBANNNC': ('C1790', None, None),                           # Basic, 740 k
+    'CL21B225KAFNNNE': ('C19110', None, None),                          # Extended, 460 k
+    'CL21B102KBANNNC': ('C46653', 'Samsung Electro-Mechanics', 'CL21B102KBCNNNC'),   # Basic, 1.3 M; 1 nF 50 V X7R
+    'CL21B273KBANNNC': ('C113860', 'Yageo', 'CC0805KRX7R9BB273'),       # Extended, 9.1 k (Samsung: not listed)
+    'CL21B392KBANNNC': ('C113861', 'Yageo', 'CC0805KRX7R9BB392'),       # Extended, 3.2 k (Samsung: not listed)
+    'CL21C820JBANNNC': ('C113833', 'Yageo', 'CC0805JRNPO9BN820'),       # Extended, 14 k (Samsung: 0); 82 pF 50 V NP0 5%
+    'LMK325ABJ107MM-P': ('C386065', None, None),                        # Extended, 411; 100 uF 10 V X5R 1210
+    'CC1210KKX7R9BB106': ('C596319', None, None),                       # Extended, 100 k
+    'CS3225X5R226K160NRL': ('C2918506', None, None),                    # Extended, 28 k
+    # semiconductors and the rest of the SMT parts
+    '1N4148W-7-F': ('C81598', 'ST (Semtech)', '1N4148W'),               # Basic, 3.5 M; clamp diode of the buzzer
+    'MMBT3904LT1G': ('C20526', 'Jiangsu Changjing', 'MMBT3904'),        # Basic, 4.3 M; buzzer switch
+    'BZT52C33-7-F': ('C19077419', 'Hongjiacheng', 'BZT52C33'),          # Preferred, 210 k; 31.35-34.65 V, 100 nA
+    'BZT52C5V1-7-F': ('C19077401', 'Hongjiacheng', 'BZT52C5V1'),        # Preferred, 2.2 M (Diodes Inc.: 3)
+    'TPS3840PH27DBVR': ('C1849503', 'Texas Instruments', 'TPS3840PH27DBVRQ1'),   # Extended, 45 (DBVR: 6); same part, AEC-Q100
+    'SN74LVC1G32DBVR': ('C10096', None, None),                          # Extended, 150 k
+    'MCP1640T-I/CHY': ('C44365', None, None),                           # Extended, 516
+    '744031004': ('C2649331', None, None),                              # Extended, 899
+    'LTC2955ITS8-2#TRPBF': ('C683797', None, None),                     # Extended, 33
+    'FH12-10S-0.5SH(55)': ('C506791', None, None),                      # Extended, 1.9 k
+    # No stock of the design part at JLC on 2026-11-10: an equivalent that is in stock (owner's decision of
+    # 2026-11-10: JLC fits every part, through-hole too).
+    'CY15B104QN-50SXI': ('C42742723', 'RAMXEED', 'MB85RS4MTPF-G-BCERE1'),    # Extended, 11 (Infineon: 0); same pins
+    'PPTC221LFBN-RC': ('C41376161', 'Hong Cheng', 'HC-PM254-8.5H-1x22PZ'),   # Extended, 18 k (Sullins: 0); 8.5 mm high
+    'PPTC071LFBN-RC': ('C22438157', 'hanxia', 'HX PM2.54-1x7P ZC-Y'),        # Extended, 23 k (Sullins: 0); 8.5 mm high
+    'UKL1E101MPD': ('C350221', 'SamYoung', 'PXB 25V100 8*11.5'),             # Extended, 2.9 k (Nichicon UKL: 0)
+    # through-hole parts with stock
+    '61300211121': ('C2915055', None, None), 'B5B-XH-A(LF)(SN)': ('C157991', None, None),
+    'B2B-XH-A(LF)(SN)': ('C158012', None, None), 'B3F-1000': ('C93157', None, None),
+    'WP7113ID': ('C6926004', None, None), 'CEM-1203(42)': ('C3812098', None, None),      # buzzer: 103 in stock
+    '01110501Z': ('C151075', None, None),
+}
+# Parts JLC does not fit (soldered by hand): none since 2026-11-10.
+HAND = {}
 
-def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True):
+
+def part(ref, lib_id, value, footprint, nets, *, mpn='', manufacturer='', spec='', note='', lcsc='', qty=1, bom=True, dnp=False):
     """Record one board item; nets maps pin number to net name, lcsc is the LCSC/JLC part number and qty the
-    number of pieces bought for this item (two clips for one fuse holder)."""
+    number of pieces bought for this item (two clips for one fuse holder). dnp: footprint and symbol only, the
+    part is not fitted and not in the BOM."""
+    if mpn in JLC:
+        number, maker, model = JLC[mpn]
+        assert not lcsc or lcsc == number, (ref, lcsc, number)
+        lcsc, manufacturer, mpn = number, maker or manufacturer, model or mpn
+    hand = ref in HAND
     PARTS.append(dict(ref=ref, lib_id=lib_id, value=value, footprint=footprint,
                       nets={str(k): v for k, v in nets.items()}, mpn=mpn, manufacturer=manufacturer,
-                      spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom))
+                      spec=spec, note=note, lcsc=lcsc, qty=qty, bom=bom and not dnp, dnp=dnp, hand=hand))
 
 
 def res(ref, value, a, b, note, mpn='', spec='', footprint=R0805, lcsc=''):
@@ -48,7 +129,7 @@ def precise(value, mpn):
 # New signals use GPIO45/46 (strapping, held low by pull-downs, which is their default boot level) and
 # GPIO47/48 (3.3 V on WROOM-1 N8R8; RGB LED of v1.1 is on GPIO38).
 DEVKIT = dict(mpn='PPTC221LFBN-RC', manufacturer='Sullins', spec='gniazdo żeńskie 1x22, 2,54 mm, proste, THT',
-              note='ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od góry; pin 1 od strony anteny')
+              note='ESP32-S3-DevKitC-1 v1.1 (N8R8) wpina się od spodu płytki; pin 1 od strony anteny')
 part('J5', 'Connector_Generic:Conn_01x22', 'DEVKITC J1',
      'Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical',
      {1: '+3V3', 2: '+3V3', 4: 'V_AA_ADC', 5: 'V_12_ADC', 6: 'BTN_PREP', 7: 'LCD_CS', 8: 'BUZZER',
@@ -124,7 +205,7 @@ cap('C7', '100n', 'LCD_DISP', 'GND', 'DISP panelu (zalecenie Sharp)', 'CL21B104K
 part('U1', 'Memory_NVRAM:MB85RS2MT', 'CY15B104QN-50SXI', 'Package_SO:SOIC-8_5.3x5.3mm_P1.27mm',
      {1: 'FRAM_CS_U1', 2: 'SPI_MISO', 3: '+3V3', 4: 'GND', 5: 'SPI_MOSI', 6: 'SPI_SCK', 7: '+3V3', 8: '+3V3'},
      mpn='CY15B104QN-50SXI', manufacturer='Infineon', spec='FRAM 4 Mbit SPI, 1,8–3,6 V, SOIC-8 208 mil',
-     note='zamiennik: RAMXEED MB85RS4MTPF-G-BCERE1')
+     note='w projekcie Infineon CY15B104QN-50SXI (LCSC C1349451, stan 0); montowany zamiennik RAMXEED o tych samych pinach')
 part('U3', 'WICI:TPS3840PH', 'TPS3840PH27', 'Package_TO_SOT_SMD:SOT-23-5',
      {1: 'FRAM_GUARD', 2: '+3V3', 3: 'GND'}, mpn='TPS3840PH27DBVR', manufacturer='Texas Instruments',
      spec='nadzorca napięcia 2,7 V, wyjście aktywne stanem wysokim, SOT-23-5', note='ochrona CS FRAM jak w v1.1')
@@ -223,11 +304,18 @@ part('J2', 'Connector_Generic:Conn_01x02', '12V', XH2, {1: '12V_IN', 2: 'GND'}, 
 part('F1', 'Device:Fuse', 'T1A', 'Fuse:Fuseholder_Clip-5x20mm_Bel_FC-203-22_Lateral_P17.80x5.00mm_D1.17mm_Horizontal',
      {1: '12V_IN', 2: 'V12_F'}, mpn='01110501Z', manufacturer='Littelfuse',
      spec='zacisk bezpiecznika 5x20 mm do druku (seria 111 501), 10 A, około 7 mm nad płytką',
-     note='2 zaciski na F1; od spodu płytki, lutowane ręcznie; bezpiecznik T1A osobno (poniżej)', lcsc='C151075',
+     note='2 zaciski na F1; od spodu płytki, montuje JLC; bezpiecznik T1A osobno (poniżej)', lcsc='C151075',
      qty=2)
 part('D4', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
      manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
      note='pula promocyjna JLC; zapasowo Littelfuse SMBJ33CA (LCSC C83325)', lcsc='C19077587')
+# Place for a second TVS at the sources of Q2, not fitted (decided after the second review, 2026-11-10): D4 stands 105 mm away at
+# the input. It is fitted only if the peak measured at C38 on the first units is above 65 V (README, input
+# protection at the switch).
+part('D20', 'Device:D_TVS', 'SMBJ33CA', 'Diode_SMD:D_SMB', {1: 'V12_F', 2: 'GND'}, mpn='SMBJ33CA',
+     manufacturer='Hongjiacheng (R+O)', spec='TVS dwukierunkowy 33 V, ograniczenie 53,3 V, SMB',
+     note='NIE MONTOWAĆ: miejsce na drugi TVS przy łączniku; montaż po pomiarze na pierwszych sztukach',
+     lcsc='C19077587', dnp=True)
 part('U5', 'WICI:LM74800-Q1', 'LM74800-Q1', 'Package_SON:WSON-12-1EP_3x3mm_P0.5mm_EP1.5x2.5mm',
      {1: 'S12_DGATE', 2: 'V12_F', 3: 'V12_MID', 4: 'S12_SW', 5: 'S12_OV', 6: 'S12_EN', 7: 'GND',
       8: 'S12_HGATE', 9: 'VSYS', 10: 'V12_MID', 11: 'S12_CAP', 12: 'V12_MID'},
@@ -242,6 +330,11 @@ part('Q3', 'WICI:NMOS_SO8', 'AO4292E', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
      {1: 'VSYS', 2: 'VSYS', 3: 'VSYS', 4: 'S12_HGATE', 5: 'V12_MID', 6: 'V12_MID', 7: 'V12_MID',
       8: 'V12_MID'}, note='łącznik do VSYS (HGATE), odcina przy OVP i UV', lcsc='C176743', **NMOS100)
 cap('C30', '100n', 'V12_MID', 'GND', 'VS U5 (karta: 100 nF)', 'CL21B104KCFNNNE', spec='100 nF 100 V X7R 0805')
+# Input capacitor at the switch (LM7480-Q1 SNOSD95C: 7.3 "A to GND" 0.1 uF minimum, 10.2.3.3, 11.1): the TVS D4
+# stands at the connector, about 105 mm of track away, so the capacitor takes the spike of that track when the
+# MOSFETs open: V = I x sqrt(L / C), under 1 V at 1 A with 0.1 uH (README, "Ścieżki").
+cap('C38', '100n', 'V12_F', 'GND', 'kondensator wejściowy U5 przy źródle Q2 (karta: min. 100 nF na A)', 'CL21B104KCFNNNE',
+    spec='100 nF 100 V X7R 0805')
 cap('C31', '100n', 'S12_CAP', 'V12_MID', 'pompa ładunkowa U5, CAP–VS (karta: 100 nF)', 'CL21B104KBCNNNC',
     spec='100 nF 50 V X7R 0805')
 # OVP 102k / 8.06k: 1.231 V x 13.66 = 16.81 V rising (16.32-17.30 V), 15.4 V falling. Below 120 kOhm in total
@@ -282,6 +375,10 @@ res('R36', '1M', 'Q5_G', 'GND', 'Q5 wyłączony bez ON; 91% ON na bramce także 
 zener15('D15', 'Q5_G', 'GND', 'VGS Q5 ≤15 V przy ON do około 35 V')
 res('R37', '221k', 'V12_SW', 'S12_EN', 'dzielnik UV: włączenie 11,94 V (11,59–12,29 V), wyłączenie 10,98 V (10,58–11,24 V)',
     **precise('221 kΩ', 'RT0805BRD07221KL'))
+# The divider stands about 110 mm from U5, so EN/UVLO gets a capacitor at its pin: 10 nF with the 22.8 kOhm of
+# the ladder is 0.23 ms, which does not move the thresholds.
+cap('C39', '10n', 'S12_EN', 'GND', 'filtr EN/UVLO przy U5 (dzielnik jest około 110 mm dalej); 0,23 ms z dzielnikiem',
+    'CL21B103KBANNNC', spec='10 nF 50 V X7R 0805')
 res('R38', '10k', 'S12_EN', 'V_12_DIV', 'dzielnik UV i pomiaru 12 V', **precise('10,0 kΩ', 'RT0805BRD0710KL'))
 res('R39', '15k4', 'V_12_DIV', 'GND', 'pomiar 12 V: 0,0625 × V12', **precise('15,4 kΩ', 'RT0805BRD0715K4L'))
 cap('C33', '100n', 'V_12_ADC', 'GND', 'filtr wejścia ADC 12 V za R76 (karta ESP32-S3, 5.5: 100 nF przy ADC)', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
@@ -350,7 +447,7 @@ res('R46', '1k', 'V12_MID', 'V12_FLT', 'filtr 12 V przed sumą (Z14); ze wspóln
 cap('C35', '1u', 'V12_FLT', 'GND', 'filtr 12 V przed sumą (Z14)', 'CL21B105KBFNNNE', spec='1 µF 50 V X7R 0805')
 part('D10', 'Device:D_Zener', 'BZT52C33', 'Diode_SMD:D_SOD-123', {1: 'V12_FLT', 2: 'GND'},
      mpn='BZT52C33-7-F', manufacturer='Diodes Incorporated', spec='Zener 33 V (31–35 V), SOD-123',
-     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi', lcsc='C260938')
+     note='VIN LTC2955 ≤35 V (praca do 36 V); przy 24–28,8 V nie przewodzi')
 cap('C36', '100n', 'VCTL', 'GND', 'VIN U6', 'CL21B104KBCNNNC', spec='100 nF 50 V X7R 0805')
 part('U6', 'WICI:LTC2955-2', 'LTC2955ITS8-2', 'Package_TO_SOT_SMD:TSOT-23-8',
      {1: 'PWR_ON', 2: 'PWR_KILL', 3: 'PWR_TMR', 4: 'GND', 5: 'PWR_PB', 6: 'VCTL', 7: 'PWR_ENB', 8: 'PWR_INT'},
@@ -408,7 +505,7 @@ zener15('D12', 'VCTL', 'Q8_G', '|VGS| Q8 ≤15 V przy VCTL do około 35 V')
 # and up to about 5 uA from the cells while the station is off.
 res('R48', '470k', 'VCTL', 'PWR_KILL', 'KILL wysoki z VCTL, niezależnie od 3V3, szyny ON i MCU', 'RC0805FR-07470KL')
 part('D16', 'Device:D_Zener', 'BZT52C5V1', 'Diode_SMD:D_SOD-123', {1: 'PWR_KILL', 2: 'GND'}, mpn='BZT52C5V1-7-F',
-     manufacturer='Diodes Incorporated', spec='Zener 5,1 V, SOD-123', note='KILL ≤6 V (karta) przy VCTL do około 35 V', lcsc='C151588')
+     manufacturer='Diodes Incorporated', spec='Zener 5,1 V, SOD-123', note='KILL ≤6 V (karta) przy VCTL do około 35 V; pierwotnie Diodes Inc. BZT52C5V1-7-F (LCSC C151588, 3 szt. w magazynie)')
 part('Q11', 'Transistor_FET:BSS138', 'BSS138', SOT23, {1: 'KILL_MCU', 2: 'GND', 3: 'PWR_KILL'},
      mpn='BSS138LT1G', manufacturer='onsemi', spec='N-MOSFET 50 V, IDSS ≤0,5 µA, SOT-23',
      note='MCU wyłącza stację; GPIO nie widzi napięcia KILL; upływ w 60 °C około 1 µA wobec granicy KILL 5,8 µA',
@@ -437,8 +534,11 @@ cap('C52', '1n', 'RUN', 'GND', 'filtr RUN (karta LTC3115-1: 1000 pF, nie więcej
 
 # --- VSYS and the 3V3 converter: LTC3115-1, values of the JLC test board (hardware/przetwornica-3v3) ---------
 part('C50', 'Device:C_Polarized', '100u 25V', 'Capacitor_THT:CP_Radial_D8.0mm_P3.50mm', {1: 'VSYS', 2: 'GND'},
-     spec='elektrolit o małym upływie 100 µF 25 V (np. Nichicon UKL)',
-     note='kondensator szyny: przełączenie 12 V ↔ ogniwa bez restartu; wartość i część z próby toru ogniw')
+     mpn='UKL1E101MPD', manufacturer='Nichicon',
+     spec='elektrolit 100 µF 25 V ±20%, 8 × 11,5 mm, raster 3,5 mm, −40…+125 °C, 3000 h w 125 °C, tętnienia 325 mA',
+     note='kondensator szyny: przełączenie 12 V ↔ ogniwa bez restartu; pojemność do potwierdzenia w próbie toru ogniw; '
+          'w projekcie Nichicon UKL1E101MPD o małym upływie (brak w JLC), montowany zwykły elektrolit: upływ do sprawdzenia '
+          'w pomiarze prądu w stanie wyłączonym')
 part('U7', 'WICI:LTC3115-1', 'LTC3115-1', 'WICI:LTC3115-1_FE20_CA',
      {1: 'GND', 2: 'RUN', 3: 'CONV_SW2', 4: '+3V3', 5: 'GND', 6: 'GND', 7: 'CONV_VC', 8: 'CONV_FB', 9: 'CONV_RT',
       10: 'GND', 11: 'GND', 12: 'CONV_VCC', 13: 'VSYS', 14: 'CONV_VCC', 15: 'CONV_BST2', 16: 'CONV_BST1',
@@ -493,6 +593,10 @@ EXTRAS = [
     ('ekran w J7', 1, 'Sharp', 'LS027B7DH01A', 'panel pamięciowy LCD 2,7 cala, 400 × 240', 'ekranem do góry'),
     ('J8, J9', 1, 'Seeed', '102010611 (Wio z zestawu)', 'moduł Wio SX1262 z listwami 1x7', 'antena przez u.FL i przewód do SMA'),
     ('J5, J6', 1, 'Espressif', 'ESP32-S3-DevKitC-1-N8R8', 'płytka MCU v1.1', 'zasilana przez piny 3V3'),
+    ('D20', 2, 'Hongjiacheng (R+O)', 'SMBJ33CA (LCSC C19077587)', 'TVS dwukierunkowy 33 V, SMB',
+     'do ręcznego montażu D20 na jednym z dwóch prototypów: 1 sztuka i 1 zapasowa; JLC go nie montuje'),
+    ('C50', 2, 'Nichicon', 'UKL1E101MPD', 'elektrolit o małym upływie 100 µF 25 V, 8 × 11,5 mm, raster 3,5 mm',
+     'na zapas: do wymiany C50, gdyby pomiar prądu w stanie wyłączonym na pierwszych sztukach wyszedł za duży'),
     ('F1', 1, 'Schurter', '0001.2504', 'bezpiecznik T1A 5x20 mm', 'wkładany w zaciski F1; drugi: Littelfuse 0477001'),
 ]
 
