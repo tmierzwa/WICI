@@ -205,6 +205,125 @@ class ConfigDocTest(unittest.TestCase):
         self.assertEqual(len(configdoc.new_ifac()), 32)
 
 
+def station_key(number):
+    """Deterministic public keys of station `number` in the plan tests."""
+    digest = hashlib.sha256(b"wici-plan %d" % number).hexdigest()
+    return {"id": number, "ed25519": digest, "x25519": hashlib.sha256(digest.encode()).hexdigest()}
+
+
+def l0_plan(overrides=None):
+    """Plan of the L0 table trials (2026-11-14): root 1, relay B 10, stations A 20 and C 30 behind B.
+
+    A and C hold the root key only for the epoch signature; root and B hold each other's keys.
+    `overrides` maps a station number to the list of neighbour numbers in its `priority_keys`, or to
+    a dict merged into its `network`."""
+    network = {"id": 100, "root": 1, "backup_parent": 0, "receiver_main": 2, "receiver_backup": 3}
+    main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+    main.update(id=2, net_id=100, x25519=main["key"][:64])
+    backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+    plan = {1: ({"station": 1, "parent": 0}, [10]), 10: ({"station": 10, "parent": 1}, [1, 20, 30]),
+            20: ({"station": 20, "parent": 10}, [1, 10]), 30: ({"station": 30, "parent": 10}, [1, 10])}
+    docs = []
+    for number, (net, neighbours) in plan.items():
+        change = (overrides or {}).get(number)
+        net = {**network, **net, **(change if isinstance(change, dict) else {})}
+        neighbours = change if isinstance(change, list) else neighbours
+        keys = [station_key(k) for k in neighbours]
+        if number == 1:
+            keys = [dict(k, behind=[20, 30]) if k["id"] == 10 else k for k in keys]
+            docs.append({"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"}, "network": net,
+                         "priority_keys": keys})
+        else:
+            docs.append(station_doc(network=net, receiver={"main": main, "backup": backup}, priority_keys=keys))
+    return docs
+
+
+class PlanTest(unittest.TestCase):
+    """The whole network plan (docs/spec/system-wici-siec.html, chapter 6): what single documents cannot show."""
+
+    def problems(self, docs):
+        return configdoc.check_plan(docs)
+
+    def test_l0_plan_passes(self):
+        docs = l0_plan()
+        self.assertEqual([configdoc.check(d) for d in docs], [[]] * 4)
+        self.assertEqual(self.problems(docs), [])
+
+    def test_one_sided_key_between_two_stations_is_rejected(self):
+        # A 20 holds C 30 as a neighbour, C does not hold A: A could pick C as a dynamic parent, C never answers.
+        self.assertEqual(self.problems(l0_plan({20: [1, 10, 30]})),
+                         [("stacja 20", "klucz sąsiada 30, który nie ma klucza tej stacji")])
+        self.assertEqual(self.problems(l0_plan({20: [1, 10, 30], 30: [1, 10, 20]})), [])
+        # B 10 drops A: B never confirms A, its planned parent.
+        self.assertIn(("stacja 20", "klucz sąsiada 10, który nie ma klucza tej stacji"),
+                      self.problems(l0_plan({10: [1, 30]})))
+
+    def test_station_without_root_key_is_rejected(self):
+        self.assertEqual(self.problems(l0_plan({30: [10]})),
+                         [("stacja 30", "brak klucza roota (1) w priority_keys")])
+
+    def test_root_as_parent_without_the_station_key_is_rejected(self):
+        # A 20 gets the root as its backup parent: the root key becomes a neighbour key and needs a pair.
+        docs = l0_plan({20: {"backup_parent": 1}})
+        self.assertEqual(self.problems(docs), [("stacja 20", "klucz sąsiada 1, który nie ma klucza tej stacji")])
+        docs = l0_plan({20: {"backup_parent": 1}, 1: [10, 20]})
+        self.assertEqual(self.problems(docs), [])
+        # The planned parent too: B 10 with the root as parent, the root without B. The root holding A and C
+        # is a pair: A and C hold the root key, and the station side never takes the root as dynamic parent.
+        self.assertEqual(self.problems(l0_plan({1: [20, 30]})),
+                         [("stacja 10", "klucz sąsiada 1, który nie ma klucza tej stacji")])
+
+    def test_missing_parent_key_and_stale_key_are_rejected(self):
+        self.assertIn(("stacja 30", "brak klucza rodzica z planu (10) w priority_keys"),
+                      self.problems(l0_plan({30: [1]})))
+        docs = l0_plan()
+        docs[3]["priority_keys"][1] = dict(station_key(10), ed25519=station_key(99)["ed25519"])
+        self.assertEqual(self.problems(docs), [("stacja 30", "klucz stacji 10 inny niż w pozostałych dokumentach planu")])
+
+    def test_cycle_route_without_root_and_repeated_number_are_rejected(self):
+        # 10 with backup parent 20 and 20 with parent 10: each document passes alone.
+        docs = l0_plan({10: {"backup_parent": 20}})
+        self.assertEqual([configdoc.check(d) for d in docs], [[]] * 4)
+        cycle = "droga rodziców z planu lub zapasowych ma cykl albo nie kończy się w roocie"
+        self.assertEqual(self.problems(docs), [("stacja 10", cycle), ("stacja 20", cycle), ("stacja 30", cycle)])
+        # Parent 40 is not in the plan (its key is, so only the route fails).
+        docs = l0_plan({30: {"parent": 40}})
+        docs[3]["priority_keys"].append(station_key(40))
+        self.assertIn(("stacja 30", cycle), self.problems(docs))
+        docs = l0_plan()
+        self.assertEqual(self.problems(docs + [docs[2]]), [("dokument 4", "numer 20 powtarza się w planie")])
+        self.assertEqual(self.problems(docs[1:]), [("plan", "plan nie ma dokumentu roota")])
+        bad = dict(docs[2], ifac="zz")
+        self.assertEqual(self.problems(docs[:2] + [bad] + docs[3:])[0],
+                         ("dokument 2", "dokument nie przechodzi sprawdzenia albo nie ma numeru w sieci"))
+        self.assertEqual(self.problems([]), [("plan", "plan to lista dokumentów configure: stacje i root")])
+
+    def test_long_chain_with_backup_parents_is_checked_quickly(self):
+        # 15 hops, each station with the two nearer ones as parent and backup parent (no recursion, no blow-up).
+        network = {"id": 100, "root": 1, "receiver_main": 2, "receiver_backup": 3}
+        main, backup = card(MAIN_KEY), card(BACKUP_KEY)
+        main.update(id=2, net_id=100, x25519=main["key"][:64])
+        backup.update(id=3, net_id=100, x25519=backup["key"][:64])
+        chain = [1] + list(range(10, 25))
+        neighbours = {n: set() for n in chain}
+        for i, n in enumerate(chain[1:], 1):
+            for p in chain[max(0, i - 2):i]:
+                neighbours[n].add(p)
+                neighbours[p].add(n)
+        docs = [{"role": "wezel", "ifac": "11" * 16, "radio": {"profile": "p1"},
+                 "network": dict(network, station=1, parent=0, backup_parent=0),
+                 "priority_keys": [station_key(k) for k in sorted(neighbours[1])]}]
+        for i, n in enumerate(chain[1:], 1):
+            keys = sorted(neighbours[n] | {1})
+            docs.append(station_doc(network=dict(network, station=n, parent=chain[i - 1],
+                                                 backup_parent=chain[i - 2] if i > 1 else 0),
+                                    receiver={"main": main, "backup": backup},
+                                    priority_keys=[station_key(k) for k in keys]))
+        started = time.monotonic()
+        self.assertEqual(self.problems(docs), [])
+        self.assertLess(time.monotonic() - started, 2)
+
+
 class FakePort:
     """In-memory port: `respond(message)` returns the lines the station writes back."""
 

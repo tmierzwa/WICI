@@ -92,6 +92,31 @@ class ConfigTest(unittest.TestCase):
                 stos.config(bad)
 
 
+class PlanCommandTest(unittest.TestCase):
+    """`sprawdz-plan`: the whole network plan from files, before the first configuration of its stations."""
+
+    def run_command(self, *files):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = aplikacja.main(["sprawdz-plan", *map(str, files)])
+        return code, json.loads(out.getvalue())
+
+    def test_l0_plan_passes_and_one_sided_key_is_rejected(self):
+        from tests.test_laptop import l0_plan
+        with tempfile.TemporaryDirectory() as tmp:
+            root, *stations = l0_plan()
+            (Path(tmp) / "root.json").write_text(json.dumps(root), encoding="utf-8")
+            (Path(tmp) / "stacje.json").write_text(json.dumps(stations), encoding="utf-8")
+            self.assertEqual(self.run_command(Path(tmp) / "root.json", Path(tmp) / "stacje.json"),
+                             (0, {"event": "plan_ok", "documents": 4}))
+            (Path(tmp) / "plan.json").write_text(json.dumps(l0_plan({20: [1, 10, 30]})), encoding="utf-8")
+            self.assertEqual(self.run_command(Path(tmp) / "plan.json"),
+                             (1, {"event": "plan_rejected", "problems": [
+                                 {"place": "stacja 20", "message": "klucz sąsiada 30, który nie ma klucza tej stacji"}]}))
+            with self.assertRaises(SystemExit):
+                self.run_command(Path(tmp) / "brak.json")
+
+
 class BearerSetTest(unittest.TestCase):
     def test_reply_follows_last_authenticated_bearer_and_preserves_outcome(self):
         class Fake:
