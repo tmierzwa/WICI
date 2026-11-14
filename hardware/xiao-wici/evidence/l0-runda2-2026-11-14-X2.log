@@ -1,0 +1,1106 @@
+15:35:01.570 "usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"f22f37d2488647f8","wdt_s":60,"board":"XIAO"}
+15:35:01.570 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0000","busy_timeouts":0,"p1_ok":true,"ok":true}
+15:35:01.570 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+15:35:01.570 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+15:35:01.570 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+15:35:01.570 {"journal_ok":true,"debt_seq":613,"debt_ms":0,"debt_written_at_s":18632,"debt_records":32,"tx_wait_ms":0,"clock_seq":324,"uptime_s":19514,"skip_s":420,"restarts":7,"event_seq":303,"max_debt_ms":10056,"journal_resets":0,"prep_entries":6,"prep_at_s":12685,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+15:35:16.603 >> INFO
+15:35:16.607 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":7,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19529,"service_s":19109,"boot_s":64,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":762,"loop_max_ms":7,"rx_task_loops":64893,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":119,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"f22f37d2488647f8","wdt_s":60,"board":"XIAO"}
+15:35:18.788 >> FRAM
+15:35:18.806 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+15:35:48.920 >> INFO
+15:35:48.928 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":7,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19562,"service_s":19142,"boot_s":97,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":762,"loop_max_ms":7,"rx_task_loops":97210,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":119,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"f22f37d2488647f8","wdt_s":60,"board":"XIAO"}
+15:35:50.099 >> PREP 1
+15:35:50.152 {"confirm":"press OK within 30 s"}
+15:35:59.576 >> INFO
+15:36:00.759 >> PREP 1
+15:36:20.149 {"error":"PREP not confirmed by OK"}
+15:36:20.149 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":7,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19593,"service_s":19173,"boot_s":128,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":762,"loop_max_ms":7,"rx_task_loops":128390,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":119,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"f22f37d2488647f8","wdt_s":60,"board":"XIAO"}
+15:36:20.149 {"confirm":"press OK within 30 s"}
+15:36:29.611 >> INFO
+15:36:30.792 >> PREP 1
+15:36:50.520 ## port lost read failed: [Errno 6] Device not configured
+15:36:51.434 ## port back
+15:36:51.486 d":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:36:51.487 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0000","busy_timeouts":0,"p1_ok":true,"ok":true}
+15:36:51.487 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+15:36:51.487 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+15:36:51.487 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+15:36:51.487 {"journal_ok":true,"debt_seq":613,"debt_ms":0,"debt_written_at_s":18632,"debt_records":32,"tx_wait_ms":0,"clock_seq":326,"uptime_s":19585,"skip_s":480,"restarts":8,"event_seq":312,"max_debt_ms":10056,"journal_resets":0,"prep_entries":6,"prep_at_s":12685,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+15:36:59.648 >> INFO
+15:36:59.688 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19594,"service_s":19114,"boot_s":9,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":7,"rx_task_loops":9043,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:37:00.830 >> PREP 1
+15:37:00.861 {"confirm":"press OK within 30 s"}
+15:37:29.693 >> INFO
+15:37:30.882 >> PREP 1
+15:37:30.883 {"error":"PREP not confirmed by OK"}
+15:37:30.883 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19625,"service_s":19145,"boot_s":40,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":7,"rx_task_loops":40223,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:37:30.883 {"confirm":"press OK within 30 s"}
+15:37:59.743 >> INFO
+15:38:00.917 {"error":"PREP not confirmed by OK"}
+15:38:00.917 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19655,"service_s":19175,"boot_s":70,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30003,"rx_task_loops":70280,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:38:00.927 >> PREP 1
+15:38:00.973 {"confirm":"press OK within 30 s"}
+15:38:29.783 >> INFO
+15:38:30.950 {"error":"PREP not confirmed by OK"}
+15:38:30.950 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19685,"service_s":19205,"boot_s":100,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":100325,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:38:30.966 >> PREP 1
+15:38:31.002 {"confirm":"press OK within 30 s"}
+15:38:59.824 >> INFO
+15:39:00.983 {"error":"PREP not confirmed by OK"}
+15:39:00.983 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19715,"service_s":19235,"boot_s":130,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":130359,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:39:01.007 >> PREP 1
+15:39:01.041 {"confirm":"press OK within 30 s"}
+15:39:29.899 >> INFO
+15:39:31.009 {"error":"PREP not confirmed by OK"}
+15:39:31.064 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19745,"service_s":19265,"boot_s":160,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":160400,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:39:31.083 >> PREP 1
+15:39:31.119 {"confirm":"press OK within 30 s"}
+15:39:59.985 >> INFO
+15:40:01.124 {"error":"PREP not confirmed by OK"}
+15:40:01.125 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19775,"service_s":19295,"boot_s":190,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":190480,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:40:01.169 >> PREP 1
+15:40:01.176 {"confirm":"press OK within 30 s"}
+15:40:30.049 >> INFO
+15:40:31.193 {"error":"PREP not confirmed by OK"}
+15:40:31.193 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19805,"service_s":19325,"boot_s":220,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":220567,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:40:31.242 >> PREP 1
+15:40:31.244 {"confirm":"press OK within 30 s"}
+15:41:00.120 >> INFO
+15:41:01.268 {"error":"PREP not confirmed by OK"}
+15:41:01.268 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19835,"service_s":19355,"boot_s":250,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":250639,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:41:01.308 >> PREP 1
+15:41:01.322 {"confirm":"press OK within 30 s"}
+15:41:30.199 >> INFO
+15:41:31.346 {"error":"PREP not confirmed by OK"}
+15:41:31.346 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19865,"service_s":19385,"boot_s":280,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":280700,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:41:31.388 >> PREP 1
+15:41:31.397 {"confirm":"press OK within 30 s"}
+15:42:00.254 >> INFO
+15:42:01.417 {"error":"PREP not confirmed by OK"}
+15:42:01.417 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19895,"service_s":19415,"boot_s":310,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":310780,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:42:01.452 >> PREP 1
+15:42:01.475 {"confirm":"press OK within 30 s"}
+15:42:30.331 >> INFO
+15:42:31.478 {"error":"PREP not confirmed by OK"}
+15:42:31.478 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19925,"service_s":19445,"boot_s":340,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":340848,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:42:31.527 >> PREP 1
+15:42:31.529 {"confirm":"press OK within 30 s"}
+15:43:00.408 >> INFO
+15:43:01.567 {"error":"PREP not confirmed by OK"}
+15:43:01.567 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19956,"service_s":19476,"boot_s":371,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":370923,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:43:01.601 >> PREP 1
+15:43:01.619 {"confirm":"press OK within 30 s"}
+15:43:30.490 >> INFO
+15:43:31.665 {"error":"PREP not confirmed by OK"}
+15:43:31.665 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":19986,"service_s":19506,"boot_s":401,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":400997,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:43:31.685 >> PREP 1
+15:43:31.723 {"confirm":"press OK within 30 s"}
+15:44:00.579 >> INFO
+15:44:01.695 {"error":"PREP not confirmed by OK"}
+15:44:01.695 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20016,"service_s":19536,"boot_s":431,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":431076,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:44:01.772 >> PREP 1
+15:44:01.806 {"confirm":"press OK within 30 s"}
+15:44:30.648 >> INFO
+15:44:31.819 {"error":"PREP not confirmed by OK"}
+15:44:31.819 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20046,"service_s":19566,"boot_s":461,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":461168,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:44:31.844 >> PREP 1
+15:44:31.875 {"confirm":"press OK within 30 s"}
+15:45:00.719 >> INFO
+15:45:01.883 {"error":"PREP not confirmed by OK"}
+15:45:01.884 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20076,"service_s":19596,"boot_s":491,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":491235,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:45:01.917 >> PREP 1
+15:45:01.936 {"confirm":"press OK within 30 s"}
+15:45:30.804 >> INFO
+15:45:31.959 {"error":"PREP not confirmed by OK"}
+15:45:31.959 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20106,"service_s":19626,"boot_s":521,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":521313,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:45:31.992 >> PREP 1
+15:45:32.016 {"confirm":"press OK within 30 s"}
+15:46:00.891 >> INFO
+15:46:02.046 {"error":"PREP not confirmed by OK"}
+15:46:02.046 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20136,"service_s":19656,"boot_s":551,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":551388,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:46:02.089 >> PREP 1
+15:46:02.100 {"confirm":"press OK within 30 s"}
+15:46:30.995 >> INFO
+15:46:32.127 {"error":"PREP not confirmed by OK"}
+15:46:32.127 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20166,"service_s":19686,"boot_s":581,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":581484,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:46:32.191 >> PREP 1
+15:46:32.247 {"confirm":"press OK within 30 s"}
+15:47:01.068 >> INFO
+15:47:02.192 {"error":"PREP not confirmed by OK"}
+15:47:02.245 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20196,"service_s":19716,"boot_s":611,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":611581,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:47:02.256 >> PREP 1
+15:47:02.305 {"confirm":"press OK within 30 s"}
+15:47:31.136 >> INFO
+15:47:32.270 {"error":"PREP not confirmed by OK"}
+15:47:32.270 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20226,"service_s":19746,"boot_s":641,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":641647,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:47:32.328 >> PREP 1
+15:47:32.383 {"confirm":"press OK within 30 s"}
+15:48:01.200 >> INFO
+15:48:02.371 {"error":"PREP not confirmed by OK"}
+15:48:02.371 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20256,"service_s":19776,"boot_s":671,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":671724,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:48:02.395 >> PREP 1
+15:48:02.431 {"confirm":"press OK within 30 s"}
+15:48:31.289 >> INFO
+15:48:32.453 {"error":"PREP not confirmed by OK"}
+15:48:32.453 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20286,"service_s":19806,"boot_s":701,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":701785,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:48:32.487 >> PREP 1
+15:48:32.511 {"confirm":"press OK within 30 s"}
+15:49:01.379 >> INFO
+15:49:02.505 {"error":"PREP not confirmed by OK"}
+15:49:02.505 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20316,"service_s":19836,"boot_s":731,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":731877,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:49:02.571 >> PREP 1
+15:49:02.618 {"confirm":"press OK within 30 s"}
+15:49:31.457 >> INFO
+15:49:32.610 {"error":"PREP not confirmed by OK"}
+15:49:32.610 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20347,"service_s":19867,"boot_s":762,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":761966,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:49:32.642 >> PREP 1
+15:49:32.668 {"confirm":"press OK within 30 s"}
+15:50:01.516 >> INFO
+15:50:02.656 {"error":"PREP not confirmed by OK"}
+15:50:02.656 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20377,"service_s":19897,"boot_s":792,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":792037,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:50:02.712 >> PREP 1
+15:50:02.769 {"confirm":"press OK within 30 s"}
+15:50:31.625 >> INFO
+15:50:32.789 {"error":"PREP not confirmed by OK"}
+15:50:32.789 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20407,"service_s":19927,"boot_s":822,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":822106,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:50:32.823 >> PREP 1
+15:50:32.843 {"confirm":"press OK within 30 s"}
+15:51:01.699 >> INFO
+15:51:02.835 {"error":"PREP not confirmed by OK"}
+15:51:02.886 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20437,"service_s":19957,"boot_s":852,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":852196,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:51:02.888 >> PREP 1
+15:51:02.946 {"confirm":"press OK within 30 s"}
+15:51:31.769 >> INFO
+15:51:32.916 {"error":"PREP not confirmed by OK"}
+15:51:32.917 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20467,"service_s":19987,"boot_s":882,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":882250,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+15:51:32.960 >> PREP 1
+15:51:32.967 {"confirm":"press OK within 30 s"}
+15:52:02.967 {"error":"PREP not confirmed by OK"}
+15:52:29.115 >> INFO
+15:52:29.129 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":20523,"service_s":20043,"boot_s":938,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":938475,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:22:20.098 >> PREP 1
+16:22:20.135 {"confirm":"press OK within 30 s"}
+16:22:23.788 >> INFO
+16:22:35.586 >> INFO
+16:22:50.115 {"error":"PREP not confirmed by OK"}
+16:22:50.115 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22344,"service_s":21864,"boot_s":2759,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":2759467,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:22:50.115 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22344,"service_s":21864,"boot_s":2759,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30008,"rx_task_loops":2759470,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":120,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:22:50.610 >> PREP 1
+16:22:50.647 {"confirm":"press OK within 30 s"}
+16:23:20.647 {"error":"PREP not confirmed by OK"}
+16:23:38.410 >> PREP 1
+16:23:38.435 {"confirm":"press OK within 30 s"}
+16:23:41.102 >> INFO
+16:23:44.291 >> INFO
+16:23:47.484 >> INFO
+16:23:50.677 >> INFO
+16:23:51.041 {"prep":true}
+16:23:51.041 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22405,"service_s":21925,"boot_s":2820,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30011,"rx_task_loops":2820394,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":121,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:23:51.041 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22405,"service_s":21925,"boot_s":2820,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30011,"rx_task_loops":2820397,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":121,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:23:51.041 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22405,"service_s":21925,"boot_s":2820,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30011,"rx_task_loops":2820399,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":121,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:23:51.091 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":8,"bench":"XIAO","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22405,"service_s":21925,"boot_s":2820,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000006","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":764,"loop_max_ms":30011,"rx_task_loops":2820402,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":121,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"56017585532bba9d","wdt_s":60,"board":"XIAO"}
+16:23:58.454 ## port lost read failed: [Errno 6] Device not configured
+16:23:59.370 ## port back
+16:23:59.422 "link":"lora","rx_task":true,"rx_armed":false,"rx_ready_ms":723,"loop_max_ms":1,"rx_task_loops":828,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":124,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"0b6eb37293cc580a","wdt_s":60,"board":"XIAO"}
+16:23:59.422 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0000","busy_timeouts":0,"p1_ok":true,"ok":true}
+16:23:59.422 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+16:23:59.422 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+16:23:59.422 {"fram":"emulated-psram","id":"000000000000000000","status":"0x00","ok":true,"volatile":true,"kept":true}
+16:23:59.422 {"journal_ok":true,"debt_seq":613,"debt_ms":0,"debt_written_at_s":18632,"debt_records":32,"tx_wait_ms":0,"clock_seq":373,"uptime_s":22435,"skip_s":540,"restarts":9,"event_seq":361,"max_debt_ms":10056,"journal_resets":0,"prep_entries":8,"prep_at_s":22435,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+16:24:08.871 >> INFO
+16:24:08.918 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":9,"bench":"XIAO","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22445,"service_s":21905,"boot_s":10,"screen":"main","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":false,"rx_ready_ms":723,"loop_max_ms":7,"rx_task_loops":10332,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":124,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"0b6eb37293cc580a","wdt_s":60,"board":"XIAO"}
+16:24:34.783 >> KEY OK
+16:24:34.808 {"screen":"menu","lang":"PL","lines":["-- TRYB SERWISOWY --","ZGŁOSZENIE","WIADOMOŚCI","TEST","STAN               ▼"],"inverted":[true,true,false,false,false]}
+16:24:35.964 >> PREP 0
+16:24:35.976 {"prep":false}
+16:24:52.387 >> INFO
+16:24:52.417 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"xiao-0.1","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":9,"bench":"XIAO","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":true,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":22488,"service_s":21948,"boot_s":53,"screen":"menu","lang":"PL","name":"WICI-6637A7","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":723,"loop_max_ms":7,"rx_task_loops":53849,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":25,"inbox":0,"head":125,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"0b6eb37293cc580a","wdt_s":60,"board":"XIAO"}
+16:24:54.069 >> APP
+16:24:54.125 {"link":true,"in_flight":0,"sent":0,"delivered":0,"failed":0,"received":0,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":25}
+16:25:19.190 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+16:25:21.596 {"lorarx":"raw","len":156,"rssi_dbm":-21}
+16:25:23.200 {"lorarx":"raw","len":156,"rssi_dbm":-23}
+16:27:19.397 {"lorarx":"raw","len":156,"rssi_dbm":-14}
+16:27:25.145 {"lorarx":"raw","len":156,"rssi_dbm":-22}
+16:27:27.125 {"lorarx":"raw","len":156,"rssi_dbm":-24}
+16:27:48.117 {"lorarx":"raw","len":127,"rssi_dbm":-25}
+16:27:48.168 {"lorarx":"raw","len":29,"rssi_dbm":-22}
+16:27:49.453 {"lorarx":"raw","len":127,"rssi_dbm":-22}
+16:27:49.615 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:27:50.841 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:27:50.952 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:27:53.577 {"lorarx":"raw","len":98,"rssi_dbm":-20}
+16:27:53.687 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:27:54.866 {"lorarx":"raw","len":56,"rssi_dbm":-36}
+16:27:54.917 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:27:57.103 {"lorarx":"raw","len":56,"rssi_dbm":-20}
+16:27:57.209 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:28:39.547 {"lorarx":"raw","len":105,"rssi_dbm":-11}
+16:28:39.653 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:28:40.935 {"lorarx":"raw","len":105,"rssi_dbm":-20}
+16:28:41.042 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:28:42.229 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:28:42.280 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:28:44.586 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:28:44.695 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:29:00.623 {"lorarx":"raw","len":105,"rssi_dbm":-11}
+16:29:00.731 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:02.864 {"lorarx":"raw","len":105,"rssi_dbm":-21}
+16:29:02.970 {"lorarx":"raw","len":29,"rssi_dbm":-32}
+16:29:04.183 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:29:04.291 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:29:06.540 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:29:06.645 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:29:21.216 {"lorarx":"raw","len":156,"rssi_dbm":-12}
+16:29:27.337 {"lorarx":"raw","len":156,"rssi_dbm":-20}
+16:29:28.187 {"lorarx":"raw","len":156,"rssi_dbm":-31}
+16:29:46.828 {"lorarx":"raw","len":132,"rssi_dbm":-32}
+16:29:46.931 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:48.221 {"lorarx":"raw","len":132,"rssi_dbm":-20}
+16:29:48.376 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:29:49.592 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:29:49.696 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:50.403 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:29:50.511 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:53.541 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:29:53.651 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:54.883 {"lorarx":"raw","len":98,"rssi_dbm":-20}
+16:29:54.992 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:29:57.393 {"lorarx":"raw","len":132,"rssi_dbm":-20}
+16:29:57.495 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:29:57.820 {"lorarx":"raw","len":132,"rssi_dbm":-32}
+16:29:57.927 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:29:58.725 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:29:58.829 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:30:00.850 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:00.902 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:01.230 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:30:02.600 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:30:03.671 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:30:04.680 {"lorarx":"raw","len":132,"rssi_dbm":-20}
+16:30:04.786 {"lorarx":"raw","len":29,"rssi_dbm":-12}
+16:30:05.745 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:30:05.847 {"lorarx":"raw","len":29,"rssi_dbm":-20}
+16:30:07.248 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:30:08.848 {"lorarx":"raw","len":132,"rssi_dbm":-29}
+16:30:09.488 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:30:09.595 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:30:10.889 {"lorarx":"raw","len":90,"rssi_dbm":-11}
+16:30:12.005 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:30:12.112 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:13.185 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:13.658 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:13.765 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:15.856 {"lorarx":"raw","len":98,"rssi_dbm":-12}
+16:30:15.958 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:16.755 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:17.339 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:30:17.449 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:30:18.530 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:19.502 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:20.243 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:30:20.723 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:20.830 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:21.999 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:22.105 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:23.015 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:24.414 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:30:24.522 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:30:25.762 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:25.813 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:26.288 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:28.108 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:30:28.488 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:28.815 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:28.920 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:30.907 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:31.014 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:31.827 {"lorarx":"raw","len":156,"rssi_dbm":-31}
+16:30:32.405 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:32.515 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:33.366 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:33.473 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:35.831 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:36.533 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:30:36.638 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:37.862 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:37.971 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:38.766 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:38.870 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:40.691 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:41.224 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:42.034 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:30:42.137 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:30:43.104 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:44.805 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:45.075 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:45.721 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:45.826 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:47.255 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:47.360 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:48.166 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:49.336 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:49.444 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:49.771 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:49.821 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:51.150 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:52.216 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:52.957 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:53.063 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:54.246 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:54.671 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:54.777 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:56.106 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:56.536 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:30:56.642 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:30:57.114 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:30:57.218 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:30:59.116 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:30:59.598 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:00.131 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:00.237 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:31:02.115 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:31:02.594 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:02.699 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:31:03.073 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:03.182 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:05.148 {"lorarx":"raw","len":68,"rssi_dbm":-31}
+16:31:05.199 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:05.517 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:06.959 {"lorarx":"raw","len":64,"rssi_dbm":-31}
+16:31:07.280 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:31:07.384 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:09.039 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:09.148 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:31:09.635 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:09.744 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:10.327 {"lorarx":"raw","len":64,"rssi_dbm":-31}
+16:31:10.429 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:12.090 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:12.724 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:31:13.744 {"lorarx":"raw","len":68,"rssi_dbm":-21}
+16:31:13.850 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:14.386 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:31:14.492 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:15.675 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:16.153 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:31:16.261 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:17.928 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:18.033 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:31:18.727 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:18.829 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:20.437 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:31:21.191 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:21.564 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:31:21.669 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:23.529 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:31:23.634 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:24.823 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:25.787 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:25.894 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+16:31:27.239 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:27.342 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:27.715 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:29.433 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+16:31:29.542 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:30.508 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:30.869 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:32.159 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:32.526 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:32.633 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:31:33.336 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:33.445 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:34.989 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:35.796 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:36.061 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:31:36.166 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:36.648 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:36.756 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:38.314 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:31:38.906 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:39.013 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:31:39.388 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:39.494 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:41.204 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:31:41.854 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:42.439 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:31:42.544 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:43.132 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:31:43.239 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:44.897 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:45.323 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:45.425 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:31:46.172 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:46.282 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:47.667 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:48.632 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:49.595 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:49.972 {"lorarx":"raw","len":60,"rssi_dbm":-21}
+16:31:50.078 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:51.420 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:31:51.798 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:51.906 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:31:52.231 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:52.338 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:54.703 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:54.810 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:55.982 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:31:56.466 {"lorarx":"raw","len":64,"rssi_dbm":-21}
+16:31:56.574 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:31:58.274 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:31:58.378 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:31:59.661 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:31:59.767 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:00.788 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:00.839 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:01.055 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:02.758 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:32:03.243 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:04.100 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:04.258 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:05.693 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:32:05.744 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:06.065 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:07.461 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:08.153 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:08.261 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:08.531 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:08.582 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:10.296 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:11.960 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:12.659 {"lorarx":"raw","len":64,"rssi_dbm":-21}
+16:32:12.769 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:13.777 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:13.882 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:14.536 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:15.456 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:16.310 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:16.419 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:16.999 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:17.103 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:18.272 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:19.447 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:19.870 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:32:19.978 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:20.240 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:20.344 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:21.902 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:22.752 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:22.859 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:23.783 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:23.888 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:24.754 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:26.294 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:32:26.397 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:27.101 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:32:27.206 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:27.634 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:28.806 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:29.127 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:29.234 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:30.078 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:30.188 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:31.596 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:32.654 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:32:32.816 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:34.045 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:34.153 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:34.788 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:35.536 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:35.642 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:37.630 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:38.005 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:38.106 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:40.450 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:40.554 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:41.786 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:32:41.836 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:43.433 {"lorarx":"raw","len":68,"rssi_dbm":-30}
+16:32:43.541 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:45.143 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:32:45.247 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:46.306 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:32:46.413 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:47.107 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:47.210 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:49.125 {"lorarx":"raw","len":68,"rssi_dbm":-21}
+16:32:49.232 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:50.029 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:32:50.138 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:52.166 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:32:52.270 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:32:54.305 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:32:54.414 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:55.820 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:32:55.923 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:32:57.152 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:32:57.262 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:32:58.293 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:00.072 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:33:03.202 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:33:03.306 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:03.581 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:03.690 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:04.565 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:05.378 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:05.428 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:07.271 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:08.504 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:08.826 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:08.933 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:09.697 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:09.805 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:12.153 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:12.738 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:13.389 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:33:13.496 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:15.774 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:16.474 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:16.584 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:17.879 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:17.929 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:18.415 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:18.468 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:20.885 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:21.149 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:33:21.258 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:21.794 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:33:21.901 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:23.629 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:23.997 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:24.103 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:24.482 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:24.589 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:26.908 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:27.653 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:33:27.760 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:28.303 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:33:28.409 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:30.513 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:31.367 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:31.850 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:31.954 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:33.021 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:33.073 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:34.151 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:35.482 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:35.968 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:37.653 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:38.138 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:38.626 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:33:38.734 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:39.943 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:41.624 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:42.493 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:42.600 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:43.298 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:43.348 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:44.429 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:45.714 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:46.028 {"lorarx":"raw","len":60,"rssi_dbm":-21}
+16:33:46.135 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:47.648 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:47.754 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:48.948 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:49.053 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:49.319 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:49.422 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:50.436 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:51.787 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:52.438 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:52.863 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:33:52.974 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:33:54.114 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:54.221 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:55.403 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:55.786 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:33:56.486 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:33:56.592 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:33:57.999 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:33:58.050 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:33:58.588 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:00.022 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:34:00.132 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:00.445 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:00.555 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:01.567 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:02.101 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:02.848 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:02.958 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:04.378 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:04.484 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:04.903 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:06.400 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:34:06.509 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:06.994 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:07.101 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:08.010 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:08.655 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:09.306 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:09.413 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:10.487 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:10.592 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:11.613 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:34:12.807 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:34:12.914 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:14.151 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:14.254 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:15.064 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:15.711 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:15.821 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:16.615 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:16.724 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:17.853 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:19.087 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:19.775 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:19.885 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:21.053 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:21.159 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:21.541 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:22.730 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:23.375 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:23.482 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:24.296 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:24.397 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:25.688 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:26.925 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:34:27.031 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:28.269 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:28.375 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:28.745 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:29.765 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:29.874 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:31.643 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:32.248 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:32.355 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:34.602 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:34.708 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:35.997 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:34:36.103 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:36.418 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:34:36.524 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:37.331 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:37.437 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:38.294 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:34:38.400 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:39.807 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:41.438 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:34:42.295 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:43.146 {"lorarx":"raw","len":64,"rssi_dbm":-21}
+16:34:43.255 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:44.589 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:34:44.693 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:45.865 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:47.038 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:34:47.144 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:34:48.813 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:34:49.565 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:34:49.675 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:50.902 {"lorarx":"raw","len":90,"rssi_dbm":-11}
+16:34:51.971 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:34:52.077 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:53.210 {"lorarx":"raw","len":90,"rssi_dbm":-11}
+16:34:53.846 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:34:53.898 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:34:54.964 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:34:55.071 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:56.732 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:34:56.783 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:34:57.482 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:34:59.175 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:00.181 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:01.627 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:02.160 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:02.591 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:35:02.698 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:03.834 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:05.219 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:05.488 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:06.566 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:06.669 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:07.691 {"lorarx":"raw","len":90,"rssi_dbm":-11}
+16:35:08.294 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:08.970 {"lorarx":"raw","len":60,"rssi_dbm":-21}
+16:35:09.080 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:09.962 {"lorarx":"raw","len":60,"rssi_dbm":-30}
+16:35:10.083 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:11.134 {"lorarx":"raw","len":90,"rssi_dbm":-13}
+16:35:11.810 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:35:11.922 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:13.087 {"lorarx":"raw","len":64,"rssi_dbm":-21}
+16:35:13.200 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:14.656 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:14.713 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:15.646 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:15.703 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:17.078 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:17.570 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:35:17.690 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:18.137 {"lorarx":"raw","len":133,"rssi_dbm":-30}
+16:35:18.253 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:20.703 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:21.317 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:35:21.779 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:21.890 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:23.186 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:23.243 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:25.447 {"lorarx":"raw","len":133,"rssi_dbm":-21}
+16:35:25.562 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:25.894 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:26.775 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:28.531 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:28.588 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:29.223 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:29.326 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:29.779 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:31.448 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:31.851 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:33.045 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:35:33.154 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:33.498 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:33.605 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:35.133 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:35.750 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:36.875 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:36.987 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:38.184 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:38.289 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:38.520 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:40.450 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:35:40.564 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:41.176 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:41.228 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:41.845 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:42.793 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:43.285 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:43.401 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:44.535 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:44.651 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:45.599 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:46.821 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:35:46.926 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:47.981 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:48.094 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:49.192 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:49.736 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:51.325 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:51.660 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:52.165 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:52.283 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:35:54.146 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:54.202 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:54.656 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:55.723 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:35:55.840 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:35:56.430 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:56.483 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:35:57.738 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:35:58.085 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:35:58.591 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:35:58.702 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:00.275 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:00.395 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:00.919 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:02.104 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:36:02.214 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:03.107 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:03.217 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:03.874 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:04.774 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:05.670 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:36:05.778 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:06.567 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:06.677 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:07.559 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+16:36:09.004 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:10.074 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:36:10.182 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:10.975 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:11.089 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:12.616 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:13.444 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:36:13.549 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:14.752 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:15.090 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:15.205 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:16.399 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:17.013 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:36:17.123 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:18.682 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:18.795 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:19.405 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:20.023 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:36:20.140 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:22.342 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:36:23.171 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:36:23.283 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:25.629 {"lorarx":"raw","len":60,"rssi_dbm":-21}
+16:36:25.684 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:26.924 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+16:36:27.028 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:28.414 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:28.517 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:29.770 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+16:36:29.888 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+16:36:31.240 {"lorarx":"raw","len":64,"rssi_dbm":-30}
+16:36:31.352 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:33.050 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:33.323 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:36:33.429 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:35.018 {"lorarx":"raw","len":64,"rssi_dbm":-21}
+16:36:35.133 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:35.517 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+16:36:35.627 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+16:36:37.912 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+16:36:38.019 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+16:36:50.656 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:36:53.788 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:36:56.905 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:00.058 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:03.172 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:06.333 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:09.450 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:12.603 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:15.681 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:18.834 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:21.946 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:25.146 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:37:28.696 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:31.843 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:34.952 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:38.089 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:41.235 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:44.320 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:47.480 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:50.597 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:53.695 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:56.838 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:37:59.986 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:03.124 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:06.259 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:09.380 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:12.485 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:38:15.621 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:18.750 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:21.907 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:25.038 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:28.163 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:31.244 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:34.410 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:37.547 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:40.680 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:43.775 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:46.907 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:50.028 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:53.170 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:56.298 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:38:59.456 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:02.572 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:05.708 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:08.847 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:11.920 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:15.074 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:18.235 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:21.337 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:24.468 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:27.576 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:30.737 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:33.878 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:36.986 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:40.120 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:43.238 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:46.377 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:49.484 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:39:52.623 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:55.758 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:39:58.872 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:40:57.249 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:00.403 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:03.518 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:06.643 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:09.799 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:12.911 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:25.170 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:28.267 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:31.411 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:34.556 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:37.682 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:40.821 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:41:43.952 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:47.044 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:50.171 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:53.301 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:56.490 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:41:59.557 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:02.743 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:42:05.816 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:08.952 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:12.120 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:15.253 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:18.349 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:21.501 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:24.641 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:27.746 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:30.878 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:33.990 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:42:37.153 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:07.230 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:10.341 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:13.490 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:16.635 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:19.726 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:22.856 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:46:56.210 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:46:59.368 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:02.508 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:05.624 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:08.751 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:11.867 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:15.000 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:18.149 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:21.262 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:24.428 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:27.557 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:30.643 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:33.794 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:36.914 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:40.022 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+16:47:43.151 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:46.306 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:49.443 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:52.558 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:55.691 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:47:58.831 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:48:01.917 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:48:05.058 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:48:08.176 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:55:49.972 {"lorarx":"raw","len":156,"rssi_dbm":-11}
+16:59:08.199 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:11.300 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:14.433 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:17.544 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:20.698 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:23.813 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:49.168 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:52.314 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:55.477 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+16:59:58.608 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:00:01.700 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:00:04.814 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:03:15.231 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:03:18.325 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:03:21.474 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:03:24.607 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:03:27.713 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:03:30.827 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:38.237 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:41.343 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:04:44.463 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:47.637 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:50.723 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:53.886 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:04:57.000 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:05:00.116 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:05:03.256 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:05:06.411 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:05:09.535 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:05:12.650 {"lorarx":"raw","len":132,"rssi_dbm":-31}
+17:07:19.747 {"lorarx":"raw","len":156,"rssi_dbm":-21}
+17:07:23.309 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+17:07:23.421 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:07:24.636 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:07:24.745 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:27.518 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:07:27.631 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+17:07:28.824 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:07:28.941 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:30.630 {"lorarx":"raw","len":156,"rssi_dbm":-31}
+17:07:31.090 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:07:31.195 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:07:37.188 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:07:37.305 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:38.581 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+17:07:38.691 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:07:39.909 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:07:40.016 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:41.147 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:07:41.258 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:43.966 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:07:44.020 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+17:07:45.297 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:07:45.415 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:47.271 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:07:47.322 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:48.715 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+17:07:48.831 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:07:50.085 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:07:50.196 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:52.523 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:07:52.980 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+17:07:53.084 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:07:56.041 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:07:56.150 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+17:07:57.010 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:07:57.116 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:57.327 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+17:07:57.438 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:07:59.495 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:00.726 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:00.836 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:02.490 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:08:02.602 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+17:08:03.120 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:03.170 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:03.781 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+17:08:03.835 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:05.580 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:07.170 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:07.287 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:08.860 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:08:08.970 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+17:08:09.260 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:09.374 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:10.151 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:08:10.264 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:11.732 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:13.570 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:13.687 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:15.310 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:08:15.421 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+17:08:15.641 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:15.748 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:16.551 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:08:16.662 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:18.116 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:19.989 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:20.097 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:21.707 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:08:21.821 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+17:08:22.255 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:08:22.368 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:22.997 {"lorarx":"raw","len":56,"rssi_dbm":-30}
+17:08:23.051 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:26.397 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:26.517 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:28.095 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:08:28.203 {"lorarx":"raw","len":29,"rssi_dbm":-31}
+17:08:29.424 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:08:29.481 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:08:31.197 {"lorarx":"raw","len":156,"rssi_dbm":-31}
+17:08:31.635 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:31.747 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:08:33.305 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:08:33.421 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:09:13.289 {"lorarx":"raw","len":132,"rssi_dbm":-30}
+17:09:13.397 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:09:14.691 {"lorarx":"raw","len":132,"rssi_dbm":-21}
+17:09:14.746 {"lorarx":"raw","len":29,"rssi_dbm":-11}
+17:09:16.006 {"lorarx":"raw","len":98,"rssi_dbm":-11}
+17:09:16.121 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:09:18.888 {"lorarx":"raw","len":98,"rssi_dbm":-21}
+17:09:19.001 {"lorarx":"raw","len":29,"rssi_dbm":-30}
+17:09:20.174 {"lorarx":"raw","len":56,"rssi_dbm":-31}
+17:09:20.285 {"lorarx":"raw","len":29,"rssi_dbm":-21}
+17:09:22.440 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+17:09:22.491 {"lorarx":"raw","len":29,"rssi_dbm":-11}
