@@ -29,3 +29,17 @@ Kryterium spełnione: 50/50 RECEIVED, żadna stacja nie blokuje drugiej, czasy o
 
 - Obie stacje, jak A w [próbie 4](hack-2026-11-14.md#ponowienia), po odrzuceniach przez B przełączają się na roota, który nie zna ich kluczy i nie potwierdza. Na stole kosztuje to około 157 ramek bez HACK.
 - 50 zgłoszeń z dwóch stacji szło 10,5 min; 50 zgłoszeń z jednej stacji w próbie 5 szło 13 min.
+
+## Uzupełnienie: licznik odmów kolejki B na obrazie `32a5f2d6` (wieczór, piwnica)
+
+Ten sam układ na obrazach z ponownych prób ([raport](ponowne-3-4-11-2026-11-14.md)), z nowym licznikiem odmów przy pełnej kolejce (PR 216). Przebiegi skryptem: `dwie-stacje-runda2-l0-2026-11-14.out` i `dwie-stacje-runda3-l0-2026-11-14.out`. Nie było podsłuchu: podsłuch z przebiegu 9a zapisywał wtedy dalej (`podsluch-wrogi-l0-2026-11-14.jsonl`).
+
+Stacja A miała pełny rejestr (256 gniazd), bo zgłoszenia z prób dostały tylko RECEIVED i nie były zamknięte. Stacja zwalnia gniazdo tylko po zgłoszeniu zamkniętym, czyli po decyzji 6 albo anulowaniu (`firmware/src/store.cpp`, `requestClosed`). Przed drugim przebiegiem dyżurny zamknął w panelu 30 najstarszych zgłoszeń A decyzją 6. A przyjęła jednak tylko 14 nowych, a przyczyny nie badano.
+
+| Przebieg | Zgłoszenia | Czas do `intents` 0 | HACK B | Odmowy przy pełnej kolejce B (w górę + w dół) | Odmowy na zgłoszenie |
+|---|---|---|---|---|---|
+| jedna stacja (próba 4 po poprawkach) | 20 z A | 6 min 27 s | 105 | 91 + 62 = 153 | 7,7 |
+| dwie stacje, przebieg 2 | 5 z A + 25 z C | 8 min 0 s | 130 | 127 + 71 = 198 | 6,6 |
+| dwie stacje, przebieg 3 | 14 z A + 25 z C | 11 min 59 s | 190 | 299 + 119 = 418 | 10,7 |
+
+Wszystkie zgłoszenia doszły, `failed` 0 na C, HACK na B najdłużej 107 ms. Przy 39 zgłoszeniach z dwóch stacji B odmawia ponad dwa razy częściej, niż potwierdza (418 odmów na 190 HACK). Liczba odmów na zgłoszenie rośnie z liczbą zgłoszeń w toku naraz. Te liczby są danymi do decyzji o rozmiarze kolejki przekaźnika.
