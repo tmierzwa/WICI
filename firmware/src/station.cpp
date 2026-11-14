@@ -167,6 +167,43 @@ int Station::nextToSend() const {
     return best;
 }
 
+bool Station::parentHeard(bool hack) {
+    // Po ciszy albo awarii rodzica wiadomości czekają do 15 min, choć droga już działa (próby przy stole
+    // 2026-11-14: ostatnie z 5 zgłoszeń 9 min 55 s po zdjęciu ciszy przekaźnika). Kontakt przyspiesza jedną,
+    // w kolejności wysyłki; następną przyspieszy HACK za nią, więc wiadomości idą po kolei, a nie naraz.
+    if (!store_.ok()) return false;
+    const uint32_t nowS = store_.now();
+    if (hack) { parentHacked_ = true; parentHackS_ = nowS; }
+    if (!hack && beaconWoke_ && nowS - beaconWakeS_ < WAKE_BEACON_EVERY_S) return false;
+    // BEACON to sygnał powrotu drogi tylko dla stacji odciętej; przy ruchu (HACK w ostatnich 5 min) dodatkowe
+    // próby po każdym BEACON-ie tylko zajmowały kanał przeciążonego przekaźnika (emulator, 10 i 30 stacji).
+    if (!hack && parentHacked_ && nowS - parentHackS_ < WAKE_CUT_OFF_S) return false;
+    if (hack && wakeBlocked_) return false;
+    int best = -1, bestRank = 0;
+    for (size_t i = 0; i < store::REGISTER_SLOTS; ++i) {
+        const RequestIndex& r = store_.request(i);
+        if (!r.used() || r.stage != Stage::SENDING || silencedFor(r) || (r.type == sa1::TEST && testPaused()) ||
+            static_cast<int32_t>(r.nextTryS - nowS) <= static_cast<int32_t>(WAKE_MIN_S)) continue;
+        bool flying = false;
+        for (const Flight& f : flights_) flying |= f.slot == static_cast<int>(i);
+        if (flying) continue;
+        const int rank = r.type == sa1::TEST ? 2 : r.urgency == 2 ? 0 : 1;
+        if (best < 0 || rank < bestRank || (rank == bestRank && r.commitS < store_.request(best).commitS)) {
+            best = static_cast<int>(i);
+            bestRank = rank;
+        }
+    }
+    Request r;
+    if (best < 0 || !store_.readRequest(static_cast<size_t>(best), r)) return false;
+    r.nextTryS = nowS + random32() % ((hack ? WAKE_HACK_SPREAD_S : WAKE_BEACON_SPREAD_S) + 1);
+    store::Tx wake(store_);
+    wake.request(static_cast<uint16_t>(best), r, false);
+    if (!wake.commit()) return false;
+    woken_[best / 8] |= static_cast<uint8_t>(1u << (best % 8));
+    if (!hack) { beaconWoke_ = true; beaconWakeS_ = nowS; wakeBlocked_ = false; }
+    return true;
+}
+
 bool Station::transmit(uint16_t slot) {
     Request r;
     const uint8_t* to = store_.recipient();
@@ -255,6 +292,11 @@ void Station::finishFlight(Flight& f, bool delivered) {
     const Flight done = f;
     const uint16_t slot = static_cast<uint16_t>(f.slot);
     f = Flight();
+    if (slot < store::REGISTER_SLOTS) {
+        const uint8_t bit = static_cast<uint8_t>(1u << (slot % 8));
+        if ((woken_[slot / 8] & bit) && !delivered) wakeBlocked_ = true;   // przyspieszona próba bez HACK
+        woken_[slot / 8] &= static_cast<uint8_t>(~bit);
+    }
     Request r;
     // Wynik próby rewizji już zastąpionej, wpisu zwolnionego albo potwierdzonego: bez skutku.
     if (!store_.readRequest(slot, r) || r.gen != done.gen || r.rMax != done.revision || r.stage > Stage::DELIVERED) return;

@@ -812,6 +812,50 @@ void calibrate(const Params& params) {
 
 }  // namespace
 
+// 6. Cisza przekaźnika obok roota (próby przy stole 2026-11-14): `n` stacji (domyślnie 1) za jednym
+// przekaźnikiem, każda słyszy pozostałe; na początku 30 min ciszy przekaźnika każda zgłasza 5 razy w ciągu
+// minuty (`hours`: dłuższa cisza w godzinach). Liczy, po jakim czasie od zdjęcia ciszy zamyka się ostatnie zgłoszenie i ile kosztuje to nadań.
+void relaySilence(const Params& params) {
+    const int children = params.n ? static_cast<int>(params.n) : 1;
+    Net net(static_cast<size_t>(children) + 2, params.seed, assumptionsFor(params), params.variant);
+    net.link(1, 0, params.p);
+    net.setParents(1, 0, -1);
+    for (int i = 2; i < children + 2; ++i) {
+        net.link(i, 1, params.p);
+        net.setParents(i, 1, -1);
+        for (int j = 2; j < i; ++j) net.interfere(i, j);
+        net.rootPlan(net.node(i).id, net.node(1).id);
+    }
+    net.start();
+    net.run(10 * 60000);
+    net.node(1).radio->silent = true;
+    const uint32_t silenced = net.now();
+    for (uint32_t k = 0; k < 5; ++k) {
+        net.run(silenced + k * 12000);
+        for (int i = 2; i < children + 2; ++i) net.report(i);
+    }
+    net.run(silenced + (params.hours ? params.hours * 3600000u : 30 * 60000u));
+    net.node(1).radio->silent = false;
+    const uint32_t lifted = net.now();
+    const auto unicast = [&] {
+        uint32_t total = 0;
+        for (size_t i = 0; i < net.size(); ++i) total += net.node(static_cast<int>(i)).stats.txUnicast;
+        return total;
+    };
+    const uint32_t txBefore = unicast();
+    net.runUntil(lifted + 3 * 3600000u, [&] { return net.allClosed(); });
+    std::vector<uint32_t> after;
+    for (const auto& report : net.reports())
+        if (!report->probe && report->closed) after.push_back(report->closedMs > lifted ? (report->closedMs - lifted) / 1000 : 0);
+    uint32_t p50 = 0, last = 0, wakes = 0;
+    percentiles(after, p50, last);
+    for (size_t i = 0; i < net.size(); ++i) wakes += net.node(static_cast<int>(i)).stats.wakes;
+    std::string extra = ",\"children\":" + std::to_string(children) + ",\"closed_after_lift_p50_s\":" + std::to_string(p50);
+    extra += ",\"closed_after_lift_max_s\":" + std::to_string(last) + ",\"unicast_after_lift\":" + std::to_string(unicast() - txBefore);
+    extra += ",\"wakes\":" + std::to_string(wakes);
+    emit(params, "cisza_przekaznika", net, extra);
+}
+
 int main(int argc, char** argv) {
     Params params;
     if (argc < 2) {
@@ -868,6 +912,8 @@ int main(int argc, char** argv) {
         else if (name == "fakeevery") params.fakeEveryS = value;
         else if (name == "fromend") params.fromEnd = value;
         else if (name == "nopool") params.variant.noPool = value;
+        else if (name == "nowake") params.variant.noWake = value;
+        else if (name == "cutoff") params.variant.cutOffS = value;
         else return 2;
     }
 #ifndef WICI_EMU_VARIANT
@@ -901,6 +947,7 @@ int main(int argc, char** argv) {
     else if (s == "atak_k1") floodAttack(params);
     else if (s == "regula_rodzica") floodRule(params);
     else if (s == "kalibracja") calibrate(params);
+    else if (s == "cisza_przekaznika") relaySilence(params);
     else return 2;
     return 0;
 }
