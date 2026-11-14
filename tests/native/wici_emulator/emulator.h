@@ -107,6 +107,8 @@ struct Variant {
                                   // 2 także bieżący (obecny kod), 3 kontrola pułapki
     bool stickyRoutes = false;    // próba: nauka tylko brakującej drogi zamiast „ostatnia wygrywa”
     bool noPool = false;          // próba przyczyny: bez puli czasu nadawania (nie rozstrzygnięcie, nie do firmware)
+    uint32_t cutOffS = 300;       // BEACON przyspiesza tylko bez HACK rodzica od tylu sekund (jak firmware; 0 wyłącza)
+    uint32_t noWake = 0;          // porównanie: 1 bez przyspieszenia po kontakcie z rodzicem (Station::parentHeard), 2 bez HACK, 3 bez BEACON
 };
 
 struct NodeStats {
@@ -118,6 +120,7 @@ struct NodeStats {
     uint32_t parentChanges = 0;
     uint32_t leaves = 0;
     uint32_t maxSilentS = 0;   // najdłużej otwarta wiadomość po HACK bez wiadomości od odbiorcy
+    uint32_t wakes = 0;        // przyspieszenia po kontakcie z rodzicem
     uint32_t firstLeaveMs = 0; // pierwsza zmiana rodzica przez stoper albo próg w próbach
     uint32_t probes = 0;       // wysłane próbki
     uint32_t longestMuteS = 0; // najdłużej bez żadnego nadania w chwili odmowy z dziennika czasu nadawania
@@ -194,6 +197,7 @@ struct Report {
     uint32_t hacked = 0;  // nadania z HACK od ostatniej wiadomości od odbiorcy (próg w próbach)
     bool probe = false;   // próbka przekaźnika, nie zgłoszenie: poza wynikami i bez wpisu w panelu
     bool delivered = false, closed = false;
+    bool woken = false;   // próba przyspieszona kontaktem z rodzicem
     uint16_t station = 0;
     size_t size = 174;
 };
@@ -261,6 +265,10 @@ struct Node {
     struct Flight { Report* report = nullptr; uint32_t handle = 0, sentS = 0; } flights[2];
     uint32_t lastReceiverMsgS = 0;  // ostatnia uwierzytelniona wiadomość od odbiorcy
     uint32_t leaveTimerS = 0;       // wariant: początek czasu bez odpowiedzi przy otwartej wiadomości
+    uint32_t seenParentHacks = 0, seenParentBeacons = 0, beaconWakeS = 0;  // Station::parentHeard
+    bool beaconWoke = false;
+    bool wakeBlocked = false;
+    uint32_t parentHackS = 0;   // ostatni HACK rodzica (próba: BEACON przyspiesza tylko odciętą stację)   // nieudana próba przyspieszona: HACK nie przyspiesza do następnego BEACON-u
     uint32_t upWaitS = 0;           // próbka: przekazany ruch w górę czeka na powrót od tej chwili
     uint32_t lastProbeS = 0;
     uint32_t lastTxMs = 0;
@@ -462,6 +470,7 @@ private:
     void endAir(Air& air);
     void pollNode(Node& node);
     void pollApp(Node& node);
+    void wake(Node& node, bool hack);
     void pollBeacon(Node& node);
     void pollHostile(Node& node);
     bool pollLowRank(Node& node);
