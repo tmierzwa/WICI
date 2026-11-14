@@ -59,7 +59,7 @@ Każde zgłoszenie zawiera:
 | czas | czas odbioru według zegara komputera stanowiska; stacja nie podaje czasu utworzenia |
 | krótki numer | 4 cyfry; razem z nazwą stacji jednoznacznie wskazuje zgłoszenie |
 
-Rodzaje potrzeb w kolejności z ekranu stacji: 0 POMOC MEDYCZNA, 1 LEKI I SPRZĘT MED., 2 EWAKUACJA, TRANSPORT, 3 WODA PITNA, 4 ŻYWNOŚĆ, 5 OGRZEWANIE, ENERGIA, 6 SANITARNE, HIGIENA, 7 ZAGROŻENIE BUDYNKU, 8 POSZUKIWANIE, INFO, 9 INNE.
+Rodzaje potrzeb w kolejności z ekranu stacji: 0 POMOC MEDYCZNA, 1 LEKI I SPRZĘT MED., 2 EWAKUACJA/TRANSPORT, 3 WODA PITNA, 4 ŻYWNOŚĆ, 5 OGRZEWANIE, ENERGIA, 6 SANITARNE, HIGIENA, 7 ZAGROŻENIE BUDYNKU, 8 POSZUKIWANIE, INFO, 9 INNE.
 
 ### Trzy poziomy potwierdzenia
 
@@ -338,7 +338,7 @@ Drogi łączności bez sieci publicznych: radiotelefon służbowy, łącze satel
 |---|---|---|---|
 | 0 POMOC MEDYCZNA | | | |
 | 1 LEKI I SPRZĘT MED. | | | |
-| 2 EWAKUACJA, TRANSPORT | | | |
+| 2 EWAKUACJA/TRANSPORT | | | |
 | 3 WODA PITNA | | | |
 | 4 ŻYWNOŚĆ | | | |
 | 5 OGRZEWANIE, ENERGIA | | | |

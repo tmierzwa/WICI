@@ -30,15 +30,14 @@ class TextTests(unittest.TestCase):
             if key != "odpowiedzi_po_polsku":
                 self.assertTrue(strings[0], key)
 
-    def test_menu_labels_and_categories_fit_twenty_columns(self):
-        # oprogramowanie.md: pozycje menu i etykiety kategorii <= 20 znaków; etykieta języka 19.
-        for _, strings in self.data["menu"]:
+    def test_menu_labels_and_categories_leave_the_arrow_column(self):
+        # oprogramowanie.md: pozycje menu, etykiety i kategorie <= 19 znaków (ostatnia kolumna listy należy do
+        # strzałki przewijania); etykieta języka ma dokładnie 19.
+        for strings in [m for _, m in self.data["menu"]] + list(self.data["labels"].values()) + self.data["categories"]:
             for s in strings:
-                self.assertLessEqual(len(s), 20, s)
+                self.assertLessEqual(len(s), 19, s)
         self.assertEqual(len(self.data["menu"][4][1][0]), 19)
-        for strings in self.data["categories"]:
-            for s in strings:
-                self.assertLessEqual(len(s), 20, s)
+        self.assertTrue(set(ui_texts.ARROWS) <= ui_texts.charset(self.data))
         self.assertEqual([key for key, _ in self.data["menu"]], ["ZGLOSZENIE", "WIADOMOSCI", "TEST", "STAN", "JEZYK"])
         self.assertEqual(self.data["buttons"][0], ("GÓRA", "DÓŁ", "OK", "WSTECZ"))
 

@@ -219,7 +219,7 @@ constexpr const char* const LABELS[static_cast<size_t>(Label::COUNT)][LANGS] = {
     {"ZAMKNIJ ZDARZENIE", "ЗАКРИТИ ПОДІЮ", "CLOSE EVENT"},
     {"ZNISZCZ DANE", "ЗНИЩИТИ ДАНІ", "DESTROY DATA"},
     {"ZMIEŃ LICZBĘ OSÓB", "КІЛЬКІСТЬ ЛЮДЕЙ", "CHANGE PEOPLE COUNT"},
-    {"ZMIEŃ PILNOŚĆ", "ЗМІНИТИ ТЕРМІНОВІСТЬ", "CHANGE URGENCY"},
+    {"ZMIEŃ PILNOŚĆ", "ЗМІНА ТЕРМІНОВОСТІ", "CHANGE URGENCY"},
     {"POTRZEBA USTAŁA", "ПОТРЕБА ЗНИКЛА", "NEED RESOLVED"},
     {"ANULUJ WYSYŁKĘ", "СКАСУВАТИ ВІДПРАВКУ", "CANCEL SENDING"},
     {"INNA LICZBA", "ІНША КІЛЬКІСТЬ", "OTHER NUMBER"},
@@ -249,14 +249,14 @@ constexpr const char* const MENU[MENU_ITEMS][LANGS] = {
 // Etykiety kategorii 0-9.
 constexpr const char* const CATEGORIES[10][LANGS] = {
     {"POMOC MEDYCZNA", "МЕДИЧНА ДОПОМОГА", "MEDICAL HELP"},
-    {"LEKI I SPRZĘT MED.", "ЛІКИ, МЕДОБЛАДНАННЯ", "MEDICINES, EQUIPMENT"},
-    {"EWAKUACJA, TRANSPORT", "ЕВАКУАЦІЯ, ТРАНСПОРТ", "EVACUATION/TRANSPORT"},
+    {"LEKI I SPRZĘT MED.", "ЛІКИ, МЕДОБЛАДНАННЯ", "MEDICINE, EQUIPMENT"},
+    {"EWAKUACJA/TRANSPORT", "ЕВАКУАЦІЯ/ТРАНСПОРТ", "EVACUATE/TRANSPORT"},
     {"WODA PITNA", "ПИТНА ВОДА", "DRINKING WATER"},
     {"ŻYWNOŚĆ", "ХАРЧУВАННЯ", "FOOD"},
     {"OGRZEWANIE, ENERGIA", "ОПАЛЕННЯ, ЕНЕРГІЯ", "HEATING, POWER"},
     {"SANITARNE, HIGIENA", "САНІТАРІЯ, ГІГІЄНА", "SANITATION, HYGIENE"},
     {"ZAGROŻENIE BUDYNKU", "ЗАГРОЗА БУДІВЛІ", "BUILDING HAZARD"},
-    {"POSZUKIWANIE, INFO", "ПОШУК ЛЮДЕЙ, ІНФО", "MISSING PEOPLE, INFO"},
+    {"POSZUKIWANIE, INFO", "ПОШУК ЛЮДЕЙ, ІНФО", "MISSING PEOPLE/INFO"},
     {"INNE", "ІНШЕ", "OTHER"},
 };
 

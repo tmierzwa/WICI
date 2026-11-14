@@ -2729,14 +2729,18 @@ class HostUnitTests(unittest.TestCase):
 
     @staticmethod
     def screens(out):
-        """Split harness output into (screen name, language, [(inverted, text)]) tuples."""
+        """Split harness output into (screen name, language, [(inverted, text)], [arrow]) tuples. A scroll arrow
+        in the last column (ui.cpp, arrow) goes to `arrow` ("▲", "▼" or ""), the text keeps the rest of the row."""
         result = []
         i = 0
         while i < len(out):
             if out[i].startswith("screen "):
                 _, name, lang = out[i].split()
-                lines = [(row[0] == "1", row[2:]) for row in out[i + 1:i + 6]]
-                result.append((name, int(lang), lines))
+                rows = [row[2:] for row in out[i + 1:i + 6]]
+                arrows = [row[-1] if row[-1:] in ("▲", "▼") else "" for row in rows]
+                lines = [(row[0] == "1", text[:-1].rstrip() if arrow else text)
+                         for row, text, arrow in zip(out[i + 1:i + 6], rows, arrows)]
+                result.append((name, int(lang), lines, arrows))
                 i += 6
             else:
                 i += 1
@@ -2798,7 +2802,7 @@ class HostUnitTests(unittest.TestCase):
 
         def status_lines(prep):
             seen = []
-            for name, _, rows in self.screens(self.ui([prep] + open_status)):
+            for name, _, rows, _ in self.screens(self.ui([prep] + open_status)):
                 if name == "status":
                     for _, text in rows:
                         if text not in seen:
@@ -2823,7 +2827,7 @@ class HostUnitTests(unittest.TestCase):
         out = self.ui(["PP 1 3 1 7200 1 beef", "L 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] +
                       ["K DOWN 0"] * downs + ["K OK 0", "R"] + ["K DOWN 0", "R"] * 8)
         handover = []
-        for name, _, rows in self.screens(out):
+        for name, _, rows, _ in self.screens(out):
             if name == "handover":
                 for _, text in rows:
                     if text not in handover:
@@ -2857,6 +2861,12 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(status_end[-4:], ["bench-a-test", "WICI-000000", labels["PRZEKAZANIE_ZMIANY"][0], labels["USLUGI"][0]])
         self.assertTrue(texts_prep.endswith(status_end[0]))
         self.assertEqual([inv for inv, _ in screens[4][2]], [False, False, False, False, True])
+        # Strzałki przewijania: menu mieści się w oknie (bez strzałek); STAN na początku ▼ na dole, w środku ▲ i ▼,
+        # na końcu ▲ na górze. Wiersze STAN mają najwyżej 19 znaków, bo ostatnia kolumna należy do strzałek.
+        self.assertEqual(screens[0][3], [""] * 5)
+        self.assertEqual([screens[i][3] for i in (2, 3, 4)],
+                         [["", "", "", "", "▼"], ["▲", "", "", "", "▼"], ["▲", "", "", "", ""]])
+        self.assertTrue(all(len(t) <= 19 for i in (2, 3, 4) for _, t in screens[i][2]))
         self.assertEqual([inv for inv, _ in screens[5][2]], [False, False, False, True, False])  # kursor wraca na STAN
         self.assertEqual([t for _, t in screens[6][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
         self.assertEqual(screens[7][1], 2)  # wybrano ENGLISH, powrót do menu
@@ -3133,7 +3143,12 @@ class HostUnitTests(unittest.TestCase):
         screens = self.screens(self.ui(script))
         self.assertIn("OK = WYŚLIJ", self.shown(screens[0]))
         self.assertIn("= POPRAW", self.shown(screens[0]))
-        self.assertIn("DÓŁ: DALSZA TREŚĆ", self.lines(screens[0]))
+        # Tekst dłuższy niż ekran: ▼ w ostatniej kolumnie dolnego wiersza zamiast wiersza „DÓŁ: DALSZA TREŚĆ”,
+        # po przewinięciu do końca ▲ w górnym; wiersze łamane na 19 znaków.
+        self.assertEqual(screens[0][3], ["", "", "", "", "▼"])
+        self.assertEqual(screens[-1][3][0], "▲")
+        self.assertEqual(screens[-1][3][4], "")
+        self.assertTrue(all(len(t) <= 19 for screen in screens for _, t in screen[2]))
         visible = " ".join(self.shown(screen) for screen in screens)
         self.assertIn("osoba na wózku", visible)
         self.assertIn("GODZIN", visible)
@@ -3154,7 +3169,7 @@ class HostUnitTests(unittest.TestCase):
         s = self.screens(out)
         summary, result, item, menu, silent, sending, sending_menu = s
         self.assertEqual(self.lines(summary)[:4], ["OK = WYŚLIJ, WSTECZ", "= POPRAW", data["categories"][2][0], "5 PILNE – KILKA"])
-        self.assertEqual(self.lines(summary)[4], "DÓŁ: DALSZA TREŚĆ")
+        self.assertEqual((self.lines(summary)[4], summary[3][4]), ("GODZIN", "▼"))
         self.assertEqual(self.shown(result), texts["zapisane_w_stacji"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", number))
         self.assertTrue(self.shown(item).startswith(texts["zapisane_w_stacji"][0]), item)
         # Przed `nadane`: ANULUJ WYSYŁKĘ dostępne.
@@ -3256,6 +3271,8 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([x[0] for x in s], ["alarm", "alarm", "main", "main"])
         self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
         self.assertTrue(self.shown(s[1]).startswith(texts["blad_pamieci"][0][:20]))
+        # Alarm mieści się w 5 wierszach po 20 znaków (po 19 byłoby 6): zostaje przy 20, bez strzałek.
+        self.assertEqual((s[1][3], self.shown(s[1])), ([""] * 5, texts["blad_pamieci"][0]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
 
     def test_stack_fault_alarm(self):
