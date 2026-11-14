@@ -42,6 +42,14 @@ constexpr uint32_t TEST_WINDOW_PER_STATION_S = 50;  // 50 s x liczba stacji z co
 constexpr uint32_t TEST_ALARM_S = 1800;             // brak_potwierdzenia TEST: 30 min od test_wyslany
 constexpr uint32_t READ_ALARM_S = 1800;             // brak_odczytu: 30 min po RECEIVED r_max (pilność 2)
 constexpr uint32_t CONFIRM_ALARM_S[3] = {6 * 3600, 3600, 900};  // brak_potwierdzenia według pilności 0, 1, 2
+// Kontakt z rodzicem po nieudanych próbach (oprogramowanie.md, "Wysyłanie"): HACK rodzica albo jego
+// sprawdzony BEACON przyspiesza jedną czekającą wiadomość, gdy do jej próby zostało ponad WAKE_MIN_S.
+// Po nieudanej próbie przyspieszonej HACK nie przyspiesza, dopóki nie przyspieszy BEACON.
+constexpr uint32_t WAKE_MIN_S = 120;
+constexpr uint32_t WAKE_HACK_SPREAD_S = 10;     // po HACK: droga działa, kolejna wiadomość zaraz
+constexpr uint32_t WAKE_BEACON_SPREAD_S = 120;  // po BEACON: dzieci jednego rodzica słyszą go naraz
+constexpr uint32_t WAKE_BEACON_EVERY_S = 300;   // BEACON przyspiesza najwyżej raz na 5 min (nagrany można powtórzyć)
+constexpr uint32_t WAKE_CUT_OFF_S = 300;        // BEACON przyspiesza tylko stację bez HACK rodzica od 5 min (odciętą)
 constexpr const char* RESOLVED_TEXT = "potrzeba ustała";        // POTRZEBA USTAŁA (fraza domyślna)
 
 // Usługi stacji dla warstwy aplikacji (main.cpp albo program testowy).
@@ -115,6 +123,9 @@ public:
     // Odstęp następnej próby (random: liczba losowa do ±20% i 30–60 min).
     static uint32_t retryDelayS(uint16_t attempts, bool delivered, uint32_t ageS, uint32_t random);
     int nextToSend() const;     // gniazdo do nadania teraz albo -1
+    // Kontakt z bieżącym rodzicem: hack = jego HACK, inaczej sprawdzony BEACON. True, gdy przyspieszył
+    // wiadomość po nieudanych próbach (etap `wysylanie`, do próby ponad WAKE_MIN_S).
+    bool parentHeard(bool hack);
 
     // Zgłoszenie z przycisków: location z wybranego obiektu, text = fraza PL albo pusty.
     Result create(uint8_t category, uint16_t people, uint8_t urgency, const char* text, uint16_t& number);
@@ -182,6 +193,14 @@ private:
     Services& services_;
     Stats stats_;
     bool exceptionTraffic_ = false;
+    uint32_t beaconWakeS_ = 0;   // ostatnie przyspieszenie po BEACON-ie (RAM)
+    bool beaconWoke_ = false;
+    // Nieudana próba przyspieszona wstrzymuje przyspieszanie po HACK do następnego BEACON-u: przy pełnej kolejce
+    // rodzica każda dodatkowa próba tylko zajmuje kanał (emulator, scenariusz cisza_przekaznika, 30 stacji).
+    bool wakeBlocked_ = false;
+    bool parentHacked_ = false;
+    uint32_t parentHackS_ = 0;   // ostatni HACK rodzica
+    uint8_t woken_[store::REGISTER_SLOTS / 8] = {};
     // Gniazdo wpisu z wyjątkiem ciszy (indeks ma tylko przedrostek id, więc pełne id sprawdza odczyt rekordu).
     mutable int exceptionSlot_ = -1;
     mutable uint16_t exceptionGen_ = 0;

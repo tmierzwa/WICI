@@ -32,7 +32,7 @@ Pierwsze polecenie pobiera przypięte biblioteki (emulator potrzebuje tylko Cryp
 
 - `Radio` to odpowiednik `Bench` i `WiciAir` (`measure.cpp`, `main.cpp`): dług ciszy 12t, 50 ms wolnego kanału, CAD, odroczenie 100–1000 ms, najwyżej 30 odroczeń, zatrzymanie kanału do terminu HACK, ścieżka HACK z limitami długu i terminu 200 ms.
 - `Laptop` to skrót `WiciStos` i `Wysylka`: jedno zgłoszenie do roota naraz, cztery wiadomości w toku, trzy próby, ponowienia 60/120/300/900 s, 35 min po przekazaniu przekaźnikowi, `contact` i `accepted`, limit powtórnych HACK.
-- Obieg stacji w `Net::pollApp` to skrót `Station`: dwie wiadomości w toku, 60 s, 10 min po HACK, potem 30–60 min, po porażce 60/120/300/900 s.
+- Obieg stacji w `Net::pollApp` to skrót `Station`: dwie wiadomości w toku, 60 s, 10 min po HACK, potem 30–60 min, po porażce 60/120/300/900 s; kontakt z rodzicem przyspiesza jedną wiadomość jak `Station::parentHeard` (`nowake=1` wyłącza, 2 bez HACK, 3 bez BEACON).
 
 ## Warianty rozstrzygnięć
 

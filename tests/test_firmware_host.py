@@ -839,6 +839,8 @@ int world() {
         } else if (!strcmp(cmd, "ackalarm")) {
             station::Alarm al;
             if (w.app->alarm(al)) w.app->ackAlarm(al);
+        } else if (!strcmp(cmd, "parent")) {
+            printf("wake %d\n", w.app->parentHeard(atoi(arg) != 0));
         } else if (!strcmp(cmd, "retry")) {
             sscanf(arg, "%u %u %u %u", &a, &b, &c, &d);
             printf("retry %u\n", station::Station::retryDelayS(static_cast<uint16_t>(a), b != 0, c, d));
@@ -2059,6 +2061,29 @@ class HostUnitTests(unittest.TestCase):
                          '["WICI",1,"%s","%s",%s]' % (SELF, MAIN_SA1, compact(self.request(x))))
         self.assertEqual(self.find(out, "stats e")[0], "stats e sent=3 delivered=2 failed=1 received=0 rejected=0 skipped=0 bulletins=0 "
                                                       "full=0 evicted=0")
+
+    def test_parent_contact_wakes_waiting_messages(self):
+        # Próby przy stole 2026-11-14: po ciszy przekaźnika zgłoszenia czekały do 15 min, choć droga działała.
+        # Kontakt z rodzicem przyspiesza jedną wiadomość po nieudanych próbach: BEACON najwyżej raz na 5 min
+        # i z rozrzutem do 120 s, HACK zawsze i do 10 s; wiadomość z krótkim odstępem zostaje bez zmiany.
+        x, y = self.rid(2101), self.rid(2102)
+        out = self.world([self.CONFIG, "now 100", self.sub(self.request(x)), "now 101", self.sub(self.request(y)),
+                          "poll", "rcpt 1 0", "rcpt 2 0", "parent 0",
+                          "now 200", "poll", "rcpt 3 0", "rcpt 4 0",
+                          "now 400", "poll", "rcpt 5 0", "rcpt 6 0", "reg a",
+                          "parent 0", "reg b", "parent 0", "parent 1", "reg c", "parent 1",
+                          "now 701", "parent 0",
+                          # Obie przyspieszone próby bez HACK: HACK nie przyspiesza, aż przyspieszy BEACON.
+                          "poll", "rcpt 7 0", "rcpt 8 0", "parent 1", "now 1010", "parent 0", "parent 1",
+                          # BEACON przyspiesza tylko stację bez HACK rodzica od 5 min.
+                          "now 1200", "poll", "rcpt 9 0", "rcpt 10 0", "parent 1", "now 1320", "parent 0", "now 1501", "parent 0"])
+        wakes = self.find(out, "wake ")
+        self.assertEqual(wakes, ["wake 0", "wake 1", "wake 0", "wake 1", "wake 0", "wake 0", "wake 0", "wake 1", "wake 1",
+                                 "wake 0", "wake 0", "wake 1"])
+        a, b, c = (self.regs(out, label) for label in "abc")
+        self.assertTrue(all(a[i]["att"] == 3 and a[i]["next"] > 400 + 120 for i in (x, y)), a)
+        self.assertTrue(400 <= b[x]["next"] <= 400 + 120 and b[y]["next"] == a[y]["next"], b)  # najstarsza pierwsza
+        self.assertTrue(400 <= c[y]["next"] <= 400 + 10, c)
 
     def test_station_queue_order_in_flight_and_silence(self):
         ids = [self.rid(n) for n in (11, 12, 13, 14)]

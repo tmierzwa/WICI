@@ -96,6 +96,12 @@ public:
     // routes, link sequence, envelope counters, replay windows) until begin().
     bool ready() const;
     uint16_t clearedRecords() const { return relay_.clearedRecords(); }
+    // Contact with the current parent since start: a HACK from it (own or
+    // relayed frame; cannot be replayed, the echo binds it to the attempt)
+    // and an admitted, checked BEACON from it. The station coordinator wakes
+    // waiting own messages on a change (station::Station::parentHeard).
+    uint32_t parentHacks() const { return parentHacks_; }
+    uint32_t parentBeacons() const { return parentBeacons_; }
     // Delivery proofs lost to a full list; the receiver resends those messages.
     uint16_t proofsDropped() const { return proofsDropped_; }
     wici_route::Table& routes() { return relay_.routes(); }
@@ -152,6 +158,7 @@ private:
     uint32_t proofs_[2][envelope::PROOF_COUNTERS] = {};
     uint8_t proofCount_[2] = {};
     uint16_t proofsDropped_ = 0;
+    uint32_t parentHacks_ = 0, parentBeacons_ = 0;
     void addProof(uint8_t peer, uint32_t counter);
     bool startProof();
     bool startOwn(uint8_t peer, uint8_t type, const uint8_t* data, size_t length, uint32_t handle,

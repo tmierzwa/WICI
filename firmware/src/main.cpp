@@ -2304,6 +2304,21 @@ struct PassTimer {
     }
 };
 
+// HACK albo sprawdzony BEACON bieżącego rodzica przyspiesza jedną wiadomość po nieudanych próbach
+// (station::Station::parentHeard); kilka zdarzeń w jednym przeglądzie to jedno przyspieszenie.
+void pollParentContact() {
+    static uint32_t hacks = 0, beacons = 0;
+    if (!wiciShelter) return;
+    if (wiciShelter->parentHacks() != hacks) {
+        hacks = wiciShelter->parentHacks();
+        app.parentHeard(true);
+    }
+    if (wiciShelter->parentBeacons() != beacons) {
+        beacons = wiciShelter->parentBeacons();
+        app.parentHeard(false);
+    }
+}
+
 void stationLoop() {
     PassTimer passTimer;
     static uint32_t lastBeat = 0;
@@ -2412,7 +2427,10 @@ void stationLoop() {
         lastApp = now;
         stationStore.now(serviceS());
         storeWork = stationStore.maintain();   // gniazda starej epoki po ZAMKNIJ ZDARZENIE (jedna transakcja na obieg)
-        if (linkAuto && radiocon::ok() && !nodeRole()) app.poll();
+        if (linkAuto && radiocon::ok() && !nodeRole()) {
+            pollParentContact();
+            app.poll();
+        }
     }
     pollSerial();
     pollButtons(now);

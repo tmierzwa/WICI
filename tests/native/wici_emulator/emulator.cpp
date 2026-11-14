@@ -65,6 +65,8 @@ void finishFlight(Node& node, Node::Flight& flight, bool delivered) {
     flight = Node::Flight();
     if (!report || report->closed) return;
     const uint32_t nowS = node.net->nowS();
+    if (report->woken && !delivered) node.wakeBlocked = true;
+    report->woken = false;
     if (delivered) {
         const bool first = !report->delivered;
         ++report->hacked;
@@ -800,6 +802,17 @@ void Net::pollApp(Node& n) {
         if (variant_.leaveAfterS && silent >= variant_.leaveAfterS) leave(n, nowSeconds);
     }
     if (variant_.probeS) pollProbe(n);
+    if (variant_.noWake != 1) {
+        if (n.shelter->parentHacks() != n.seenParentHacks) {
+            n.seenParentHacks = n.shelter->parentHacks();
+            n.parentHackS = nowSeconds;
+            if (variant_.noWake != 2) wake(n, true);
+        }
+        if (n.shelter->parentBeacons() != n.seenParentBeacons) {
+            n.seenParentBeacons = n.shelter->parentBeacons();
+            if (variant_.noWake != 3) wake(n, false);
+        }
+    }
     for (;;) {
         unsigned inFlight = 0;
         for (const Node::Flight& flight : n.flights) inFlight += flight.report != nullptr;
@@ -834,6 +847,31 @@ void Net::pollApp(Node& n) {
             return;
         }
     }
+}
+
+// Jak Station::parentHeard: jedna wiadomość po nieudanych próbach (bez HACK, do próby ponad 120 s), najstarsza;
+// po HACK rodzica do 10 s, po jego BEACON-ie do 120 s i najwyżej raz na 300 s; po nieudanej próbie przyspieszonej
+// HACK nie przyspiesza do następnego przyspieszenia BEACON-em; BEACON przyspiesza tylko bez HACK rodzica od 300 s.
+void Net::wake(Node& n, bool hack) {
+    const uint32_t nowSeconds = nowS();
+    if (!hack && n.beaconWoke && nowSeconds - n.beaconWakeS < 300) return;
+    if (hack && n.wakeBlocked) return;
+    if (!hack && variant_.cutOffS && n.parentHackS && nowSeconds - n.parentHackS < variant_.cutOffS) return;
+    Report* best = nullptr;
+    for (Report* report : n.reports) {
+        if (report->closed || report->delivered || !report->attempts ||
+            static_cast<int32_t>(report->nextTryS - nowSeconds) <= 120) continue;
+        bool flying = false;
+        for (const Node::Flight& flight : n.flights) flying = flying || flight.report == report;
+        if (flying) continue;
+        if (!best || report->createdMs < best->createdMs) best = report;
+    }
+    if (!best) return;
+    best->nextTryS = nowSeconds + n.rng.next() % (hack ? 11 : 121);
+    best->woken = true;
+    if (!hack) n.wakeBlocked = false;
+    ++n.stats.wakes;
+    if (!hack) { n.beaconWoke = true; n.beaconWakeS = nowSeconds; }
 }
 
 void Net::pollNode(Node& n) {
