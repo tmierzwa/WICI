@@ -1,0 +1,30 @@
+17:45:53 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:00 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":true}
+17:46:00 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:10 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":true}
+17:46:10 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:13 {"buttons":{"up":true,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:16 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:18 {"buttons":{"up":false,"down":true,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:20 {"buttons":{"up":false,"down":true,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":true}
+17:46:20 {"buttons":{"up":false,"down":true,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:21 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:24 {"buttons":{"up":false,"down":false,"ok":true,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:27 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:29 {"buttons":{"up":false,"down":false,"ok":false,"back":true},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:30 {"buttons":{"up":false,"down":false,"ok":false,"back":true},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":true}
+17:46:30 {"buttons":{"up":false,"down":false,"ok":false,"back":true},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:32 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:35 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":true,"silence":false,"prep":false,"alarm_led":false}
+17:46:39 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:40 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":true}
+17:46:40 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+17:46:43 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":true,"prep_button":false,"silence":true,"prep":false,"alarm_led":false}
+17:46:46 {"buttons":{"up":false,"down":false,"ok":false,"back":false},"silence_switch":false,"prep_button":false,"silence":false,"prep":false,"alarm_led":false}
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+  File "~/WICI-L0/.venv/lib/python3.14/site-packages/serial/serialposix.py", line 595, in read
+    raise SerialException(
+        'device reports readiness to read but returned no data '
+        '(device disconnected or multiple access on port?)')
+serial.serialutil.SerialException: device reports readiness to read but returned no data (device disconnected or multiple access on port?)

@@ -150,4 +150,4 @@ Po E5 przykleić panel taśmą 3M 4032 w położeniu wybranym przy przymiarce (F
 
 Numer sztuki, MAC z `INFO`, typ FRAM z `RDID`, R12 = 1 kΩ (część spoza BOM), suma SHA-256 kopii fabrycznej, zmierzone napięcia i prądy (wartości, nie tylko zaliczenie), RSSI i SNR z R1/R2, zrzuty E4, EXTCOMIN i [pomiaru sygnałów magistrali](#pomiar-sygnałów-magistrali), logi i JSON, zdjęcia płytki i adaptera, rozbieżności z tą instrukcją. Wyniki sztuki trafiają do `evidence/` bez danych osobowych i rozliczeń wykonawcy. P001 (2026-11-01): SPI CLK 1 MHz czysty, 8 MHz bez widocznych problemów na granicy możliwości pomiarowych wykonawcy, na MISO nieco dzwonienia; w E4 CS przy spadku zasilania wymuszony w stan wysoki aż do zera; prąd nadawania około 22 mA dotyczy 0 dBm programu diagnostycznego, nie 13 dBm stacji.
 
-Następny krok po odbiorze: obraz stacji `l0` ([firmware](../../firmware/README.md#stacja-l0-l0)).
+Następny krok po odbiorze: obraz stacji `l0` ([firmware](../../firmware/README.md#stacja-l0-l0)). Odbiór u właściciela i pierwsze uruchomienie stacji: [ODBIOR.md](ODBIOR.md).
