@@ -7,6 +7,7 @@
     python -m wici.stanowisko nowa-tozsamosc --nosnik KATALOG --karta NOWY_PLIK
     python -m wici.stanowisko aktywuj-tozsamosc --nosnik KATALOG --karta PLIK --karta-na-stacjach
     python -m wici.stanowisko aktywuj-zapasowa --nosnik PUSTY_KATALOG --dyzurni 4 --paczka PLIK --karta PLIK
+    python -m wici.stanowisko sprawdz-plan PLIK [PLIK ...]
 
 przygotuj (preparation of the station, on a computer without a network; stanowisko-osp.md, „Przygotowanie”):
 makes the medium (accounts of the duty officers, station password, main identity), the backup identity
@@ -37,6 +38,9 @@ aktywuj-zapasowa (takeover of the station, stanowisko-osp.md, „Tożsamość za
 password from stdin and puts the backup identity on a new medium with new accounts, the card the stations hold
 and, for a numbered card, the WICI-Link settings. Prints "envelopes" once, with "guarded": a package used before
 starts with WICI-Link sending blocked until nowa-tozsamosc and aktywuj-tozsamosc.
+sprawdz-plan (network plan, before the first configuration of its stations; configdoc.check_plan): reads the
+`configure` documents of all numbered stations and of the root (one per file, or a JSON list in a file) and
+prints "plan_ok" or "plan_rejected" with the problems; a rejected plan ends with code 1.
 """
 
 import argparse
@@ -97,6 +101,22 @@ def prepare(args):
                                                  backup_password, args.iteracje))
     write_new(args.karta, card)
     emit("envelopes", envelopes={**envelopes, "paczka-zapasowa": backup_password}, card=card)
+    return 0
+
+
+def check_plan(args):
+    docs = []
+    for path in args.pliki:
+        try:
+            value = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"nie można odczytać planu {path}: {exc}") from None
+        docs.extend(value if isinstance(value, list) else [value])
+    problems = configdoc.check_plan(docs)
+    if problems:
+        emit("plan_rejected", problems=[{"place": p, "message": m} for p, m in problems])
+        return 1
+    emit("plan_ok", documents=len(docs))
     return 0
 
 
@@ -324,8 +344,10 @@ def main(argv=None):
     arch = commands.add_parser("archiwum", help="otwarcie archiwum zamkniętego zdarzenia (hasło archiwum na wejściu)")
     arch.add_argument("--plik", required=True, help="plik archiwum .wici")
     arch.add_argument("--do", required=True, help="katalog na baza.sqlite i rejestr.csv")
+    plan = commands.add_parser("sprawdz-plan", help="sprawdzenie całego planu sieci przed konfiguracją stacji")
+    plan.add_argument("pliki", nargs="+", help="dokumenty configure stacji i roota (plik z dokumentem albo listą)")
     args = parser.parse_args(argv)
-    return {"przygotuj": prepare, "start": start, "odtworz": restore, "nowa-tozsamosc": receiver_rekey,
+    return {"przygotuj": prepare, "sprawdz-plan": check_plan, "start": start, "odtworz": restore, "nowa-tozsamosc": receiver_rekey,
             "aktywuj-tozsamosc": receiver_rekey, "aktywuj-zapasowa": activate_backup,
             "archiwum": open_archive}[args.command](args)
 
