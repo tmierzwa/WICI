@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "a861173198098b4738e75f0eebed14d9882ea7535f71f9c2f54a57d7944b8f33",
-   "bytes": 778757,
+   "sha256": "4f301983a70817bfff7df0c0b7b37c29ce076fe32e469dbb64d36f78bc4d7686",
+   "bytes": 778813,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -315,7 +315,7 @@
   "firmware/src/wici_radio.h": "88fa1b53bb4002db5548298420e8a75190c0df9e789dfbfa4eadd4764aa35cbe",
   "firmware/src/wici_relay.cpp": "95c105ab9069f8903a34c2cb052df25592343694be1548cf3d7fd09ab59f3a6d",
   "firmware/src/wici_relay.h": "0dd769b00d056cfca16086d77a28b448338203856a8e268e4b910f6827496ef4",
-  "firmware/src/wici_route.cpp": "3103c66b27347b59ba48d6f8c32b36a0e5b88a076f8cea902f5e5f6ccd830869",
+  "firmware/src/wici_route.cpp": "d2263eca49e7752b1714ac3900937e0eeda6de62ad0ba84870c2caafd93f2c29",
   "firmware/src/wici_route.h": "ffbbf1fb4362769be63092b25c0d3d2c756b399255ab1abe5fff55d7cfdec968",
   "firmware/src/wici_seen.cpp": "8f6cb157c91f2aeb8e81ed55969bd730099eeb3ce26a319c57beb18026404007",
   "firmware/src/wici_seen.h": "d97824be19db1abb8200a1ca60cff63b03ce27a68ab6fec0b919dd93f84ba800",

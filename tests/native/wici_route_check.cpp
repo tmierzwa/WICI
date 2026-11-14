@@ -135,6 +135,22 @@ int main() {
         assert(floor.parent() == (round % 2 ? 2 : 3) && floor.rank(100 + round) == 0xFFFF);
     }
 
+    // Trials 2026-11-14: the root's BEACON (rank 0) is heard and checked,
+    // but the root holds keys only of its planned neighbours; it is never a
+    // dynamic candidate, so the rotation skips it.
+    static Memory rootHeardMemory;
+    wici_route::Table rootHeard(rootHeardMemory, config);
+    assert(rootHeard.begin());
+    assert(rootHeard.beacon(1, B(1, 0, 5, 0), 16, 100));
+    for (uint8_t i = 0; i < 3; ++i) rootHeard.hopResult(2, false, 101);
+    assert(rootHeard.parent() == 3);
+    for (uint8_t i = 0; i < 3; ++i) rootHeard.hopResult(3, false, 102);
+    assert(rootHeard.parent() == 2);  // not the root
+    assert(rootHeard.beacon(8, B(1, 8, 5, 1), 16, 103));
+    for (uint8_t i = 0; i < 3; ++i) rootHeard.hopResult(2, false, 104);
+    for (uint8_t i = 0; i < 3; ++i) rootHeard.hopResult(3, false, 105);
+    assert(rootHeard.parent() == 8);  // another heard neighbour still is one
+
     // D1 rotation with a dynamic neighbour and immediate return to the
     // configured parents after their BEACON.
     static Memory rotationMemory;
