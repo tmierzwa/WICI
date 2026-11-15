@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.57</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.58</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.57</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -245,7 +245,7 @@
           <tr><td>Próby programowe</td><td>Kodeki C++ i Python, trasy, kolejka, restart i pierścienie w <a href="../../tests/test_envelope_cross_language.py">pakiecie międzyjęzykowym</a>; testy radia w <a href="../../tests/test_radio_link_host.py">torze hosta</a>.</td><td>Sprawdzają logikę, bez czasu, FRAM i zakłóceń docelowego urządzenia.</td></tr>
           <tr><td>Próby XIAO</td><td><a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">Dwa zestawy XIAO + Wio-SX1262</a>: root i stacja w jednym skoku, ramki v3, cisza, HACK i wybrane scenariusze. Obraz trzymał stan FRAM w PSRAM.</td><td>Bez przekaźnika: kolejka K1/K2 i wynik „w drodze” były sprawdzane tylko programowo. XIAO mogą służyć do W10, próby wrogiej i czasu HACK, lecz nie do dowodu energii, zapasu RAM ani zaniku zasilania z FRAM.</td></tr>
           <tr><td>Pełny zakres: 3–15 skoków i drogi w dół</td><td><a href="#sprawdzenie-pelnego-zakresu">Metoda</a> jest ustalona. W <code>main</code> od <code>8968e2c</code> są wstępne wyniki emulatora C++ z zegarem i kanałem, bez kalibracji D21 i krótkim łańcuchem fizycznym (<a href="system-wici-decyzje.html#wici-inv-039">WICI-INV-039</a>).</td><td>Wynik dotyczy modelu, nie radia. Rejestr oddzieli głębokość potwierdzoną fizycznie od sprawdzonej tylko w emulatorze.</td></tr>
-          <tr><td>D21 na sprzęcie docelowym</td><td>Częściowo, próby z 14 listopada 2026 r. na <code>8dd305f2</code>: stacja i przekaźnik na prototypach <code>l0</code> z FRAM, root i druga stacja na XIAO, podsłuch na RAK4631, wszystko na jednym stole. 50 zgłoszeń z jednej stacji przez przekaźnik w 13 min 2 s; z dwóch stacji w 10,5 min. W około 200 zgłoszeniach przez 2–3 skoki, przy 6 zanikach zasilania przekaźnika (zakres zmniejszony decyzją właściciela z 15), ciszy przekaźnika i wstępnym węźle wrogim przy 10% kanału, żadne nie zginęło ani nie zostało przyjęte dwa razy. HACK 96–118 ms po końcu DATA. „Wrogi węzeł” przy 50% przez 2 h zaliczony: 20/20 w 14 min 28 s bez klucza sieci i w 21 min 2 s z kluczem, bez strat i podwójnych przyjęć (<a href="system-wici-decyzje.html#wici-inv-063">WICI-INV-063</a>). Niewykonane: część próby RAM, W23, przeniesienie i rozsyłanie awaryjne. Raport z prób czeka na scalenie do <code>main</code> (<a href="system-wici-decyzje.html#wici-inv-061">WICI-INV-061</a>).</td><td>Warunek: 50/50 RECEIVED w &lt;15 min przez przekaźnik; „Wrogi węzeł” 20/20 w 30 min; W23, RAM ≥30%, zimny start, zaniki, przeniesienie i rozsyłanie bez pętli oraz przekroczenia K2.</td></tr>
+          <tr><td>D21 na sprzęcie docelowym</td><td>Częściowo, próby z 14 listopada 2026 r. na <code>8dd305f2</code>: stacja i przekaźnik na prototypach <code>l0</code> z FRAM, root i druga stacja na XIAO, podsłuch na RAK4631, wszystko na jednym stole. 50 zgłoszeń z jednej stacji przez przekaźnik w 13 min 2 s; z dwóch stacji w 10,5 min. W około 200 zgłoszeniach przez 2–3 skoki, przy 6 zanikach zasilania przekaźnika (zakres zmniejszony decyzją właściciela z 15), ciszy przekaźnika i wstępnym węźle wrogim przy 10% kanału, żadne nie zginęło ani nie zostało przyjęte dwa razy. HACK 96–118 ms po końcu DATA. „Wrogi węzeł” przy 50% przez 2 h zaliczony: 20/20 w 14 min 28 s bez klucza sieci i w 21 min 2 s z kluczem, bez strat i podwójnych przyjęć (<a href="system-wici-decyzje.html#wici-inv-063">WICI-INV-063</a>). Niewykonane: część próby RAM, W23, przeniesienie i rozsyłanie awaryjne. <a href="../../hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md">Raport z prób</a> jest w <code>main</code> od <code>0d8d4bc5</code> (<a href="system-wici-decyzje.html#wici-inv-061">WICI-INV-061</a>).</td><td>Warunek: 50/50 RECEIVED w &lt;15 min przez przekaźnik; „Wrogi węzeł” 20/20 w 30 min; W23, RAM ≥30%, zimny start, zaniki, przeniesienie i rozsyłanie bez pętli oraz przekroczenia K2.</td></tr>
         </tbody>
       </table>
       <p class="explain">Pierwsze zdanie <a href="transport.md#warunek-przyjęcia">warunku D21</a> mówi o dwóch RAK4631 i prototypie; <a href="../../hardware/xiao-wici/README.md">procedura sprzętowa</a> przypisuje RAK4631 role podsłuchu i wrogiego węzła. Rozbieżność opisu zestawu wymaga uporządkowania przed próbą.</p>
@@ -278,7 +278,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.57 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

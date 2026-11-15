@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.57</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.58</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.57</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -471,22 +471,22 @@
         <article class="record" id="wici-inv-061">
           <h4>WICI-INV-061</h4>
           <dl>
-            <div><dt>Stan</dt><dd>Wyniki prób przy stole z 14 listopada 2026 r. (prototypy <code>l0</code>, program z <code>8dd305f2</code>) są w raporcie <code>hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md</code> na gałęzi prób, jeszcze poza <code>main</code>. Przekaźnik odrzuca bez HACK około połowy pierwszych kopii DATA, gdy ruch płynie naraz w górę i w dół; program nie podaje licznika takich odrzuceń (zmiana w toku, PR 216). Kryteria próby „Wrogi węzeł” w <a href="odbior.md">planie odbioru</a> wymagają licznika odrzuceń po tagu pary, udziałów K1, K2 i BEACON w oknie godzinnym oraz liczby gniazd K1 na sąsiada; program ich nie wypisuje.</dd></div>
-            <div><dt>Luka</dt><dd>Rejestr zgodności wpisze wynik po scaleniu raportu. Związek W10 z liczbą stacji za jednym przekaźnikiem (limit w planie sieci albo większa kolejka) właściciel rozstrzygnie po danych z licznika odrzuceń i z emulatora; do tego czasu tekst rozdziału 6 się nie zmienia (decyzja z 14 listopada 2026 r.). Przyspieszone ponowienie po kontakcie z rodzicem (<a href="#wici-dec-017">WICI-DEC-017</a>) jest w przygotowaniu w sesji programu; brak próby emulatora przy 30 stacjach za przekaźnikiem. Każda wielkość w kryteriach prób ma wskazane źródło (polecenie i pole programu albo pomiar z podsłuchu); dziś wskazania brak.</dd></div>
+            <div><dt>Stan</dt><dd>Wyniki prób przy stole z 14 listopada 2026 r. (prototypy <code>l0</code>, program z <code>8dd305f2</code>) są w <a href="../../hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md">raporcie</a> w <code>main</code> od <code>0d8d4bc5</code>, a wnioski w <a href="../../hardware/xiao-wici/evidence/l0-wnioski-dla-specyfikacji-2026-11-14.md">osobnym pliku</a>; wynik jest w rejestrze zgodności. Przekaźnik odrzucał bez HACK około połowy pierwszych kopii DATA, gdy ruch płynął naraz w górę i w dół. Od tamtej pory w <code>main</code>: licznik odmów przy pełnej kolejce (<code>f65f8c41</code>), liczniki odrzuceń po tagu pary oraz przyjęć do gniazd K1 i miejsc K2 (<code>2e626eb5</code>) i przyspieszone ponowienie po kontakcie z rodzicem (<code>32a5f2d6</code>, <a href="#wici-dec-017">WICI-DEC-017</a>).</dd></div>
+            <div><dt>Luka</dt><dd>Nowe liczniki nie przeszły jeszcze próby; udziału K1, K2 i BEACON w oknie godzinnym program nadal nie podaje. Związek W10 z liczbą stacji za jednym przekaźnikiem (limit w planie sieci albo większa kolejka) właściciel rozstrzygnie po danych z licznika odmów i z emulatora; do tego czasu tekst rozdziału 6 się nie zmienia. Brak próby emulatora przy 30 stacjach za przekaźnikiem. Każda wielkość w kryteriach prób ma mieć wskazane źródło (polecenie i pole programu albo pomiar z podsłuchu).</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-062">
           <h4>WICI-INV-062</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd>Każda stacja ma klucz roota, żeby sprawdzać podpis epoki, więc uznaje słyszanego roota za kandydata dynamicznego. Root zna tylko sąsiadów ze swojego planu i takiej stacji nie potwierdza. Na stole stacja po trzech skokach bez HACK przechodziła na roota i wracała; w próbach 59–157 ramek zostało bez HACK. Poprawka w toku (PR 214): root jest rodzicem tylko z planu.</dd></div>
-            <div><dt>Luka</dt><dd>Reguła z <a href="#wici-dec-017">WICI-DEC-017</a>: kandydatem dynamicznym jest tylko sąsiad z kluczem sąsiada, a przygotowanie odrzuca plan bez par kluczy. PR 214 pokrywa przypadek roota; sprawdzenie par w całym planie czeka na wdrożenie razem z <a href="#wici-inv-050">WICI-INV-050</a>.</dd></div>
+            <div><dt>Stan przed poprawką</dt><dd>Każda stacja ma klucz roota, żeby sprawdzać podpis epoki, więc uznawała słyszanego roota za kandydata dynamicznego. Root zna tylko sąsiadów ze swojego planu i takiej stacji nie potwierdzał. Na stole stacja po trzech skokach bez HACK przechodziła na roota i wracała; w próbach 59–157 ramek zostało bez HACK.</dd></div>
+            <div><dt>Stan wdrożenia</dt><dd>Reguła z <a href="#wici-dec-017">WICI-DEC-017</a> jest w <code>main</code>: root nie jest sąsiadem dynamicznym (<code>8a023c39</code>), a przygotowanie sprawdza pary kluczy sąsiadów w całym planie (<code>8e13bcba</code>). Nie przeszła jeszcze próby na sprzęcie.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-063">
           <h4>WICI-INV-063</h4>
           <dl>
-            <div><dt>Stan</dt><dd>Próba „Wrogi węzeł” z 14 listopada 2026 r. na prototypach <code>l0</code> (raport <code>hardware/xiao-wici/evidence/wrogi-2026-11-14.md</code> na gałęzi prób, jeszcze poza <code>main</code>): dwa przebiegi po 2 h przy 50% zagłuszania, 20/20 zgłoszeń w 14 min 28 s bez klucza sieci i w 21 min 2 s z kluczem, bez strat i podwójnych przyjęć. Przekaźnik i root rezygnowały z HACK w 68–77% prób, przeważnie przy zajętym kanale w CAD. Kryteria, które wymagają liczników (odrzucenia po tagu pary, gniazda K1, udział K2), wykazano tylko pośrednio z podsłuchu, jak w <a href="#wici-inv-061">WICI-INV-061</a>.</dd></div>
-            <div><dt>Luka</dt><dd>Kandydat z rozdziału 6 (<a href="system-wici-siec.html#kanal">ponowne CAD przed HACK</a>) czeka na zmianę w torze radia i przebieg 2 h przy 50% na <code>l0</code> do porównania z wynikiem powyżej. Szacunek zysku: najwyżej około jednej trzeciej odmów HACK. Drugi kandydat (dłuższe odroczenia przed porzuceniem ramki) mierzy się w tym samym wieczorze: przebieg z obiema zmianami i bez nich. Alarm zagłuszania kanału (<a href="system-wici-funkcje.html#r3-43">R3-43</a>, <a href="system-wici-funkcje.html#r3-44">R3-44</a>) czeka na wdrożenie jako druga przyczyna alarmu awarii radia, z tekstem ekranu w trzech językach, progiem z pomiaru i próbą w planie odbioru. Zagłuszacza silniejszego od sieci ani ciągłego szumu nie mierzono. Rejestr zgodności wpisze wynik próby po scaleniu raportu.</dd></div>
+            <div><dt>Stan</dt><dd>Próba „Wrogi węzeł” z 14 listopada 2026 r. na prototypach <code>l0</code> (<a href="../../hardware/xiao-wici/evidence/wrogi-2026-11-14.md">raport</a> w <code>main</code> od <code>0d8d4bc5</code>): dwa przebiegi po 2 h przy 50% zagłuszania, 20/20 zgłoszeń w 14 min 28 s bez klucza sieci i w 21 min 2 s z kluczem, bez strat i podwójnych przyjęć. Przekaźnik i root rezygnowały z HACK w 68–77% prób, przeważnie przy zajętym kanale w CAD. Kryteria, które wymagają liczników, wykazano tylko pośrednio z podsłuchu; liczniki są w programie od <code>2e626eb5</code> (<a href="#wici-inv-061">WICI-INV-061</a>). Alarm zagłuszania kanału (<a href="system-wici-funkcje.html#r3-43">R3-43</a>, <a href="system-wici-funkcje.html#r3-44">R3-44</a>) jest w <code>main</code> od <code>02e80023</code> jako druga przyczyna alarmu awarii radia, z tekstem w trzech językach i progiem tymczasowo 5 min.</dd></div>
+            <div><dt>Luka</dt><dd>Kandydaci z rozdziału 6 (<a href="system-wici-siec.html#kanal">ponowne CAD przed HACK i dłuższe odroczenia przed porzuceniem ramki</a>) czekają na zmianę w programie i przebieg 2 h przy 50% na <code>l0</code> z obiema zmianami i bez nich. Szacunek zysku z ponownego CAD: najwyżej około jednej trzeciej odmów HACK. Alarm zagłuszania nie ma wiersza w planie odbioru (alarm przy 90%, brak alarmu przez 24 h zwykłego ruchu) ani progu z pomiaru. Zagłuszacza silniejszego od sieci ani ciągłego szumu nie mierzono.</dd></div>
           </dl>
         </article>
       </div>
@@ -562,6 +562,7 @@
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.58</td><td>Raport z prób przy stole w <code>main</code>: rejestr zgodności z wynikami (HACK i kolejki, cisza, zalew, współistnienie w kanale, zanik przekaźnika) i nowym wierszem alarmu zagłuszania; WICI-INV-061, 062 i 063 ze stanem wdrożeń w <code>main</code>; wiersz D21 w rozdziale 6 z odnośnikiem do raportu.</td></tr>
           <tr><td>0.57</td><td>Zapisano WICI-DEC-019: alarm zagłuszania kanału (nowe R3-43 i R3-44 w rozdziale 3), dłuższe odroczenia przed porzuceniem ramki jako kandydat do pomiaru, odrzucone krótsze okno wolnego kanału. Rozdział 6: szacunek zysku z ponownego CAD przed HACK i granica milknięcia sieci przy zagłuszaniu.</td></tr>
           <tr><td>0.56</td><td>WICI-DEC-018 i rozdział 6: nadawanie w zajęty kanał zapisane jako odrzucony wariant z powodami.</td></tr>
           <tr><td>0.55</td><td>Zapisano WICI-DEC-018 po próbie „Wrogi węzeł”: ponowne CAD przed HACK jako kandydat do pomiaru, obietnica czasu do 50% zajętości kanału (rozdział 6); wynik próby w wierszu D21 i nowe WICI-INV-063.</td></tr>
@@ -619,7 +620,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.57 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
