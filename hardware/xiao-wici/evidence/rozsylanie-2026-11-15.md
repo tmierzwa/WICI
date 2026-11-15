@@ -7,6 +7,7 @@ Plan trzech skoków (jak w próbie 10): A (P001, 20) → XIAO nr 2 (30, przekaź
 Dowody:
 - przebieg kroków 1 i 2: `rozsylanie-l0-2026-11-15.out`, skrypt `rozsylanie-p12.py`, chwile odcięć B `rozsylanie-chwile-l0-2026-11-15.txt`;
 - koperty z podsłuchu: `rozsylanie-koperty-l0-2026-11-15.json` (`tools/envelopes.py`, cały podsłuch do 15:17);
+- rejestr A po próbie: `rozsylanie-rejestr-A-l0-2026-11-15.jsonl`;
 - przebieg kroku 3: `utrata-drogi-l0-2026-11-15.out`.
 
 ## Krok 1 i 2: rozsyłanie w dół z restartem B
@@ -18,12 +19,12 @@ Dowody:
 | każdy węzeł rozsyła kopertę najwyżej raz, także po restarcie w oknie 120 s | spełnione: 68 rozsyłanych kopert, `repeated_floods` 0; po pięciu restartach B żadnej z nich nie rozesłał drugi raz |
 | żaden nonce się nie powtarza | spełnione: 522 koperty, `nonce_reuse` 0 |
 | zgłoszenia dokładnie raz | spełnione: 10/10 |
-| decyzje doszły do A | stanowisko: wszystkie 20 wysłane (`unsent` 0), jedna wiadomość bez dowodu doręczenia (`forwarded_unconfirmed` 1); licznik `received` na A od 0 po konfiguracji do 61 |
+| decyzje doszły do A | spełnione: 20/20; `REGISTER` na A (obraz z `main` `256a582e`, wgrany po próbie) pokazuje dla każdego z 10 zgłoszeń `read: true` i `decision` 6 (`rozsylanie-rejestr-A-l0-2026-11-15.jsonl`) |
 | tranzyt i BEACON-y przekaźnika ≤60% godziny, BEACON-y ≤2% | spełnione: w godzinie 14–15 B nadawał przez 0,80%, XIAO nr 2 przez 0,78%, root przez 0,67%; BEACON-y każdego 0,03% |
 
 **Co robi sieć, gdy B jest wyłączony.** Root nie dostaje HACK od B i po nieudanych nadaniach sam rozsyła decyzję w dół (DATA od 1 z `l_dst` 65535, np. 14:04:24–14:04:29 przy pierwszym odcięciu). B po starcie przekazuje rozsyłaną kopertę od swojego rodzica najwyżej raz. XIAO nr 2 dostaje rozsyłanie od swojego rodzica B i przekazuje je do A jednoadresowo.
 
-**Ograniczenie.** Licznik `received` na A obejmuje też RECEIVED dla 10 zgłoszeń i resztę decyzji z porannego zamykania starych zgłoszeń, więc nie wykazuje osobno każdej z 20 decyzji. Obraz stacji nie ma polecenia, które wypisze stan każdego wpisu rejestru. Doręczenie każdej decyzji wykazuje stanowisko (dowody doręczenia), z jednym wyjątkiem w toku.
+**Sprawdzenie decyzji na A.** Polecenie `REGISTER` dodano po próbie (PR 224). Rejestr A odczytano po wgraniu tego obrazu: indeks w RAM odtworzony z FRAM pokazuje stan każdego wpisu.
 
 ## Krok 3: utrata drogi w górę
 
