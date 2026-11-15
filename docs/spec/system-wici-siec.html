@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ramki, trasy, przekazywanie i profil radiowy WICI-Link v3 — szkic specyfikacji.">
-  <title>Sieć i radio — Specyfikacja WICI 0.55</title>
+  <title>Sieć i radio — Specyfikacja WICI 0.56</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Sieć i radio</h1>
-      <p><span class="status">Projekt 0.55</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.56</span> · 9 listopada 2026 r.</p>
       <p class="explain">WICI-Link v3 nie przeszedł jeszcze próby D21 przy stole na docelowym sprzęcie. <a href="#rozstrzygniecia-dec-009">WICI-DEC-009</a> ustala drogi i sposób sprawdzenia 3–15 skoków. Są wstępne wyniki emulatora, bez kalibracji sprzętowej. „Reguła protokołu” opisuje format lub zachowanie węzłów, „parametr profilu” ustawia tę konfigurację radia, a „plan pilotażu” ogranicza rozmieszczenie i próby.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -251,6 +251,7 @@
       <h4 id="warunek-d21-v1">Warunek D21 i granica płytki v2</h4>
       <p>Wybór protokołu rozstrzyga prototyp na płytce v1: ESP32-S3 DevKit, zewnętrzny Wio SX1262 i prawdziwy FRAM. Płytka v2 nie warunkuje wyboru protokołu. Kryteria W10 i próby „Wrogi węzeł” pozostają takie jak w tabeli powyżej.</p>
       <p><strong>Zakres obietnicy czasu.</strong> Czasy W10 i próby „Wrogi węzeł” obowiązują, gdy obcy ruch zajmuje kanał najwyżej przez 50% czasu; tyle sprawdziła próba. Przy większej zajętości węzeł nie nadaje w zajęty kanał, więc zgłoszenie czeka w kolejce stacji na wolny kanał i nie ginie, a gospodarza informuje alarm braku potwierdzenia (<a href="system-wici-sa1.html">rozdział 4</a>). W próbie z 14 listopada 2026 r. przy 70% przez 20 min ponad jedna trzecia zgłoszeń przeszła w czasie zagłuszania, a reszta w ciągu 6 min po nim; przy 90% żadne nie przeszło w czasie zagłuszania, a wszystkie doszły w ciągu 6 min 8 s po jego końcu. Granicę 50% można podnieść po próbie z lepszym wynikiem.</p>
+      <p class="explain"><strong>Odrzucony wariant: nadawanie w zajęty kanał.</strong> Ramka nadana mimo zajętego kanału przechodzi tylko wtedy, gdy u odbiorcy jest wyraźnie silniejsza od zakłócenia (około 6 dB przy tym samym SF). Celowy napastnik wygrywa wtedy większą mocą albo mniejszą odległością. Nadawanie mimo zajętego kanału zderzałoby też własne DATA i HACK w łańcuchu, zakłócało innych użytkowników podpasma (RX2 LoRaWAN, Meshtastic) i zużywało dług ciszy na ramki, które w większości giną. Wariant wraca do rozważenia tylko wtedy, gdy teren pokaże długą zajętość kanału przez słaby, przypadkowy ruch.</p>
       <div class="table-scroll" role="region" aria-label="Podział prób między płytkę v1 i v2" tabindex="0"><table class="chapter-table">
         <thead><tr><th>Etap</th><th>Sprawdzenie</th></tr></thead>
         <tbody>
@@ -274,7 +275,7 @@
       </ul>
       <p class="meta">Źródła: <a href="wici-link.md">WICI-Link v3</a>, <a href="radio.md">radio</a>, <a href="transport.md">szew i D21</a>, <a href="odbior.md">odbiór</a>, <a href="../../firmware/src/wici_link.cpp">kodek stacji</a>, <a href="../../software/laptop/wici/stanowisko/wici_link.py">kodek stanowiska</a>, <a href="../../firmware/src/sx1262_link.cpp">tor SX1262</a> i <a href="../../hardware/xiao-wici/evidence/xiao-zestaw-2026-11-03.md">próby XIAO</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.55 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.56 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
