@@ -102,13 +102,13 @@ bool Auth::open(const uint8_t* radio, size_t length, uint8_t* bare,
     const size_t extra = dest == wici_link::BROADCAST ? 0 : TAG;
     if (length < wici_link::HEADER + wici_link::TAG + extra || length - extra > capacity) return false;
     const uint8_t* peerKey = extra ? key(source) : nullptr;
-    if (extra && !peerKey) return false;
+    if (extra && !peerKey) { ++stats_.noKey; return false; }
     if (extra) {
         uint8_t digest[32], mismatch = 0;
         tag(peerKey, radio, length - extra, digest);
         for (size_t i = 0; i < TAG; ++i) mismatch |= digest[i] ^ radio[length - extra + i];
         sha2::wipe(digest, sizeof(digest));
-        if (mismatch) return false;
+        if (mismatch) { ++stats_.tagBad; return false; }
     }
     bareLength = length - extra;
     memcpy(bare, radio, bareLength);

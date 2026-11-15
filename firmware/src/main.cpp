@@ -1881,22 +1881,31 @@ void handle(char* cmd) {
         if (n) {
             bench.resetHackStats();
             if (wiciShelter) wiciShelter->resetBeaconStats();
+            wiciHopAuth.resetStats();
         }
         // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
         // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
-        // Kolejka przekaźnika: odmowy DATA bez wolnego gniazda (bez HACK) w górę i w dół oraz zajęte gniazda.
-        char beacon[256] = "";
+        // Kolejka przekaźnika: odmowy DATA bez wolnego gniazda (bez HACK) w górę i w dół, nowe koperty przyjęte
+        // do gniazda K1 sąsiada i do miejsc K2, zajęte gniazda i z nich gniazda K1.
+        // Ramki do tej stacji odrzucone przed łączem (każda rola): nadawca bez klucza w priority_keys, zły tag pary.
+        char beacon[384] = "";
+        const wici_hop_auth::Stats& h = wiciHopAuth.stats();
+        int used = snprintf(beacon, sizeof(beacon), ",\"hop_no_key\":%lu,\"hop_tag_bad\":%lu",
+                            static_cast<unsigned long>(h.noKey), static_cast<unsigned long>(h.tagBad));
         const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
-        if (wiciShelter) {
+        if (wiciShelter && used > 0 && static_cast<size_t>(used) < sizeof(beacon)) {
             const wici_hop::QueueStats& q = wiciShelter->queueStats();
-            snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
+            snprintf(beacon + used, sizeof(beacon) - used, ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
                      "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u,"
-                     "\"queue_full_up\":%lu,\"queue_full_down\":%lu,\"queue_pending\":%u",
+                     "\"queue_full_up\":%lu,\"queue_full_down\":%lu,\"queue_k1_admitted\":%lu,"
+                     "\"queue_k2_admitted\":%lu,\"queue_pending\":%u,\"queue_k1_pending\":%u",
                      static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
                      static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
                      static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()),
                      static_cast<unsigned long>(q.fullUp), static_cast<unsigned long>(q.fullDown),
-                     static_cast<unsigned>(wiciShelter->queuePending()));
+                     static_cast<unsigned long>(q.admittedK1), static_cast<unsigned long>(q.admittedK2),
+                     static_cast<unsigned>(wiciShelter->queuePending()),
+                     static_cast<unsigned>(wiciShelter->queuePendingK1()));
         }
         bench.printHack(beacon);
     }

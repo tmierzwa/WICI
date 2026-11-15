@@ -50,6 +50,11 @@ int main() {
     assert(!receiver.open(radio, radioLength, opened, sizeof(opened), openedLength));
     radio[4] = 1;
     assert(!receiver.open(bare, bareLength, opened, sizeof(opened), openedLength));
+    // Counted for HACK: two bad pair tags and one sender without a key; a frame
+    // too short for a pair tag counts as neither.
+    assert(receiver.stats().tagBad == 2 && receiver.stats().noKey == 1);
+    receiver.resetStats();
+    assert(receiver.stats().tagBad == 0 && receiver.stats().noKey == 0);
     frame.destination = wici_link::BROADCAST;
     frame.type = wici_link::Type::BEACON; frame.length = wici_link::BEACON_PAYLOAD;
     radioLength = wici_link::encode(groupKey, frame, bare, sizeof(bare));
