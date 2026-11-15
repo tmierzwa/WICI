@@ -2,7 +2,8 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools'))
-from pair_test import decode, judge
+from unittest import mock
+from pair_test import decode, judge, open_serial
 
 class PairResults(unittest.TestCase):
     def events(self, payload='expected'):
@@ -56,3 +57,23 @@ class PairResults(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class FakePosixSerial:
+    """Line states as pyserial on macOS/Linux sets them: both high at open, then DTR, then RTS."""
+    seen = []
+    def __init__(self):
+        self.dtr = self.rts = True
+    def open(self):
+        wanted, line = (self.dtr, self.rts), {'dtr': True, 'rts': True}
+        FakePosixSerial.seen = [dict(line)]
+        for name, value in zip(('dtr', 'rts'), wanted):
+            line[name] = value
+            FakePosixSerial.seen.append(dict(line))
+
+class OpenSerial(unittest.TestCase):
+    def test_open_never_passes_reset_state(self):
+        # ESP32-S3 USB-Serial-JTAG resets the chip at RTS high and DTR low.
+        with mock.patch.dict(sys.modules, {'serial': mock.Mock(Serial=FakePosixSerial)}):
+            open_serial('/dev/fake')
+        self.assertFalse(any(s['rts'] and not s['dtr'] for s in FakePosixSerial.seen))

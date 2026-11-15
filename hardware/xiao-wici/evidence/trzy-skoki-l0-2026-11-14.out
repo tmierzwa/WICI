@@ -1,0 +1,35 @@
+A0 13:39:27.067 {"link":true,"in_flight":0,"sent":0,"delivered":0,"failed":0,"received":0,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":170}
+REQ 13:39:28.294 {"numbers":[3257,8809,1901,120,355,6977,4681,4574,8071,7659],"created":10,"sa1_bytes":81}
+A 13:39:28.929 {"link":true,"in_flight":1,"sent":2,"delivered":1,"failed":0,"received":0,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":10,"unsent":9,"next":172,"test_paused":false,"items":180}
+A 13:39:49.808 {"link":true,"in_flight":1,"sent":7,"delivered":6,"failed":0,"received":1,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":9,"unsent":4,"next":177,"test_paused":false,"items":180}
+A 13:40:10.704 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":4,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":8,"unsent":3,"next":177,"test_paused":false,"items":180}
+A 13:40:31.618 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":7,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":7,"unsent":3,"next":177,"test_paused":false,"items":180}
+A 13:40:52.509 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":12,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":3,"next":177,"test_paused":false,"items":180}
+A 13:41:13.438 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":15,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":3,"next":177,"test_paused":false,"items":180}
+A 13:41:34.327 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":18,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":3,"next":177,"test_paused":false,"items":180}
+A 13:41:55.223 {"link":true,"in_flight":1,"sent":9,"delivered":8,"failed":0,"received":23,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":179,"test_paused":false,"items":180}
+A 13:42:16.113 {"link":true,"in_flight":0,"sent":9,"delivered":9,"failed":0,"received":26,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":1,"next":179,"test_paused":false,"items":180}
+A 13:42:37.043 {"link":true,"in_flight":0,"sent":9,"delivered":9,"failed":0,"received":29,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":2,"unsent":1,"next":179,"test_paused":false,"items":180}
+A 13:42:57.961 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":32,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":2,"unsent":0,"next":-1,"test_paused":false,"items":180}
+A 13:43:18.853 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":36,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":1,"unsent":0,"next":-1,"test_paused":false,"items":180}
+A 13:43:39.761 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":39,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":180}
+DONE 13:43:40
+X2 13:43:40.592 >> HACK
+X2 13:43:40.649 {"hack_sent":33,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":97,"end_ms_max":99,"end_ms_mean":96,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":0,"beacon_check_ms_last":0,"beacon_check_ms_max":0,"beacon_dropped":0,"beacon_stack_free":7436,"proofs_dropped":0}
+X2 13:43:40.745 >> P1
+X2 13:43:40.754 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":349,"rx_bad":0,"rx_datagrams":349,"tx_datagrams":121,"tx_fragments":121,"tx_drop":0,"deferrals":40,"long_deferrals":8,"cad_busy":1,"cad_unconfirmed":0,"rssi_busy":0,"rssi_ignored":0,"rx_busy":39,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-86,"tx_wait_ms":1812}}
+X2 13:43:41.449 {"lorarx":"raw","len":56,"rssi_dbm":-25}
+P002 13:43:41.931 >> HACK
+P002 13:43:41.989 {"hack_sent":72,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":97,"end_ms_max":101,"end_ms_mean":97,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0},"beacon_checks":0,"beacon_check_ms_last":0,"beacon_check_ms_max":0,"beacon_dropped":0,"beacon_stack_free":7436,"proofs_dropped":0}
+P002 13:43:42.085 >> P1
+P002 13:43:42.093 {"lora":{"rx":true,"tx":"wait_debt","rx_ok":329,"rx_bad":0,"rx_datagrams":329,"tx_datagrams":143,"tx_fragments":143,"tx_drop":0,"deferrals":27,"long_deferrals":3,"cad_busy":0,"cad_unconfirmed":0,"rssi_busy":0,"rssi_ignored":0,"rx_busy":27,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-96,"tx_wait_ms":2002}}
+P002 13:43:42.462 {"hack":"sent","len":29,"end_ms":98}
+P002 13:43:42.462 {"lorarx":"raw","len":98,"rssi_dbm":-33}
+P002 13:43:42.836 {"hack":"sent","len":29,"end_ms":97}
+P002 13:43:42.836 {"lorarx":"raw","len":56,"rssi_dbm":-21}
+X1 13:43:43.268 >> HACK
+X1 13:43:43.320 {"hack_sent":31,"hack_late":0,"hack_refused":0,"hack_over_200ms":0,"end_ms_last":106,"end_ms_max":111,"end_ms_mean":105,"refused_by":{"state":0,"lock":0,"rx_pending":0,"prep":0,"cad":0,"debt":0,"tx":0}}
+X1 13:43:43.421 >> P1
+X1 13:43:43.423 {"lora":{"rx":true,"tx":"idle","rx_ok":5428,"rx_bad":1,"rx_datagrams":5428,"tx_datagrams":1366,"tx_fragments":1366,"tx_drop":0,"deferrals":305,"long_deferrals":34,"cad_busy":6,"cad_unconfirmed":9,"rssi_busy":16,"rssi_ignored":14,"rx_busy":283,"split_lost":0,"header_only":0,"assembly_timeout":0,"rx_late":0,"rx_ring_overflow":0,"cca_threshold_dbm":-77,"tx_wait_ms":1205}}
+X1 13:43:44.058 {"lorarx":"raw","len":56,"rssi_dbm":-37}
+X1 13:43:44.162 {"lorarx":"raw","len":29,"rssi_dbm":-13}

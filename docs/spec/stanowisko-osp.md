@@ -133,7 +133,7 @@ Panel nasłuchuje wyłącznie na 127.0.0.1. Wymaga logowania; konta i hasła two
 - wyśle stan 3 („pomoc skierowana”) tylko z wpisanym źródłem potwierdzenia skierowania pomocy i czasem potwierdzenia. Źródło to podmiot, który dysponuje siłami, funkcja osoby i kanał. Stan 4 („przekazane dalej”) zapisuje komu i kiedy przekazano zgłoszenie, bez potwierdzenia skierowania. Oba wpisy zostają w bazie i dzienniku działań, nie idą radiem;
 - ma widok kwarantanny z wiadomościami „do weryfikacji”, a przy stacjach usuniętych z listy alarm „możliwe przejęcie stacji” z liczbą odebranych od nich wiadomości (z powtórzeniami);
 - wysyła BULLETIN osobno do każdej stacji i pokazuje postęp rozsyłania;
-- pokazuje stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, liczbę intencji w drodze i w oczekiwaniu, wiek najstarszej;
+- pokazuje stan węzła: połączenie ze stacją, czas od ostatniego pakietu z radia, liczbę intencji w drodze i w oczekiwaniu, wiek najstarszej; z portu diagnostycznego węzła (`INFO`) przełącznik CISZA, stan radia i alarm zagłuszania kanału przy roocie (`channel_jammed`, R3-44), oba jako alarm na pasku stanu („AWARIA RADIA WĘZŁA”, „KANAŁ ZAGŁUSZONY PRZY WĘŹLE”);
 - przy przekazaniu zmiany pokazuje otwarte zgłoszenia, sprawy w stanie 4 bez potwierdzenia skierowania pomocy, niewysłane intencje, stan kwarantanny i kopię bazy;
 - eksportuje rejestr do CSV ([eksport rejestru](#komputer-i-aplikacja-stanowiska)); po ZAMKNIJ ZDARZENIE pokazuje zadanie „usuń kopie” do potwierdzenia odbioru archiwum.
 

@@ -62,6 +62,7 @@ struct Status {
     bool prep = false;
     bool silence = false;
     bool radioOk = false;
+    bool channelJammed = false;  // przy !radioOk: przyczyną jest zagłuszanie kanału (kanal_zagluszony), nie układ
     bool stackOk = true;         // false: brak_lacznosci (stos sieciowy stacji nie działa)
     bool storeOk = true;         // false: blad_pamieci w PRZEKAZANIU ZMIANY
     bool contactKnown = false;   // false: dolne oszacowanie "PONAD [czas]" (bez RTC)
@@ -147,12 +148,14 @@ struct TestInfo {
     uint32_t minutes = 0;    // SCHEDULED: do nadania
     uint8_t confirmed = 0;   // CONFIRMED: stan 1-6 (1: odebrany bez decyzji)
 };
-// Awarie stacji (bez wpisu rejestru): RADIO_FAULT: radio_awaria, układ radiowy nie działa; MEMORY_FAULT:
+// Awarie stacji (bez wpisu rejestru): RADIO_FAULT: radio_awaria, układ radiowy nie działa, albo
+// kanal_zagluszony (druga przyczyna, ten sam alarm: AlarmInfo::jammed); MEMORY_FAULT:
 // blad_pamieci, magazyn nie wystartował albo zatrzymał się po błędzie zapisu FRAM; STACK_FAULT:
 // brak_lacznosci, stos sieciowy stacji nie działa.
 enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
+    bool jammed = false;     // RADIO_FAULT z powodu zagłuszania kanału
     uint32_t ref = 0;        // wpis rejestru (jak Item::ref)
     uint16_t number = 0;
     uint32_t minutes = 0;

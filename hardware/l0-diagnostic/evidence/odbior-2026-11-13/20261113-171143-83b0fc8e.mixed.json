@@ -1,0 +1,11 @@
+{
+  "mixed": {
+    "cycles": 4464,
+    "errors": 0,
+    "lcd_frames": 4464,
+    "elapsed_ms": 900104,
+    "max_gap_ms": 292
+  },
+  "radio_100_each": true,
+  "physical_acceptance": false
+}

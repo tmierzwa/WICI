@@ -1,0 +1,45 @@
+CUT 1 lost 19:32:35.904
+CUT 1 back 19:32:41.676
+JOURNAL "debt_ms":2268 "tx_wait_ms":1286 "restarts":14 
+JOURNAL "debt_ms":2268 "tx_wait_ms":1149 "restarts":14 
+STORE corrupt_slots="corrupt_slots":0
+CUT 2 lost 19:33:01.470
+CUT 2 back 19:33:10.580
+JOURNAL "debt_ms":2268 "tx_wait_ms":1285 "restarts":15 
+JOURNAL "debt_ms":1730 "tx_wait_ms":1063 "restarts":15 
+STORE corrupt_slots="corrupt_slots":0
+CUT 3 lost 19:33:47.542
+CUT 3 back 19:33:56.971
+JOURNAL "debt_ms":1713 "tx_wait_ms":730 "restarts":16 
+JOURNAL "debt_ms":3071 "tx_wait_ms":0 "restarts":16 
+STORE corrupt_slots="corrupt_slots":0
+CUT 4 lost 19:34:30.145
+CUT 4 back 19:34:38.343
+JOURNAL "debt_ms":1536 "tx_wait_ms":553 "restarts":17 
+JOURNAL "debt_ms":2268 "tx_wait_ms":1904 "restarts":17 
+STORE corrupt_slots="corrupt_slots":0
+CUT 5 lost 19:35:15.298
+CUT 5 back 19:35:22.601
+JOURNAL "debt_ms":2199 "tx_wait_ms":1216 "restarts":18 
+JOURNAL "debt_ms":2268 "tx_wait_ms":2267 "restarts":18 
+STORE corrupt_slots="corrupt_slots":0
+CUT 6 lost 19:35:56.002
+CUT 6 back 19:36:02.691
+JOURNAL "debt_ms":3798 "tx_wait_ms":2815 "restarts":19 
+JOURNAL "debt_ms":2268 "tx_wait_ms":687 "restarts":19 
+STORE corrupt_slots="corrupt_slots":0
+CUT 7 lost 19:36:35.754
+CUT 7 back 19:36:45.473
+JOURNAL "debt_ms":1656 "tx_wait_ms":674 "restarts":20 
+JOURNAL "debt_ms":2972 "tx_wait_ms":89 "restarts":20 
+STORE corrupt_slots="corrupt_slots":0
+CUT 8 lost 19:37:29.918
+CUT 8 back 19:37:38.116
+JOURNAL "debt_ms":1933 "tx_wait_ms":950 "restarts":21 
+JOURNAL "debt_ms":1596 "tx_wait_ms":374 "restarts":21 
+STORE corrupt_slots="corrupt_slots":0
+CUT 9 lost 19:38:10.510
+CUT 9 back 19:38:19.023
+JOURNAL "debt_ms":2880 "tx_wait_ms":1897 "restarts":22 
+JOURNAL "debt_ms":3356 "tx_wait_ms":631 "restarts":22 
+STORE corrupt_slots="corrupt_slots":0

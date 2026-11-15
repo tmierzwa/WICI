@@ -215,6 +215,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
         for (ui::AlarmKind kind : FAULTS) {
             if (fault(kind)->pending()) {
                 out.kind = kind;
+                out.jammed = kind == ui::AlarmKind::RADIO_FAULT && radioJammed_;
                 break;
             }
         }

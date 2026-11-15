@@ -989,7 +989,10 @@ int world() {
         } else if (sscanf(line, "T %u", &a) == 1) w.model.tick(a);
         else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
         else if (sscanf(line, "Q %u", &a) == 1) { status.silence = a; w.services.forced = a; }
-        else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
+        else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; status.channelJammed = false; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
+        else if (sscanf(line, "J %u", &a) == 1) {   // zagłuszanie kanału: druga przyczyna awarii radia (main.cpp)
+            status.radioOk = !a; status.channelJammed = a; w.con->setRadioFault(a, a);
+        }
         else if (sscanf(line, "W %u", &a) == 1) { status.stackOk = a; w.con->setStackFault(!a); }   // stos sieciowy działa
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
@@ -3317,6 +3320,21 @@ class HostUnitTests(unittest.TestCase):
         # Alarm mieści się w 5 wierszach po 20 znaków (po 19 byłoby 6): zostaje przy 20, bez strzałek.
         self.assertEqual((s[1][3], self.shown(s[1])), ([""] * 5, texts["blad_pamieci"][0]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_jammed_channel_is_the_radio_fault_alarm(self):
+        # R3-43: zagłuszanie kanału to druga przyczyna alarmu awarii radia, z tym samym ekranem alarmu do OK,
+        # przyczyną (dioda) do wolnego kanału i wpisem w PRZEKAZANIU ZMIANY; tekst kanal_zagluszony.
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", self.CONFIG, "L 0", "J 1", "cause", "T 1000", "R", "K OK 1000", "T 2000", "R",
+                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 15 +
+                      ["K OK 2600", "R", "J 0", "cause"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "handover"])
+        self.assertEqual(self.shown(s[0]), texts["kanal_zagluszony"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["kanal_zagluszony"][0])
+        self.assertIn(texts["kanal_zagluszony"][0], self.lines(s[2]))
+        self.assertNotIn(texts["radio_awaria"][0], self.lines(s[2]))
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
 
     def test_stack_fault_alarm(self):
         # oprogramowanie.md: brak_lacznosci (stos sieciowy nie działa) jak radio_awaria: ekran alarmu do OK

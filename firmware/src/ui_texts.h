@@ -16,6 +16,7 @@ constexpr size_t MAX_COLUMNS = 20;  // wiersz ekranu
 enum class Id : uint8_t {
     RADIO_WLACZONE,
     RADIO_AWARIA,
+    KANAL_ZAGLUSZONY,
     BRAK_LACZNOSCI,
     JEZYK_PL,
     JEZYK_UK,
@@ -98,6 +99,7 @@ enum class Id : uint8_t {
 constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"RADIO WŁĄCZONE", "РАДІО УВІМКНЕНО", "RADIO ON"},
     {"RADIO: AWARIA", "РАДІО: НЕСПРАВНЕ", "RADIO: FAULT"},
+    {"KANAŁ: ZAGŁUSZONY", "КАНАЛ: ЗАГЛУШЕНО", "CHANNEL: JAMMED"},
     {"BRAK ŁĄCZNOŚCI", "НЕМАЄ ЗВ'ЯЗКУ", "NO COMMUNICATION"},
     {"POLSKI", "POLSKI", "POLSKI"},
     {"УКРАЇНСЬКА", "УКРАЇНСЬКА", "УКРАЇНСЬКА"},
