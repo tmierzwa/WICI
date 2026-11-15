@@ -305,8 +305,12 @@ bool radioListening() { return radioServes() && bench.receiving(); }
 
 // Alarm radio_awaria (oprogramowanie.md, ekran główny): radio nie służy stacji albo odbiór w tle stoi
 // (stacja L0: zadanie odbioru bez postępu przez 10 s przy uzbrojonym odbiorze stosu, radiocon::rxStalled).
+// Druga przyczyna, ten sam alarm (R3-43): radio działa, ale datagram do nadania przez JAM_ALARM_MS nie znalazł
+// wolnej przerwy (zagłuszanie kanału, Bench::channelJammed); ekran mówi kanal_zagluszony. Także root.
 bool rxStalled = false;
-bool radioFault() { return !radioServes() || rxStalled; }
+bool radioHardwareFault() { return !radioServes() || rxStalled; }
+bool channelJammed() { return !radioHardwareFault() && bench.channelJammed(); }
+bool radioFault() { return radioHardwareFault() || bench.channelJammed(); }
 
 // Gotowość radiowa (plan interfejsu LoRa, L6): czas od startu do uzbrojenia odbioru stosu, -1 przed nim;
 // odbiór startuje przed ekranem. Najdłuższy obieg pętli od startu (loop_max_ms).
@@ -1177,6 +1181,7 @@ ui::Status screenStatus() {
     s.prep = bench.prep;
     s.silence = silenceAny();
     s.radioOk = !radioFault();
+    s.channelJammed = channelJammed();
     s.stackOk = !stackFault();
     s.storeOk = stationStore.ok();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
@@ -1406,10 +1411,11 @@ void printInfo() {
                   radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
-    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"fram_volatile\":%s,"
+    // channel_jammed: alarm zagłuszania kanału (R3-43); stanowisko pokazuje go przy roocie (R3-44).
+    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"channel_jammed\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"fram_volatile\":%s,"
                   "\"journal_ok\":%s,\"journal_resets\":%lu,",
                   BENCH, boolName(bench.prep),
-                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk),
+                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(channelJammed()), boolName(radiocon::p1Ok()), boolName(framOk),
                   boolName(memory.VOLATILE), boolName(journalOk), static_cast<unsigned long>(journalResets));
     radiocon::printProfile();
     Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"service_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\","
@@ -2364,7 +2370,7 @@ void stationLoop() {
         radioLed = radio;
         ledWrite(board::LED_RADIO, radio);
     }
-    screenHost.setRadioFault(radioFault());     // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC i zadanie odbioru
+    screenHost.setRadioFault(radioFault(), channelJammed());     // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC i zadanie odbioru
     screenHost.setStackFault(stackFault());     // alarm brak_lacznosci
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);

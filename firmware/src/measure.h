@@ -61,6 +61,11 @@ constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
 constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
+// Alarm zagłuszania kanału (R3-43, druga przyczyna radio_awaria): datagram do nadania przez tyle nie znalazł
+// wolnej przerwy (okno CCA, CAD). Parametr profilu; wartość tymczasowa do ustalenia pomiarem (polecenie P1:
+// no_gap_ms_max po 24 h zwykłego ruchu i przy 90% zagłuszania). Gaśnie przy pierwszej wolnej przerwie albo po
+// tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale).
+constexpr uint32_t JAM_ALARM_MS = 5 * 60 * 1000;
 // Pętla czeka na blokadę operacji radia najwyżej tyle (zadanie odbioru trzyma ją ≤5 ms, ekran ≤5 ms).
 constexpr uint32_t RADIO_LOCK_WAIT_MS = 500;
 constexpr uint32_t EMC_PERIOD_MAX_S = 3600;
@@ -213,6 +218,11 @@ public:
     bool confirm();      // czeka na przycisk OK do CONFIRM_MS (seria TXCW/TXPKT w toku zostaje przerwana)
     uint32_t debtRemainingMs() const;
     bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
+    // Czas bez wolnej przerwy do nadania: od pierwszego zajętego kanału do ostatniego, bez wolnego pomiędzy
+    // (także przez kolejne datagramy po odrzuceniu za odroczenia); 0, gdy ostatnia próba znalazła wolny kanał.
+    uint32_t noGapMs() const { return noGap_ ? noGapLastMs_ - noGapSinceMs_ : 0; }
+    uint32_t noGapMaxMs() const { return noGapMaxMs_; }   // najdłuższy od startu (pomiar progu)
+    bool channelJammed() const;                           // alarm zagłuszania kanału (JAM_ALARM_MS)
     // Układ nadaje albo mierzy kanał przed nadaniem; datagram czekający na dług lub odstęp (układ w
     // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
     bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
@@ -324,6 +334,9 @@ private:
     uint32_t hackHoldUntilMs_ = 0;
     bool hackHold_ = false;
     uint8_t txDeferrals_ = 0;
+    // Alarm zagłuszania kanału (noGapMs): pierwszy i ostatni zajęty kanał bez wolnego pomiędzy.
+    bool noGap_ = false;
+    uint32_t noGapSinceMs_ = 0, noGapLastMs_ = 0, noGapMaxMs_ = 0;
 
     uint32_t debtUntilMs_ = 0;
     mutable bool debtActive_ = false;   // dług jeszcze nieodczekany; gaszony w debtRemainingMs() (main.cpp co obieg)

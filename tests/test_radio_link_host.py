@@ -1810,6 +1810,30 @@ int main() {
            static_cast<unsigned long>(bench.link().cadBusy - before.cadBusy), static_cast<unsigned long>(bench.link().txDrop - before.txDrop),
            static_cast<unsigned long>(dj.debt().a));
 
+    // Alarm zagłuszania kanału (R3-43): czas bez wolnej przerwy trwa przez kolejne datagramy odrzucone za
+    // odroczenia; alarm od JAM_ALARM_MS, gaśnie bez kolejnej próby po tym samym czasie, a wolny CAD go kończy.
+    const bool jamAfter30 = bench.noGapMs() > 0 && !bench.channelJammed();
+    const uint32_t jamCadBefore = bench.link().cadBusy;
+    radio.cadBusy = 1000000;
+    unsigned jamDatagrams = 0;
+    while (bench.noGapMs() < measure::JAM_ALARM_MS && jamDatagrams < 40) {
+        txDone = -1;
+        bench.linkSend(d20.data(), d20.size(), true);
+        untilDone(60000);
+        ++jamDatagrams;
+    }
+    radio.cadBusy = 0;
+    const bool jammed = bench.channelJammed();
+    const bool maxKept = bench.noGapMaxMs() >= measure::JAM_ALARM_MS;
+    runFor(measure::JAM_ALARM_MS);
+    const bool faded = !bench.channelJammed() && bench.noGapMs() >= measure::JAM_ALARM_MS;
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(3000);
+    printf("JAM %d %d %d %d %d %lu %lu\n", jamAfter30, jammed, maxKept, faded, txDone,
+           static_cast<unsigned long>(bench.noGapMs()), static_cast<unsigned long>(bench.link().cadBusy - jamCadBefore));
+    settle();
+
     // Błąd zapisu długu po wolnym CAD: bez nadania, odbiór wraca.
     txDone = -1;
     radio.sent.clear();
@@ -2969,6 +2993,11 @@ class LoraBenchTests(unittest.TestCase):
     def test_30_deferrals_then_drop_without_debt(self):
         self.assertEqual(line(self.out, "DEFER30"), "DEFER30 0 30 31 1 0")
 
+    def test_jammed_channel_alarm_from_time_without_a_free_gap(self):
+        # R3-43: after one dropped datagram (about 16 s) no alarm yet; further datagrams on a busy channel add up
+        # to JAM_ALARM_MS and raise it; without another attempt it fades after the same time; a free CAD ends it.
+        self.assertEqual(line(self.out, "JAM").split()[1:7], ["1", "1", "1", "1", "1", "0"])
+
     def test_failed_debt_write_after_free_cad_sends_nothing(self):
         self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")
         self.assertTrue(any(l.startswith('{"loratx":"debt journal write failed"') for l in self.out))
@@ -2982,7 +3011,11 @@ class LoraBenchTests(unittest.TestCase):
         lora = json.loads(next(l for l in self.out if l.startswith('{"lora":')))["lora"]
         self.assertEqual((lora["rx_datagrams"], lora["header_only"], lora["assembly_timeout"], lora["split_lost"]), (2, 1, 1, 1))
         self.assertEqual((lora["rx_late"], lora["rx_ring_overflow"], lora["cca_threshold_dbm"]), (2, 0, -100))
-        self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (33, 1, 3))
+        jam_cads = int(line(self.out, "JAM").split()[7])   # zajęte CAD próby zagłuszania kanału (JAM)
+        self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (33 + jam_cads, 1, 3))
+        # Alarm zagłuszania kanału w LINK: czas bez wolnej przerwy teraz i najdłuższy od startu.
+        self.assertEqual((lora["no_gap_ms"], lora["channel_jammed"]), (0, False))
+        self.assertGreaterEqual(lora["no_gap_ms_max"], 5 * 60 * 1000)
 
     def test_assembly_limit_counts_from_frame_time_after_a_long_loop_pass(self):
         # The second part waiting in the ring completes the datagram after a 1.1 s loop stall (508 B); a lone
