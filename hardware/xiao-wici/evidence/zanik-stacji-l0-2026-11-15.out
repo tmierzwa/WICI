@@ -1,0 +1,140 @@
+13:01:16.396 == req 1/3
+13:01:16.502 REQ numer [1385] sa1 123
+13:01:16.502 TERAZ
+13:01:24.679 odcięcie 13:01:18.476, opóźnienie ręki 1.97 s; powrót 13:01:24.267
+13:07:59.557 == req 1/2
+13:08:21.974 intents 0
+13:08:21.974 ZARAZ
+13:08:25.086 REQ numer [9545] sa1 123
+13:08:25.086 TERAZ
+13:08:33.670 odcięcie 13:08:26.375, opóźnienie ręki 1.29 s; powrót 13:08:33.369
+13:11:21.392 intents 0
+13:11:21.392 == req 2/2
+13:11:22.598 intents 0
+13:11:22.598 ZARAZ
+13:11:25.663 REQ numer [7260] sa1 123
+13:11:25.663 TERAZ
+13:11:31.586 odcięcie 13:11:26.486, opóźnienie ręki 0.82 s; powrót 13:11:31.342
+13:12:33.225 intents 0
+13:12:33.225 koniec
+13:12:33.268 == hack 1/3
+13:12:34.471 intents 0
+13:12:34.471 ZARAZ
+13:12:37.534 REQ numer [4826] sa1 123
+13:12:37.896 DATA 20->10 seq 1668 part 0
+13:12:37.970 TERAZ
+13:12:47.383 odcięcie 13:12:38.642, opóźnienie ręki 0.67 s; powrót 13:12:46.983
+13:13:06.608 intents 0
+13:13:06.608 == hack 2/3
+13:13:07.812 intents 0
+13:13:07.813 ZARAZ
+13:13:10.873 REQ numer [4344] sa1 123
+13:13:11.185 DATA 20->10 seq 1729 part 0
+13:13:11.272 TERAZ
+13:13:20.655 odcięcie 13:13:12.117, opóźnienie ręki 0.84 s; powrót 13:13:20.314
+13:13:39.883 intents 0
+13:13:39.883 == hack 3/3
+13:13:41.087 intents 0
+13:13:41.087 ZARAZ
+13:13:44.147 REQ numer [2024] sa1 123
+13:13:44.486 DATA 20->10 seq 1793 part 0
+13:13:44.584 TERAZ
+13:13:53.570 odcięcie 13:13:45.309, opóźnienie ręki 0.72 s; powrót 13:13:53.222
+13:14:12.789 intents 0
+13:14:12.789 koniec
+13:14:12.830 == part1 1/5
+13:14:14.036 intents 0
+13:14:14.036 ZARAZ
+13:14:17.102 REQ numer [8927] sa1 214
+13:14:17.438 DATA 20->10 seq 1857 part 1
+13:14:17.553 TERAZ
+13:14:27.992 odcięcie 13:14:18.269, opóźnienie ręki 0.72 s; powrót 13:14:27.695
+13:16:12.060 intents 0
+13:16:12.060 == part1 2/5
+13:16:13.266 intents 0
+13:16:13.266 ZARAZ
+13:16:16.330 REQ numer [5808] sa1 214
+13:16:16.622 DATA 20->10 seq 1923 part 1
+13:16:16.722 TERAZ
+13:16:26.312 odcięcie 13:16:17.508, opóźnienie ręki 0.79 s; powrót 13:16:26.028
+13:18:31.579 intents 0
+13:18:31.579 == part1 3/5
+13:18:32.784 intents 0
+13:18:32.784 ZARAZ
+13:18:35.845 REQ numer [9439] sa1 214
+13:18:36.164 DATA 20->10 seq 1987 part 1
+13:18:36.263 TERAZ
+13:18:44.862 odcięcie 13:18:37.060, opóźnienie ręki 0.80 s; powrót 13:18:44.648
+13:20:07.700 intents 0
+13:20:07.700 == part1 4/5
+13:20:08.902 intents 0
+13:20:08.902 ZARAZ
+13:20:12.022 REQ numer [6568] sa1 214
+13:20:12.292 DATA 20->10 seq 2051 part 1
+13:20:12.389 TERAZ
+13:20:20.966 odcięcie 13:20:13.091, opóźnienie ręki 0.70 s; powrót 13:20:20.700
+13:22:05.024 intents 0
+13:22:05.024 == part1 5/5
+13:22:06.230 intents 0
+13:22:06.230 ZARAZ
+13:22:09.290 REQ numer [3997] sa1 214
+13:22:09.583 DATA 20->10 seq 2115 part 1
+13:22:09.679 TERAZ
+13:22:21.723 odcięcie 13:22:10.411, opóźnienie ręki 0.73 s; powrót 13:22:21.350
+13:24:26.989 intents 0
+13:24:26.989 koniec
+13:24:27.033 == bulletin 1/5
+13:24:28.239 intents 0
+13:24:28.239 ZARAZ
+13:24:31.436 biuletyn {"id": "3a85217c435eeac98ec1bff79b8de588"}
+13:24:39.084 DATA 10->20 seq 3382 part 1
+13:24:39.171 TERAZ
+13:24:46.530 odcięcie 13:24:40.126, opóźnienie ręki 0.95 s; powrót 13:24:46.217
+13:25:05.758 intents 0
+13:25:05.758 == bulletin 2/5
+13:25:06.963 intents 0
+13:25:06.964 ZARAZ
+13:25:10.166 biuletyn {"id": "5aa95684b46bb09261541f0acfceb52c"}
+13:25:12.319 DATA 10->20 seq 3387 part 1
+13:25:12.414 TERAZ
+13:25:20.766 odcięcie 13:25:13.189, opóźnienie ręki 0.77 s; powrót 13:25:20.488
+13:25:39.985 intents 0
+13:25:39.986 == bulletin 3/5
+13:25:41.191 intents 0
+13:25:41.191 ZARAZ
+13:25:44.391 biuletyn {"id": "86eaa3c58c71f1360153397132595fa0"}
+13:25:51.626 DATA 10->20 seq 3394 part 1
+13:25:51.724 TERAZ
+13:25:59.478 odcięcie 13:25:52.486, opóźnienie ręki 0.76 s; powrót 13:25:59.179
+13:26:18.710 intents 0
+13:26:18.710 == bulletin 4/5
+13:26:19.916 intents 0
+13:26:19.916 ZARAZ
+13:26:23.093 biuletyn {"id": "ed605153985ca231c3ca80e746bdb535"}
+13:26:25.652 DATA 10->20 seq 3399 part 1
+13:26:25.751 TERAZ
+13:26:34.732 odcięcie 13:26:26.533, opóźnienie ręki 0.78 s; powrót 13:26:34.447
+13:26:53.964 intents 0
+13:26:53.964 == bulletin 5/5
+13:26:55.169 intents 0
+13:26:55.169 ZARAZ
+13:26:58.368 biuletyn {"id": "49b01dac0407935034be5634f4df4b5f"}
+13:27:05.667 DATA 10->20 seq 3406 part 1
+13:27:05.765 TERAZ
+13:27:14.536 odcięcie 13:27:06.565, opóźnienie ręki 0.80 s; powrót 13:27:14.309
+13:27:33.768 intents 0
+13:27:33.768 koniec
+13:27:33.809 == idle 1/2
+13:27:33.809 ZARAZ
+13:27:38.018 intents 0
+13:27:38.018 TERAZ
+13:27:44.981 odcięcie 13:27:38.841, opóźnienie ręki 0.82 s; powrót 13:27:44.613
+13:28:04.206 intents 0
+13:28:04.206 == idle 2/2
+13:28:04.206 ZARAZ
+13:28:08.422 intents 0
+13:28:08.423 TERAZ
+13:28:16.802 odcięcie 13:28:09.129, opóźnienie ręki 0.71 s; powrót 13:28:16.433
+13:28:36.029 intents 0
+13:28:36.029 koniec
+P13 DONE 13:28:36

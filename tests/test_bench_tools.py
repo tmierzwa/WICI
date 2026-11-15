@@ -297,12 +297,15 @@ class Envelopes(unittest.TestCase):
         self.assertTrue(envelopes.analyse(lines)["ok"])
 
     def test_boundary_after_mark(self):
-        frames = [(1, 20, 10, 1, 0x40, 20, 2, 70, b"a"), (2, 20, 10, 2, 0x40, 20, 2, 71, b"b")]
-        good = envelopes.analyse(_capture(*frames, (5, 20, 10, 3, 0x40, 20, 2, 128, b"c")), [4])
+        frames = [(1, 20, 10, 1, 0x40, 20, 2, 70, b"a"), (2, 20, 10, 2, 0x50, 20, 2, 71, b"b"),
+                  (3, 2, 10, 9, 0x40, 2, 20, 75, b"z")]
+        old_copy = (5, 10, 1, 4, 0x40, 20, 2, 70, b"a")  # B forwards an older envelope after the restart
+        good = envelopes.analyse(_capture(*frames, old_copy, (6, 20, 10, 3, 0x60, 20, 2, 128, b"c")), [4], 20)
         self.assertTrue(good["ok"])
-        self.assertEqual(good["boundaries"][0]["last_before"], 71)
-        self.assertFalse(envelopes.analyse(_capture(*frames, (5, 20, 10, 3, 0x40, 20, 2, 72, b"c")), [4])["ok"])
-        self.assertFalse(envelopes.analyse(_capture(*frames, (5, 20, 10, 3, 0x40, 20, 2, 64, b"c")), [4])["ok"])
+        self.assertEqual(len(good["boundaries"]), 1)
+        self.assertEqual((good["boundaries"][0]["last_before"], good["boundaries"][0]["first_after"]), (71, 128))
+        self.assertFalse(envelopes.analyse(_capture(*frames, (6, 20, 10, 3, 0x40, 20, 2, 72, b"c")), [4], 20)["ok"])
+        self.assertFalse(envelopes.analyse(_capture(*frames, (6, 20, 10, 3, 0x40, 20, 2, 64, b"c")), [4], 20)["ok"])
 
     def test_flood_once_per_node(self):
         once = _capture((1, 10, 0xFFFF, 7, 0x40, 2, 20, 64, b"a"), (2, 10, 0xFFFF, 7, 0x40, 2, 20, 64, b"a"),

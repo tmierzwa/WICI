@@ -5,9 +5,11 @@ The WICI envelope header is plaintext at byte 11 of a DATA frame: kind (1 B), sr
 the nonce is src ‖ dst ‖ kind ‖ 0 ‖ ctr (docs/spec/transport.md). A nonce repeats when one (src, dst, kind, ctr)
 carries two different envelopes. Retries and forwarding copy the same envelope bytes, so they are not reuse.
 
---mark T (host time, Unix seconds; repeatable) splits the capture at a transfer or restart: for every
-(src, dst, kind) the report gives the last ctr before and the first after each mark. The first after must be a
-multiple of 64 and greater than every earlier one (reservation in blocks of 64, envelope_counter.h).
+--mark T (host time, Unix seconds; repeatable) splits the capture at a transfer or restart of the station --src.
+One counter serves all kinds of one (src, dst) pair (parts 1/2 and 2/2 share a value). For every pair the report
+gives the largest ctr seen before the mark and the ctr of the first envelope first seen after it; copies of older
+envelopes (forwarding, retries) are skipped. That ctr must be a multiple of 64 and larger than every earlier one
+(reservation in blocks of 64, envelope_counter.h).
 
 Floods are DATA with l_dst 0xFFFF; every node must send each envelope at most once (one link seq per l_src).
 """
@@ -39,28 +41,31 @@ def envelopes(lines):
         yield record["host_ts"], v3, kind, src, dst, ctr, body
 
 
-def analyse(lines, marks=()):
+def analyse(lines, marks=(), src_filter=None):
     seen = defaultdict(set)          # (src, dst, kind, ctr) -> envelope bodies
-    counters = defaultdict(list)     # (src, dst, kind) -> [(ts, ctr)]
+    first_seen = {}                  # envelope body -> (ts, src, dst, ctr)
     floods = defaultdict(set)        # ((src, dst, kind, ctr), l_src) -> link seqs
     for ts, v3, kind, src, dst, ctr, body in envelopes(lines):
         seen[(src, dst, kind, ctr)].add(body)
-        counters[(src, dst, kind)].append((ts, ctr))
+        first_seen.setdefault(body, (ts, src, dst, ctr))
         if v3["l_dst"] == BROADCAST:
             floods[((src, dst, kind, ctr), v3["l_src"])].add(v3["seq"])
     reuse = sorted(key for key, bodies in seen.items() if len(bodies) > 1)
     repeated_floods = sorted((key, src, sorted(seqs)) for (key, src), seqs in floods.items() if len(seqs) > 1)
+    pairs = defaultdict(list)        # (src, dst) -> [(first ts, ctr)] of distinct envelopes
+    for ts, src, dst, ctr in first_seen.values():
+        if src_filter is None or src == src_filter:
+            pairs[(src, dst)].append((ts, ctr))
     boundaries = []
     for mark in sorted(marks):
-        for key, values in sorted(counters.items()):
+        for key, values in sorted(pairs.items()):
             before = [c for t, c in values if t < mark]
-            after = [c for t, c in sorted(values) if t >= mark]
+            after = sorted((t, c) for t, c in values if t >= mark)
             if not before or not after:
                 continue
-            first = after[0]
-            boundaries.append({"mark": mark, "src": key[0], "dst": key[1], "kind": key[2],
-                               "last_before": max(before), "first_after": first,
-                               "ok": first > max(before) and first % BLOCK == 0})
+            first = after[0][1]
+            boundaries.append({"mark": mark, "src": key[0], "dst": key[1], "last_before": max(before),
+                               "first_after": first, "ok": first > max(before) and first % BLOCK == 0})
     return {
         "envelopes": len(seen),
         "nonce_reuse": [{"src": s, "dst": d, "kind": k, "ctr": c} for s, d, k, c in reuse],
@@ -78,9 +83,10 @@ def main(argv=None):
     parser.add_argument("capture", help="JSONL z tools/monitor.py")
     parser.add_argument("--mark", type=float, action="append", default=[],
                         help="chwila przeniesienia albo restartu (host_ts, s); można podać wiele razy")
+    parser.add_argument("--src", type=int, help="numer stacji, której dotyczą chwile --mark")
     args = parser.parse_args(argv)
     with open(args.capture, encoding="utf-8") as handle:
-        result = analyse(handle, args.mark)
+        result = analyse(handle, args.mark, args.src)
     json.dump(result, sys.stdout, indent=1)
     print()
     return 0 if result["ok"] else 1
