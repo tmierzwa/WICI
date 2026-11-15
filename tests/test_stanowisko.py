@@ -2053,7 +2053,11 @@ class NodeDiagnosticsTest(unittest.TestCase):
         self.replies = [self.info(True, tx_wait_ms=42_000, radio_ok=False)]
         self.w.poll(self.port)
         self.assertEqual({k: v for k, v in self.w.status().items() if k != "age_s"},
-                         {"silence": True, "radio_ok": False, "tx_wait_s": 42})
+                         {"silence": True, "radio_ok": False, "channel_jammed": False, "tx_wait_s": 42})
+        # Alarm zagłuszania kanału przy roocie (R3-44) z INFO; starszy obraz bez pola: brak alarmu.
+        self.replies = [self.info(False, channel_jammed=True)]
+        self.w.poll(self.port)
+        self.assertTrue(self.w.status()["channel_jammed"])
 
     def test_node_already_silent_at_start_is_recorded(self):
         self.replies = [self.info(True)]

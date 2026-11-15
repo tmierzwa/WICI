@@ -100,15 +100,19 @@ Id peopleForm(uint32_t n, Lang lang) {
     return Id::OSOBY_5;
 }
 
-// Wiersz 1 ekranu głównego: przy awarii radia radio_awaria, przy awarii samego stosu brak_lacznosci.
+// Awaria radia: układ (radio_awaria) albo zagłuszanie kanału (kanal_zagluszony), ten sam alarm.
+Id radioFaultText(bool jammed) { return jammed ? Id::KANAL_ZAGLUSZONY : Id::RADIO_AWARIA; }
+
+// Wiersz 1 ekranu głównego: przy awarii radia radio_awaria albo kanal_zagluszony, przy awarii samego stosu
+// brak_lacznosci.
 Id linkLine(const Status& s) {
-    return !s.radioOk ? Id::RADIO_AWARIA : !s.stackOk ? Id::BRAK_LACZNOSCI : Id::RADIO_WLACZONE;
+    return !s.radioOk ? radioFaultText(s.channelJammed) : !s.stackOk ? Id::BRAK_LACZNOSCI : Id::RADIO_WLACZONE;
 }
 
 // Tekst ekranu alarmu awarii stacji; COUNT: alarm zgłoszenia.
-Id faultText(AlarmKind kind) {
-    switch (kind) {
-        case AlarmKind::RADIO_FAULT: return Id::RADIO_AWARIA;
+Id faultText(const AlarmInfo& alarm) {
+    switch (alarm.kind) {
+        case AlarmKind::RADIO_FAULT: return radioFaultText(alarm.jammed);
         case AlarmKind::MEMORY_FAULT: return Id::BLAD_PAMIECI;
         case AlarmKind::STACK_FAULT: return Id::BRAK_LACZNOSCI_ALARM;
         default: return Id::COUNT;
@@ -1181,7 +1185,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     char lines[LINES][LINE_BYTES];
     renderMain(status, lines, LINES);
     if (status.silence) t.addLine(lines[0]);
-    if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
+    if (!status.radioOk) t.addLine(text(radioFaultText(status.channelJammed), lang_));  // wpis alarmu do usunięcia przyczyny
     if (!status.stackOk) t.addLine(text(Id::BRAK_LACZNOSCI, lang_));
     if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
     if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
@@ -1529,8 +1533,8 @@ void Model::renderScreen(const Status& s, Lines& out, size_t first, size_t windo
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:
-            if (faultText(alarm_.kind) != Id::COUNT) {
-                t.add(text(faultText(alarm_.kind), lang_));
+            if (faultText(alarm_) != Id::COUNT) {
+                t.add(text(faultText(alarm_), lang_));
                 renderText(t, window, out, first);
                 break;
             }

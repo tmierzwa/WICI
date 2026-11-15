@@ -914,7 +914,17 @@ bool Bench::channelBusy() {
     return r.valid && r.dbm > radio_.ccaThresholdDbm();
 }
 
+bool Bench::channelJammed() const {
+    if (!noGap_ || silence || emcActive_) return false;
+    return noGapMs() >= JAM_ALARM_MS && millis() - noGapLastMs_ < JAM_ALARM_MS;
+}
+
 void Bench::defer(uint32_t now) {
+    // Zajęty kanał (CCA, CAD, ramka w odbiorze): czas bez wolnej przerwy liczy się od pierwszej próby
+    // datagramu, który ją zastał, i trwa przez odrzucenie za odroczenia aż do wolnego kanału.
+    if (!noGap_) { noGap_ = true; noGapSinceMs_ = ccaFirstMs_; }
+    noGapLastMs_ = now;
+    if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
     if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
     ++link_.deferrals;
     backoffUntilMs_ = now + backoffMs();
@@ -945,6 +955,7 @@ void Bench::pollLinkTx() {
         }
             [[fallthrough]];
         case TxState::SEND: {
+            noGap_ = false;  // wolna przerwa: koniec czasu bez niej (alarm zagłuszania kanału)
             if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * radio_.frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
@@ -1030,6 +1041,7 @@ void Bench::sendLora(uint32_t now) {
         return;
     }
     if (cad != radiolink::Cad::Free) { ++link_.txDrop; finishLinkTx("tx error"); return; }
+    noGap_ = false;  // wolna przerwa: koniec czasu bez niej (alarm zagłuszania kanału)
     // Dług po wolnym CAD, przed pierwszą ramką; błąd zapisu: bez nadania, odbiór wraca (finishLinkTx).
     const uint32_t txMs = rawLora_ ? radio_.frameAirMs(txLength_) : loraframe::reservedTxMs(txLength_);
     if (!reserveDebt(txMs)) return;
@@ -1104,6 +1116,9 @@ void Bench::printLink() {
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
+    // Alarm zagłuszania kanału: czas bez wolnej przerwy teraz i najdłuższy od startu (pomiar progu).
+    Serial.printf("\"no_gap_ms\":%lu,\"no_gap_ms_max\":%lu,\"channel_jammed\":%s,",
+                  static_cast<unsigned long>(noGapMs()), static_cast<unsigned long>(noGapMaxMs_), boolName(channelJammed()));
     if (radio_.framing() == radiolink::Framing::RNODE) {
         const loraframe::Stats& a = loraAssembler_.stats();
         Serial.printf("\"cad_busy\":%lu,\"cad_unconfirmed\":%lu,\"rssi_busy\":%lu,\"rssi_ignored\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"
