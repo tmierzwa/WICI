@@ -397,7 +397,16 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         return false;
     }
     rxMode_ = RxMode::NONE;
-    const radiolink::Cad cad = radio_.cad();
+    radiolink::Cad cad = radio_.cad();
+    // Pomiar (CHANNEL): zajęty CAD powtarza się, dopóki HACK zdąży przed ostatnią chwilą startu; ramka zostaje
+    // w buforze układu, a pozostałe węzły wstrzymują się do 113 ms po DATA, więc późny HACK nadal jest chroniony.
+    // Limit prób na wypadek CAD bez upływu czasu (jeden CAD SX1262 z potwierdzeniem trwa kilka ms).
+    bool retried = false;
+    for (uint8_t tries = 0; hackCadRetry_ && cad == radiolink::Cad::Busy && millis() - receivedMs <= lastStartMs &&
+                            tries < HACK_CAD_RETRIES; ++tries) {
+        retried = true;
+        cad = radio_.cad();
+    }
     if (cad != radiolink::Cad::Free || millis() - receivedMs > lastStartMs) {
         enterRx(RxMode::LINK, 0);
         if (cad != radiolink::Cad::Free) refuseHack(HACK_CAD);
@@ -425,6 +434,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     const uint32_t endMs = millis() - receivedMs;   // sendPrepared returns at TxDone
     if (sent) {
         ++hack_.sent;
+        if (retried) ++hack_.cadRetried;
         hack_.lastMs = endMs;
         if (endMs > hack_.maxMs) hack_.maxMs = endMs;
         hack_.sumMs += endMs;
@@ -925,7 +935,7 @@ void Bench::defer(uint32_t now) {
     if (!noGap_) { noGap_ = true; noGapSinceMs_ = ccaFirstMs_; }
     noGapLastMs_ = now;
     if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
-    if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
+    if (++txDeferrals_ > maxDeferrals_) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
     ++link_.deferrals;
     backoffUntilMs_ = now + backoffMs();
     txState_ = TxState::BACKOFF;
@@ -1091,11 +1101,12 @@ const char* Bench::txStateName() const {
 
 void Bench::printHack(const char* tail) {
     Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
-                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu",
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu,\"hack_cad_retried\":%lu",
                   static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
                   static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
                   static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
-                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
+                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0),
+                  static_cast<unsigned long>(hack_.cadRetried));
     // Osobne wywołania: Print::printf rdzenia nRF52 formatuje do bufora 256 B (zob. printRns w main.cpp).
     const uint32_t* r = hack_.refusedBy;
     Serial.printf(",\"refused_by\":{\"state\":%lu,\"lock\":%lu,\"rx_pending\":%lu,\"prep\":%lu,\"cad\":%lu,"
