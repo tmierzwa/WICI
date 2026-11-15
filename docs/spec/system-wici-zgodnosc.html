@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
-  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.58</title>
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.59</title>
   <link rel="stylesheet" href="system-wici.css">
   <style>
     .evidence-table { min-width: 94rem; }
@@ -36,7 +36,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wersje, zgodność i dowody</h1>
-      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.59</span> · 9 listopada 2026 r.</p>
       <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 na docelowym sprzęcie jest wykonana częściowo (prototypy <code>l0</code>, 14 listopada 2026 r.); wynik jednej drogi posłuży do kalibracji <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">emulatora</a>, lecz nie potwierdzi 15 skoków.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -113,7 +113,7 @@
           <tr><td>Wystarczalność opisu formatów</td><td><a href="system-wici-o-dokumencie.html#zatwierdzanie">O dokumencie</a></td><td>Dokument</td><td>Niezależna implementacja</td><td>—</td><td>Przed stopniem normatywnym</td><td>Brak próby</td><td>Raport porównania z implementacją wzorcową pozostaje do wykonania; procedura próby jest luką <a href="system-wici-decyzje.html#wici-inv-054">WICI-INV-054</a>.</td></tr>
           <tr><td>Logika HACK i kolejek</td><td><a href="system-wici-siec.html#potwierdzenia">6. Sieć</a></td><td>Protokół</td><td>Test</td><td>T3, T5</td><td>Przed terenem</td><td>Dowód istnieje</td><td><a href="https://github.com/tmierzwa/WICI/actions/runs/41730879991">Checks 41730879991</a>, <code>d637149</code>, 3.11.2026: <code>test_relay_hop_coordinator_crash_retry_and_hack</code>, <code>test_root_kiss_gateway_requires_matching_timely_hack</code> i <code>test_memory_bearer_one_relay_crash_and_return_route</code> — „ok”. Kod C++ na komputerze, łącze w pamięci i jeden przekaźnik; bez radia i łańcuchów 3–15 skoków.</td></tr>
           <tr><td>HACK i kolejki na sprzęcie</td><td><a href="system-wici-siec.html#potwierdzenia">6. Sieć</a></td><td>Wyrób</td><td>Test</td><td>T3, T5</td><td>Przed terenem i wydaniem</td><td>Dowód istnieje</td><td><a href="../../hardware/xiao-wici/evidence/l0-zestaw-2026-11-14.md">Próby przy stole 14.11.2026</a>, <code>8dd305f2</code>, w <code>main</code> od <code>0d8d4bc5</code>: prototypy <code>l0</code> (v1), 2–3 skoki, W10 w 13 min 2 s, 15 zaników przekaźnika bez straty i podwójnego przyjęcia. Brak wyniku na v2 i dla 3–15 skoków; D21 częściowo (<a href="system-wici-siec.html#dowody">rozdział 6</a>).</td></tr>
-          <tr><td>D21: część energii na v1</td><td><a href="system-wici-siec.html#warunek-d21-v1">6. Sieć</a></td><td>Wybór protokołu</td><td>Pomiar</td><td>—</td><td>Przed wyborem protokołu</td><td>Brak próby</td><td>Brakuje pomiaru prądu Wio na osobnej linii 3,3 V i czasu wybudzenia procesora; oba wyniki odnoszą się do W23 (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</td></tr>
+          <tr><td>D21: część energii na v1</td><td><a href="system-wici-siec.html#warunek-d21-v1">6. Sieć</a></td><td>Wybór protokołu</td><td>Pomiar</td><td>—</td><td>Przed wyborem protokołu</td><td>Brak próby</td><td>Brakuje pomiaru prądu Wio na osobnej linii 3,3 V i licznika wybudzeń na godzinę; czas jednego wybudzenia mierzy się na v2; wyniki odnoszą się do W23 (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</td></tr>
           <tr><td>D21: przeniesienie, rozsyłanie i zanik stacji</td><td><a href="system-wici-siec.html#warunek-d21-v1">6. Sieć</a></td><td>Wybór protokołu</td><td>Próba i podsłuch</td><td>—</td><td>Przed wyborem protokołu</td><td>Brak próby</td><td>Ustalono kryteria, bez procedury w <a href="../../hardware/xiao-wici/README.md">planie sprzętowym</a> i bez wyników. Zanik w tym planie dotyczy tylko przekaźnika (<a href="system-wici-decyzje.html#wici-inv-045">WICI-INV-045</a>).</td></tr>
           <tr><td>Odcięcie przejętej stacji u sąsiadów</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">5. Bezpieczeństwo</a></td><td>Warunek wdrożenia</td><td>Test</td><td>T2</td><td>Przed użyciem</td><td>Brak próby</td><td><a href="odbior.md#próby">„Zaufanie”</a> opisuje tylko usunięcie z listy stanowiska; „Wrogi węzeł” nie obejmuje odcięcia u sąsiadów (<a href="system-wici-decyzje.html#wici-inv-024">WICI-INV-024</a>).</td></tr>
           <tr><td>USB i panel</td><td><a href="system-wici-interfejsy.html#granice">7. Interfejsy</a></td><td>Wyrób</td><td>Test</td><td>T1, T2, T8</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">„Laptop i USB”</a> (T1, T2), „Panel dyżurnego” (T1, T8), „Pełna wymiana na stole” i „Zaufanie” (T2); brak wyników całego zakresu.</td></tr>
@@ -224,7 +224,7 @@
       <p>W sieci działa jedna wersja WICI-Link. Zmiana formatu łącza następuje poza kryzysem, przez przygotowanie wszystkich węzłów przez USB, i można ją połączyć z wymianą klucza sieci. Protokół nie obsługuje dwóch wersji naraz i nie obiecuje zgodności wstecznej formatu łącza. Po przygotowaniu każdego węzła wykonuje się próbę TEST. Zmiany kolejek, ponowień i polityki dróg nie wymagają zmiany formatu, jeśli nie zmieniają bajtów w eterze.</p>
       <p class="explain"><strong>Granica i koszt.</strong> Pole wersji ma dwa bity: v3 zajmuje wartość maksymalną, v2 jest wycofana, a 0 i 1 są wolne. Następny format użyje jednej z nich. Klucz łącza pochodzi z etykiety <code>WICI link v3</code>; po jej zmianie starszy węzeł odrzuci ramkę przy sprawdzaniu MAC i nie odróżni jej od zakłóceń. Niezgodność ujawni nieudany TEST. Podczas objazdu sieć jest podzielona, przy 15 skokach potencjalnie przez dzień lub dłużej; pilna poprawka formatu ma ten sam koszt. Dwie wersje naraz wymagałyby sprawdzenia dwóch kluczy łącza oraz kombinacji kolejek, HACK i tagów pary, pozostawiając starą wersję podatną na ataki i nadal wymagając objazdu. Zmiana przez radio otwiera nową drogę ataku i zużywa czas nadawania; węzeł tłumaczący ponosi koszt obu wersji. Procedura objazdu pozostaje <a href="system-wici-decyzje.html#wici-inv-035">luką</a>. Decyzja nie dotyczy SA1 ani koperty.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.59 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

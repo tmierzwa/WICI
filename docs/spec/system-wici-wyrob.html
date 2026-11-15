@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wyrób, obsługa, zasilanie i próby eksploatacyjne systemu WICI.">
-  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.58</title>
+  <title>Wyrób i eksploatacja — Specyfikacja WICI 0.59</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wyrób i eksploatacja</h1>
-      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.59</span> · 9 listopada 2026 r.</p>
       <p>Rozdział opisuje zachowanie stacji i zestawu w użyciu oraz wyniki, które trzeba sprawdzić na ocenianej konfiguracji. Czynności krok po kroku pozostają w <a href="projekt.md">opisie zestawu</a> i instrukcjach obsługi.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -98,7 +98,7 @@
           <tr><td>Praca<br><small>Wyrób</small></td><td>Stacja przyjmuje zgłoszenia i przekazuje ruch innych stacji bez laptopa. Ekran odróżnia zapis lokalny, wysyłanie z numerem próby, RECEIVED, odczyt i decyzję; alarm wskazuje brak potwierdzenia oraz stan zasilania. Brak miejsca lub błąd zapisu nie daje komunikatu sukcesu.</td><td><a href="../../firmware/src/station.cpp">Kod zgłoszeń</a>, <a href="../../firmware/src/ui.cpp">kod ekranu</a>, <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">wynik skoku</a>.</td></tr>
           <tr><td>Przerwanie<br><small>Wyrób</small></td><td>Brak odpowiedzi stanowiska pozostawia zgłoszenie w stacji do ponowienia; ekran wskazuje formularz i gońca, jeśli droga jest bezpieczna. Błąd pamięci, pełny rejestr i niski poziom energii mają odrębne wskazania. Stan po zaniku zasilania opisuje <a href="system-wici-interfejsy.html#odtwarzanie">rozdział 7</a>.</td><td><a href="../../firmware/src/ui_texts.h">Teksty ekranu</a>, <a href="projekt.md#uruchomienie-stacji-poziom-1">opis obsługi</a>.</td></tr>
           <tr><td>Cisza radiowa<br><small>Wyrób</small></td><td>W pełnej ciszy stacja nie nadaje, także ruchu innych stacji; odbiór, zapis i kolejka działają dalej. Wyjątek dla jednej pary (<code>id</code>, <code>revision</code>) ustawia się tylko z panelu laptopa przy ciszy operacyjnej, po potwierdzeniu przyciskiem na stacji; przełącznik CISZA go wyklucza. Obsługa laptopa schronienia należy do etapu po pilotażu. Ekran stale pokazuje „CISZA RADIOWA – STACJA NIE NADAJE. PILNE: GONIEC”, a po zapisaniu własnego zgłoszenia wskazuje zapis w ciszy. Wyłączenie ciszy jest ręczne.</td><td><a href="oprogramowanie.md#tryby-kryzysowe">Opis trybu</a>, <a href="../../firmware/src/store.h">kod ciszy</a>, <a href="../../firmware/src/station.cpp">kod wyjątku</a>; W19.</td></tr>
-          <tr><td>Język ekranu<br><small>Wyrób</small></td><td>Stacja poziomu 1 ma teksty po polsku, ukraińsku i angielsku; radio startuje bez czekania na wybór języka. Strona mieszkańca należy do etapu po pilotażu.</td><td><a href="../../firmware/src/ui.cpp">Kod ekranu</a>, <a href="oprogramowanie.md#teksty-ekranu">teksty</a>; W20.</td></tr>
+          <tr><td>Język ekranu<br><small>Wyrób</small></td><td>Stacja poziomu 1 ma teksty po polsku, ukraińsku i angielsku; radio startuje bez czekania na wybór języka. Po każdym starcie, także po zaniku zasilania i wyłączniku głównym, stacja używa języka zapisanego w FRAM; ekran wyboru języka pojawia się tylko, gdy języka nie zapisano (po przygotowaniu, ZAMKNIJ ZDARZENIE i ZNISZCZ DANE), a w pracy język zmienia menu JĘZYK/МОВА/LANGUAGE (<a href="system-wici-decyzje.html#wici-dec-020">WICI-DEC-020</a>). Strona mieszkańca należy do etapu po pilotażu.</td><td><a href="../../firmware/src/ui.cpp">Kod ekranu</a>, <a href="oprogramowanie.md#teksty-ekranu">teksty</a>; W20.</td></tr>
           <tr><td>Diagnostyka<br><small>Wyrób</small></td><td>Gospodarz widzi na ekranie stan radia, czas od kontaktu, źródło energii, kolejkę i alarmy. Obsługa techniczna odczytuje liczniki odbioru, odrzuceń i nadawania, stan FRAM, wersję programu oraz przyczynę restartu przez port diagnostyczny. Pomiar napięcia docelowej stacji pozostaje luką.</td><td><a href="../../firmware/src/ui.cpp">Kod STAN</a>, <a href="../../firmware/src/main.cpp">kod INFO</a>, <a href="system-wici-decyzje.html#wici-inv-008">próby sprzętowe</a>.</td></tr>
         </tbody>
       </table></div>
@@ -171,7 +171,7 @@
       <p class="explain"><strong>Dlaczego próg nasycenia czeka na pomiar.</strong> Dług ciszy 12t ogranicza udział nadawania do około 1/13 czasu niezależnie od liczby skoków; próbę można wykonać na jednej stacji z generatorem ruchu. Sprawność przetwornicy i pobór MCU nie są zmierzone, a model ma małą marżę. Odrzucono próg 48 h przy nasyceniu oraz ruch modelowy dla 15 skoków jako podstawę progu.</p>
       <p class="explain"><strong>Granice środowiskowe.</strong> Odrzucono −20…+45 °C z koncepcji z powodu braku zapasu ekranu w −20 °C i większych wymagań wobec płytki. IP54 wymagałoby uszczelnienia okna, USB i komory ogniw bez uzasadnienia dla suchego miejsca i skrzynki.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.59 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

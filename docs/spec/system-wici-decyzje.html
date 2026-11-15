@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.58</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.59</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.59</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -489,6 +489,13 @@
             <div><dt>Luka</dt><dd>Kandydaci z rozdziału 6 (<a href="system-wici-siec.html#kanal">ponowne CAD przed HACK i dłuższe odroczenia przed porzuceniem ramki</a>) czekają na zmianę w programie i przebieg 2 h przy 50% na <code>l0</code> z obiema zmianami i bez nich. Szacunek zysku z ponownego CAD: najwyżej około jednej trzeciej odmów HACK. Alarm zagłuszania nie ma wiersza w planie odbioru (alarm przy 90%, brak alarmu przez 24 h zwykłego ruchu) ani progu z pomiaru. Zagłuszacza silniejszego od sieci ani ciągłego szumu nie mierzono.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-064">
+          <h4>WICI-INV-064</h4>
+          <dl>
+            <div><dt>Stan zastany</dt><dd>Po włączeniu wyłącznikiem głównym i po pełnym zaniku zasilania pierwszym ekranem stacji jest wybór języka; kontrola adresu i stan <code>adres_brak</code> są związane z tym wyborem (<a href="oprogramowanie.md">oprogramowanie</a>, „Start”). Stanowisko nie liczy zgłoszeń stacji bez stanu 6. Prototyp <code>l0</code> nie usypia procesora i nie liczy wybudzeń.</dd></div>
+            <div><dt>Luka</dt><dd>Według <a href="#wici-dec-020">WICI-DEC-020</a> do zmiany są: opis startu w oprogramowaniu i program stacji (język z FRAM, kontrola adresu po każdym starcie, nie po wyborze języka), aplikacja stanowiska i instrukcja dyżurnego (<a href="system-wici-funkcje.html#r3-45">R3-45</a>, zamykanie załatwionych zgłoszeń stanem 6) oraz program <code>l0</code> (licznik wybudzeń na godzinę w poleceniu diagnostycznym). Plan odbioru nie ma jeszcze prób tych zmian.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
       <p><a href="system-wici-o-dokumencie.html#zatwierdzanie">Trzy stopnie</a> to szkic, zatwierdzenie do próby i stan normatywny. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
@@ -556,12 +563,14 @@
           <tr id="wici-dec-017"><td>WICI-DEC-017</td><td><strong>Wnioski z prób przy stole, 14 listopada 2026 r.</strong> Związek W10 z liczbą stacji za przekaźnikiem rozstrzyga się po danych z licznika odrzuceń i z emulatora (<a href="#wici-inv-061">WICI-INV-061</a>). Stacja z czekającą wiadomością przyspiesza ponowienie po HACK albo BEACON-ie bieżącego rodzica, z BEACON-u najwyżej raz na okres z profilu (<a href="system-wici-siec.html#kanal">rozdział 6</a>). Odrzucono dłuższe przechowanie ramki w przekaźniku: cisza może trwać dni, a kolejka ma 4 miejsca. Odrzucono pozostawienie powrotu do 18 min po ciszy rodzica. Kandydatem dynamicznym może być tylko sąsiad, którego klucz stacja ma jako klucz sąsiada; klucz roota tylko do podpisu epoki tego nie daje, więc root jest rodzicem tylko z planu. Przygotowanie odrzuca plan, w którym klucze sąsiadów nie są parami. Odrzucono sam wyjątek dla roota (nie chroni przed kluczami danymi w jedną stronę) i ogłaszanie planu w BEACON-ie (zmiana bajtów w eterze).</td></tr>
           <tr id="wici-dec-018"><td>WICI-DEC-018</td><td><strong>Wnioski z próby „Wrogi węzeł”, 14 listopada 2026 r.</strong> Ponowne CAD przed HACK do ostatniej chwili startu jest kandydatem do pomiaru; wchodzi do profilu, jeśli przy 50% zagłuszania wyraźnie skróci czas dostarczenia (<a href="system-wici-siec.html#kanal">rozdział 6</a>, <a href="#wici-inv-063">WICI-INV-063</a>). Odrzucono pozostawienie jednego CAD bez pomiaru: nadawca ponawia wtedy całą DATA, droższą niż spóźniony HACK. Obietnica czasu W10 i próby „Wrogi węzeł” obowiązuje przy obcym ruchu do 50% czasu kanału; przy większej zajętości zgłoszenie czeka na wolny kanał bez utraty. Odrzucono obietnicę bez warunku: przy długim, silnym zagłuszaniu nie da się jej dotrzymać bez nadawania w zajęty kanał. Odrzucono nadawanie w zajęty kanał: pomaga tylko przy słabym zakłóceniu, przegrywa z celowym napastnikiem, zderza własne ramki i zakłóca innych użytkowników podpasma.</td></tr>
           <tr id="wici-dec-019"><td>WICI-DEC-019</td><td><strong>Zagłuszanie kanału po próbie z 14 listopada 2026 r.</strong> Stacja i stanowisko dostają alarm zagłuszania kanału jako drugą przyczynę alarmu awarii radia, liczony z czasu bez wolnej przerwy do nadania (<a href="system-wici-funkcje.html#r3-43">R3-43</a>, <a href="system-wici-funkcje.html#r3-44">R3-44</a>). Dłuższe odroczenia przed porzuceniem ramki są kandydatem do pomiaru (<a href="system-wici-siec.html#kanal">rozdział 6</a>). Odrzucono krótsze okno wolnego kanału po odroczeniach: pomaga tylko przy zagłuszaczu z przerwami i dokłada zderzeń przy dużym ruchu własnej sieci. Odrzucono na teraz drugi kanał w podpaśmie: duża zmiana protokołu, a celowy zagłuszacz zajmie całe podpasmo.</td></tr>
+          <tr id="wici-dec-020"><td>WICI-DEC-020</td><td><strong>Wnioski z prób 12–14 na <code>l0</code>, 15 listopada 2026 r.</strong> Stacja po każdym starcie używa języka z FRAM; wybór języka pojawia się tylko bez zapisanego języka (po przygotowaniu, ZAMKNIJ ZDARZENIE i ZNISZCZ DANE). Odrzucono wybór języka po każdym pełnym starcie: stacja nie odróżnia wyłącznika od zaniku zasilania, a gospodarz po każdym zaniku robiłby zbędny krok. Stanowisko ostrzega dyżurnego o zbliżaniu się do 256 zgłoszeń stacji bez stanu 6, a instrukcja dyżurnego wymaga zamykania załatwionych zgłoszeń (<a href="system-wici-funkcje.html#r3-45">R3-45</a>). Odrzucono zwalnianie odebranych zgłoszeń bez stanu 6: odpowiedź dyżurnego na zwolnione zgłoszenie nie dotarłaby do stacji. Część energii zależną od protokołu sprawdza na v1 liczba wybudzeń na godzinę, a czas jednego wybudzenia mierzy się na v2 (<a href="system-wici-siec.html#warunek-d21-v1">rozdział 6</a>). Odrzucono przeniesienie całego pomiaru wybudzeń na v2, bo protokół byłby wtedy wybrany bez tej części.</td></tr>
         </tbody>
       </table>
       <h3 id="historia-zmian">Historia zmian</h3>
       <table>
         <thead><tr><th>Wersja</th><th>Zmiana</th></tr></thead>
         <tbody>
+          <tr><td>0.59</td><td>Zapisano WICI-DEC-020: język z FRAM po każdym starcie (rozdział 8), ostrzeżenie stanowiska o zgłoszeniach bez stanu 6 (nowe R3-45), licznik wybudzeń na v1 i czas wybudzenia na v2 (rozdział 6, rejestr zgodności); nowe WICI-INV-064. Rozdział 6: rozsyłanie awaryjne tylko w dół, BEACON stacji bez rangi i przekaźnika po zimnym starcie.</td></tr>
           <tr><td>0.58</td><td>Raport z prób przy stole w <code>main</code>: rejestr zgodności z wynikami (HACK i kolejki, cisza, zalew, współistnienie w kanale, zanik przekaźnika) i nowym wierszem alarmu zagłuszania; WICI-INV-061, 062 i 063 ze stanem wdrożeń w <code>main</code>; wiersz D21 w rozdziale 6 z odnośnikiem do raportu.</td></tr>
           <tr><td>0.57</td><td>Zapisano WICI-DEC-019: alarm zagłuszania kanału (nowe R3-43 i R3-44 w rozdziale 3), dłuższe odroczenia przed porzuceniem ramki jako kandydat do pomiaru, odrzucone krótsze okno wolnego kanału. Rozdział 6: szacunek zysku z ponownego CAD przed HACK i granica milknięcia sieci przy zagłuszaniu.</td></tr>
           <tr><td>0.56</td><td>WICI-DEC-018 i rozdział 6: nadawanie w zajęty kanał zapisane jako odrzucony wariant z powodami.</td></tr>
@@ -620,7 +629,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.59 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

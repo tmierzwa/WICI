@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.58</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.59</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.58</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.59</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -301,6 +301,12 @@
           <p class="req-why"><strong>Uzasadnienie.</strong> Zamknięte zgłoszenie można otworzyć ponownie, ale świadomie i ze śladem.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Panel dyżurnego” w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="system-wici-sa1.html#rozstrzygniecia-dec-005">gwarancje WICI-DEC-005</a>.</p>
         </div>
+        <div class="req" id="r3-45">
+          <p class="req-head"><span class="req-id">R3-45</span> roboczy · Stanowisko · wymaganie funkcji</p>
+          <p class="req-text">Stanowisko MUSI ostrzec dyżurnego, gdy liczba zgłoszeń stacji bez stanu 6 „zamknięte” osiągnie próg ustalony w profilu.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Stacja ma 256 wpisów zgłoszeń i zwalnia tylko wpisy zamknięte; gdy żaden nie jest zamknięty, odmawia nowego zgłoszenia i odsyła do formularza papierowego. Zamknąć zgłoszenie może tylko dyżurny, więc ostrzeżenie trafia do niego. Zwalnianie zgłoszeń odebranych bez stanu 6 odrzucono, bo późniejsza odpowiedź dyżurnego nie dotarłaby do osoby, która na nią czeka (<a href="system-wici-decyzje.html#wici-dec-020">WICI-DEC-020</a>). W profilu pilotażu próg wynosi 200.</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Panel dyżurnego” w <a href="odbior.md">planie odbioru</a> (do uzupełnienia). <strong>Źródło:</strong> <a href="system-wici-decyzje.html#wici-dec-020">WICI-DEC-020</a>.</p>
+        </div>
         <div class="req" id="r3-25">
           <p class="req-head"><span class="req-id">R3-25</span> roboczy · Stanowisko · wymaganie funkcji</p>
           <p class="req-text">Stanowisko MUSI w panelu blokować drugie działanie do odpowiedzi na pierwsze, a po błędzie albo utracie odpowiedzi odsyłać do sprawdzenia listy zamiast proponować ponowienie.</p>
@@ -492,7 +498,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.58 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.59 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
