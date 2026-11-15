@@ -1,0 +1,42 @@
+{
+  "started_utc": "2026-11-13T15:57:33.718473+00:00",
+  "command": "RDID",
+  "records": [
+    "ESP-ROM:esp32s3-20210327",
+    "Build:Mar 27 2021",
+    "rst:0x15 (USB_UART_CHIP_RESET),boot:0xb (SPI_FAST_FLASH_BOOT)",
+    "Saved PC:0x4202afea",
+    "SPIWP:0xee",
+    "mode:DIO, clock div:1",
+    "load:0x3fce3808,len:0x4bc",
+    "load:0x403c9700,len:0xbd8",
+    "load:0x403cc700,len:0x2a0c",
+    "entry 0x403c98d0",
+    "FRAM_ID MB85RS4MT 047F4903FFFFFFFFFF status=00",
+    "INFO l0-0.5 50112F6B4580 1 0 EF9EDF97 869.525 125 7 5 0 1.8",
+    "STATUS radio=1 fram=1 ext=1 ext_counter=1435 inputs=00 silence=0 mixed=0 guard=0 cycles=0 errors=0 frames=1 buzzer=1",
+    "CMD INFO",
+    "INFO l0-0.5 50112F6B4580 1 0 EF9EDF97 869.525 125 7 5 0 1.8",
+    "CMD RDID",
+    "FRAM_ID MB85RS4MT 047F4903FFFFFFFFFF status=00"
+  ],
+  "software_command_completed": true,
+  "physical_acceptance": false,
+  "node": {
+    "kind": "info",
+    "version": "l0-0.5",
+    "id": "50112F6B4580",
+    "ready": true,
+    "reset": 0,
+    "boot": "EF9EDF97",
+    "profile": [
+      "869.525",
+      "125",
+      "7",
+      "5",
+      "0",
+      "1.8"
+    ]
+  },
+  "finished_utc": "2026-11-13T15:57:33.973374+00:00"
+}

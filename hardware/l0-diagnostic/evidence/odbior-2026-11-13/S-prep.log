@@ -1,0 +1,15 @@
+18:49:59 P001 > PREP 1
+18:50:32 P001 > PREP 1
+18:51:05 P001 > PREP 1
+18:51:38 P001 > PREP 1
+18:51:47 P001 {"prep":true}
+P001 PREP True
+18:51:48 P002 > PREP 1
+18:52:21 P002 > PREP 1
+Traceback (most recent call last):
+  File "<stdin>", line 9, in <module>
+  File "~/WICI-L0/.venv/lib/python3.14/site-packages/serial/serialposix.py", line 595, in read
+    raise SerialException(
+        'device reports readiness to read but returned no data '
+        '(device disconnected or multiple access on port?)')
+serial.serialutil.SerialException: device reports readiness to read but returned no data (device disconnected or multiple access on port?)
