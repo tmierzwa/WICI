@@ -1881,6 +1881,16 @@ void handle(char* cmd) {
 #if !defined(WICI_HEADLESS)
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
 #endif
+    else if (!strcmp(cmd, "CHANNEL")) {
+        // Ustawienie pomiarowe przy zagłuszaniu (kandydaci z rozdziału 6 specyfikacji): ponowny CAD przed HACK
+        // i dłuższe odroczenia; tylko RAM, po restarcie wyłączone. Bez argumentów: stan.
+        uint32_t cadRetry = 0, longDefer = 0;
+        if (n == 2 && cmdargs::parseUint(words[0], 0, 1, cadRetry) && cmdargs::parseUint(words[1], 0, 1, longDefer))
+            bench.setChannelTrial(cadRetry, longDefer);
+        else if (n) { printError("CHANNEL [<cad 0|1> <odroczenia 0|1>]"); return; }
+        Serial.printf("{\"hack_cad_retry\":%s,\"max_deferrals\":%u}\n", boolName(bench.hackCadRetry()),
+                      static_cast<unsigned>(bench.maxDeferrals()));
+    }
     else if (!strcmp(cmd, "HACK")) {
         uint32_t zero = 1;
         if (n > 1 || (n == 1 && !cmdargs::parseUint(words[0], 0, 0, zero))) { printError("HACK [0]"); return; }

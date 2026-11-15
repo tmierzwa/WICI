@@ -2104,6 +2104,25 @@ int main() {
     printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
     printf("HACK_STATS ");
     bench.printHack();
+    // Pomiar (CHANNEL 1 x): zajęty CAD przed HACK powtarza się, dopóki HACK zdąży; bez przełącznika rezygnacja.
+    bench.restoreDebt(0);
+    bench.resetHackStats();
+    radio.cadBusy = 2;
+    const bool busyDefault = bench.linkSendHack(hack, sizeof(hack), millis());
+    bench.setChannelTrial(true, false);
+    radio.cadBusy = 2;
+    const bool busyRetried = bench.linkSendHack(hack, sizeof(hack), millis());
+    radio.cadBusy = 1000;
+    const bool busyAlways = bench.linkSendHack(hack, sizeof(hack), millis());
+    radio.cadBusy = 0;
+    const bool lateRetry = bench.linkSendHack(hack, sizeof(hack), millis() - 120);   // po ostatniej chwili startu
+    printf("HACK_RETRY %d %d %d %d %lu %lu %u\n", busyDefault, busyRetried, busyAlways, lateRetry,
+           static_cast<unsigned long>(bench.hackStats().cadRetried), static_cast<unsigned long>(bench.hackStats().refusedBy[measure::HACK_CAD]),
+           static_cast<unsigned>(bench.maxDeferrals()));
+    bench.setChannelTrial(false, true);
+    printf("HACK_TRIAL %d %u\n", bench.hackCadRetry(), static_cast<unsigned>(bench.maxDeferrals()));
+    bench.setChannelTrial(false, false);
+    bench.resetHackStats();
     // Po usłyszanej DATA v3 z ACKREQ własna ramka czeka do 200 ms − czas HACK (29 B) od DATA, czyli do
     // ostatniej chwili, gdy HACK odbiorcy musi już nadawać; DATA bez ACKREQ trzyma tylko okno 50 ms.
     bench.restoreDebt(0);
@@ -2930,8 +2949,15 @@ class LoraBenchTests(unittest.TestCase):
         # The model's TxDone comes at once, so the end times are 0 ms here; on the board they include the airtime.
         # refused_by splits them: 4 state (silence, malformed, untagged, v2), 1 busy CAD, 2 debt (failed write, full).
         self.assertEqual(line(self.out, "HACK_STATS"), 'HACK_STATS {"hack_sent":2,"hack_late":3,"hack_refused":7,'
-                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,'
+                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,"hack_cad_retried":0,'
                          '"refused_by":{"state":4,"lock":0,"rx_pending":0,"prep":0,"cad":1,"debt":2,"tx":0}}')
+
+    def test_channel_trial_retries_cad_before_hack_and_lengthens_deferrals(self):
+        # Kandydaci do pomiaru przy zagłuszaniu (CHANNEL), domyślnie wyłączeni: bez przełącznika zajęty CAD to
+        # rezygnacja; z nim CAD się powtarza i HACK wychodzi; kanał zajęty do końca albo HACK po ostatniej chwili
+        # startu (103 ms po DATA) nadal rezygnuje. Drugi przełącznik podnosi limit odroczeń z 30 do 220.
+        self.assertEqual(line(self.out, "HACK_RETRY"), "HACK_RETRY 0 1 0 0 1 2 30")
+        self.assertEqual(line(self.out, "HACK_TRIAL"), "HACK_TRIAL 0 220")
 
     def test_own_frame_waits_for_the_hack_after_heard_data_with_ackreq(self):
         # Po DATA z ACKREQ (0xC1) kanał jest zajęty do 200 − 87 = 113 ms: HACK odbiorcy może zacząć się

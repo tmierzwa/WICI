@@ -61,6 +61,11 @@ constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
 constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
+// Kandydaci do pomiaru przy zagłuszaniu (wici-link.md, rozdział 6 specyfikacji), przełączani poleceniem CHANNEL
+// w RAM, domyślnie wyłączeni: dłuższe odroczenia przed porzuceniem datagramu (około 2 min zamiast 16 s)
+// i ponowny CAD przed HACK aż do ostatniej chwili startu.
+constexpr uint8_t MAX_DEFERRALS_LONG = 220;
+constexpr uint8_t HACK_CAD_RETRIES = 40;   // ponowne CAD przed HACK: limit, gdyby CAD nie zajmował czasu
 // Alarm zagłuszania kanału (R3-43, druga przyczyna radio_awaria): datagram do nadania przez tyle nie znalazł
 // wolnej przerwy (okno CCA, CAD). Parametr profilu; wartość tymczasowa do ustalenia pomiarem (polecenie P1:
 // no_gap_ms_max po 24 h zwykłego ruchu i przy 90% zagłuszania). Gaśnie przy pierwszej wolnej przerwie albo po
@@ -130,6 +135,7 @@ struct HackStats {
     uint32_t lastMs = 0;
     uint32_t maxMs = 0;
     uint32_t sumMs = 0;
+    uint32_t cadRetried = 0;  // HACK nadane po zajętym CAD dzięki ponownemu CAD (CHANNEL, pomiar)
 };
 
 enum class RxMode : uint8_t { NONE, TEST, LINK };
@@ -180,6 +186,7 @@ public:
     void printLink();
     void printHack(const char* tail = nullptr);   // HACK: HackStats as JSON; tail: further ",\"pole\":…" fields
     void resetHackStats() { hack_ = HackStats(); }
+    const HackStats& hackStats() const { return hack_; }
     const LinkCounters& link() const { return link_; }
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
     radiolink::Framing linkFraming() const { return radio_.framing(); }
@@ -223,6 +230,14 @@ public:
     uint32_t noGapMs() const { return noGap_ ? noGapLastMs_ - noGapSinceMs_ : 0; }
     uint32_t noGapMaxMs() const { return noGapMaxMs_; }   // najdłuższy od startu (pomiar progu)
     bool channelJammed() const;                           // alarm zagłuszania kanału (JAM_ALARM_MS)
+    // Ustawienie pomiarowe (polecenie CHANNEL, tylko RAM, po restarcie domyślne): ponowny CAD przed HACK
+    // do ostatniej chwili startu i limit odroczeń MAX_DEFERRALS_LONG zamiast MAX_DEFERRALS.
+    void setChannelTrial(bool hackCadRetry, bool longDeferrals) {
+        hackCadRetry_ = hackCadRetry;
+        maxDeferrals_ = longDeferrals ? MAX_DEFERRALS_LONG : MAX_DEFERRALS;
+    }
+    bool hackCadRetry() const { return hackCadRetry_; }
+    uint8_t maxDeferrals() const { return maxDeferrals_; }
     // Układ nadaje albo mierzy kanał przed nadaniem; datagram czekający na dług lub odstęp (układ w
     // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
     bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
@@ -334,6 +349,8 @@ private:
     uint32_t hackHoldUntilMs_ = 0;
     bool hackHold_ = false;
     uint8_t txDeferrals_ = 0;
+    bool hackCadRetry_ = false;
+    uint8_t maxDeferrals_ = MAX_DEFERRALS;
     // Alarm zagłuszania kanału (noGapMs): pierwszy i ostatni zajęty kanał bez wolnego pomiędzy.
     bool noGap_ = false;
     uint32_t noGapSinceMs_ = 0, noGapLastMs_ = 0, noGapMaxMs_ = 0;
