@@ -122,8 +122,8 @@ Zaliczenie: każde zgłoszenie RECEIVED dokładnie raz w bazie stanowiska; każd
 
 Łańcuch A → B → root, wszystkie drogi nauczone ruchem (próba 3 albo `REQ 1`). Kryterium: [odbiór, „Zimny start trasy”](../../docs/spec/odbior.md#próby), w znaczeniu WICI-Link.
 
-1. Odcięcie A i B jednocześnie na 30 s; root zostaje zasilony. Bez żadnego polecenia po starcie: w podsłuchu BEACON-y B w ciągu kilku sekund, w `LOG` „wici durable state recovered” i „wici station ready”. `REQ 1` na A: RECEIVED. Decyzja w panelu idzie do A przez B jednoadresowo (droga w dół z FRAM), bez rozsyłania.
-2. `SILENCE 1` na B, odcięcie B na 30 s. Po starcie `INFO` `silence: true` i 10 min podsłuchu bez żadnej ramki od B. `SILENCE 0`, potem `REQ 1` na A: RECEIVED.
+1. Odcięcie A i B jednocześnie na 30 s; root zostaje zasilony. Bez żadnego polecenia po starcie: w `LOG` „wici station ready”; najpierw decyzja w panelu dla starszego zgłoszenia A (przed ruchem w górę), która idzie do A przez B jednoadresowo, bez rozsyłania; potem `REQ 1` na A: RECEIVED. BEACON B przychodzi dopiero po BEACON-ie roota (ranga, reguła 4), czyli do 36 min po starcie.
+2. Przełącznik CISZA na B w pozycji ciszy (nie `SILENCE 1`, które udaje przełącznik tylko w RAM i znika przy restarcie), odcięcie B na 30 s. Po starcie `INFO` `silence: true` i 10 min podsłuchu bez żadnej ramki od B. `REQ 1` na A w czasie ciszy, po 10 min przełącznik z powrotem: RECEIVED.
 
 ### Próba 15: prąd modułu Wio
 
