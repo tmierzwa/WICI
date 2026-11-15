@@ -1656,6 +1656,27 @@ void printStore() {
                   static_cast<unsigned long>(protocol.stats().overflow), static_cast<unsigned long>(protocol.stats().resends));
 }
 
+// REGISTER: stan każdego wpisu rejestru stacji z indeksu w RAM, jeden wiersz JSON na wpis (bez odczytu
+// FRAM i bez zmian), potem wiersz z liczbą wpisów. W próbach przy stole sprawdza doręczenie decyzji
+// do każdego zgłoszenia bez wnioskowania z liczników APP.
+void printRegister() {
+    static const char* const STAGES[] = {"saved", "sending", "delivered", "received", "cancelled"};
+    size_t count = 0;
+    for (size_t slot = 0; storeOk && slot < store::REGISTER_SLOTS; ++slot) {
+        const store::RequestIndex& r = stationStore.request(slot);
+        if (!r.used()) continue;
+        ++count;
+        const uint8_t stage = static_cast<uint8_t>(r.stage);
+        Serial.printf("{\"slot\":%u,\"number\":\"%04u\",\"id\":\"%08lx\",\"type\":%u,\"revision\":%u,\"stage\":\"%s\","
+                      "\"decision\":%u,\"decision_revision\":%u,\"attempts\":%u,\"sent_once\":%s,\"read\":%s}\n",
+                      static_cast<unsigned>(slot), static_cast<unsigned>(r.number()), static_cast<unsigned long>(r.idPrefix),
+                      static_cast<unsigned>(r.type), static_cast<unsigned>(r.rMax), stage < 5 ? STAGES[stage] : "?",
+                      static_cast<unsigned>(r.decision), static_cast<unsigned>(r.decisionRev), static_cast<unsigned>(r.attempts),
+                      boolName(r.flags & store::SENT_ONCE), boolName(r.flags & store::READ_MAX));
+    }
+    Serial.printf("{\"register\":%u,\"store_ok\":%s}\n", static_cast<unsigned>(count), boolName(storeOk));
+}
+
 // REQ <n> [<text bytes>]: n REQUEST messages through the button path (station::Station::create: the same
 // SA1 encoding, register and queue as the wizard) with category 0, 1 person, urgency 0 and the selected
 // address, for bench trials (W10: 50 requests in a few seconds, also on a board without buttons). Like KEY
@@ -1721,7 +1742,8 @@ void handle(char* cmd) {
         bool on = false;  // jak przełącznik CISZA (na płytce N1 do następnego przełączenia)
         if (!cmdargs::parseFlag(words[0], on)) { printError("SILENCE <0|1>"); return; }
         setSwitchSilence(on, " (command)");
-        Serial.printf("{\"silence\":%s,\"switch\":%s}\n", boolName(silenceAny()), boolName(switchSilence));
+        // until_restart: polecenie zastępuje przełącznik tylko w RAM; po restarcie decyduje przełącznik CISZA.
+        Serial.printf("{\"silence\":%s,\"switch\":%s,\"until_restart\":true}\n", boolName(silenceAny()), boolName(switchSilence));
     } else if (!strcmp(cmd, "TXCW")) {
         size_t count = n;
         const bool conducted = lastIsConducted(words, count);
@@ -1926,6 +1948,7 @@ void handle(char* cmd) {
         bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();
+    else if (!strcmp(cmd, "REGISTER") && n == 0) printRegister();
     else if (!strcmp(cmd, "APP")) printApp();
     else if (!strcmp(cmd, "LINK") && n == 1) {
         if (!cmdargs::parseFlag(words[0], linkAuto)) printError("LINK <0|1>");
