@@ -31,6 +31,7 @@ constexpr uint32_t HOLD_MAX_S = 300;
 // could infer these only from code and sniffer.
 struct QueueStats {
     uint32_t fullUp = 0, fullDown = 0;
+    uint32_t admittedK1 = 0, admittedK2 = 0;  // new envelopes stored in a neighbour's K1 slot or in K2 space
 };
 
 class Relay {
@@ -51,7 +52,8 @@ public:
     uint16_t clearedRecords() const { return queue_.clearedRecords() + flood_.cleared(); }
     const QueueStats& queueStats() const { return queueStats_; }
     void resetQueueStats() { queueStats_ = QueueStats(); }
-    uint8_t queuePending() const;  // occupied queue slots now
+    uint8_t queuePending() const;    // occupied queue slots now
+    uint8_t queuePendingK1() const;  // of them, K1 slots held for a neighbour
     // HACK_READY only after the incoming frame is durably held or was already
     // forwarded. `hack` is a complete radio frame; the caller applies silence.
     Receipt receiveData(const uint8_t* wire, size_t length, uint32_t nowS,
