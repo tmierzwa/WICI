@@ -1840,6 +1840,22 @@ int main() {
     bench.linkSend(d20.data(), d20.size(), true);
     untilDone(3000);
     printf("JAMRESTART %d\n", fresh);
+    // R3-46: root bez ruchu sprawdza kanał co JAM_PROBE_MS oknem CCA (bez liczników nadania); zajęty kanał
+    // przez JAM_ALARM_MS daje alarm, wolne okno go kończy.
+    const uint32_t probeRxBusy = bench.link().rxBusy;
+    const uint32_t probeEnd = millis() + measure::JAM_ALARM_MS + 10000;
+    radio.mark = radiolink::Activity::Rx;
+    while (static_cast<int32_t>(millis() - probeEnd) < 0) {
+        fakeUs += 1000000;
+        radio.markMs = millis();
+        bench.probeChannel(millis());
+    }
+    const bool probeJammed = bench.channelJammed();
+    radio.mark = radiolink::Activity::None;
+    fakeUs += (measure::JAM_PROBE_MS + 100) * 1000;
+    bench.probeChannel(millis());
+    printf("JAMPROBE %d %d %lu %lu\n", probeJammed, bench.channelJammed(), static_cast<unsigned long>(bench.noGapMs()),
+           static_cast<unsigned long>(bench.link().rxBusy - probeRxBusy));
     printf("JAM %d %d %d %d %d %lu %lu\n", jamAfter30, jammed, maxKept, faded, txDone,
            static_cast<unsigned long>(bench.noGapMs()), static_cast<unsigned long>(bench.link().cadBusy - jamCadBefore));
     settle();
@@ -3035,6 +3051,9 @@ class LoraBenchTests(unittest.TestCase):
         self.assertEqual(line(self.out, "JAM").split()[1:7], ["1", "1", "1", "1", "1", "0"])
         # After a gap without attempts longer than the threshold a busy channel starts the time anew (trial 17).
         self.assertEqual(line(self.out, "JAMRESTART"), "JAMRESTART 1")
+        # R3-46: the root checks the channel without traffic; busy for the threshold raises the alarm, a free
+        # window ends it, and the periodic check adds nothing to the transmit counters.
+        self.assertEqual(line(self.out, "JAMPROBE"), "JAMPROBE 1 0 0 0")
 
     def test_failed_debt_write_after_free_cad_sends_nothing(self):
         self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")

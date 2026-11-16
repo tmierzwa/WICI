@@ -894,16 +894,16 @@ void Bench::startCca(uint32_t now, bool first) {
     ccaFrames_ = link_.rxOk + link_.rxBad;
 }
 
-bool Bench::channelBusy() {
+bool Bench::channelBusy(bool count) {
     if (hackHold_) {
-        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { ++link_.rxBusy; return true; }
+        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { if (count) ++link_.rxBusy; return true; }
         hackHold_ = false;
     }
     if (radio_.framing() == radiolink::Framing::RNODE) {
         // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
         // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.
         const radiolink::Activity activity = radio_.recentActivity(CCA_MS);
-        if (activity == radiolink::Activity::Rx) { ++link_.rxBusy; return true; }
+        if (activity == radiolink::Activity::Rx) { if (count) ++link_.rxBusy; return true; }
         bool rssiHigh = activity == radiolink::Activity::Rssi;
         if (!rssiHigh) {
             const radiolink::Rssi r = radio_.rssi();
@@ -912,8 +912,8 @@ bool Bench::channelBusy() {
         if (!rssiHigh) return false;
         // Sama energia zajmuje kanał tylko, gdy może być ramką, której początku odbiornik nie słyszał; dłużej to
         // sygnał obcy, a odroczenie przed nim nie chroni odbiorcy (radio.md, „Dostęp do kanału”, punkt 5).
-        if (radio_.rssiMayHideFrame()) { ++link_.rssiBusy; return true; }
-        ccaRssiIgnored_ = true;
+        if (radio_.rssiMayHideFrame()) { if (count) ++link_.rssiBusy; return true; }
+        if (count) ccaRssiIgnored_ = true;
         return false;
     }
     // P1: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo RSSI ponad progiem CCA.
@@ -922,6 +922,22 @@ bool Bench::channelBusy() {
     if (link_.rxOk + link_.rxBad != ccaFrames_) return true;
     const radiolink::Rssi r = radio_.rssi();
     return r.valid && r.dbm > radio_.ccaThresholdDbm();
+}
+
+void Bench::noteBusy(uint32_t now, uint32_t since) {
+    if (!noGap_ || now - noGapLastMs_ >= JAM_ALARM_MS) { noGap_ = true; noGapSinceMs_ = since; }
+    noGapLastMs_ = now;
+    if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
+}
+
+void Bench::probeChannel(uint32_t now) {
+    if (radio_.framing() != radiolink::Framing::RNODE || rxMode_ != RxMode::LINK || txState_ != TxState::IDLE ||
+        busy() || silence || emcActive_ || static_cast<int32_t>(now - probeNextMs_) < 0 || now - rxSinceMs_ < CCA_MS) return;
+    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+    if (!lock.held()) return;   // bez blokady bez sprawdzenia; następna próba w kolejnym obiegu
+    probeNextMs_ = now + JAM_PROBE_MS;
+    if (channelBusy(false)) noteBusy(now, now);
+    else noGap_ = false;   // wolna przerwa: koniec czasu bez niej
 }
 
 bool Bench::channelJammed() const {
@@ -935,9 +951,7 @@ void Bench::defer(uint32_t now) {
     // bez prób dłuższej niż JAM_ALARM_MS (jak przy gaśnięciu alarmu) liczy się od nowa: o kanale w tej
     // przerwie stacja nic nie wie, a przekaźnik bez ruchu dałby inaczej fałszywy alarm z jednym zajętym
     // kanałem minuty po zagłuszaniu (próba 17, B: 17 s w zagłuszaniu i 361 s po nim).
-    if (!noGap_ || now - noGapLastMs_ >= JAM_ALARM_MS) { noGap_ = true; noGapSinceMs_ = ccaFirstMs_; }
-    noGapLastMs_ = now;
-    if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
+    noteBusy(now, ccaFirstMs_);
     if (++txDeferrals_ > maxDeferrals_) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
     ++link_.deferrals;
     backoffUntilMs_ = now + backoffMs();

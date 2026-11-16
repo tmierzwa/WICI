@@ -2398,6 +2398,7 @@ void stationLoop() {
         }
     }
     rxStalled = radiocon::rxStalled(bench.transmitting(), now);
+    if (wiciRoot) bench.probeChannel(now);   // R3-46: root sprawdza kanał także bez ruchu (alarm zagłuszania)
     const bool radio = radioWorks();
     if (radio != radioLed) {
         radioLed = radio;
