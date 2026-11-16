@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Operacje, dane i stany systemu WICI.">
-  <title>Funkcje i dane — Specyfikacja WICI 0.59</title>
+  <title>Funkcje i dane — Specyfikacja WICI 0.60</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Funkcje i dane</h1>
-      <p><span class="status">Projekt 0.59</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.60</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przebieg">Przebieg</a>
@@ -191,12 +191,18 @@
         <div class="req" id="r3-43">
           <p class="req-head"><span class="req-id">R3-43</span> roboczy · Stacja · wymaganie funkcji</p>
           <p class="req-text">Stacja z ramką do nadania MUSI podnieść alarm zagłuszania kanału, gdy przez czas ustalony w profilu nie znajdzie wolnej przerwy potrzebnej do nadania.</p>
-          <p class="req-why"><strong>Uzasadnienie.</strong> Przy długim zagłuszaniu radio w tym miejscu nie ma szans, a sam alarm braku potwierdzenia nie mówi dlaczego. Gospodarz ma wcześniej przejść na drogę bez radia. Alarm rozszerza alarm awarii radia o drugą przyczynę, z tym samym ekranem, dźwiękiem i diodą. Sygnałem jest czas bez wolnej przerwy, a nie liczba porzuconych ramek, więc nie zależy od limitu odroczeń. Dotyczy także roota.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Przy długim zagłuszaniu radio w tym miejscu nie ma szans, a sam alarm braku potwierdzenia nie mówi dlaczego. Gospodarz ma wcześniej przejść na drogę bez radia. Alarm rozszerza alarm awarii radia o drugą przyczynę, z tym samym ekranem, dźwiękiem i diodą. Sygnałem jest czas bez wolnej przerwy, a nie liczba porzuconych ramek, więc nie zależy od limitu odroczeń. Stacja bez ruchu do nadania nie sprawdza kanału i nie alarmuje; gospodarz dowiaduje się o zagłuszaniu, gdy próbuje coś wysłać.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Wrogi węzeł” przy 90% (alarm) i 24 h zwykłego ruchu bez alarmu, do dodania w <a href="odbior.md">planie odbioru</a>. <strong>Źródło:</strong> <a href="system-wici-decyzje.html#wici-dec-019">WICI-DEC-019</a>.</p>
+        </div>
+        <div class="req" id="r3-46">
+          <p class="req-head"><span class="req-id">R3-46</span> roboczy · Stacja · wymaganie funkcji</p>
+          <p class="req-text">Root MUSI sprawdzać kanał w odstępie ustalonym w profilu także bez ramki do nadania, tym samym sprawdzeniem wolnego kanału co przed nadaniem, i podnieść alarm zagłuszania kanału według progu z <a href="#r3-43">R3-43</a>.</p>
+          <p class="req-why"><strong>Uzasadnienie.</strong> Root głównie odbiera i rzadko ma co nadać, więc bez tego sprawdzenia stanowisko prawie nigdy nie pokazałoby alarmu, a dyżurny widziałby tylko, że zgłoszenia przestały dochodzić. To dyżurny może zarządzić przejście na gońców w całej okolicy. Root jest zasilany z laptopa, więc okresowe sprawdzanie nie obciąża ogniw; stacje na ogniwach go nie wykonują. Ciągły szum bez ramek LoRa sprawdzenie kanału pomija, jak przy nadawaniu (<a href="system-wici-decyzje.html#wici-dec-021">WICI-DEC-021</a>).</p>
+          <p class="req-meta"><strong>Sprawdzenie:</strong> próba „Alarm zagłuszania kanału” w <a href="odbior.md">planie odbioru</a>, z rootem bez ruchu do nadania (do uzupełnienia). <strong>Źródło:</strong> <a href="system-wici-decyzje.html#wici-dec-021">WICI-DEC-021</a>.</p>
         </div>
         <div class="req" id="r3-44">
           <p class="req-head"><span class="req-id">R3-44</span> roboczy · Stanowisko · wymaganie funkcji</p>
-          <p class="req-text">Stanowisko MUSI pokazać alarm zagłuszania kanału, gdy podniesie go root.</p>
+          <p class="req-text">Stanowisko MUSI pokazać alarm zagłuszania kanału, gdy podniesie go root (<a href="#r3-46">R3-46</a>).</p>
           <p class="req-why"><strong>Uzasadnienie.</strong> Dyżurny ma wiedzieć, że zgłoszenia mogą nie dochodzić z powodu kanału, a nie stacji.</p>
           <p class="req-meta"><strong>Sprawdzenie:</strong> ta sama próba co <a href="#r3-43">R3-43</a>. <strong>Źródło:</strong> <a href="system-wici-decyzje.html#wici-dec-019">WICI-DEC-019</a>.</p>
         </div>
@@ -498,7 +504,7 @@
       <p>Bez drogi radiowej stacja nadal zapisuje własne zgłoszenia i intencje wysyłki, pokazuje brak potwierdzenia i ponawia później. W ciszy radiowej przyjmuje i zapisuje, lecz nie nadaje także ruchu przekazywanego. Pełna kolejka albo błąd pamięci oznaczają brak zapisu zgłoszenia. Formularz papierowy i goniec są procedurą zastępczą poza systemem; o bezpiecznej drodze decyduje gospodarz.</p>
       <p class="meta">Źródła: <a href="oprogramowanie.md">wiadomości i cykl życia SA1</a>, <a href="usb-protocol.md">USB</a>, <a href="stanowisko-osp.md">panel dyżurnego</a>, <a href="transport.md">transport</a>, <a href="../concept/01-potrzeby-i-wymagania.html">W06</a>, <a href="../concept/02-scenariusze-i-organizacja.html">praca bez łączności</a>, <a href="../../firmware/src/sa1.h">SA1 w kodzie</a>, <a href="../../firmware/src/station.cpp">stacja</a> i <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.59 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.60 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
