@@ -56,5 +56,8 @@ Górną granicę `no_gap_ms` przy zwykłym ruchu bez węzła wrogiego da 24 h ru
 
 ## Wynik
 
-- Próba 17: spełniona dla stacji z ruchem do wysłania. Alarm przy 90%, brak alarmu przy 50 i 70%. Przekaźnik i root bez ruchu nie alarmują, zgodnie z R3-43. Alarm bez własnego ruchu wymagałby wykrywania z samego nasłuchu i nowej reguły w specyfikacji (R3-44). Rozbieżność `no_gap_ms_max` na B to usterka licznika, poprawka w programie.
+- Próba 17: **spełniona częściowo**. Na A alarm przy 90% po około 5 min i brak alarmu przy 50 i 70%. Przekaźnik i root bez ruchu nie alarmują, zgodnie z R3-43. Rozbieżność `no_gap_ms_max` na B to usterka licznika, poprawka w programie. Do zamknięcia brakuje:
+  - decyzji specyfikacji, czy alarm na B i roocie bez własnego ruchu jest wymagany (kryterium odbioru tego wymaga, R3-43 nie; ewentualnie R3-44);
+  - odczytu alarmu w panelu stanowiska przy 90% (krok 2), krótki przebieg w piwnicy;
+  - 24 h zwykłego ruchu bez węzła wrogiego (krok 3), na obrazie z poprawką licznika.
 - Kandydaci: `CHANNEL 1 1` szybszy i z mniejszą liczbą odmów CAD, bez przekroczenia okna HACK poza jednym przypadkiem 200,3 ms. Wybór kandydata należy do sesji od programu.
