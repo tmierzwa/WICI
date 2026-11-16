@@ -1827,9 +1827,19 @@ int main() {
     const bool maxKept = bench.noGapMaxMs() >= measure::JAM_ALARM_MS;
     runFor(measure::JAM_ALARM_MS);
     const bool faded = !bench.channelJammed() && bench.noGapMs() >= measure::JAM_ALARM_MS;
+    // Po przerwie bez prób dłuższej niż próg (alarm już zgasł) zajęty kanał nie łączy się z dawnym czasem:
+    // liczy się od nowa, od pierwszej próby nowego datagramu (bez wolnego kanału pomiędzy).
+    radio.cadBusy = 1000000;
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    for (int i = 0; i < 300; ++i) { fakeUs += 10000; bench.poll(); }
+    const bool fresh = bench.noGapMs() > 0 && bench.noGapMs() < 5000 && !bench.channelJammed();
+    untilDone(60000);
+    radio.cadBusy = 0;
     txDone = -1;
     bench.linkSend(d20.data(), d20.size(), true);
     untilDone(3000);
+    printf("JAMRESTART %d\n", fresh);
     printf("JAM %d %d %d %d %d %lu %lu\n", jamAfter30, jammed, maxKept, faded, txDone,
            static_cast<unsigned long>(bench.noGapMs()), static_cast<unsigned long>(bench.link().cadBusy - jamCadBefore));
     settle();
@@ -3023,6 +3033,8 @@ class LoraBenchTests(unittest.TestCase):
         # R3-43: after one dropped datagram (about 16 s) no alarm yet; further datagrams on a busy channel add up
         # to JAM_ALARM_MS and raise it; without another attempt it fades after the same time; a free CAD ends it.
         self.assertEqual(line(self.out, "JAM").split()[1:7], ["1", "1", "1", "1", "1", "0"])
+        # After a gap without attempts longer than the threshold a busy channel starts the time anew (trial 17).
+        self.assertEqual(line(self.out, "JAMRESTART"), "JAMRESTART 1")
 
     def test_failed_debt_write_after_free_cad_sends_nothing(self):
         self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")

@@ -69,7 +69,8 @@ constexpr uint8_t HACK_CAD_RETRIES = 40;   // ponowne CAD przed HACK: limit, gdy
 // Alarm zagłuszania kanału (R3-43, druga przyczyna radio_awaria): datagram do nadania przez tyle nie znalazł
 // wolnej przerwy (okno CCA, CAD). Parametr profilu; wartość tymczasowa do ustalenia pomiarem (polecenie P1:
 // no_gap_ms_max po 24 h zwykłego ruchu i przy 90% zagłuszania). Gaśnie przy pierwszej wolnej przerwie albo po
-// tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale).
+// tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale); po takiej przerwie
+// czas liczy się od nowa.
 constexpr uint32_t JAM_ALARM_MS = 5 * 60 * 1000;
 // Pętla czeka na blokadę operacji radia najwyżej tyle (zadanie odbioru trzyma ją ≤5 ms, ekran ≤5 ms).
 constexpr uint32_t RADIO_LOCK_WAIT_MS = 500;
