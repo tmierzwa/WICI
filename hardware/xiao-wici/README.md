@@ -153,7 +153,7 @@ Zaliczenie jak w tabeli (z B zamiast A i P002 ↔ P001). Na końcu pusty prototy
 Alarm awarii radia ma drugą przyczynę: kanał bez wolnej przerwy do nadania dłużej niż próg `JAM_ALARM_MS` (w programie tymczasowo 5 min). Do pomiaru służą pola `P1` `no_gap_ms` (bieżący czas bez wolnej przerwy), `no_gap_ms_max` i `channel_jammed` oraz `channel_jammed` w `INFO`. Węzeł wrogi pracuje jak w próbie 9, więc obowiązują te same warunki miejsca ([wyżej](#próba-9-tylko-w-torze-przewodowym-w-komorze-albo-w-pomieszczeniu-odizolowanym)).
 
 1. Łańcuch A → B → root, `REQ 5` na A na początku każdego przebiegu. `hostile.py --mode junk --conducted` przy 50%, 70% i 90%, każdy przebieg 20 min (przy 90% co najmniej próg + 5 min), z przerwą 10 min. Na A, B i roocie `P1` i `INFO` co 10 s.
-2. Przy 90%: chwila włączenia alarmu na każdym urządzeniu i w panelu, oraz zgaśnięcie po końcu zagłuszania. Stacja i przekaźnik alarmują tylko z ramką do nadania; root także bez ruchu, bo co kilka sekund sprawdza kanał ([R3-46](../../docs/spec/odbior.md#próby), od obrazu z tą zmianą).
+2. Przy 90%: chwila włączenia alarmu na każdym urządzeniu i w panelu, oraz zgaśnięcie po końcu zagłuszania. Stacja i przekaźnik alarmują tylko z ramką do nadania; root także bez ruchu, bo co kilka sekund sprawdza kanał (R3-46 w specyfikacji 0.60, od obrazu z tą zmianą).
 3. 24 h zwykłego ruchu bez węzła wrogiego (np. `REQ 1` na A co 30 min, BEACON-y): brak alarmu, `no_gap_ms_max` zapisany.
 
 Próg: rozkład `no_gap_ms_max` z przebiegów 50% i 70% oraz z 24 h zwykłego ruchu (górna granica) i z przebiegu 90% (dolna granica). Proponowany próg wpisuje się w raporcie z uzasadnieniem; zmiana stałej należy do programu. Pomiar robi się tego samego wieczoru co przebiegi kandydatów zmian dostępu do kanału.
