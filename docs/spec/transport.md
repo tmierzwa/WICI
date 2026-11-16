@@ -115,7 +115,7 @@ Reguły kontraktu:
 2. **Dowód po zapisie.** Cel WICI-Link wysyła HACK dopiero po trwałym zapisie skutku SA1 i okna powtórzeń (stacja: `wici_destination`; stanowisko: transakcja SQLite przed HACK), a stacja po tym samym zapisie także dowód doręczenia. Reticulum wysyła dowód po transakcji aplikacji (PROVE_APP).
 3. **Cisza i klasy czasu w nośniku stacji.** Oba nośniki stacji egzekwują ciszę radiową (W19) i klasy czasu kanału z [radio.md](radio.md). Nośnik bez nich (Meshtastic, MeshCore) może działać tylko na stanowisku, a próba „Wrogi węzeł” nie może być dla niego zaliczona.
 4. **Odbiór niepewny.** Koperta, której nie da się odszyfrować kluczem żadnej znanej pary, jest odrzucana i liczona. Nie trafia do kwarantanny SA1, bo nie ma uwierzytelnionego nadawcy. Kwarantanna dotyczy dalej stacji z kluczem spoza listy zaufanych, ale z poprawną kopertą.
-5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej).
+5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej). Drugie radio na stacji do nadawania kopert przez sieć Meshtastic albo MeshCore rozważono 2026-11-16 i odrzucono. Oba protokoły są jawne, ale koperta w MeshCore (SF8, 62,5 kHz) zajmuje kanał około 1,9 s na każdym przekaźniku sieci, a typowe zgłoszenie idzie w dwóch częściach; Meshtastic LongFast daje około 2 s na przeskok. Zalew zgłoszeń w kryzysie obciążyłby więc cudzą sieć, gdy mieszkańcy i tak ją zapychają. Do tego oba radia dzieliłyby limit 10% tego samego podpasma, cisza radiowa i badania zgodności objęłyby dwa nadajniki, a przekaźnikami tych sieci zarządzają prywatni operatorzy bez porozumienia z gminą.
 
 ## Nośniki
 
@@ -123,12 +123,12 @@ Reguły kontraktu:
 |---|---|---|---|---|---|
 | [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 228 B | tak / w dół (dowód doręczenia) | tak / tak | własny protokół łącza; licencja MIT |
 | Reticulum (rdzeń stacji) | obecny; zapasowy do rozstrzygnięcia D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
-| Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty |
-| MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; domyślny budżet nadawania 50% wymaga ustawienia na ≤10% |
+| Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty; typowe zgłoszenie (koperta 199 B) w jednej ramce; program i biblioteka Python na GPL-3.0, więc adapter mówi protokołem szeregowym sam albo działa jako osobny proces |
+| MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; typowe zgłoszenie w dwóch częściach; węzeł z programem `kiss_modem` (surowe ramki LoRa do 255 B), a protokół MeshCore, limit 10% i ciszę prowadzi komputer stanowiska (np. biblioteka openhop_core, MIT); węzeł z programem companion ma domyślny budżet nadawania 50%, który wymaga ustawienia na ≤10% |
 | IP (MQTT lub HTTPS) | stanowisko ↔ powiat, gdy działa internet | 64 KiB | — / tak | — / — | poza siecią radiową; ta sama koperta |
 | Pamięć (symulator, testy) | testy i symulator | dowolne | konfigurowalne | konfigurowalne | wzorzec do prób zgodności |
 
-Wartości `max_payload` dla Meshtastic i MeshCore pochodzą ze źródeł tych projektów sprawdzonych 2026-11-01 (ramka 255 B, nagłówek Meshtastic 16 B, narzut PKI 12 B; ładunek MeshCore 184 B) i trzeba je potwierdzić w adapterze.
+Wartości `max_payload` dla Meshtastic i MeshCore pochodzą ze źródeł tych projektów sprawdzonych 2026-11-01 (ramka 255 B, nagłówek Meshtastic 16 B, narzut PKI 12 B; ładunek MeshCore 184 B; ponownie 2026-11-16 w Meshtastic 2.7.26 i 2.8.2 oraz MeshCore 1.18.0) i trzeba je potwierdzić w adapterze. Meshtastic 2.8 (2026-11 w fazie alfa) zmienia ponowienia i potwierdzenia oraz dodaje szyfrowanie kanału z uwierzytelnieniem i podpisy rozsyłanych wiadomości, więc adapter przypina wersję programu węzła. Protokół companion MeshCore jest według jego dokumentacji jeszcze rozwijany.
 
 ### Stanowisko odbiorcze z kilkoma nośnikami
 
