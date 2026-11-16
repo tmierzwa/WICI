@@ -44,7 +44,7 @@ Na roocie obraz z `main` `86c0e44a`, z licznikami `probes` (sprawdzenia kanału 
 - `channel_jammed` na roocie: włączony 15:40:18, 5 min 10 s po starcie zagłuszania i 2 min po ostatniej ramce do nadania; 96 kolejnych odczytów; zgasł przed 15:55:10, w chwili końca zagłuszania. Alarm trzymał się 15 min wyłącznie na sprawdzaniu kanału bez ruchu.
 - A, B i XIAO nr 2 bez alarmu. Nie miały własnych ramek; XIAO nr 2 miał jedną ramkę (`deferrals` 2020 → 2050, `tx_drop` 66 → 67), za krótko na próg.
 
-**Próg CCA na roocie.** XIAO nr 1 miał `cca_threshold_dbm` −85 tuż po starcie i −73…−74 dBm w przebiegu. Węzły L0 mają −96…−97, XIAO nr 2 −83…−84. Wyższy próg na roocie nie przeszkodził w wykryciu zagłuszania (sygnał wrogi przewodzony, około −52 dBm w podsłuchu). Przyczynę, np. szum własny XIAO nr 1, ustala sesja od programu.
+**Próg CCA na roocie.** Próg to podłoga szumu plus 10 dB. W czasie zagłuszania i po nim progi wynosiły: A −97…−95, B −98…−97, XIAO nr 2 −86…−83, root (XIAO nr 1) −80…−73 dBm. L0 i XIAO nr 2 nie podnoszą progu w zagłuszaniu, więc to nie przeciek węzła wrogiego. Root ma −72…−73 dBm także bez zagłuszania (noc z 2026-11-15 i doba od 16:07); −85 było tylko tuż po starcie. Podłoga szumu wynosi więc około −83 dBm na XIAO nr 1, −94 na XIAO nr 2 i −107 na L0. To szum własny płytki XIAO (ESP32-S3 i USB blisko modułu radia), a XIAO nr 1 jako root ma dodatkowo aktywne oba porty USB. CCA na XIAO jest przez to mniej czułe na słabą obcą energię. Wykrywania zagłuszania to nie zmienia, bo opiera się na odbiorniku (preambuła, nagłówek, ramka), a nie na samym RSSI. Produktem jest L0, więc sesja od programu nie traktuje tego jako usterki.
 
 ## Wynik
 
