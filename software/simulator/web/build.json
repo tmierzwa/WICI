@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "94973184ba182b195a6d827fa0b614056400e410c5190fdd3526aee6269ca8ca",
-   "bytes": 783905,
+   "sha256": "0b694e621116348e24e5d8ba8c63b1cb38af11f15d23da46f2ceeae9cd285a00",
+   "bytes": 784341,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -228,10 +228,10 @@
   "firmware/src/lora_profile.h": "2806f6f80cf8c417ec359bc94e77d9a00e915f4222a6a67e794b5e5a95b6697f",
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
-  "firmware/src/main.cpp": "e395f1bddf0b6afad125ab81f7f854b8ae68caf438b33c6f7c612ee6d6304ace",
+  "firmware/src/main.cpp": "904841211a6f93a920e5b9ac15c701d8a3ce7ebfd4bcccbec994004339563ce1",
   "firmware/src/mcu_sleep.h": "e78eff146506c31780c643ed234d38915e4afa40e131b5d5a4f3b2d1e144f0c8",
-  "firmware/src/measure.cpp": "0715525437464aae438462d54f3c70df1e5cf53b1ef0f4af3819674e312c3ee1",
-  "firmware/src/measure.h": "7a65743efcec25041fd64d9031e6db4e97ecfe8c8fb337c33678bb8c10800747",
+  "firmware/src/measure.cpp": "0c5d978bfd20ab7be030ecc29dd2d0f8d6691359c3b781d6822dec06cc12d15d",
+  "firmware/src/measure.h": "10e24d89347e3fbc053c7583aa0c0acdaa450c4639f6ed04759feaee3a588663",
   "firmware/src/migration_crypto.cpp": "550133971722d578b72bc4eb279d0c2cd52268002c0a73228a5bf03507a1361d",
   "firmware/src/migration_crypto.h": "c33b7c2734c691adcf234b9d11da81e725b2f91e4dee72f058f1d6b321c99d9a",
   "firmware/src/migration_image.cpp": "c0949e3463ad8c4c8a9bf71eff5451f7a8d2dcc82b28201a3c11257631f1dc76",

@@ -72,6 +72,9 @@ constexpr uint8_t HACK_CAD_RETRIES = 40;   // ponowne CAD przed HACK: limit, gdy
 // tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale); po takiej przerwie
 // czas liczy się od nowa.
 constexpr uint32_t JAM_ALARM_MS = 5 * 60 * 1000;
+// Root sprawdza kanał co tyle także bez datagramu do nadania (R3-46, parametr profilu): okno CCA 50 ms
+// z tymi samymi progami co przed nadaniem (Bench::probeChannel). Stacje na ogniwach tego nie robią.
+constexpr uint32_t JAM_PROBE_MS = 5000;
 // Pętla czeka na blokadę operacji radia najwyżej tyle (zadanie odbioru trzyma ją ≤5 ms, ekran ≤5 ms).
 constexpr uint32_t RADIO_LOCK_WAIT_MS = 500;
 constexpr uint32_t EMC_PERIOD_MAX_S = 3600;
@@ -231,6 +234,10 @@ public:
     uint32_t noGapMs() const { return noGap_ ? noGapLastMs_ - noGapSinceMs_ : 0; }
     uint32_t noGapMaxMs() const { return noGapMaxMs_; }   // najdłuższy od startu (pomiar progu)
     bool channelJammed() const;                           // alarm zagłuszania kanału (JAM_ALARM_MS)
+    // Root (R3-46): co JAM_PROBE_MS, gdy nic nie nadaje, okno CCA 50 ms jak przed nadaniem; zajęty kanał
+    // liczy się do czasu bez wolnej przerwy, wolny go kończy. Bez CAD: ten wymaga wyjścia z odbioru.
+    // Wołać w każdym obiegu pętli; tylko LoRa w odbiorze łącza.
+    void probeChannel(uint32_t now);
     // Ustawienie pomiarowe (polecenie CHANNEL, tylko RAM, po restarcie domyślne): ponowny CAD przed HACK
     // do ostatniej chwili startu i limit odroczeń MAX_DEFERRALS_LONG zamiast MAX_DEFERRALS.
     void setChannelTrial(bool hackCadRetry, bool longDeferrals) {
@@ -267,7 +274,8 @@ private:
     void receiveLora();
     void datagramLine(const char* head, int headLength, const uint8_t* data, size_t length);
     bool enterRx(RxMode mode, uint8_t length);
-    bool channelBusy();
+    bool channelBusy(bool count = true);   // count = false: sprawdzenie okresowe bez liczników nadania
+    void noteBusy(uint32_t now, uint32_t since);   // zajęty kanał do czasu bez wolnej przerwy
     void startCca(uint32_t now, bool first);
     void defer(uint32_t now);
     void pollLinkTx();
@@ -355,6 +363,7 @@ private:
     // Alarm zagłuszania kanału (noGapMs): pierwszy i ostatni zajęty kanał bez wolnego pomiędzy.
     bool noGap_ = false;
     uint32_t noGapSinceMs_ = 0, noGapLastMs_ = 0, noGapMaxMs_ = 0;
+    uint32_t probeNextMs_ = 0;   // następne sprawdzenie kanału bez ruchu (root)
 
     uint32_t debtUntilMs_ = 0;
     mutable bool debtActive_ = false;   // dług jeszcze nieodczekany; gaszony w debtRemainingMs() (main.cpp co obieg)
