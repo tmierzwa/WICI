@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "b60f0f99bd510e94a0c78bd55e4c3378c07cddf89f8a2522f7d11c421310e761",
-   "bytes": 783877,
+   "sha256": "94973184ba182b195a6d827fa0b614056400e410c5190fdd3526aee6269ca8ca",
+   "bytes": 783905,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -230,8 +230,8 @@
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
   "firmware/src/main.cpp": "e395f1bddf0b6afad125ab81f7f854b8ae68caf438b33c6f7c612ee6d6304ace",
   "firmware/src/mcu_sleep.h": "e78eff146506c31780c643ed234d38915e4afa40e131b5d5a4f3b2d1e144f0c8",
-  "firmware/src/measure.cpp": "758bac77cef9bf3eb40f9939fd015a81ee623199a1c93b977a4fda536618eba5",
-  "firmware/src/measure.h": "ab6265afbfd74175f905a4755702205d72878561f7b71a03693b0654488b7b49",
+  "firmware/src/measure.cpp": "0715525437464aae438462d54f3c70df1e5cf53b1ef0f4af3819674e312c3ee1",
+  "firmware/src/measure.h": "7a65743efcec25041fd64d9031e6db4e97ecfe8c8fb337c33678bb8c10800747",
   "firmware/src/migration_crypto.cpp": "550133971722d578b72bc4eb279d0c2cd52268002c0a73228a5bf03507a1361d",
   "firmware/src/migration_crypto.h": "c33b7c2734c691adcf234b9d11da81e725b2f91e4dee72f058f1d6b321c99d9a",
   "firmware/src/migration_image.cpp": "c0949e3463ad8c4c8a9bf71eff5451f7a8d2dcc82b28201a3c11257631f1dc76",

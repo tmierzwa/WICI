@@ -931,8 +931,11 @@ bool Bench::channelJammed() const {
 
 void Bench::defer(uint32_t now) {
     // Zajęty kanał (CCA, CAD, ramka w odbiorze): czas bez wolnej przerwy liczy się od pierwszej próby
-    // datagramu, który ją zastał, i trwa przez odrzucenie za odroczenia aż do wolnego kanału.
-    if (!noGap_) { noGap_ = true; noGapSinceMs_ = ccaFirstMs_; }
+    // datagramu, który ją zastał, i trwa przez odrzucenie za odroczenia aż do wolnego kanału. Po przerwie
+    // bez prób dłuższej niż JAM_ALARM_MS (jak przy gaśnięciu alarmu) liczy się od nowa: o kanale w tej
+    // przerwie stacja nic nie wie, a przekaźnik bez ruchu dałby inaczej fałszywy alarm z jednym zajętym
+    // kanałem minuty po zagłuszaniu (próba 17, B: 17 s w zagłuszaniu i 361 s po nim).
+    if (!noGap_ || now - noGapLastMs_ >= JAM_ALARM_MS) { noGap_ = true; noGapSinceMs_ = ccaFirstMs_; }
     noGapLastMs_ = now;
     if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
     if (++txDeferrals_ > maxDeferrals_) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
