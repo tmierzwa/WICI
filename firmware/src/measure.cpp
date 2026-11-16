@@ -936,7 +936,8 @@ void Bench::probeChannel(uint32_t now) {
     platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
     if (!lock.held()) return;   // bez blokady bez sprawdzenia; następna próba w kolejnym obiegu
     probeNextMs_ = now + JAM_PROBE_MS;
-    if (channelBusy(false)) noteBusy(now, now);
+    ++link_.probes;
+    if (channelBusy(false)) { ++link_.probeBusy; noteBusy(now, now); }
     else noGap_ = false;   // wolna przerwa: koniec czasu bez niej
 }
 
@@ -1144,9 +1145,11 @@ void Bench::printLink() {
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
-    // Alarm zagłuszania kanału: czas bez wolnej przerwy teraz i najdłuższy od startu (pomiar progu).
-    Serial.printf("\"no_gap_ms\":%lu,\"no_gap_ms_max\":%lu,\"channel_jammed\":%s,",
-                  static_cast<unsigned long>(noGapMs()), static_cast<unsigned long>(noGapMaxMs_), boolName(channelJammed()));
+    // Alarm zagłuszania kanału: czas bez wolnej przerwy teraz i najdłuższy od startu (pomiar progu); sprawdzenia
+    // kanału bez ruchu u roota (R3-46) i z nich zajęte.
+    Serial.printf("\"no_gap_ms\":%lu,\"no_gap_ms_max\":%lu,\"channel_jammed\":%s,\"probes\":%lu,\"probe_busy\":%lu,",
+                  static_cast<unsigned long>(noGapMs()), static_cast<unsigned long>(noGapMaxMs_), boolName(channelJammed()),
+                  static_cast<unsigned long>(link_.probes), static_cast<unsigned long>(link_.probeBusy));
     if (radio_.framing() == radiolink::Framing::RNODE) {
         const loraframe::Stats& a = loraAssembler_.stats();
         Serial.printf("\"cad_busy\":%lu,\"cad_unconfirmed\":%lu,\"rssi_busy\":%lu,\"rssi_ignored\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"

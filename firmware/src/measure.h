@@ -119,6 +119,8 @@ struct LinkCounters {
     uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji, gdy może zdradzać ramkę
     uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, nieodczytana ramka w układzie albo czas na HACK
     uint32_t rssiIgnored = 0;   // LoRa: datagramy nadane mimo RSSI ponad progiem bez możliwej ukrytej ramki (energia obca)
+    uint32_t probes = 0;        // root: sprawdzenia kanału bez ruchu (Bench::probeChannel, R3-46)
+    uint32_t probeBusy = 0;     // root: z nich zajęty kanał
 };
 
 // HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused

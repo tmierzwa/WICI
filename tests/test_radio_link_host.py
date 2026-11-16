@@ -1843,6 +1843,7 @@ int main() {
     // R3-46: root bez ruchu sprawdza kanał co JAM_PROBE_MS oknem CCA (bez liczników nadania); zajęty kanał
     // przez JAM_ALARM_MS daje alarm, wolne okno go kończy.
     const uint32_t probeRxBusy = bench.link().rxBusy;
+    const uint32_t probesBefore = bench.link().probes, probeBusyBefore = bench.link().probeBusy;
     const uint32_t probeEnd = millis() + measure::JAM_ALARM_MS + 10000;
     radio.mark = radiolink::Activity::Rx;
     while (static_cast<int32_t>(millis() - probeEnd) < 0) {
@@ -1856,6 +1857,8 @@ int main() {
     bench.probeChannel(millis());
     printf("JAMPROBE %d %d %lu %lu\n", probeJammed, bench.channelJammed(), static_cast<unsigned long>(bench.noGapMs()),
            static_cast<unsigned long>(bench.link().rxBusy - probeRxBusy));
+    printf("JAMPROBES %lu %lu\n", static_cast<unsigned long>(bench.link().probes - probesBefore),
+           static_cast<unsigned long>(bench.link().probeBusy - probeBusyBefore));
     printf("JAM %d %d %d %d %d %lu %lu\n", jamAfter30, jammed, maxKept, faded, txDone,
            static_cast<unsigned long>(bench.noGapMs()), static_cast<unsigned long>(bench.link().cadBusy - jamCadBefore));
     settle();
@@ -3054,6 +3057,10 @@ class LoraBenchTests(unittest.TestCase):
         # R3-46: the root checks the channel without traffic; busy for the threshold raises the alarm, a free
         # window ends it, and the periodic check adds nothing to the transmit counters.
         self.assertEqual(line(self.out, "JAMPROBE"), "JAMPROBE 1 0 0 0")
+        # P1 counts the checks and the busy ones: every check while jammed was busy, the last one was free.
+        probes, busy = map(int, line(self.out, "JAMPROBES").split()[1:])
+        self.assertEqual(probes, busy + 1)
+        self.assertGreaterEqual(busy, 300 // 5)  # JAM_ALARM_MS / JAM_PROBE_MS
 
     def test_failed_debt_write_after_free_cad_sends_nothing(self):
         self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")
