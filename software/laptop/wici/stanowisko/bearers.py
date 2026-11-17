@@ -5,9 +5,10 @@ The database thread selects a bearer for each reply: the operator's choice, else
 the bearer of the last fresh authenticated message from that station, else the
 primary. A receive path records its choice in the same durable transaction as
 admission, so unauthenticated or replayed traffic cannot move the reply route
-and a reboot preserves the last verified path. Without an operator choice, a
-reply whose last attempt failed on the chosen bearer tries the other one, and
-WICI-Link that cannot carry a reply falls back to Reticulum at once.
+and a reboot preserves the last verified path. The selected bearer never changes
+by itself: a reply it cannot carry now, or whose delivery failed, waits in the
+queue (wysylka.py) and retries on the same bearer, and only the duty officer
+moves a station to another one (WICI-INV-048).
 """
 
 from dataclasses import dataclass
@@ -28,7 +29,6 @@ class Bearers:
         self.primary = primary
         self.reception = None
         self.address = self.bindings[primary].address
-        self.failed = {}   # dest -> bearer of its last failed delivery; DB thread only
 
     def start(self):
         started = []
@@ -71,17 +71,8 @@ class Bearers:
         chosen = self.reception.last_bearer.get(dest, self.primary)
         if chosen not in self.bindings:
             chosen = self.primary
-        if self.failed.get(dest) == chosen:
-            chosen = next((name for name in self.bindings if name != chosen), chosen)
         message = self._send(chosen, dest, content)
-        if message is None and chosen == "wici" and "reticulum" in self.bindings:
-            chosen, message = "reticulum", self._send("reticulum", dest, content)
         return Delivery(chosen, dest, message) if message is not None else None
 
     def outcome(self, delivery):
-        result = self.bindings[delivery.bearer].outcome(delivery.message)
-        if result is False:
-            self.failed[delivery.dest] = delivery.bearer
-        elif result:
-            self.failed.pop(delivery.dest, None)
-        return result
+        return self.bindings[delivery.bearer].outcome(delivery.message)
