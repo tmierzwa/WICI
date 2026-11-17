@@ -127,7 +127,7 @@
           <h4>WICI-INV-011</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>Opis poziomów 2–3, po pilotażu, przewiduje stronę, na której mieszkaniec podaje miejsce w budynku i opis potrzeby oraz śledzi własne zgłoszenie. Laptop ma przechowywać zgłoszenie mieszkańca, powiązane SA1, skrót tokenu dostępu i czas; bez IP, MAC, numeru telefonu i nazwiska. Kiosk ma pokazywać formularz na laptopie i czyścić go po zgłoszeniu; panel gospodarza ma inny adres lokalny, osobne ciasteczko i ponowne logowanie. Próba strony przewiduje 50 podłączonych telefonów, w tym 15 aktywnych.</dd></div>
-            <div><dt>Źródło i luka</dt><dd><a href="oprogramowanie.md#strona-mieszkańca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="oprogramowanie.md#strona-mieszkańca">Opis</a>, <a href="odbior.md">próba T1/T2</a>, <a href="../../software/laptop/wici/web.py">serwer</a>, <a href="../../software/laptop/wici/ui/index.html">interfejs</a>. Kod udostępnia dziś lokalny panel, bez strony mieszkańca i kiosku. Wymagania ochrony danych mieszkańców pozostają do określenia.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-012">
@@ -394,7 +394,7 @@
         <article class="record" id="wici-inv-049">
           <h4>WICI-INV-049</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/main.cpp">Start WICI-Link</a> wymaga jednego klucza roota w <code>priority_keys</code>; <a href="wici-link.md#klucze-łącza">tag pary</a> i podpis epoki wiążą się z jego kluczami. <a href="stanowisko-osp.md#stacja-stanowiska">Opis Reticulum</a> dopuszcza dowolną stację zapasową, co jest niezgodne z WICI-Link. PRZENIEŚ STACJĘ wymaga działającej stacji źródłowej. Utrata roota odcina więc stanowisko do ponownego przygotowania wszystkich stacji.</dd></div>
+            <div><dt>Stan zastany</dt><dd><a href="../../firmware/src/main.cpp">Start WICI-Link</a> wymaga jednego klucza roota w <code>priority_keys</code>; <a href="wici-link.md#ramka">tag pary</a> i podpis epoki wiążą się z jego kluczami. <a href="stanowisko-osp.md#stacja-stanowiska">Opis Reticulum</a> dopuszcza dowolną stację zapasową, co jest niezgodne z WICI-Link. PRZENIEŚ STACJĘ wymaga działającej stacji źródłowej. Utrata roota odcina więc stanowisko do ponownego przygotowania wszystkich stacji.</dd></div>
             <div><dt>Luka i decyzja</dt><dd><a href="system-wici-siec.html#trasy">Dwa przygotowane rooty</a> o jednym numerze i osobnych kluczach wymagają zmiany formatu konfiguracji, sprawdzania tagu i trwałego wyboru w FRAM. Koszt to jeden wpis planu na stację przy limicie 50 i dwa sprawdzenia tagu u sąsiadów roota; zakres 15 skoków i rozsyłanie się nie zmieniają. Zapasowy klucz prywatny chroni się jak paczkę zapasowej tożsamości odbiorcy: kradzież jest równie groźna jak kradzież klucza głównego. Kopia kluczy roota łamałaby zasadę nieeksportowania klucza prywatnego i pozwalała uruchomić nierozróżnialne rooty; brak zapasu wymagałby objazdu stacji z USB.</dd></div>
             <div><dt>Sprawdzenie</dt><dd>Emulator ma objąć przejęcie w trakcie ruchu i powrót starego roota. Przegląd rozdziału 6 rozstrzygnie, czy dodać te przypadki do prób przy stole.</dd></div>
           </dl>
