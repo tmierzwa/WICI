@@ -1,0 +1,137 @@
+### p16-destroy
+15:45:32 {"usb": 2, "seq": 3, "type": "ok", "re": 1}
+### p16-run0
+START 15:47:45 1794926865.176934
+rc=1 15:48:15 1794926895.567849
+START 15:48:15 1794926895.585703
+{"activated": true, "fingerprint": "1e5e4cfbc3d781e8", "mid": "a353d0aa66e56a9434f6e7fab7a134f9", "package_sha256": "4a5d1b200444d65887e11eb7ae4f1a29bdabd70169fa1d4e42ad25a51f37e495"}
+rc=0 15:48:54 1794926934.983844
+### p16-card-B
+ALL PREP 15:57:11
+P001 numbered {'id': 10, 'net_id': 100, 'fingerprint': '6be9 6288 6f9f d397'}
+KARTA_OK
+### p16-r1
+16:08:52 {"usb": 2, "seq": 3, "type": "ok", "re": 1}
+ALL PREP 16:09:31
+16:09:31 D2FB83 {"migration": "none", "mid": "", "package": ""}
+16:09:32 F11503 {"migration": "none", "mid": "", "package": ""}
+16:09:32 1 receive_key fc45734d5d032c9339d0b1a312d2f8d8 odcisk 9821508de520b4e0
+16:09:32 STOP po kroku 1
+ODLACZ_P002
+### p16-r1-resume
+START 16:11:31 1794928291.554862
+{"activated": true, "fingerprint": "9821508de520b4e0", "mid": "fc45734d5d032c9339d0b1a312d2f8d8", "package_sha256": "4de4f7798f0101aa839b526f8233f205f1dd03cdab73960039946f09d31fc05b"}
+rc=0 16:12:10 1794928330.8508968
+### p16-r2
+16:32:14 {"usb": 2, "seq": 81, "type": "ok", "re": 40}
+ALL PREP 16:36:40
+16:36:40.590 {"silence":true,"switch":true,"until_restart":true}
+"numbers":[7807,5138,9461]
+"in_flight":0 "sent":1 "intents":5 "unsent":3 
+16:37:00 F11503 {"migration": "none", "mid": "", "package": ""}
+16:37:01 D2FB83 {"migration": "none", "mid": "", "package": ""}
+16:37:01 1 receive_key 4f4973c31d99305dd8847594885afd6b odcisk 359764c8d7389e1b
+16:37:01 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+Traceback (most recent call last):
+  File "~/WICI-L0/proby/mig.py", line 24, in <module>
+    pkg=src.read_transfer('export',mid=mid,target_key=k['key']); say('2 export',len(pkg),'B',hashlib.sha256(pkg).hexdigest()[:16])
+  File "~/Work/WICI/implementacja/.claude/worktrees/proby-przy-stole-l0-be3c91/software/laptop/wici/usbproto.py", line 194, in read_transfer
+    begin = self.request("xfer_begin", timeout=60 if op == "export" else TIMEOUT, op=op, **extra)
+  File "~/Work/WICI/implementacja/.claude/worktrees/proby-przy-stole-l0-be3c91/software/laptop/wici/usbproto.py", line 146, in request
+    raise Rejected(reply)
+### p16-r2b
+16:37:43 1 receive_key 4f4973c31d99305dd8847594885afd6b odcisk 359764c8d7389e1b
+16:37:43 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+16:38:31 2 export 270437 B 5e22e2f68eb857d9
+16:38:31 STOP po kroku 2
+ODLACZ_P002
+### p16-r2-resume
+START 16:39:26 1794929966.848004
+{"activated": true, "fingerprint": "359764c8d7389e1b", "mid": "4f4973c31d99305dd8847594885afd6b", "package_sha256": "5e22e2f68eb857d9bc0781794830ac9150130a081679cb3f093fe81da0d37d23"}
+rc=0 16:39:46 1794929986.557537
+### p16-r3
+16:53:44 {"usb": 2, "seq": 55, "type": "ok", "re": 27}
+ALL PREP 16:54:23
+16:54:23 D2FB83 {"migration": "none", "mid": "", "package": ""}
+16:54:23 F11503 {"migration": "none", "mid": "", "package": ""}
+16:54:24 1 receive_key 291f2da398776640d4e9ddda9dbcea2c odcisk 70da69d9485433b7
+16:54:24 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+16:54:49 2 export 270437 B fa6f67c5f034f5e9
+16:54:58 3 import ok
+16:54:58 STOP po kroku 3
+ODLACZ_P002
+### p16-r3-resume
+START 16:55:38 1794930938.143271
+{"activated": true, "fingerprint": "70da69d9485433b7", "mid": "291f2da398776640d4e9ddda9dbcea2c", "package_sha256": null}
+rc=0 16:55:39 1794930939.7193758
+### p16-r4
+16:56:18 {"usb": 2, "seq": 3, "type": "ok", "re": 1}
+ALL PREP 16:56:57
+16:56:57 F11503 {"migration": "none", "mid": "", "package": ""}
+16:56:58 D2FB83 {"migration": "none", "mid": "", "package": ""}
+16:56:58 1 receive_key 8630016bfc8db3d818f77c63c1352c51 odcisk 5d7a0055ea603169
+16:56:58 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+16:58:02 2 export 270437 B 66f074a7a12d6e45
+16:58:11 3 import ok
+16:58:12 4 retire ok
+16:58:12 STOP po kroku 4
+ODLACZ_P002
+### p16-r4-resume
+START 16:58:49 1794931129.951519
+{"activated": true, "fingerprint": "5d7a0055ea603169", "mid": "8630016bfc8db3d818f77c63c1352c51", "package_sha256": null}
+rc=0 16:58:51 1794931131.534625
+### p16-r5
+16:59:47 {"usb": 2, "seq": 5, "type": "ok", "re": 2}
+ALL PREP 17:00:26
+17:00:26 D2FB83 {"migration": "none", "mid": "", "package": ""}
+17:00:26 F11503 {"migration": "none", "mid": "", "package": ""}
+17:00:26 1 receive_key 8fcc5a0aa074c3a770300e7a450d75c8 odcisk 8c575ebeac4bf2ca
+17:00:26 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+17:01:07 2 export 270437 B ed8de3e66bb1d4a3
+17:01:15 3 import ok
+17:01:16 4 retire ok
+17:01:16 STOP po kroku 4
+ODLACZ_P002
+### p16-r5-resume
+START 17:01:45 1794931305.195051
+{"activated": true, "fingerprint": "8c575ebeac4bf2ca", "mid": "8fcc5a0aa074c3a770300e7a450d75c8", "package_sha256": null}
+rc=0 17:01:46 1794931306.776511
+### p16-r6
+17:02:21 {"usb": 2, "seq": 3, "type": "ok", "re": 1}
+ALL PREP 17:03:00
+17:03:00 F11503 {"migration": "none", "mid": "", "package": ""}
+17:03:00 D2FB83 {"migration": "none", "mid": "", "package": ""}
+17:03:00 1 receive_key 207b225f4e5c45c90cf3c7ae688e0ee1 odcisk 369fe272ee2256a3
+17:03:00 2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej
+17:03:12 2 export 270437 B 017ac536b595a201
+17:03:12 STOP po kroku 2
+17:03:13 F11503 {"migration": "export", "mid": "207b225f4e5c45c90cf3c7ae688e0ee1", "package": "42f58a5b9d566eb122f9fbf7e261ddd517867eda3bba28de7506f3947c4f723a"}
+17:03:13 D2FB83 {"migration": "receiving", "mid": "207b225f4e5c45c90cf3c7ae688e0ee1", "package": ""}
+START 17:03:13 1794931393.762667
+{"aborted": true, "mid": "207b225f4e5c45c90cf3c7ae688e0ee1"}
+rc=0 17:03:14 1794931394.7832582
+    raise Rejected(reply)
+wici.usbproto.Rejected: prep_required
+P001 "identity":"d7e2c59f "restarts":1 "prep":false 
+P002 "identity":"6be96288 "restarts":50 "prep":false 
+KONIEC
+### p16-a
+ALL PREP 17:06:57
+P001 card WICI-D7E2C5 d7e2 c59f c33c a8f1
+P002 chain config_seq 9 81
+P001 chain config_seq 1 81
+P001 numbered {'id': 20, 'net_id': 100, 'fingerprint': 'd7e2 c59f c33c a8f1'}
+1 {"replace": {"net_id": 100, "station": 20, "old": {"name": "WICI-374C8F", "fingerprint": "374c 8f5a 60d0 8a32"}, "renumbered_from": null}}
+2 {"name": "WICI-D7E2C5"}
+KONIEC
+### p16-r1-p002-screen
+16:11:30.366 >> SCREEN
+16:11:30.418 {"screen":"alarm","lang":"PL","lines":["-- TRYB SERWISOWY --","BŁĄD PAMIĘCI STACJI","– ZGŁOSZENIE NIE","ZAPISANE.","FORMULARZ. GONIEC, ▼"],"inverted":[true,false,false,false,false],"refreshes":32}
+### p16-r2-p002-screen
+16:39:25.390 {"screen":"alarm","lang":"PL","lines":["-- TRYB SERWISOWY --","BŁĄD PAMIĘCI STACJI","– ZGŁOSZENIE NIE","ZAPISANE.","FORMULARZ. GONIEC, ▼"],"inverted":[true,false,false,false,false],"refreshes":32}
+### p16-r3-p002-screen
+16:55:36.678 {"screen":"alarm","lang":"PL","lines":["-- TRYB SERWISOWY --","BŁĄD PAMIĘCI STACJI","– ZGŁOSZENIE NIE","ZAPISANE.","FORMULARZ. GONIEC, ▼"],"inverted":[true,false,false,false,false
+### p16-r4-p002-screen
+16:58:48.473 {"screen":"alarm","lang":"PL","lines":["-- TRYB SERWISOWY --","BŁĄD PAMIĘCI STACJI","– ZGŁOSZENIE NIE","ZAPISANE.","FORMULARZ. GONIEC, ▼"],"inverted":[true,false,false,false,false
+### p16-r5-p002-screen
+17:01:43.724 {"screen":"alarm","lang":"PL","lines":["-- TRYB SERWISOWY --","BŁĄD PAMIĘCI STACJI","– ZGŁOSZENIE NIE","ZAPISANE.","FORMULARZ. GONIEC, ▼"],"inverted":[true,false,false,false,false

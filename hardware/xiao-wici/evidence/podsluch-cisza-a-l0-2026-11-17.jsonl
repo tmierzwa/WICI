@@ -1,0 +1,2 @@
+{"device": {"begin": 0, "board": "rak4631", "bw_khz": 125, "cr": 5, "crc": true, "cut": 239, "explicit_header": true, "info": "lora-raw-0.2", "mhz": 869.525, "power_dbm": -9, "preamble": 24, "ready": true, "reset": 0, "rx_stream": true, "sf": 7, "sync_word": 18, "t_us": 80324048923, "tcxo_v": 3.3, "tx_count": 0}, "host_ts": 1794908700.444898, "tool": "monitor"}
+{"host_ts": 1794909000.553261, "summary": {"airtime_by_l_src_s": {}, "airtime_s": {}, "airtime_total_s": 0.0, "duration_s": 300.148, "frames": {}, "occupancy_pct": 0.0}}

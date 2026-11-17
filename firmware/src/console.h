@@ -52,11 +52,15 @@ public:
     bool node() override { return actions_.node(); }
     // Awaria układu radiowego (radio_awaria) i stosu sieciowego (brak_lacznosci), podawane przez main.cpp
     // przy każdym obiegu: alarm do potwierdzenia OK; po ustąpieniu przyczyny następna awaria alarmuje od nowa.
-    void setRadioFault(bool fault) { radio_.set(fault); }
+    // jammed: przyczyną jest zagłuszanie kanału (Bench::channelJammed), ten sam alarm co układ radiowy.
+    void setRadioFault(bool fault, bool jammed = false) { radio_.set(fault); radioJammed_ = fault && jammed; }
     void setStackFault(bool fault) { stack_.set(fault); }
+    // Przeniesienie stacji w toku (usb-protocol.md, „Przeniesienie stacji”): magazyn celowo zamknięty do
+    // końca albo wycofania przeniesienia, więc to nie awaria pamięci (bez blad_pamieci i bez alarmu).
+    void setMigrationFrozen(bool frozen) { migrationFrozen_ = frozen; }
     // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia albo stosu, magazyn niedziałający albo
     // alarm zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
-    bool alarmCause() const { return radio_.active || stack_.active || !store_.ok() || station_.alarmCause(); }
+    bool alarmCause() const { return radio_.active || stack_.active || (!store_.ok() && !migrationFrozen_) || station_.alarmCause(); }
 
 private:
     static_assert(ui::ADDRESS_CHOICES == config::ADDRESSES, "lista obiektów ekranu i konfiguracji");
@@ -87,7 +91,9 @@ private:
     };
     Fault* fault(ui::AlarmKind kind);
     Fault radio_;
+    bool radioJammed_ = false;
     Fault memory_;   // magazyn wraca dopiero po restarcie, więc potwierdzenie trwa do niego
+    bool migrationFrozen_ = false;
     Fault stack_;    // stos startuje tylko przy włączeniu, więc też do restartu
     size_t count_ = 0;
     Entry list_[MAX_ITEMS];

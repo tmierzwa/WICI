@@ -3,4 +3,8 @@
 // osobny segment danych `wici_noinit`; środowisko przenosi go do nowej instancji przy restarcie, nie przy
 // włączeniu zasilania (vboard.cpp, vb::noinit).
 #pragma once
+#if defined(__APPLE__)
+#define RTC_NOINIT_ATTR __attribute__((section("__DATA,wici_noinit"), used))
+#else
 #define RTC_NOINIT_ATTR __attribute__((section("wici_noinit"), used))
+#endif

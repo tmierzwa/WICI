@@ -424,3 +424,58 @@ class MigrationHostTest(unittest.TestCase):
     def test_abort_after_import_restores_source(self):
         self.check_source_restored("import")   # the target asks for OK before erasing an import
 
+
+
+@unittest.skipUnless(PROGRAM.is_file(), "simulator program not built (software/simulator/build.py --native)")
+class DamagedBarrierTest(unittest.TestCase):
+    """FRAM with a test pattern everywhere (the L0 diagnostic program): the barrier is damaged, the store does not
+    start and the panel is the only way out. ZNISZCZ DANE from the buttons erases FRAM including the barrier and
+    restarts the station (oprogramowanie.md, "Pamięć FRAM": damage blocks until ZNISZCZ DANE)."""
+
+    def test_destroy_from_panel(self):
+        with tempfile.TemporaryDirectory() as base:
+            board = Board(base, 5)
+            board.power_on()
+            board.advance(3_000_000)
+            board.power_off()
+            fram = board.dir / "fram"
+            size = len(fram.read_bytes())
+            x, pattern = 0x2545F491, bytearray(size)
+            for i in range(size):   # xorshift32, as the host harness
+                x ^= (x << 13) & 0xFFFFFFFF
+                x ^= x >> 17
+                x ^= (x << 5) & 0xFFFFFFFF
+                pattern[i] = x & 0xFF
+            fram.write_bytes(pattern)
+            board.power_on()
+            board.advance(60_000_000)   # blad_pamieci: no store
+
+            def screen():
+                return json.loads(board.cmd("screen"))["lines"]
+
+            def acknowledge():
+                for _ in range(3):
+                    if screen()[0] not in ("BŁĄD PAMIĘCI STACJI", "BRAK ŁĄCZNOŚCI –"):
+                        return
+                    board.press("OK")
+                self.fail(f"alarm not acknowledged by OK: {screen()}")
+
+            self.assertEqual(screen()[0], "BŁĄD PAMIĘCI STACJI")
+            acknowledge()
+            self.assertEqual(screen()[0], "POLSKI")
+            board.press("OK")
+            board.advance(60_000_000)   # brak_lacznosci comes after the language screen
+            acknowledge()
+            for key in ["OK"] + ["DOWN"] * 3 + ["OK"] + ["DOWN"] * 25 + ["OK"]:
+                board.press(key)   # menu, STAN, last line USŁUGI
+            self.assertEqual(screen()[:2], ["WYCISZ DŹWIĘK", "ZNISZCZ DANE"])
+            for key in ["DOWN", "OK", "UP", "DOWN", "UP", "OK"]:
+                board.press(key)
+            generation = board.generation
+            board.advance(5_000_000)   # restart after ZNISZCZ DANE
+            self.assertGreater(board.generation, generation)
+            image = board.fram()
+            self.assertTrue(all(b == 0 for b in image[-512:]), "barrier erased")
+            board.advance(20_000_000)
+            self.assertNotEqual(screen()[0], "BŁĄD PAMIĘCI STACJI")
+            board.power_off()

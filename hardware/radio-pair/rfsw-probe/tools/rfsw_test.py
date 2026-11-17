@@ -88,14 +88,21 @@ def grid_mismatches(events):
 
 
 def open_serial(path):
-    """Avoid DTR/RTS reset pulses by setting both before opening native USB (as pair_test)."""
+    """Open native USB without a reset pulse (as pair_test.open_serial).
+
+    The ESP32-S3 USB-Serial-JTAG resets the chip when RTS is high and DTR low.
+    On macOS and Linux the port opens with both lines high, and pyserial then sets
+    DTR before RTS, so asking for both low passes through exactly that state
+    (seen on macOS: rst:0x15 USB_UART_CHIP_RESET on every open). Keeping both
+    high never does; on Windows the lines follow these settings from the start.
+    """
     import serial
     port = serial.Serial()
     port.port = path
     port.baudrate = 115200
     port.timeout = .1
     port.write_timeout = 2
-    port.dtr = port.rts = False
+    port.dtr = port.rts = True
     port.open()
     return port
 

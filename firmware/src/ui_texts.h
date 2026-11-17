@@ -16,6 +16,7 @@ constexpr size_t MAX_COLUMNS = 20;  // wiersz ekranu
 enum class Id : uint8_t {
     RADIO_WLACZONE,
     RADIO_AWARIA,
+    KANAL_ZAGLUSZONY,
     BRAK_LACZNOSCI,
     JEZYK_PL,
     JEZYK_UK,
@@ -98,6 +99,7 @@ enum class Id : uint8_t {
 constexpr const char* const TEXTS[static_cast<size_t>(Id::COUNT)][LANGS] = {
     {"RADIO WŁĄCZONE", "РАДІО УВІМКНЕНО", "RADIO ON"},
     {"RADIO: AWARIA", "РАДІО: НЕСПРАВНЕ", "RADIO: FAULT"},
+    {"KANAŁ: ZAGŁUSZONY", "КАНАЛ: ЗАГЛУШЕНО", "CHANNEL: JAMMED"},
     {"BRAK ŁĄCZNOŚCI", "НЕМАЄ ЗВ'ЯЗКУ", "NO COMMUNICATION"},
     {"POLSKI", "POLSKI", "POLSKI"},
     {"УКРАЇНСЬКА", "УКРАЇНСЬКА", "УКРАЇНСЬКА"},
@@ -219,7 +221,7 @@ constexpr const char* const LABELS[static_cast<size_t>(Label::COUNT)][LANGS] = {
     {"ZAMKNIJ ZDARZENIE", "ЗАКРИТИ ПОДІЮ", "CLOSE EVENT"},
     {"ZNISZCZ DANE", "ЗНИЩИТИ ДАНІ", "DESTROY DATA"},
     {"ZMIEŃ LICZBĘ OSÓB", "КІЛЬКІСТЬ ЛЮДЕЙ", "CHANGE PEOPLE COUNT"},
-    {"ZMIEŃ PILNOŚĆ", "ЗМІНИТИ ТЕРМІНОВІСТЬ", "CHANGE URGENCY"},
+    {"ZMIEŃ PILNOŚĆ", "ЗМІНА ТЕРМІНОВОСТІ", "CHANGE URGENCY"},
     {"POTRZEBA USTAŁA", "ПОТРЕБА ЗНИКЛА", "NEED RESOLVED"},
     {"ANULUJ WYSYŁKĘ", "СКАСУВАТИ ВІДПРАВКУ", "CANCEL SENDING"},
     {"INNA LICZBA", "ІНША КІЛЬКІСТЬ", "OTHER NUMBER"},
@@ -249,14 +251,14 @@ constexpr const char* const MENU[MENU_ITEMS][LANGS] = {
 // Etykiety kategorii 0-9.
 constexpr const char* const CATEGORIES[10][LANGS] = {
     {"POMOC MEDYCZNA", "МЕДИЧНА ДОПОМОГА", "MEDICAL HELP"},
-    {"LEKI I SPRZĘT MED.", "ЛІКИ, МЕДОБЛАДНАННЯ", "MEDICINES, EQUIPMENT"},
-    {"EWAKUACJA, TRANSPORT", "ЕВАКУАЦІЯ, ТРАНСПОРТ", "EVACUATION/TRANSPORT"},
+    {"LEKI I SPRZĘT MED.", "ЛІКИ, МЕДОБЛАДНАННЯ", "MEDICINE, EQUIPMENT"},
+    {"EWAKUACJA/TRANSPORT", "ЕВАКУАЦІЯ/ТРАНСПОРТ", "EVACUATE/TRANSPORT"},
     {"WODA PITNA", "ПИТНА ВОДА", "DRINKING WATER"},
     {"ŻYWNOŚĆ", "ХАРЧУВАННЯ", "FOOD"},
     {"OGRZEWANIE, ENERGIA", "ОПАЛЕННЯ, ЕНЕРГІЯ", "HEATING, POWER"},
     {"SANITARNE, HIGIENA", "САНІТАРІЯ, ГІГІЄНА", "SANITATION, HYGIENE"},
     {"ZAGROŻENIE BUDYNKU", "ЗАГРОЗА БУДІВЛІ", "BUILDING HAZARD"},
-    {"POSZUKIWANIE, INFO", "ПОШУК ЛЮДЕЙ, ІНФО", "MISSING PEOPLE, INFO"},
+    {"POSZUKIWANIE, INFO", "ПОШУК ЛЮДЕЙ, ІНФО", "MISSING PEOPLE/INFO"},
     {"INNE", "ІНШЕ", "OTHER"},
 };
 

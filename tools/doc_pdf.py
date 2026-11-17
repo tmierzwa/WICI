@@ -4,10 +4,14 @@
 Usage: python3 tools/doc_pdf.py <document.md> <output.pdf> [--chrome PATH]
 Relative links become links to the file on GitHub (main), so the PDF works on its own.
 Needs the Python package "markdown" and Chrome or Chromium (--chrome or $CHROME).
+A PDF written to output/pdf/ is recorded in output/pdf/zrodla.json with the SHA-256 of its source and of
+the PDF itself; tools/verify_repository.py rejects a PDF whose source changed after printing.
 """
 
 from pathlib import Path
 import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -18,6 +22,7 @@ import tempfile
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
+RECORD = ROOT / "output/pdf/zrodla.json"
 GITHUB = "https://github.com/tmierzwa/WICI/blob/main/"
 CHROMES = ["chromium", "chromium-browser", "google-chrome", "chrome",
            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
@@ -64,6 +69,19 @@ def chrome(explicit: str | None) -> str:
     sys.exit("Chrome or Chromium not found: pass --chrome PATH or set CHROME")
 
 
+def sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def record(source: Path, output: Path) -> None:
+    """Store which source, in which version, the PDF in output/pdf/ was printed from."""
+    entries = json.loads(RECORD.read_text(encoding="utf-8")) if RECORD.is_file() else {}
+    entries[output.name] = {"source": source.resolve().relative_to(ROOT).as_posix(),
+                            "source_sha256": sha256(source), "pdf_sha256": sha256(output)}
+    RECORD.write_text(json.dumps(dict(sorted(entries.items())), ensure_ascii=False, indent=2) + "\n",
+                      encoding="utf-8")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("source", type=Path)
@@ -76,6 +94,8 @@ def main() -> None:
         subprocess.run([chrome(args.chrome), "--headless", "--no-sandbox", "--disable-gpu",
                         "--no-pdf-header-footer", f"--print-to-pdf={args.output.resolve()}", page.as_uri()],
                        check=True, capture_output=True)
+    if args.output.resolve().parent == RECORD.parent:
+        record(args.source, args.output)
     print(f"{args.output}: {args.output.stat().st_size} B")
 
 

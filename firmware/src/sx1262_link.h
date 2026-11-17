@@ -146,6 +146,12 @@ public:
     const rxwatch::TaskSignals& taskSignals() const { return signals_; }
     uint32_t rxRingOverflow() const override { return ring_.overflow(); }
     void discardRx() override;  // pętla (konsument pierścienia): ramki starego trybu odbioru przepadają
+    // Lekkie uśpienie (platform::sleep, pod blokadą radia). rxPending: ramka odebrana przez zadanie czeka
+    // w pierścieniu na pętlę, więc bez uśpienia. resumed: w uśpieniu nie było próbek, a DIO1 budzi MCU tuż po
+    // RxDone, więc wybudzenie jest chwilą ostatniej próbki: HeaderValid zastany przy RxDone to nagłówek tej
+    // ramki (następny nagłówek przychodzi najwcześniej po preambule i nagłówku), a nie rx_late.
+    bool rxPending() const { return ring_.size() != 0; }
+    void resumed(uint32_t nowMs) { lastSampleMs_ = nowMs; }
 
     const char* stateName() override { return modeName(radio_.status().mode()); }
     void idle() override;

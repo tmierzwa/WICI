@@ -61,6 +61,20 @@ constexpr uint32_t BACKOFF_MIN_MS = 100;      // odroczenie losowe 100..1000 ms
 constexpr uint32_t BACKOFF_MAX_MS = 1000;
 constexpr uint32_t LONG_DEFERRAL_MS = 1000;   // odroczenie łączne powyżej 1 s liczy się jako długie
 constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybór stanowiska, tx_drop)
+// Kandydaci do pomiaru przy zagłuszaniu (wici-link.md, rozdział 6 specyfikacji), przełączani poleceniem CHANNEL
+// w RAM, domyślnie wyłączeni: dłuższe odroczenia przed porzuceniem datagramu (około 2 min zamiast 16 s)
+// i ponowny CAD przed HACK aż do ostatniej chwili startu.
+constexpr uint8_t MAX_DEFERRALS_LONG = 220;
+constexpr uint8_t HACK_CAD_RETRIES = 40;   // ponowne CAD przed HACK: limit, gdyby CAD nie zajmował czasu
+// Alarm zagłuszania kanału (R3-43, druga przyczyna radio_awaria): datagram do nadania przez tyle nie znalazł
+// wolnej przerwy (okno CCA, CAD). Parametr profilu, ustalony pomiarem 2026-11-16 (P1 no_gap_ms_max): zwykły
+// ruch najwyżej 1 ms, zagłuszanie 70% 15 s, 90% bez przerwy; 5 min zostawia zapas na własny ruch dużej sieci. Gaśnie przy pierwszej wolnej przerwie albo po
+// tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale); po takiej przerwie
+// czas liczy się od nowa.
+constexpr uint32_t JAM_ALARM_MS = 5 * 60 * 1000;
+// Root sprawdza kanał co tyle także bez datagramu do nadania (R3-46, parametr profilu): okno CCA 50 ms
+// z tymi samymi progami co przed nadaniem (Bench::probeChannel). Stacje na ogniwach tego nie robią.
+constexpr uint32_t JAM_PROBE_MS = 5000;
 // Pętla czeka na blokadę operacji radia najwyżej tyle (zadanie odbioru trzyma ją ≤5 ms, ekran ≤5 ms).
 constexpr uint32_t RADIO_LOCK_WAIT_MS = 500;
 constexpr uint32_t EMC_PERIOD_MAX_S = 3600;
@@ -105,6 +119,8 @@ struct LinkCounters {
     uint32_t rssiBusy = 0;      // LoRa: RSSI ponad progiem CCA w oknie albo przy decyzji, gdy może zdradzać ramkę
     uint32_t rxBusy = 0;        // LoRa: preambuła, nagłówek albo ramka w oknie, nieodczytana ramka w układzie albo czas na HACK
     uint32_t rssiIgnored = 0;   // LoRa: datagramy nadane mimo RSSI ponad progiem bez możliwej ukrytej ramki (energia obca)
+    uint32_t probes = 0;        // root: sprawdzenia kanału bez ruchu (Bench::probeChannel, R3-46)
+    uint32_t probeBusy = 0;     // root: z nich zajęty kanał
 };
 
 // HACK path (Bench::linkSendHack) for the D21 200 ms trial: HACKs sent, refused at the deadline, refused
@@ -125,6 +141,7 @@ struct HackStats {
     uint32_t lastMs = 0;
     uint32_t maxMs = 0;
     uint32_t sumMs = 0;
+    uint32_t cadRetried = 0;  // HACK nadane po zajętym CAD dzięki ponownemu CAD (CHANNEL, pomiar)
 };
 
 enum class RxMode : uint8_t { NONE, TEST, LINK };
@@ -175,6 +192,7 @@ public:
     void printLink();
     void printHack(const char* tail = nullptr);   // HACK: HackStats as JSON; tail: further ",\"pole\":…" fields
     void resetHackStats() { hack_ = HackStats(); }
+    const HackStats& hackStats() const { return hack_; }
     const LinkCounters& link() const { return link_; }
     // Ramkowanie łącza układu (RNODE: LoRa); stos bierze z niego czas łącza (p1iface::LinkTiming).
     radiolink::Framing linkFraming() const { return radio_.framing(); }
@@ -213,10 +231,33 @@ public:
     bool confirm();      // czeka na przycisk OK do CONFIRM_MS (seria TXCW/TXPKT w toku zostaje przerwana)
     uint32_t debtRemainingMs() const;
     bool busy() const { return cwActive_ || pktActive_ || txState_ != TxState::IDLE; }
+    // Czas bez wolnej przerwy do nadania: od pierwszego zajętego kanału do ostatniego, bez wolnego pomiędzy
+    // (także przez kolejne datagramy po odrzuceniu za odroczenia); 0, gdy ostatnia próba znalazła wolny kanał.
+    uint32_t noGapMs() const { return noGap_ ? noGapLastMs_ - noGapSinceMs_ : 0; }
+    uint32_t noGapMaxMs() const { return noGapMaxMs_; }   // najdłuższy od startu (pomiar progu)
+    bool channelJammed() const;                           // alarm zagłuszania kanału (JAM_ALARM_MS)
+    // Root (R3-46): co JAM_PROBE_MS, gdy nic nie nadaje, okno CCA 50 ms jak przed nadaniem; zajęty kanał
+    // liczy się do czasu bez wolnej przerwy, wolny go kończy. Bez CAD: ten wymaga wyjścia z odbioru.
+    // Wołać w każdym obiegu pętli; tylko LoRa w odbiorze łącza.
+    void probeChannel(uint32_t now);
+    // Ustawienie pomiarowe (polecenie CHANNEL, tylko RAM, po restarcie domyślne): ponowny CAD przed HACK
+    // do ostatniej chwili startu i limit odroczeń MAX_DEFERRALS_LONG zamiast MAX_DEFERRALS.
+    void setChannelTrial(bool hackCadRetry, bool longDeferrals) {
+        hackCadRetry_ = hackCadRetry;
+        maxDeferrals_ = longDeferrals ? MAX_DEFERRALS_LONG : MAX_DEFERRALS;
+    }
+    bool hackCadRetry() const { return hackCadRetry_; }
+    uint8_t maxDeferrals() const { return maxDeferrals_; }
     // Układ nadaje albo mierzy kanał przed nadaniem; datagram czekający na dług lub odstęp (układ w
     // odbiorze) nie wstrzymuje kontroli radia, inaczej pod stałym ruchem nie byłoby jej wcale.
     bool transmitting() const { return cwActive_ || pktActive_ || txState_ == TxState::CCA || txState_ == TxState::SEND; }
     bool receiving() const { return rxMode_ != RxMode::NONE; }
+    // Pętla czuwania (standby.h): jak długo łącze może czekać bez MCU [ms]. Bez zadania 0xFFFFFFFF; datagram
+    // czekający na dług albo odroczenie: do końca czekania; okno CCA, nadawanie, nośna, seria i EMC: 0.
+    uint32_t sleepableMs() const;
+    // Po lekkim uśpieniu: zadanie odbioru nie zbierało znaczników aktywności kanału, więc okno CCA LoRa liczy
+    // się od wybudzenia, jak od początku odbioru.
+    void resumed(uint32_t nowMs);
     // Odbiór łącza stosu uzbrojony (rxArmed bez stanu stosu, plan interfejsu LoRa, L6): łącze w odbiorze na
     // skonfigurowanym układzie, poza trybem przygotowania i EMC. IDLE, RESET, REGW (stop), TXCW, TXPKT, RX
     // wzorcowy i EMC zmieniają tryb odbioru, więc odbiór przestaje być uzbrojony.
@@ -235,7 +276,8 @@ private:
     void receiveLora();
     void datagramLine(const char* head, int headLength, const uint8_t* data, size_t length);
     bool enterRx(RxMode mode, uint8_t length);
-    bool channelBusy();
+    bool channelBusy(bool count = true);   // count = false: sprawdzenie okresowe bez liczników nadania
+    void noteBusy(uint32_t now, uint32_t since);   // zajęty kanał do czasu bez wolnej przerwy
     void startCca(uint32_t now, bool first);
     void defer(uint32_t now);
     void pollLinkTx();
@@ -284,7 +326,7 @@ private:
     uint8_t rxLen_ = 0;
     uint32_t rxPollMs_ = 0;
     uint32_t autoRxMs_ = 0;      // ostatnia próba samoczynnego powrotu do odbioru łącza
-    uint32_t rxSinceMs_ = 0;     // początek odbioru łącza (okno CCA LoRa nie krótsze niż odbiór)
+    uint32_t rxSinceMs_ = 0;     // początek odbioru łącza albo wybudzenie (okno CCA LoRa nie krótsze niż obserwacja)
     uint32_t seriesDebtMs_ = 0;  // dług serii TXCW/TXPKT do odliczenia od jej końca
     Counters counters_;
 
@@ -318,6 +360,12 @@ private:
     uint32_t hackHoldUntilMs_ = 0;
     bool hackHold_ = false;
     uint8_t txDeferrals_ = 0;
+    bool hackCadRetry_ = false;
+    uint8_t maxDeferrals_ = MAX_DEFERRALS;
+    // Alarm zagłuszania kanału (noGapMs): pierwszy i ostatni zajęty kanał bez wolnego pomiędzy.
+    bool noGap_ = false;
+    uint32_t noGapSinceMs_ = 0, noGapLastMs_ = 0, noGapMaxMs_ = 0;
+    uint32_t probeNextMs_ = 0;   // następne sprawdzenie kanału bez ruchu (root)
 
     uint32_t debtUntilMs_ = 0;
     mutable bool debtActive_ = false;   // dług jeszcze nieodczekany; gaszony w debtRemainingMs() (main.cpp co obieg)

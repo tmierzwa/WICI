@@ -100,15 +100,19 @@ Id peopleForm(uint32_t n, Lang lang) {
     return Id::OSOBY_5;
 }
 
-// Wiersz 1 ekranu głównego: przy awarii radia radio_awaria, przy awarii samego stosu brak_lacznosci.
+// Awaria radia: układ (radio_awaria) albo zagłuszanie kanału (kanal_zagluszony), ten sam alarm.
+Id radioFaultText(bool jammed) { return jammed ? Id::KANAL_ZAGLUSZONY : Id::RADIO_AWARIA; }
+
+// Wiersz 1 ekranu głównego: przy awarii radia radio_awaria albo kanal_zagluszony, przy awarii samego stosu
+// brak_lacznosci.
 Id linkLine(const Status& s) {
-    return !s.radioOk ? Id::RADIO_AWARIA : !s.stackOk ? Id::BRAK_LACZNOSCI : Id::RADIO_WLACZONE;
+    return !s.radioOk ? radioFaultText(s.channelJammed) : !s.stackOk ? Id::BRAK_LACZNOSCI : Id::RADIO_WLACZONE;
 }
 
 // Tekst ekranu alarmu awarii stacji; COUNT: alarm zgłoszenia.
-Id faultText(AlarmKind kind) {
-    switch (kind) {
-        case AlarmKind::RADIO_FAULT: return Id::RADIO_AWARIA;
+Id faultText(const AlarmInfo& alarm) {
+    switch (alarm.kind) {
+        case AlarmKind::RADIO_FAULT: return radioFaultText(alarm.jammed);
         case AlarmKind::MEMORY_FAULT: return Id::BLAD_PAMIECI;
         case AlarmKind::STACK_FAULT: return Id::BRAK_LACZNOSCI_ALARM;
         default: return Id::COUNT;
@@ -120,16 +124,19 @@ void formatShort(char* out, size_t size, uint16_t number) { snprintf(out, size, 
 
 }  // namespace
 
-// Wiersze tekstu do przewijania: łamane teksty i pojedyncze wiersze.
+// Wiersze tekstu do przewijania: łamane teksty i pojedyncze wiersze. cols = COLS - 1 w drugim przebiegu
+// renderScreen (tekst dłuższy niż okno): ostatnia kolumna zostaje na strzałki, więc dłuższy wiersz też się łamie.
 struct Model::Text {
     char line[TEXT_MAX_LINES][LINE_BYTES];
     size_t count = 0;
+    size_t cols = COLS;
     void add(const char* text) {
         if (count >= TEXT_MAX_LINES) return;
-        count += wrap(text, line + count, TEXT_MAX_LINES - count);
+        count += wrap(text, line + count, TEXT_MAX_LINES - count, cols);
     }
     void addLine(const char* text) {
-        if (count < TEXT_MAX_LINES) copyLine(line[count++], LINE_BYTES, text);
+        if (utf8Chars(text) > cols) add(text);
+        else if (count < TEXT_MAX_LINES) copyLine(line[count++], LINE_BYTES, text);
     }
     void addNumber(Id id, const char* key, uint32_t value, Lang lang) {
         char tmp[320];
@@ -194,6 +201,19 @@ void copyLine(char* out, size_t size, const char* text) {
     out[bytes] = '\0';
 }
 
+// Strzałka przewijania w ostatniej kolumnie wiersza: treść ucięta do COLS - 1 znaków i dopełniona spacjami.
+constexpr const char* ARROW_UP = "\u25B2";    // ▲
+constexpr const char* ARROW_DOWN = "\u25BC";  // ▼
+void arrow(char* line, const char* glyph) {
+    size_t bytes = utf8Bytes(line, COLS - 1);
+    size_t chars = utf8Chars(line);
+    if (chars > COLS - 1) chars = COLS - 1;
+    for (; chars < COLS - 1; ++chars) line[bytes++] = ' ';
+    const size_t n = strlen(glyph);
+    memcpy(line + bytes, glyph, n);
+    line[bytes + n] = '\0';
+}
+
 void substitute(const char* text, const char* key, const char* value, char* out, size_t size) {
     const char* at = strstr(text, key);
     if (!at) {
@@ -218,13 +238,13 @@ void voltage(uint16_t millivolts, Lang lang, char* out, size_t size) {
     snprintf(out, size, "%u%c%u", tenths / 10, ui_texts::DECIMAL[static_cast<size_t>(lang)], tenths % 10);
 }
 
-size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
+size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines, size_t cols) {
     size_t lines = 0;
     const char* p = text;
     while (*p && lines < maxLines) {
         while (*p == ' ') ++p;
         if (!*p) break;
-        // Najdłuższy przedrostek do COLS znaków kończący się przed spacją albo na końcu tekstu.
+        // Najdłuższy przedrostek do cols znaków kończący się przed spacją albo na końcu tekstu.
         size_t bestBytes = 0;
         size_t chars = 0;
         size_t bytes = 0;
@@ -232,12 +252,12 @@ size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines) {
         while (p[bytes]) {
             if (p[bytes] == ' ') bestBytes = bytes;
             const size_t width = utf8Bytes(p + bytes, 1);
-            if (chars == COLS) { fits = false; break; }
+            if (chars == cols) { fits = false; break; }
             bytes += width;
             ++chars;
         }
         if (fits) bestBytes = bytes;  // reszta tekstu mieści się w wierszu
-        if (bestBytes == 0) bestBytes = utf8Bytes(p, COLS);  // słowo dłuższe niż wiersz: podział twardy
+        if (bestBytes == 0) bestBytes = utf8Bytes(p, cols);  // słowo dłuższe niż wiersz: podział twardy
         memcpy(out[lines], p, bestBytes);
         out[lines][bestBytes] = '\0';
         ++lines;
@@ -265,11 +285,13 @@ uint8_t Model::menuIndex(ui_texts::Menu item) const {
 
 size_t Model::services(Service out[]) const {
     // Węzeł OSP nie ma adresu LXMF, karty OSP ani zgłoszeń: bez OGŁOŚ ADRES, KLUCZ ZAPASOWY i ZAMKNIJ ZDARZENIE.
+    // Stacja bez magazynu (attachAlarms) też ich nie ma: zostaje ZNISZCZ DANE, jedyna naprawa.
+    const bool station = host_ && !node();
     size_t n = 0;
-    if (!node()) out[n++] = Service::ANNOUNCE;
+    if (station) out[n++] = Service::ANNOUNCE;
     out[n++] = Service::MUTE;
-    if (!node()) out[n++] = Service::BACKUP;
-    if (!node()) out[n++] = Service::CLOSE;
+    if (station) out[n++] = Service::BACKUP;
+    if (station) out[n++] = Service::CLOSE;
     out[n++] = Service::DESTROY;
     return n;
 }
@@ -649,9 +671,8 @@ void Model::act(Button button, uint32_t nowMs) {
             if (back) go(Screen::SERVICES);
             else if (button == SEQUENCE[sequence_]) {
                 if (++sequence_ == 4) {
-                    const bool done = host_ && (screen_ == Screen::BACKUP ? host_->switchBackup()
-                                                : screen_ == Screen::CLOSE ? host_->closeEvent()
-                                                                           : host_->destroy());
+                    const bool done = screen_ == Screen::DESTROY ? alarms_ && alarms_->destroy()
+                                      : host_ && (screen_ == Screen::BACKUP ? host_->switchBackup() : host_->closeEvent());
                     if (done) {
                         if (screen_ == Screen::CLOSE) { resetDraft(); messagesCursor_ = 0; }   // zgłoszenia znikły
                         go(screen_ == Screen::BACKUP ? Screen::STATUS : Screen::MAIN);
@@ -992,7 +1013,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
         duration(s.contactS, lang_, value, sizeof(value));
         substitute(text(s.contactKnown ? Id::OSTATNI_KONTAKT : Id::OSTATNI_KONTAKT_PONAD, lang_), "[czas]", value, tmp, sizeof(tmp));
         char lines[4][LINE_BYTES];
-        const size_t wrapped = wrap(tmp, lines, 4);
+        const size_t wrapped = wrap(tmp, lines, 4, COLS - 1);   // STAN jest zawsze dłuższy niż okno: strzałki
         for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
     if (s.mains12) {
@@ -1012,7 +1033,7 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     const char* const prepLines[] = {entries, change};
     for (const char* line : prepLines) {
         char lines[3][LINE_BYTES];
-        const size_t wrapped = line[0] ? wrap(line, lines, 3) : 0;
+        const size_t wrapped = line[0] ? wrap(line, lines, 3, COLS - 1) : 0;
         for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
     put(s.version);
@@ -1038,19 +1059,23 @@ void Model::renderList(const char* const* items, size_t count, size_t window, Li
         copyLine(out.text[first + i], LINE_BYTES, index < count ? items[index] : "");
         out.inverted[first + i] = mark && index == cursor_;
     }
+    if (window && top > 0) arrow(out.text[first], ARROW_UP);
+    if (window && top + window < count) arrow(out.text[first + window - 1], ARROW_DOWN);
 }
 
 void Model::renderText(Text& text, size_t window, Lines& out, size_t first) {
+    if (text.cols == COLS && text.count > window) textOverflow_ = true;   // render() łamie go jeszcze raz
     const char* items[TEXT_MAX_LINES];
     for (size_t i = 0; i < text.count; ++i) items[i] = text.line[i];
-    const bool continued = (screen_ == Screen::SUMMARY || screen_ == Screen::ITEM) && text.count > window;
-    renderList(items, text.count, continued ? window - 1 : window, out, first, false);
-    if (continued) {
-        const bool more = top_ + window - 1 < text.count;
-        const char* next[] = {"DÓŁ: DALSZA TREŚĆ", "ВНИЗ: ДАЛІ", "DOWN: MORE TEXT"};
-        const char* previous[] = {"GÓRA: WCZEŚNIEJ", "ВГОРУ: НАЗАД", "UP: PREVIOUS TEXT"};
-        copyLine(out.text[first + window - 1], LINE_BYTES, (more ? next : previous)[static_cast<size_t>(lang_)]);
-    }
+    renderList(items, text.count, window, out, first, false);
+}
+
+bool Model::resultItem(Item& item) const {
+    if (!host_ || !resultNumber_) return false;
+    const size_t count = host_->itemCount();
+    for (size_t i = 0; i < count; ++i)   // najnowsze najpierw: zwykle pierwsza pozycja
+        if (host_->item(i, item, true) && item.own && item.number == resultNumber_) return true;
+    return false;
 }
 
 bool Model::openItem(Item& item) {
@@ -1160,7 +1185,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     char lines[LINES][LINE_BYTES];
     renderMain(status, lines, LINES);
     if (status.silence) t.addLine(lines[0]);
-    if (!status.radioOk) t.addLine(text(Id::RADIO_AWARIA, lang_));  // wpis alarmu do usunięcia przyczyny
+    if (!status.radioOk) t.addLine(text(radioFaultText(status.channelJammed), lang_));  // wpis alarmu do usunięcia przyczyny
     if (!status.stackOk) t.addLine(text(Id::BRAK_LACZNOSCI, lang_));
     if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
     if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
@@ -1269,10 +1294,23 @@ void Model::render(const Status& s, Lines& out) {
         out.inverted[first++] = true;
     }
     const size_t window = LINES - first;
-    const size_t L = static_cast<size_t>(lang_);
     lastStatus_ = s;
+    // Tekst dłuższy niż okno: drugi przebieg z wierszami COLS - 1 (strzałki w ostatniej kolumnie), od tego
+    // samego przewinięcia, bo pierwszy przebieg docina je do krótszego tekstu.
+    const uint16_t top = top_;
+    textOverflow_ = false;
+    renderScreen(s, out, first, window, COLS);
+    if (!textOverflow_) return;
+    for (size_t i = first; i < LINES; ++i) { out.text[i][0] = '\0'; out.inverted[i] = false; }
+    top_ = top;
+    renderScreen(s, out, first, window, COLS - 1);
+}
+
+void Model::renderScreen(const Status& s, Lines& out, size_t first, size_t window, size_t cols) {
+    const size_t L = static_cast<size_t>(lang_);
     char tmp[320];
     Text t;
+    t.cols = cols;
     switch (screen_) {
         case Screen::LANGUAGE:
         case Screen::LANGUAGE_MENU:
@@ -1379,10 +1417,18 @@ void Model::render(const Status& s, Lines& out) {
             break;
         case Screen::RESULT:
             switch (result_) {
-                case Submit::STORED:
-                    t.add(text(resultSilence_ ? Id::ZAPISANE_W_CISZY : Id::ZAPISANE_W_STACJI, lang_));
+                case Submit::STORED: {
+                    // Bieżący etap wysłanego zgłoszenia, jak w WIADOMOŚCIACH (próby przy stole 2026-11-14:
+                    // stały napis „czeka na wysłanie” stał po przyjęciu i decyzji). Bez wpisu (anulowany,
+                    // zamknięte zdarzenie) zostaje wynik zapisu.
+                    Item item;
+                    if (resultItem(item)) {
+                        stageText(item, s, tmp, sizeof(tmp));
+                        t.add(tmp);
+                    } else t.add(text(resultSilence_ ? Id::ZAPISANE_W_CISZY : Id::ZAPISANE_W_STACJI, lang_));
                     t.addShort(Id::ZAPISZ_NUMER, resultNumber_, lang_);
                     break;
+                }
                 case Submit::NO_ADDRESS: t.add(text(Id::ADRES_BRAK, lang_)); break;
                 case Submit::FULL: t.add(text(Id::KOLEJKA_PELNA, lang_)); break;
                 case Submit::ERROR: t.add(text(Id::BLAD_PAMIECI, lang_)); break;
@@ -1487,8 +1533,8 @@ void Model::render(const Status& s, Lines& out) {
             renderText(t, window, out, first);
             break;
         case Screen::ALARM:
-            if (faultText(alarm_.kind) != Id::COUNT) {
-                t.add(text(faultText(alarm_.kind), lang_));
+            if (faultText(alarm_) != Id::COUNT) {
+                t.add(text(faultText(alarm_), lang_));
                 renderText(t, window, out, first);
                 break;
             }

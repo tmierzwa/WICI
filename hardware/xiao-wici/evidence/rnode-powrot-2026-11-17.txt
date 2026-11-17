@@ -1,0 +1,46 @@
+Powrót obu RAK4631 z lora-raw do firmware RNode, 2026-11-17 (po próbach przy stole).
+Wgranie: dwa razy RESET na RAK19007 (bootloader; dotknięcie 1200 b/s tylko restartuje lora-raw), potem
+  adafruit-nrfutil dfu serial --package ~/.config/rnodeconf/update/1.86/rnode_firmware_rak4631.zip -p PORT -b 115200
+EEPROM i podpis zostały z 2026-11-02, bez ponownego zapisu.
+
+== /dev/cu.usbmodem21301
+Opening serial port /dev/cu.usbmodem21301...
+Device connected
+Current firmware version: 1.86
+Reading EEPROM...
+EEPROM checksum correct
+Device signature validated
+
+Device info:
+	Product            : RAK4631 779 - 928 MHz (10:12:51)
+	Device signature   : Validated - Local signature
+	Firmware version   : 1.86
+	Hardware revision  : 1
+	Serial number      : 00:00:00:06
+	Modem chip         : SX1262
+	Frequency range    : 779.0 MHz - 928.0 MHz
+	Max TX power       : 22 dBm
+	Manufactured       : 2026-11-02 14:09:24
+	Device mode        : Normal (host-controlled)
+
+
+== /dev/cu.usbmodem214201
+Opening serial port /dev/cu.usbmodem214201...
+Device connected
+Current firmware version: 1.86
+Reading EEPROM...
+EEPROM checksum correct
+Device signature validated
+
+Device info:
+	Product            : RAK4631 779 - 928 MHz (10:12:51)
+	Device signature   : Validated - Local signature
+	Firmware version   : 1.86
+	Hardware revision  : 1
+	Serial number      : 00:00:00:07
+	Modem chip         : SX1262
+	Frequency range    : 779.0 MHz - 928.0 MHz
+	Max TX power       : 22 dBm
+	Manufactured       : 2026-11-02 14:14:45
+	Device mode        : Normal (host-controlled)
+

@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / "firmware" / "tools"))
 import ui_texts  # noqa: E402
 
 SOURCES = ("testframe.cpp", "annunciator.cpp", "journal.cpp", "p1frame.cpp", "ui.cpp", "font.cpp", "jsonlite.cpp", "sa1.cpp",
-           "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp")
+           "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp",
+           "migration_state.cpp")
 
 HARNESS = r"""
 #include <cstdio>
@@ -47,6 +48,7 @@ HARNESS = r"""
 #include "fram_ram.h"
 #include "hexstr.h"
 #include "journal.h"
+#include "migration_state.h"
 #include "p1frame.h"
 #include "sa1.h"
 #include "sha2.h"
@@ -837,6 +839,8 @@ int world() {
         } else if (!strcmp(cmd, "ackalarm")) {
             station::Alarm al;
             if (w.app->alarm(al)) w.app->ackAlarm(al);
+        } else if (!strcmp(cmd, "parent")) {
+            printf("wake %d\n", w.app->parentHeard(atoi(arg) != 0));
         } else if (!strcmp(cmd, "retry")) {
             sscanf(arg, "%u %u %u %u", &a, &b, &c, &d);
             printf("retry %u\n", station::Station::retryDelayS(static_cast<uint16_t>(a), b != 0, c, d));
@@ -885,6 +889,24 @@ int world() {
             uint8_t saved[2] = {};
             w.ram.read(at, saved, sizeof(saved));
             printf("destroykeep %d %02x%02x %d\n", ok, saved[0], saved[1], w.store->identitySaved());
+        } else if (!strcmp(cmd, "garbage")) {
+            // Cała FRAM ze wzorem testowym (program diagnostyczny L0): bariera przeniesienia uszkodzona, więc jak
+            // w main.cpp dziennik jest tylko odczytany, a Store::begin nie jest wołane. Potem ZNISZCZ DANE
+            // (BenchHost::destroy) i restart: bariera pusta, dziennik i magazyn startują.
+            uint32_t x = 0x2545F491u;
+            for (uint8_t& b : w.ram.bytes) { x ^= x << 13; x ^= x >> 17; x ^= x << 5; b = static_cast<uint8_t>(x); }
+            migration_state::Barrier before(w.ram);
+            const bool barrierBefore = before.begin();
+            w.stop();
+            w.journal = new journal::Journal(w.ram);
+            const bool read = w.journal->begin();
+            w.store = new store::Store(w.ram, *w.journal, storeRandom, "p1");
+            const bool ok = w.store->destroy();
+            migration_state::Barrier after(w.ram);
+            const bool barrierAfter = after.begin();
+            const store::Begin result = w.start();
+            printf("garbage %d %d %d %d %d %s %d\n", barrierBefore, read, ok, barrierAfter, after.permitsTransmit(),
+                   store::beginName(result), w.journal->formatState() == journal::FormatState::READY);
         } else if (!strcmp(cmd, "ident")) {
             const bool ok = w.store->setIdentitySaved();
             printf("ident %d %d\n", ok, w.store->identitySaved());
@@ -967,8 +989,12 @@ int world() {
         } else if (sscanf(line, "T %u", &a) == 1) w.model.tick(a);
         else if (sscanf(line, "P %u", &a) == 1) status.prep = a;
         else if (sscanf(line, "Q %u", &a) == 1) { status.silence = a; w.services.forced = a; }
-        else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
+        else if (sscanf(line, "O %u", &a) == 1) { status.radioOk = a; status.channelJammed = false; w.con->setRadioFault(!a); }   // jak main.cpp: jedno źródło
+        else if (sscanf(line, "J %u", &a) == 1) {   // zagłuszanie kanału: druga przyczyna awarii radia (main.cpp)
+            status.radioOk = !a; status.channelJammed = a; w.con->setRadioFault(a, a);
+        }
         else if (sscanf(line, "W %u", &a) == 1) { status.stackOk = a; w.con->setStackFault(!a); }   // stos sieciowy działa
+        else if (sscanf(line, "MF %u", &a) == 1) w.con->setMigrationFrozen(a);   // przeniesienie w toku (main.cpp)
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
         else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
@@ -1831,6 +1857,23 @@ class HostUnitTests(unittest.TestCase):
                          ["destroykeep 1 57a5 0", "destroykeep 1 57a5 0"])
         self.assertIn("ident=0", self.find(out, "diag ")[0])
 
+    def test_destroy_repairs_fram_with_test_pattern(self):
+        # FRAM po programie diagnostycznym L0 (wzór testowy w całej pamięci): bariera przeniesienia uszkodzona,
+        # magazyn nie startuje, ekran ma tylko alarmy (main.cpp). ZNISZCZ DANE z panelu jest jedyną naprawą
+        # (oprogramowanie.md, „Pamięć FRAM”): USŁUGI bez pozycji wymagających magazynu, sekwencja GÓRA, DÓŁ,
+        # GÓRA, OK woła destroy, a po nim bariera jest pusta, dziennik ma format READY i magazyn startuje.
+        labels = ui_texts.load()["labels"]
+        to_services = ["K OK 0"] + ["K DOWN 0"] * 3 + ["K OK 0"] + ["K DOWN 0"] * 20 + ["K OK 0", "R"]
+        out = self.world(["garbage", "alarms", "L 0"] + to_services +
+                         ["K DOWN 0", "K OK 0", "R", "K UP 0", "K DOWN 0", "K UP 0", "K OK 0", "R", "diag"])
+        # bariera przed: uszkodzona; dziennik odczytany; kasowanie; bariera po: pusta i bez przeniesienia; magazyn
+        self.assertEqual(self.find(out, "garbage "), ["garbage 0 1 1 1 1 ok 1"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["services", "destroy", "main"])
+        self.assertEqual(self.lines(s[0]), [labels["WYCISZ_DZWIEK"][0], labels["ZNISZCZ_DANE"][0], "", "", ""])
+        self.assertIn("destroyed 1", out)
+        self.assertIn("ok=1", self.find(out, "diag ")[0])
+
     def test_store_event_ring_close_maintain_and_destroy(self):
         out = self.world([
             "sevents 300", "ev 44", "ev 45", "ev 300", "diag", "restart", "ev 45", "ev 300", "diag",
@@ -2022,6 +2065,29 @@ class HostUnitTests(unittest.TestCase):
                          '["WICI",1,"%s","%s",%s]' % (SELF, MAIN_SA1, compact(self.request(x))))
         self.assertEqual(self.find(out, "stats e")[0], "stats e sent=3 delivered=2 failed=1 received=0 rejected=0 skipped=0 bulletins=0 "
                                                       "full=0 evicted=0")
+
+    def test_parent_contact_wakes_waiting_messages(self):
+        # Próby przy stole 2026-11-14: po ciszy przekaźnika zgłoszenia czekały do 15 min, choć droga działała.
+        # Kontakt z rodzicem przyspiesza jedną wiadomość po nieudanych próbach: BEACON najwyżej raz na 5 min
+        # i z rozrzutem do 120 s, HACK zawsze i do 10 s; wiadomość z krótkim odstępem zostaje bez zmiany.
+        x, y = self.rid(2101), self.rid(2102)
+        out = self.world([self.CONFIG, "now 100", self.sub(self.request(x)), "now 101", self.sub(self.request(y)),
+                          "poll", "rcpt 1 0", "rcpt 2 0", "parent 0",
+                          "now 200", "poll", "rcpt 3 0", "rcpt 4 0",
+                          "now 400", "poll", "rcpt 5 0", "rcpt 6 0", "reg a",
+                          "parent 0", "reg b", "parent 0", "parent 1", "reg c", "parent 1",
+                          "now 701", "parent 0",
+                          # Obie przyspieszone próby bez HACK: HACK nie przyspiesza, aż przyspieszy BEACON.
+                          "poll", "rcpt 7 0", "rcpt 8 0", "parent 1", "now 1010", "parent 0", "parent 1",
+                          # BEACON przyspiesza tylko stację bez HACK rodzica od 5 min.
+                          "now 1200", "poll", "rcpt 9 0", "rcpt 10 0", "parent 1", "now 1320", "parent 0", "now 1501", "parent 0"])
+        wakes = self.find(out, "wake ")
+        self.assertEqual(wakes, ["wake 0", "wake 1", "wake 0", "wake 1", "wake 0", "wake 0", "wake 0", "wake 1", "wake 1",
+                                 "wake 0", "wake 0", "wake 1"])
+        a, b, c = (self.regs(out, label) for label in "abc")
+        self.assertTrue(all(a[i]["att"] == 3 and a[i]["next"] > 400 + 120 for i in (x, y)), a)
+        self.assertTrue(400 <= b[x]["next"] <= 400 + 120 and b[y]["next"] == a[y]["next"], b)  # najstarsza pierwsza
+        self.assertTrue(400 <= c[y]["next"] <= 400 + 10, c)
 
     def test_station_queue_order_in_flight_and_silence(self):
         ids = [self.rid(n) for n in (11, 12, 13, 14)]
@@ -2692,14 +2758,18 @@ class HostUnitTests(unittest.TestCase):
 
     @staticmethod
     def screens(out):
-        """Split harness output into (screen name, language, [(inverted, text)]) tuples."""
+        """Split harness output into (screen name, language, [(inverted, text)], [arrow]) tuples. A scroll arrow
+        in the last column (ui.cpp, arrow) goes to `arrow` ("▲", "▼" or ""), the text keeps the rest of the row."""
         result = []
         i = 0
         while i < len(out):
             if out[i].startswith("screen "):
                 _, name, lang = out[i].split()
-                lines = [(row[0] == "1", row[2:]) for row in out[i + 1:i + 6]]
-                result.append((name, int(lang), lines))
+                rows = [row[2:] for row in out[i + 1:i + 6]]
+                arrows = [row[-1] if row[-1:] in ("▲", "▼") else "" for row in rows]
+                lines = [(row[0] == "1", text[:-1].rstrip() if arrow else text)
+                         for row, text, arrow in zip(out[i + 1:i + 6], rows, arrows)]
+                result.append((name, int(lang), lines, arrows))
                 i += 6
             else:
                 i += 1
@@ -2761,7 +2831,7 @@ class HostUnitTests(unittest.TestCase):
 
         def status_lines(prep):
             seen = []
-            for name, _, rows in self.screens(self.ui([prep] + open_status)):
+            for name, _, rows, _ in self.screens(self.ui([prep] + open_status)):
                 if name == "status":
                     for _, text in rows:
                         if text not in seen:
@@ -2786,7 +2856,7 @@ class HostUnitTests(unittest.TestCase):
         out = self.ui(["PP 1 3 1 7200 1 beef", "L 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] +
                       ["K DOWN 0"] * downs + ["K OK 0", "R"] + ["K DOWN 0", "R"] * 8)
         handover = []
-        for name, _, rows in self.screens(out):
+        for name, _, rows, _ in self.screens(out):
             if name == "handover":
                 for _, text in rows:
                     if text not in handover:
@@ -2820,6 +2890,12 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual(status_end[-4:], ["bench-a-test", "WICI-000000", labels["PRZEKAZANIE_ZMIANY"][0], labels["USLUGI"][0]])
         self.assertTrue(texts_prep.endswith(status_end[0]))
         self.assertEqual([inv for inv, _ in screens[4][2]], [False, False, False, False, True])
+        # Strzałki przewijania: menu mieści się w oknie (bez strzałek); STAN na początku ▼ na dole, w środku ▲ i ▼,
+        # na końcu ▲ na górze. Wiersze STAN mają najwyżej 19 znaków, bo ostatnia kolumna należy do strzałek.
+        self.assertEqual(screens[0][3], [""] * 5)
+        self.assertEqual([screens[i][3] for i in (2, 3, 4)],
+                         [["", "", "", "", "▼"], ["▲", "", "", "", "▼"], ["▲", "", "", "", ""]])
+        self.assertTrue(all(len(t) <= 19 for i in (2, 3, 4) for _, t in screens[i][2]))
         self.assertEqual([inv for inv, _ in screens[5][2]], [False, False, False, True, False])  # kursor wraca na STAN
         self.assertEqual([t for _, t in screens[6][2]][:3], ["POLSKI", "УКРАЇНСЬКА", "ENGLISH"])
         self.assertEqual(screens[7][1], 2)  # wybrano ENGLISH, powrót do menu
@@ -3096,7 +3172,12 @@ class HostUnitTests(unittest.TestCase):
         screens = self.screens(self.ui(script))
         self.assertIn("OK = WYŚLIJ", self.shown(screens[0]))
         self.assertIn("= POPRAW", self.shown(screens[0]))
-        self.assertIn("DÓŁ: DALSZA TREŚĆ", self.lines(screens[0]))
+        # Tekst dłuższy niż ekran: ▼ w ostatniej kolumnie dolnego wiersza zamiast wiersza „DÓŁ: DALSZA TREŚĆ”,
+        # po przewinięciu do końca ▲ w górnym; wiersze łamane na 19 znaków.
+        self.assertEqual(screens[0][3], ["", "", "", "", "▼"])
+        self.assertEqual(screens[-1][3][0], "▲")
+        self.assertEqual(screens[-1][3][4], "")
+        self.assertTrue(all(len(t) <= 19 for screen in screens for _, t in screen[2]))
         visible = " ".join(self.shown(screen) for screen in screens)
         self.assertIn("osoba na wózku", visible)
         self.assertIn("GODZIN", visible)
@@ -3117,7 +3198,7 @@ class HostUnitTests(unittest.TestCase):
         s = self.screens(out)
         summary, result, item, menu, silent, sending, sending_menu = s
         self.assertEqual(self.lines(summary)[:4], ["OK = WYŚLIJ, WSTECZ", "= POPRAW", data["categories"][2][0], "5 PILNE – KILKA"])
-        self.assertEqual(self.lines(summary)[4], "DÓŁ: DALSZA TREŚĆ")
+        self.assertEqual((self.lines(summary)[4], summary[3][4]), ("GODZIN", "▼"))
         self.assertEqual(self.shown(result), texts["zapisane_w_stacji"][0] + " " + texts["zapisz_numer"][0].replace("[xxxx]", number))
         self.assertTrue(self.shown(item).startswith(texts["zapisane_w_stacji"][0]), item)
         # Przed `nadane`: ANULUJ WYSYŁKĘ dostępne.
@@ -3138,6 +3219,24 @@ class HostUnitTests(unittest.TestCase):
         b = self.regs(out, "b")[x]
         self.assertEqual((b["rmax"], b["stage"], b["dec"], b["closed"]), (1, 0, 6, 0))
         self.assertIn(f"log request {number} revision 1", out)
+
+    def test_result_screen_follows_stage(self):
+        # Próby przy stole 2026-11-14: ekran wyniku stał na „czeka na wysłanie” po przyjęciu i decyzji.
+        # Teraz pokazuje bieżący etap zgłoszenia, jak WIADOMOŚCI: cisza, wysyłanie, stan z decyzji.
+        texts = ui_texts.load()["texts"]
+        wizard = self.HOSTED + ["now 100", "K OK 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K DOWN 0", "K OK 0",
+                                "K DOWN 0", "K DOWN 0", "K OK 0", "K DOWN 0", "K OK 0", "K OK 0", "R"]
+        reg = list(self.regs(self.ui(wizard + ["reg a"]), "a").values())[0]
+        number, x = reg["num"], reg["id"]
+        out = self.ui(wizard + ["Q 1", "R", "Q 0", "poll", "R", "in " + compact([1, 2, x, 0, 10, 2]), "R"])
+        saved, silent, sending, decided = self.screens(out)
+        tail = " " + texts["zapisz_numer"][0].replace("[xxxx]", number)[:20]   # dalej pod ▼
+        self.assertEqual([x[0] for x in (saved, silent, sending, decided)], ["result"] * 4)
+        self.assertTrue(self.shown(saved).startswith(texts["zapisane_w_stacji"][0] + tail), self.shown(saved))
+        self.assertTrue(self.shown(silent).startswith(texts["zapisane_w_ciszy"][0] + tail), self.shown(silent))
+        step = texts["wysylanie"][0].replace("[n]", "1").replace("[m]", "1")
+        self.assertTrue(self.shown(sending).startswith(step + tail), self.shown(sending))
+        self.assertTrue(self.shown(decided).startswith(texts["stan_2"][0] + tail), self.shown(decided))   # STATUS: odebrane
 
     def test_cancel_removes_item_and_test_screen_states(self):
         texts = ui_texts.load()["texts"]
@@ -3219,7 +3318,39 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual([x[0] for x in s], ["alarm", "alarm", "main", "main"])
         self.assertEqual(self.shown(s[0]), texts["radio_awaria"][0])
         self.assertTrue(self.shown(s[1]).startswith(texts["blad_pamieci"][0][:20]))
+        # Alarm mieści się w 5 wierszach po 20 znaków (po 19 byłoby 6): zostaje przy 20, bez strzałek.
+        self.assertEqual((s[1][3], self.shown(s[1])), ([""] * 5, texts["blad_pamieci"][0]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_frozen_migration_is_not_a_memory_fault(self):
+        # usb-protocol.md, „Przeniesienie stacji”: po restarcie w toku przeniesienia magazyn jest celowo zamknięty;
+        # ekran pokazuje tryb_przygotowania bez alarmu blad_pamieci (próba 16: odłączenie USB w każdym kroku).
+        # Ten sam magazyn bez przeniesienia daje alarm (wyżej, test awarii radia), a po przeniesieniu wraca.
+        texts = ui_texts.load()["texts"]
+        out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "MF 1", "alarms", "L 0", "O 1", "P 1",
+                       "cause", "T 1000", "R", "T 2000", "R", "MF 0", "cause", "T 3000", "R"])
+        self.assertIn("ok=0", self.find(out, "diag ")[0])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["main", "main", "alarm"])
+        self.assertEqual(self.lines(s[0])[0].strip(), texts["tryb_przygotowania"][0])
+        self.assertNotIn(texts["blad_pamieci"][0][:20], " ".join(self.lines(s[0]) + self.lines(s[1])))
+        self.assertIn(texts["blad_pamieci"][0][:20], self.shown(s[2]))
+        self.assertEqual(self.find(out, "cause "), ["cause 0", "cause 1"])
+
+    def test_jammed_channel_is_the_radio_fault_alarm(self):
+        # R3-43: zagłuszanie kanału to druga przyczyna alarmu awarii radia, z tym samym ekranem alarmu do OK,
+        # przyczyną (dioda) do wolnego kanału i wpisem w PRZEKAZANIU ZMIANY; tekst kanal_zagluszony.
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", self.CONFIG, "L 0", "J 1", "cause", "T 1000", "R", "K OK 1000", "T 2000", "R",
+                       "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] + ["K DOWN 2500"] * 15 +
+                      ["K OK 2600", "R", "J 0", "cause"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "handover"])
+        self.assertEqual(self.shown(s[0]), texts["kanal_zagluszony"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["kanal_zagluszony"][0])
+        self.assertIn(texts["kanal_zagluszony"][0], self.lines(s[2]))
+        self.assertNotIn(texts["radio_awaria"][0], self.lines(s[2]))
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
 
     def test_stack_fault_alarm(self):
         # oprogramowanie.md: brak_lacznosci (stos sieciowy nie działa) jak radio_awaria: ekran alarmu do OK

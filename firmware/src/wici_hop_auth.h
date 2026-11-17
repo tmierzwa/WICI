@@ -10,6 +10,12 @@
 
 namespace wici_hop_auth {
 
+// Unicast frames to this station dropped by open(): a sender without a key
+// in priority_keys and a pairwise tag that does not match (HACK command).
+struct Stats {
+    uint32_t noKey = 0, tagBad = 0;
+};
+
 class Auth {
 public:
     // K_hop per neighbor: HKDF-SHA-256 over the X25519 secret with salt
@@ -22,6 +28,8 @@ public:
     size_t seal(const uint8_t* bare, size_t length, uint8_t* out, size_t capacity) const;
     bool open(const uint8_t* radio, size_t length, uint8_t* bare,
               size_t capacity, size_t& bareLength) const;
+    const Stats& stats() const { return stats_; }
+    void resetStats() { stats_ = Stats(); }
 
 private:
     const uint8_t* key(uint16_t peer) const;
@@ -30,6 +38,7 @@ private:
     uint16_t ids_[config::PRIORITY_KEYS_MAX] = {};
     uint8_t keys_[config::PRIORITY_KEYS_MAX][32] = {};
     uint8_t count_ = 0;
+    mutable Stats stats_;
 };
 
 }  // namespace wici_hop_auth

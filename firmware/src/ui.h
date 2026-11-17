@@ -62,6 +62,7 @@ struct Status {
     bool prep = false;
     bool silence = false;
     bool radioOk = false;
+    bool channelJammed = false;  // przy !radioOk: przyczyną jest zagłuszanie kanału (kanal_zagluszony), nie układ
     bool stackOk = true;         // false: brak_lacznosci (stos sieciowy stacji nie działa)
     bool storeOk = true;         // false: blad_pamieci w PRZEKAZANIU ZMIANY
     bool contactKnown = false;   // false: dolne oszacowanie "PONAD [czas]" (bez RTC)
@@ -147,23 +148,27 @@ struct TestInfo {
     uint32_t minutes = 0;    // SCHEDULED: do nadania
     uint8_t confirmed = 0;   // CONFIRMED: stan 1-6 (1: odebrany bez decyzji)
 };
-// Awarie stacji (bez wpisu rejestru): RADIO_FAULT: radio_awaria, układ radiowy nie działa; MEMORY_FAULT:
+// Awarie stacji (bez wpisu rejestru): RADIO_FAULT: radio_awaria, układ radiowy nie działa, albo
+// kanal_zagluszony (druga przyczyna, ten sam alarm: AlarmInfo::jammed); MEMORY_FAULT:
 // blad_pamieci, magazyn nie wystartował albo zatrzymał się po błędzie zapisu FRAM; STACK_FAULT:
 // brak_lacznosci, stos sieciowy stacji nie działa.
 enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
+    bool jammed = false;     // RADIO_FAULT z powodu zagłuszania kanału
     uint32_t ref = 0;        // wpis rejestru (jak Item::ref)
     uint16_t number = 0;
     uint32_t minutes = 0;
     bool ageKnown = true;
 };
 
-// Alarmy ekranu. Stacja bez magazynu podłącza tylko je (awaria radia, oprogramowanie.md, „Alarmy”).
+// Alarmy ekranu i ZNISZCZ DANE. Stacja bez magazynu podłącza tylko je: awarie (oprogramowanie.md, „Alarmy”)
+// i jedyną naprawę uszkodzonego magazynu albo bariery przeniesienia (oprogramowanie.md, „Pamięć FRAM”).
 struct Alarms {
     virtual ~Alarms() = default;
     virtual bool alarm(AlarmInfo& out) = 0;
     virtual void ackAlarm(const AlarmInfo& alarm) = 0;
+    virtual bool destroy() = 0;   // ZNISZCZ DANE: magazyn, dziennik, tożsamość; potem restart
 };
 
 // Dane i działania stacji dla ekranu.
@@ -188,7 +193,6 @@ struct Host : Alarms {
     virtual void cancelTest() = 0;
     virtual void pauseTest(bool paused) = 0;
     virtual bool switchBackup() = 0;
-    virtual bool destroy() = 0;
     virtual bool closeEvent() { return false; }   // ZAMKNIJ ZDARZENIE z menu: jak potwierdzone `close`
     virtual bool announce() { return false; }   // OGŁOŚ ADRES: zlecenie ogłoszenia; false = stos nie działa
     virtual bool node() { return false; }       // konfiguracja węzła stanowiska
@@ -197,7 +201,7 @@ struct Host : Alarms {
 class Model {
 public:
     void attach(Host* host) { host_ = host; alarms_ = host; }
-    // Bez magazynu: tylko alarmy, ekran bez kreatora i wiadomości.
+    // Bez magazynu: alarmy i w USŁUGACH tylko WYCISZ DŹWIĘK i ZNISZCZ DANE; bez kreatora i wiadomości.
     void attachAlarms(Alarms* alarms) { alarms_ = alarms; }
     // Po włączeniu: ekran wyboru języka (lang to tylko położenie kursora).
     void start(Lang lang);
@@ -238,8 +242,12 @@ private:
     void act(Button button, uint32_t nowMs);
     void moveCursor(int delta, size_t count, size_t window);
     void renderMain(const Status& status, char out[][LINE_BYTES], size_t count) const;
+    // Lista dłuższa niż okno: ▲ w ostatniej kolumnie górnego wiersza, gdy coś jest wyżej, ▼ w dolnym, gdy niżej.
     void renderList(const char* const* items, size_t count, size_t window, Lines& out, size_t first, bool mark);
+    // Tekst dłuższy niż okno łamie się na COLS - 1 znaków (drugi przebieg renderScreen), żeby strzałki nie
+    // zasłaniały treści; tekst, który się mieści, zostaje przy COLS.
     void renderText(Text& text, size_t window, Lines& out, size_t first);
+    void renderScreen(const Status& status, Lines& out, size_t first, size_t window, size_t cols);
     // Fraza po polsku (z SA1) w wybranym języku: lista fraz stacji, potem frazy domyślne, inaczej bez zmian.
     const char* shownPhrase(const char* polish) const;
     int8_t phraseIndex(const char* polish) const;   // indeks na liście fraz stacji albo PHRASE_*
@@ -253,6 +261,7 @@ private:
     // Wiersze wejść w tryb przygotowania: licznik z czasem, ostatnia zmiana (pusta bez wejść).
     void prepText(const Status& status, char* entries, char* change, size_t size) const;
     void stageText(const Item& item, const Status& status, char* out, size_t size) const;
+    bool resultItem(Item& item) const;  // wpis wysłanego zgłoszenia z ekranu wyniku
     bool openItem(Item& item);  // otwarta pozycja po numerze rekordu (lista mogła się przesunąć)
     size_t phraseListCount() const;   // brak (poza kategorią 9), frazy, WŁASNY TEKST
     void textAct(bool up, bool down, bool ok, bool back);
@@ -272,6 +281,7 @@ private:
     uint16_t cursor_ = 0;
     uint16_t top_ = 0;
     uint16_t lastCount_ = 0;      // liczba wierszy ostatnio pokazanej listy albo tekstu
+    bool textOverflow_ = false;   // renderText: tekst łamany na COLS nie zmieścił się w oknie
     uint8_t item_ = 0;            // pozycja menu, z której wybrano ekran
     uint32_t lastPressMs_ = 0;
     bool changed_ = false;
@@ -317,8 +327,8 @@ private:
 };
 
 // Pomocnicze (sprawdzane osobno).
-// Łamanie tekstu na wiersze po najwyżej COLS znaków, na spacjach; zwraca liczbę wierszy.
-size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines);
+// Łamanie tekstu na wiersze po najwyżej `cols` znaków, na spacjach; zwraca liczbę wierszy.
+size_t wrap(const char* text, char out[][LINE_BYTES], size_t maxLines, size_t cols = COLS);
 // [czas]: minuty do 99 MIN, potem godziny (H), od 48 H doby (D, do 99 D), jednostki języka.
 void duration(uint32_t seconds, Lang lang, char* out, size_t size);
 // Napięcie z jednym miejscem po przecinku (kropka w EN).

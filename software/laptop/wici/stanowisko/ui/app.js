@@ -2,7 +2,7 @@
 // Panel dyżurnego stanowiska odbiorczego (wici/stanowisko/panel.py). Bez bibliotek; treść tylko przez textContent.
 "use strict";
 
-var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA, TRANSPORT", "WODA PITNA", "ŻYWNOŚĆ",
+var CATEGORIES = ["POMOC MEDYCZNA", "LEKI I SPRZĘT MED.", "EWAKUACJA/TRANSPORT", "WODA PITNA", "ŻYWNOŚĆ",
   "OGRZEWANIE, ENERGIA", "SANITARNE, HIGIENA", "ZAGROŻENIE BUDYNKU", "POSZUKIWANIE, INFO", "INNE"];
 var URGENCY = ["zwykła", "pilna", "NATYCHMIAST"];
 var URGENCY_PILL = ["", "pill-warn", "pill-alarm pill-solid"];
@@ -177,6 +177,9 @@ function render() {
   }
   if (state.sound === false) $("badges").appendChild(pill("DŹWIĘK ALARMU WYŁĄCZONY", "pill-warn"));
   if (state.node.info && state.node.info.silence) badge("CISZA NA WĘŹLE", false);
+  // Alarm awarii radia węzła i jego druga przyczyna, zagłuszanie kanału (R3-44): zgłoszenia mogą nie dochodzić.
+  if (state.node.info && !state.node.info.radio_ok) badge("AWARIA RADIA WĘZŁA", false);
+  else if (state.node.info && state.node.info.channel_jammed) badge("KANAŁ ZAGŁUSZONY PRZY WĘŹLE", false);
   if (state.silence) badge("CISZA RADIOWA (" + state.silence.organ + ", " + state.silence.kiedy + ")", false);
   if (state.envelopes && state.envelopes.active) badge("ODRZUCONE KOPERTY (" + rejectedCount(state.envelopes) + ")", false);
   if (alarms().length) {
@@ -482,8 +485,9 @@ var VIEWS = {
       facts([["Połączenie z węzłem", n.online ? "tak" : "NIE", n.online ? "good" : "bad"], ["Od ostatniego pakietu z radia", ago(n.since_rx)],
         ["Przełącznik CISZA węzła", !n.diagnostics ? "nieznany (brak portu diagnostycznego)" : !info ? "czekam na odczyt" : info.silence ? "WŁĄCZONY" : "wyłączony",
           info && info.silence ? "bad" : ""],
-        ["Radio węzła", info ? (info.radio_ok ? "sprawne" : "AWARIA") + (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
-          info ? (info.radio_ok ? "good" : "bad") : ""],
+        ["Radio węzła", info ? (!info.radio_ok ? "AWARIA" : info.channel_jammed ? "sprawne, KANAŁ ZAGŁUSZONY (brak wolnej przerwy do nadania)" : "sprawne") +
+          (info.tx_wait_s ? ", nadawanie wstrzymane jeszcze " + ago(info.tx_wait_s) : "") : "—",
+          info ? (info.radio_ok && !info.channel_jammed ? "good" : "bad") : ""],
         ["Wiadomości w drodze", n.in_flight], ["Wiadomości czekające na wysłanie", n.waiting],
         ["Wstrzymane: stacja poza listą zaufanych", n.held],
         ["W tym przekazane przez przekaźnik, bez potwierdzenia stacji", n.forwarded], ["Najdłużej czekająca", ago(n.oldest_s)]]),

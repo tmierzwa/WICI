@@ -24,7 +24,8 @@ N1_POSITIONS = ROOT / "hardware/dev-bench/fabrication/N1/assembly/positions.csv"
 LAYOUT_JSON = HERE / "render/uklad.json"
 
 # --- CONCEPT: hardware/r02/obudowa.md, sections "Obudowa", "Okno ekranu", "Układ panelu" ---
-# Millimetres from the outer top-left corner of the lid; x to the right, y down.
+# Millimetres from the outer top-left corner of the front, seen from the front; x to the right, y down.
+# Hammond names: the front is the bottom of the "Box", the back with the battery door is the "Lid".
 ENCLOSURE = {
     "model": "Hammond 1599KBAT",
     "outer": (220.0, 140.0, 40.0),
@@ -40,8 +41,12 @@ DISPLAY = {
     "window": (61.5, 38.0),
     "window_center": (52.0, 42.0),
 }
-# kind: nav = E-Switch PV6 (hole 16 mm), power = PV6 recessed ~3 mm in a foil ring,
-# guard = toggle switch with flip guard (CW Industries GT-4R), led = 5 mm alarm LED,
+# Front variant 2 (owner's choice 2026-11-09, hardware/plytka-v2/README.md): the side column holds the alarm LED with
+# the buzzer grille beside it, CISZA under its guard and the main switch in line with the navigation row.
+# kind: nav = E-Switch PV6F240SS (hole 16 mm), flush with the foil; power = the same PV6, in line with the navigation
+# row, set apart by a black printed ring and the power symbol; guard = toggle 100SP1T8B13M1QEH under the flip guard
+# CW Industries GT-4R (hinge up; front hole 11.91 mm with a 1.65 x 0.79 mm key for the bushing keyway);
+# led = 5 mm alarm LED, label beside the grille (label_xy); grille = 1.5 mm holes over the buzzer;
 # seal = hole over the preparation button covered by a numbered VOID sticker (F113;
 # replaces the sealed service cover of obudowa.md for the pilot).
 PANEL = [
@@ -49,11 +54,16 @@ PANEL = [
     {"id": "GÓRA", "kind": "nav", "xy": (62.0, 98.0), "hole": 16.0, "uk": "ВГОРУ", "en": "UP"},
     {"id": "DÓŁ", "kind": "nav", "xy": (94.0, 98.0), "hole": 16.0, "uk": "ВНИЗ", "en": "DOWN"},
     {"id": "OK", "kind": "nav", "xy": (126.0, 98.0), "hole": 16.0, "uk": "OK", "en": "OK"},
-    {"id": "ALARM", "kind": "led", "xy": (185.0, 22.0), "hole": 5.0},
-    {"id": "CISZA", "kind": "guard", "xy": (185.0, 58.0), "hole": None},
-    {"id": "WYŁĄCZNIK", "kind": "power", "xy": (185.0, 100.0), "hole": 16.0},
-    {"id": "SERWIS", "kind": "seal", "xy": (150.0, 122.0), "hole": 4.0, "size": (22.0, 12.0)},
+    {"id": "ALARM", "kind": "led", "xy": (178.5, 20.0), "hole": 5.5, "label_xy": (185.0, 29.5)},
+    {"id": "BRZĘCZYK", "kind": "grille", "xy": (191.5, 20.0), "hole": 1.5,
+     "holes": [(191.5, 20.0), (194.5, 20.0), (193.0, 22.598), (190.0, 22.598), (188.5, 20.0), (190.0, 17.402),
+               (193.0, 17.402)]},
+    {"id": "CISZA", "kind": "guard", "xy": (185.0, 62.0), "hole": 11.91},
+    {"id": "WYŁĄCZNIK", "kind": "power", "xy": (185.0, 98.0), "hole": 16.0},
+    {"id": "SERWIS", "kind": "seal", "xy": (151.0, 116.0), "hole": 4.0, "size": (22.0, 12.0)},
 ]
+# Printed foil: logo centred over the brand line between the window and the side column, hint under the window.
+FOIL = {"logo": {"xy": (126.0, 30.5), "height": 11.0}, "brand": (126.0, 48.0), "hint": (52.0, 71.0)}
 # Bottom wall, x from the left outer edge. Axis height above the board is a measurement.
 CONNECTORS = [
     {"id": "USB-C", "x": 60.0, "label": "USB-C", "part": "USB-C z zatyczką na uwięzi; połączenie z laptopem"},
@@ -73,8 +83,8 @@ RULES = {
 MEASUREMENTS = {
     "devkitc_top": ("Wysokość najwyższego punktu DevKitC w gniazdach J5/J6 nad górną powierzchnią N1 [mm]",
                     "suwmiarka po wpięciu DevKitC rev.1.1 w N1", None),
-    "button_top": ("Wysokość nasadki B32-1310 na B3F-4055 nad N1 [mm], przycisk zwolniony",
-                   "suwmiarka na zmontowanej N1", None),
+    "button_top": ("Wysokość nasadki B32-1310 na B3F-4055 nad N1 [mm], przycisk zwolniony (obudowa prototypu; "
+                   "stacja pilotażowa ma przyciski PV6 w panelu)", "suwmiarka na zmontowanej N1", None),
     "display_top": ("Wysokość szkła panelu Sharp nad N1 po przyklejeniu na piance [mm]",
                     "suwmiarka po teście ekranu i przyklejeniu", None),
     "fpc_free_length": ("Długość taśmy FPC panelu od szkła do czoła J7 po wpięciu [mm]",
@@ -83,14 +93,22 @@ MEASUREMENTS = {
                      "po montażu adaptera Wio w L0", None),
     "usb_otg_position": ("Położenie gniazda USB/OTG DevKitC względem obrysu N1 (x, y, wysokość osi) [mm]",
                          "po wpięciu DevKitC", None),
-    "hammond_bosses": ("Położenie i wysokość słupków pokrywy Hammond 1599KBAT [mm]",
-                       "model STEP Hammonda albo próbka", None),
-    "hammond_lid_screws": ("Położenie śrub pokrywy Hammond 1599KBAT (od frontu czy od spodu)",
-                           "model STEP Hammonda albo próbka", None),
+    # Hammond 1599KBAT from the STEP model 1599KBKBAT.stp (2017-11-14); to be confirmed on a sample. The Lid is
+    # screwed on from the back (4 x M3 x 12 flat head into brass inserts), so the front stays smooth. Board bosses
+    # of the Box: 8 x 4.75 mm on the grid x 20/80/140/200, y 30/110 from the front corner, hole 2.36 mm, 4.6 mm deep.
+    "hammond_boss_height": ("Wysokość słupków płytki w skrzynce (Box) nad wewnętrzną powierzchnią frontu [mm]",
+                            "model STEP Hammonda 1599KBKBAT.stp; potwierdzić na próbce", 4.5),
+    "hammond_front_under_boss": ("Grubość frontu pod otworem słupka płytki [mm]",
+                                 "model STEP Hammonda 1599KBKBAT.stp; potwierdzić na próbce", 2.9),
+    "board_spacer": ("Tulejka dystansowa między słupkiem skrzynki a płytką v2 [mm]; wierzch płytki 10,5 mm od frontu",
+                     "dobór na modelu STEP (hardware/plytka-v2/README.md); potwierdzić na przymiarce", 6.0),
+    "board_screw_max": ("Największa długość wkrętu płytki pod łbem bez podkładki: płytka 1,6 + tulejka 6 + otwór 4,6 − 0,2 [mm]; "
+                        "wkręt 3 × 12 idzie z podkładką 1 mm",
+                        "model STEP; dłuższy wchodzi we front pod folią", 12.0),
     "pilot_board": ("Płytka v2 stacji pilotażowej: obrys, otwory, położenie złącza anteny i gniazda USB-C",
                     "projekt v2 (elektronika.md, stacja pilotażowa)", None),
-    "guard_footprint": ("Obrys podstawy i wysokość klapki GT-4R z przełącznikiem GTS [mm]",
-                        "karta producenta i próbka", None),
+    "guard_footprint": ("Obrys podstawy i wysokość klapki GT-4R z przełącznikiem 100SP1T8B13M1QEH [mm]; dźwignia "
+                        "18 mm przy 17,5 mm w opisie osłony", "karta producenta i próbka", None),
 }
 
 
@@ -155,10 +173,11 @@ def n1_holes() -> list[dict]:
 def layout() -> dict:
     """Concept data passed to render/stacja.html; derived only from CONCEPT above."""
     return {
-        "source": "hardware/r02/obudowa.md (2026-10-08), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
+        "source": "hardware/r02/obudowa.md, front w wariancie 2 (2026-11-09), naklejka zamiast pokrywy serwisowej (F113); koncepcja, nie rysunek wykonawczy",
         "enclosure": ENCLOSURE,
         "display": DISPLAY,
         "panel": PANEL,
+        "foil": FOIL,
         "connectors": CONNECTORS,
         "screen_rows": ["RADIO WŁĄCZONE", "KONTAKT 12 MIN TEMU", "OGNIWA: OKOŁO 46 H", "", "NOWE WIADOMOŚCI: 1"],
         "unmeasured": missing_measurements(),

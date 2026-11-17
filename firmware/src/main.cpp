@@ -64,6 +64,7 @@
 #if !defined(WICI_HEADLESS)
 #include "sharp.h"
 #endif
+#include "standby.h"
 #include "station.h"
 #include "store.h"
 #include "ui.h"
@@ -88,6 +89,8 @@ constexpr const char* BOARD_NAME = board::NAME;
 #endif
 #if defined(WICI_XIAO)
 constexpr const char* BENCH = "XIAO";
+#elif defined(WICI_V2)
+constexpr const char* BENCH = "V2";
 #elif defined(WICI_L0)
 constexpr const char* BENCH = "L0";
 #elif defined(WICI_BENCH_B)
@@ -141,7 +144,7 @@ void stationRandom(uint8_t* out, size_t count) {
     // Ziarno powstaje pierwsze w stationSetup(); odmowa to błąd programu: restart zamiast bajtów spoza generatora.
     if (!generator.generate(out, count)) platform::reboot();
 }
-#if defined(WICI_L0) || defined(WICI_XIAO)
+#if defined(WICI_L0) || defined(WICI_V2) || defined(WICI_XIAO)
 constexpr const char* RADIO_PROFILE = "lora-sf7";  // profil radiowy stacji L0 (`radio.profile` w configure, usb-protocol.md)
 #else
 constexpr const char* RADIO_PROFILE = "p1";   // profil radiowy stanowisk A i B (`radio.profile` w configure, usb-protocol.md)
@@ -221,6 +224,9 @@ void screenChanged();
 void setStationName();
 void wipeStack();
 void freezeMigration();
+// Przeniesienie stacji w toku (bariera w stanie innym niż none): magazyn i dziennik celowo zamknięte.
+// Uszkodzona bariera (ready() = false) to nadal awaria pamięci: naprawia ją tylko ZNISZCZ DANE.
+bool migrationFrozen() { return migrationBarrier.ready() && !migrationBarrier.permitsTransmit(); }
 void restartSoon(const char* why);
 
 // Usługi stacji dla protokołu USB.
@@ -302,8 +308,12 @@ bool radioListening() { return radioServes() && bench.receiving(); }
 
 // Alarm radio_awaria (oprogramowanie.md, ekran główny): radio nie służy stacji albo odbiór w tle stoi
 // (stacja L0: zadanie odbioru bez postępu przez 10 s przy uzbrojonym odbiorze stosu, radiocon::rxStalled).
+// Druga przyczyna, ten sam alarm (R3-43): radio działa, ale datagram do nadania przez JAM_ALARM_MS nie znalazł
+// wolnej przerwy (zagłuszanie kanału, Bench::channelJammed); ekran mówi kanal_zagluszony. Także root.
 bool rxStalled = false;
-bool radioFault() { return !radioServes() || rxStalled; }
+bool radioHardwareFault() { return !radioServes() || rxStalled; }
+bool channelJammed() { return !radioHardwareFault() && bench.channelJammed(); }
+bool radioFault() { return radioHardwareFault() || bench.channelJammed(); }
 
 // Gotowość radiowa (plan interfejsu LoRa, L6): czas od startu do uzbrojenia odbioru stosu, -1 przed nim;
 // odbiór startuje przed ekranem. Najdłuższy obieg pętli od startu (loop_max_ms).
@@ -458,6 +468,10 @@ console::Console screenHost(stationStore, app, screenActions);
 bool linkAuto = true;  // LINK 0 zatrzymuje nadawanie z kolejki (próby ręczne P1TX)
 // Zmiana danych ekranu: przerysowanie raz na obieg pętli, także po serii zapisów z USB.
 bool screenDirty = false;
+#if !defined(WICI_HEADLESS)
+bool displayPending = false;  // ostatni obieg wysłał wiersze ekranu: mogą czekać następne (pętla czuwania)
+#endif
+bool storeWork = false;       // porządkowanie magazynu po ZAMKNIJ ZDARZENIE trwa (pętla czuwania)
 
 void screenChanged() {
     screenHost.invalidate();
@@ -647,6 +661,7 @@ void wipeStack() {
 // station follows the same frozen boot path before any store or clock writes.
 void freezeMigration() {
     applySilence();
+    screenHost.setMigrationFrozen(true);
     bench.dropLinkTx();
     if (wiciShelter) wiciShelter->cancelOwn();
     rnsnode::dropQueue();
@@ -1170,8 +1185,10 @@ ui::Status screenStatus() {
     s.prep = bench.prep;
     s.silence = silenceAny();
     s.radioOk = !radioFault();
+    s.channelJammed = channelJammed();
     s.stackOk = !stackFault();
-    s.storeOk = stationStore.ok();
+    // Przeniesienie w toku: magazyn celowo zamknięty (freezeMigration, start z barierą), nie awaria pamięci.
+    s.storeOk = stationStore.ok() || migrationFrozen();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
@@ -1308,11 +1325,16 @@ void beginScreen() {
 void pollButtons(uint32_t now) {
     if (now - buttonPollMs < BUTTON_POLL_MS) return;
     buttonPollMs = now;
+    // Przeniesienie w toku (bariera w stanie przejściowym) zamraża panel poza pytaniem polecenia USB. Uszkodzona
+    // albo nieczytelna bariera go nie zamraża: magazyn wtedy nie startuje, więc ekran ma tylko alarmy
+    // i ZNISZCZ DANE, jedyną naprawę (oprogramowanie.md, „Pamięć FRAM”).
+    const bool panel = !migrationBarrier.ready() || migrationBarrier.permitsTransmit() ||
+                       screenModel.screen() == ui::Screen::CONFIRM;
     // Zmiana stanu dopiero po dwóch jednakowych próbkach (eliminacja drgań styków, około 20 ms).
     for (size_t i = 0; i < 4; ++i) {
         const bool is = pressed(buttons[i]);
         if (is == buttonSample[i] && is != buttonWas[i]) {
-            if (is && (migrationBarrier.permitsTransmit() || screenModel.screen() == ui::Screen::CONFIRM))
+            if (is && panel)
                 screenModel.down(static_cast<ui::Button>(i), now);
             else screenModel.up(static_cast<ui::Button>(i), now);
             buttonWas[i] = is;
@@ -1338,6 +1360,35 @@ bool parseArg(const char* text, uint32_t cap, uint32_t& out) {
 }
 
 void printError(const char* text) { Serial.printf("{\"error\":\"%s\"}\n", text); }
+
+#if defined(WICI_MCU_SLEEP)
+// Ramka w pierścieniu zadania odbioru wstrzymuje uśpienie, a po wybudzeniu sterownik radia liczy próbki od nowa
+// (bez tego ramka odebrana w uśpieniu szłaby do rx_late); NAP i pętla czuwania.
+const mcu_sleep::Hooks sleepHooks = {radiocon::rxPending, radiocon::resumed};
+#if defined(WICI_STANDBY)
+void printStandby();  // pętla czuwania, niżej
+#endif
+
+// NAP <ms>: jedno lekkie uśpienie MCU (platform::sleep) do pomiaru prądu w czuwaniu, tylko w trybie
+// przygotowania i bez serii radiowej; zawsze z zegarem, bo EXTCOMIN ekranu (MCPWM) w uśpieniu stoi. W zwykłej
+// pracy śpi pętla czuwania (standby.h, tylko v2), która w trybie przygotowania nie usypia. Budzi zegar po <ms> albo linia z board::SLEEP_WAKE (przycisk, CISZA, DIO1,
+// na v2 też wyłącznik i laptop). Przed uśpieniem odpowiedź {"nap_ms":...} i opróżnienie portów USB; po
+// wybudzeniu {"slept_ms":...,"cause":...,"line":...}. W uśpieniu MCU nie obsługuje USB, więc laptop może
+// zgłosić błąd portu albo połączyć go od nowa; odpowiedź po wybudzeniu idzie wtedy w nowe połączenie.
+void napCommand(const char* arg) {
+    uint32_t ms = 0;
+    if (!cmdargs::parseUint(arg, 1, 30000, ms)) { printError("NAP <1..30000 ms>"); return; }
+    if (!bench.prep) { printError("preparation mode off: PREP 1"); return; }
+    if (bench.busy()) { printError("busy: STOP first"); return; }
+    Serial.printf("{\"nap_ms\":%lu}\n", static_cast<unsigned long>(ms));
+    Serial.flush();
+    SerialData.flush();
+    const mcu_sleep::Result r = platform::sleep(ms, &sleepHooks);
+    const char* line = r.line >= 0 ? board::SLEEP_WAKE[r.line].name : nullptr;
+    Serial.printf("{\"slept_ms\":%lu,\"cause\":\"%s\",\"line\":%s%s%s}\n", static_cast<unsigned long>(r.sleptMs),
+                  mcu_sleep::causeName(r.cause), line ? "\"" : "", line ? line : "null", line ? "\"" : "");
+}
+#endif
 
 void printFram() {
     const fram::Id id = memory.identify();
@@ -1365,10 +1416,11 @@ void printInfo() {
                   radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
-    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"fram_volatile\":%s,"
+    // channel_jammed: alarm zagłuszania kanału (R3-43); stanowisko pokazuje go przy roocie (R3-44).
+    Serial.printf("\"bench\":\"%s\",\"prep\":%s,\"silence\":%s,\"radio_ok\":%s,\"channel_jammed\":%s,\"p1_ok\":%s,\"fram_ok\":%s,\"fram_volatile\":%s,"
                   "\"journal_ok\":%s,\"journal_resets\":%lu,",
                   BENCH, boolName(bench.prep),
-                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(radiocon::p1Ok()), boolName(framOk),
+                  boolName(silenceAny()), boolName(radiocon::ok()), boolName(channelJammed()), boolName(radiocon::p1Ok()), boolName(framOk),
                   boolName(memory.VOLATILE), boolName(journalOk), static_cast<unsigned long>(journalResets));
     radiocon::printProfile();
     Serial.printf("\"tx_power_dbm\":%d,\"uptime_s\":%lu,\"service_s\":%lu,\"boot_s\":%lu,\"screen\":\"%s\",\"lang\":\"%s\","
@@ -1473,8 +1525,8 @@ void printHelp() {
     Serial.print(",\"PREP <0|1>\",\"SILENCE <0|1>\",\"TXCW <s> [CONDUCTED]\",\"TXPKT <n> <len> [<ms>] [ZEROS|ONES] [CONDUCTED]\","
                  "\"RX [<len>]\",\"RXPER\",\"FOFF [<hz>]\",\"P1RX\",\"P1TX <hex>\",\"P1\",\"EMC [<s> <len>|0]\",\"STOP\",\"LOG [<n>]\",\"JOURNAL\",\"BENCH\","
                  "\"FRAM\",\"BTN\","
-#if !defined(WICI_BENCH_B) && !defined(WICI_L0)
-                 "\"LED <1-4> <0|1>\","  // stanowisko B i L0 (DevKitC) nie mają diod stanu
+#if !defined(WICI_BENCH_B) && !defined(WICI_L0) && !defined(WICI_V2)
+                 "\"LED <1-4> <0|1>\","  // stanowisko B, L0 i v2 (DevKitC) nie mają diod stanu
 #endif
                  "\"SCREEN\",\"KEY <UP|DOWN|OK|BACK> [ms]\",\"REQ <n> [<text bytes>]\","
 #if !defined(WICI_HEADLESS)
@@ -1483,6 +1535,12 @@ void printHelp() {
                  "\"REBOOT\",\"STORE\",\"USB <json>\",\"APP\",\"LINK <0|1>\",\"RNS\",\"ANNOUNCE\",\"HACK [0]\""
 #if defined(WICI_BOARD_N1)
                  ",\"LED 5 <0|1>\",\"BUZZ [<ms>] [<hz>]\",\"VTEST\",\"DISPLAY <hz>\""
+#endif
+#if defined(WICI_MCU_SLEEP)
+                 ",\"NAP <ms>\""
+#endif
+#if defined(WICI_STANDBY)
+                 ",\"STANDBY\""
 #endif
 #if defined(WICI_RNS_CORE)
                  ",\"RNS SELFTEST\""
@@ -1603,6 +1661,27 @@ void printStore() {
                   static_cast<unsigned long>(protocol.stats().overflow), static_cast<unsigned long>(protocol.stats().resends));
 }
 
+// REGISTER: stan każdego wpisu rejestru stacji z indeksu w RAM, jeden wiersz JSON na wpis (bez odczytu
+// FRAM i bez zmian), potem wiersz z liczbą wpisów. W próbach przy stole sprawdza doręczenie decyzji
+// do każdego zgłoszenia bez wnioskowania z liczników APP.
+void printRegister() {
+    static const char* const STAGES[] = {"saved", "sending", "delivered", "received", "cancelled"};
+    size_t count = 0;
+    for (size_t slot = 0; storeOk && slot < store::REGISTER_SLOTS; ++slot) {
+        const store::RequestIndex& r = stationStore.request(slot);
+        if (!r.used()) continue;
+        ++count;
+        const uint8_t stage = static_cast<uint8_t>(r.stage);
+        Serial.printf("{\"slot\":%u,\"number\":\"%04u\",\"id\":\"%08lx\",\"type\":%u,\"revision\":%u,\"stage\":\"%s\","
+                      "\"decision\":%u,\"decision_revision\":%u,\"attempts\":%u,\"sent_once\":%s,\"read\":%s}\n",
+                      static_cast<unsigned>(slot), static_cast<unsigned>(r.number()), static_cast<unsigned long>(r.idPrefix),
+                      static_cast<unsigned>(r.type), static_cast<unsigned>(r.rMax), stage < 5 ? STAGES[stage] : "?",
+                      static_cast<unsigned>(r.decision), static_cast<unsigned>(r.decisionRev), static_cast<unsigned>(r.attempts),
+                      boolName(r.flags & store::SENT_ONCE), boolName(r.flags & store::READ_MAX));
+    }
+    Serial.printf("{\"register\":%u,\"store_ok\":%s}\n", static_cast<unsigned>(count), boolName(storeOk));
+}
+
 // REQ <n> [<text bytes>]: n REQUEST messages through the button path (station::Station::create: the same
 // SA1 encoding, register and queue as the wizard) with category 0, 1 person, urgency 0 and the selected
 // address, for bench trials (W10: 50 requests in a few seconds, also on a board without buttons). Like KEY
@@ -1668,7 +1747,8 @@ void handle(char* cmd) {
         bool on = false;  // jak przełącznik CISZA (na płytce N1 do następnego przełączenia)
         if (!cmdargs::parseFlag(words[0], on)) { printError("SILENCE <0|1>"); return; }
         setSwitchSilence(on, " (command)");
-        Serial.printf("{\"silence\":%s,\"switch\":%s}\n", boolName(silenceAny()), boolName(switchSilence));
+        // until_restart: polecenie zastępuje przełącznik tylko w RAM; po restarcie decyduje przełącznik CISZA.
+        Serial.printf("{\"silence\":%s,\"switch\":%s,\"until_restart\":true}\n", boolName(silenceAny()), boolName(switchSilence));
     } else if (!strcmp(cmd, "TXCW")) {
         size_t count = n;
         const bool conducted = lastIsConducted(words, count);
@@ -1818,30 +1898,62 @@ void handle(char* cmd) {
         Serial.printf("{\"buzz_ms\":%lu,\"hz\":%lu}\n", static_cast<unsigned long>(ms), static_cast<unsigned long>(hz));
     } else if (!strcmp(cmd, "VTEST")) platform::printVtest();
 #endif
+#if defined(WICI_MCU_SLEEP)
+    else if (!strcmp(cmd, "NAP") && n == 1) napCommand(words[0]);
+#endif
+#if defined(WICI_STANDBY)
+    else if (!strcmp(cmd, "STANDBY") && n == 0) printStandby();
+#endif
     else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
 #if !defined(WICI_HEADLESS)
     else if (!strcmp(cmd, "DISPLAY")) printDisplay();
 #endif
+    else if (!strcmp(cmd, "CHANNEL")) {
+        // Ustawienie pomiarowe przy zagłuszaniu (kandydaci z rozdziału 6 specyfikacji): ponowny CAD przed HACK
+        // i dłuższe odroczenia; tylko RAM, po restarcie wyłączone. Bez argumentów: stan.
+        uint32_t cadRetry = 0, longDefer = 0;
+        if (n == 2 && cmdargs::parseUint(words[0], 0, 1, cadRetry) && cmdargs::parseUint(words[1], 0, 1, longDefer))
+            bench.setChannelTrial(cadRetry, longDefer);
+        else if (n) { printError("CHANNEL [<cad 0|1> <odroczenia 0|1>]"); return; }
+        Serial.printf("{\"hack_cad_retry\":%s,\"max_deferrals\":%u}\n", boolName(bench.hackCadRetry()),
+                      static_cast<unsigned>(bench.maxDeferrals()));
+    }
     else if (!strcmp(cmd, "HACK")) {
         uint32_t zero = 1;
         if (n > 1 || (n == 1 && !cmdargs::parseUint(words[0], 0, 0, zero))) { printError("HACK [0]"); return; }
         if (n) {
             bench.resetHackStats();
             if (wiciShelter) wiciShelter->resetBeaconStats();
+            wiciHopAuth.resetStats();
         }
         // Sprawdzanie podpisów BEACON-ów poza torem HACK: pola tylko na stacji WICI-Link z rodzicem (ESP32-S3;
         // na nRF52840 wiersz zostaje poniżej 256 znaków, zob. printRns).
-        char beacon[192] = "";
+        // Kolejka przekaźnika: odmowy DATA bez wolnego gniazda (bez HACK) w górę i w dół, nowe koperty przyjęte
+        // do gniazda K1 sąsiada i do miejsc K2, zajęte gniazda i z nich gniazda K1.
+        // Ramki do tej stacji odrzucone przed łączem (każda rola): nadawca bez klucza w priority_keys, zły tag pary.
+        char beacon[384] = "";
+        const wici_hop_auth::Stats& h = wiciHopAuth.stats();
+        int used = snprintf(beacon, sizeof(beacon), ",\"hop_no_key\":%lu,\"hop_tag_bad\":%lu",
+                            static_cast<unsigned long>(h.noKey), static_cast<unsigned long>(h.tagBad));
         const wici_radio::BeaconStats b = wiciShelter ? wiciShelter->beaconStats() : wici_radio::BeaconStats();
-        if (wiciShelter)
-            snprintf(beacon, sizeof(beacon), ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
-                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u",
+        if (wiciShelter && used > 0 && static_cast<size_t>(used) < sizeof(beacon)) {
+            const wici_hop::QueueStats& q = wiciShelter->queueStats();
+            snprintf(beacon + used, sizeof(beacon) - used, ",\"beacon_checks\":%lu,\"beacon_check_ms_last\":%lu,\"beacon_check_ms_max\":%lu,"
+                     "\"beacon_dropped\":%lu,\"beacon_stack_free\":%ld,\"proofs_dropped\":%u,"
+                     "\"queue_full_up\":%lu,\"queue_full_down\":%lu,\"queue_k1_admitted\":%lu,"
+                     "\"queue_k2_admitted\":%lu,\"queue_pending\":%u,\"queue_k1_pending\":%u",
                      static_cast<unsigned long>(b.checks), static_cast<unsigned long>(b.lastMs),
                      static_cast<unsigned long>(b.maxMs), static_cast<unsigned long>(b.dropped),
-                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()));
+                     static_cast<long>(beaconcheck::stackFree()), static_cast<unsigned>(wiciShelter->proofsDropped()),
+                     static_cast<unsigned long>(q.fullUp), static_cast<unsigned long>(q.fullDown),
+                     static_cast<unsigned long>(q.admittedK1), static_cast<unsigned long>(q.admittedK2),
+                     static_cast<unsigned>(wiciShelter->queuePending()),
+                     static_cast<unsigned>(wiciShelter->queuePendingK1()));
+        }
         bench.printHack(beacon);
     }
     else if (!strcmp(cmd, "STORE")) printStore();
+    else if (!strcmp(cmd, "REGISTER") && n == 0) printRegister();
     else if (!strcmp(cmd, "APP")) printApp();
     else if (!strcmp(cmd, "LINK") && n == 1) {
         if (!cmdargs::parseFlag(words[0], linkAuto)) printError("LINK <0|1>");
@@ -2143,6 +2255,9 @@ void stationSetup() {
         if (pin >= 0) pinMode(static_cast<uint8_t>(pin), INPUT_PULLUP);
     }
 #endif
+#if defined(WICI_STANDBY)
+    pinMode(board::USB_LAPTOP, INPUT);  // R75 do 3,3 V; pętla czuwania czyta linię przed pierwszym uśpieniem
+#endif
     radiocon::attach(bench);
     radiocon::begin();  // CS radia w stan nieaktywny
 #if defined(WICI_FRAM_PSRAM)
@@ -2224,7 +2339,9 @@ void stationSetup() {
     if (!extcominOk) bench.log("EXTCOMIN timer failed");
 #endif
 #endif
-    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarm awarii radia działa.
+    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarmy i ZNISZCZ DANE działają. Przeniesienie
+    // w toku zamyka magazyn celowo: ekran trybu przygotowania bez alarmu blad_pamieci (usb-protocol.md).
+    screenHost.setMigrationFrozen(migrationFrozen());
     if (storeOk) screenModel.attach(&screenHost);
     else screenModel.attachAlarms(&screenHost);
     beginScreen();
@@ -2241,6 +2358,21 @@ struct PassTimer {
         if (ms > loopMaxMs) loopMaxMs = ms;
     }
 };
+
+// HACK albo sprawdzony BEACON bieżącego rodzica przyspiesza jedną wiadomość po nieudanych próbach
+// (station::Station::parentHeard); kilka zdarzeń w jednym przeglądzie to jedno przyspieszenie.
+void pollParentContact() {
+    static uint32_t hacks = 0, beacons = 0;
+    if (!wiciShelter) return;
+    if (wiciShelter->parentHacks() != hacks) {
+        hacks = wiciShelter->parentHacks();
+        app.parentHeard(true);
+    }
+    if (wiciShelter->parentBeacons() != beacons) {
+        beacons = wiciShelter->parentBeacons();
+        app.parentHeard(false);
+    }
+}
 
 void stationLoop() {
     PassTimer passTimer;
@@ -2273,12 +2405,13 @@ void stationLoop() {
         }
     }
     rxStalled = radiocon::rxStalled(bench.transmitting(), now);
+    if (wiciRoot) bench.probeChannel(now);   // R3-46: root sprawdza kanał także bez ruchu (alarm zagłuszania)
     const bool radio = radioWorks();
     if (radio != radioLed) {
         radioLed = radio;
         ledWrite(board::LED_RADIO, radio);
     }
-    screenHost.setRadioFault(radioFault());     // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC i zadanie odbioru
+    screenHost.setRadioFault(radioFault(), channelJammed());     // alarm radio_awaria (oprogramowanie.md, ekran główny); także tryb EMC i zadanie odbioru
     screenHost.setStackFault(stackFault());     // alarm brak_lacznosci
     const bool usb = Serial;  // CDC otwarty przez hosta
     ledWrite(board::LED_USB, usb);
@@ -2349,8 +2482,11 @@ void stationLoop() {
     if (storeOk && now - lastApp >= APP_POLL_MS) {  // przegląd rejestru co 100 ms, nie w każdym obiegu
         lastApp = now;
         stationStore.now(serviceS());
-        stationStore.maintain();   // gniazda starej epoki po ZAMKNIJ ZDARZENIE (jedna transakcja na obieg)
-        if (linkAuto && radiocon::ok() && !nodeRole()) app.poll();
+        storeWork = stationStore.maintain();   // gniazda starej epoki po ZAMKNIJ ZDARZENIE (jedna transakcja na obieg)
+        if (linkAuto && radiocon::ok() && !nodeRole()) {
+            pollParentContact();
+            app.poll();
+        }
     }
     pollSerial();
     pollButtons(now);
@@ -2366,7 +2502,7 @@ void stationLoop() {
         updateScreen(false);
     }
 #if !defined(WICI_HEADLESS)
-    display.refresh();  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
+    displayPending = display.refresh() > 0;  // dalsze kawałki po 9 wierszy (sharp::LINES_PER_REFRESH), jeden na obieg
     display.maintain(now);
 #endif
     // Interfejs danych: otwarcie portu wysyła sync, zamknięcie odrzuca niepełny wiersz. Bez magazynu
@@ -2441,6 +2577,144 @@ void stationLoop() {
     }
 }
 
+#if defined(WICI_STANDBY)
+// Pętla czuwania (docs/spec/oprogramowanie.md, „Czuwanie”; reguły w standby.h): po każdym obiegu pętli stacji
+// zamiast delay(1) lekkie uśpienie do najbliższego terminu albo zdarzenia. Terminy modułów stosu, WICI-Link
+// i aplikacji są w sekundach i nie mają osobnego odczytu: obsługuje je obieg po każdym wybudzeniu, a uśpienie
+// trwa najwyżej MAX_SLEEP_MS (1 s) i najwyżej do zmiany EXTCOMIN (0,5 s). Własne terminy w planie: łącze
+// radiowe (dług, odroczenie), dioda i sygnał alarmu, BEACON, okno 10 s VBUS. Krótkie terminy po zdarzeniu
+// (HACK, przekazanie, składanie ramek) pokrywa praca RADIO_HOLD_MS po ramce albo nadaniu.
+namespace {  // ta sama przestrzeń bez nazwy co wyżej (deklaracja printStandby)
+standby::Usb standbyUsb;
+standby::Vcom standbyVcom;
+standby::Hold radioHold;
+standby::Hold inputHold;
+standby::Counters standbyCounters;
+standby::Reason standbyReason = standby::Reason::WORK;
+bool usbOnBus = true;         // rdzeń podłącza USB przed setup()
+uint32_t radioEvents = 0;     // ramki odebrane i nadane (LinkCounters) przy ostatnim obiegu
+bool vcomFailed = false;      // sterownik odmówił wymuszenia EXTCOMIN: bez uśpienia przy włączonym ekranie
+
+bool panelHeld() {
+    for (int16_t pin : buttons)
+        if (pressed(pin)) return true;
+    return pressed(board::BTN_PREP);  // przytrzymanie 3 s przełącza tryb przygotowania
+}
+
+void standbyAttach(bool on) {
+    if (on == usbOnBus) return;
+    usbOnBus = on;
+    platform::usbAttach(on);
+}
+
+// Bez wymuszenia zatrzaśnięty EXTCOMIN dawałby panelowi składową stałą, więc po odmowie sterownika stacja
+// z włączonym ekranem nie śpi (powód SCREEN), a pin wraca do licznika.
+void standbyForceVcom() {
+    if (display.forceExtcomin(standbyVcom.level() ? 1 : 0)) return;
+    vcomFailed = true;
+    standbyVcom.release();
+    display.forceExtcomin(-1);
+    bench.log("standby: EXTCOMIN force failed, no sleep");
+}
+
+void printStandby() {
+    const standby::Counters& c = standbyCounters;
+    Serial.printf("{\"standby\":\"%s\",\"usb\":\"%s\",\"vbus\":%s,\"mounted\":%s,\"vcom\":\"%s\",\"sleeps\":%lu,"
+                  "\"slept_ms\":%llu,\"uptime_ms\":%llu,\"wake\":{\"timer\":%lu,\"radio\":%lu,\"input\":%lu,\"other\":%lu},"
+                  "\"rejected\":%lu,\"busy\":%lu}\n",
+                  standby::reasonName(standbyReason), usbOnBus ? "attached" : "detached",
+                  standbyUsb.vbus() ? "true" : "false", standbyUsb.mounted() ? "true" : "false",
+                  standbyVcom.forced() ? "loop" : "timer", static_cast<unsigned long>(c.sleeps),
+                  static_cast<unsigned long long>(c.sleptMs), static_cast<unsigned long long>(platform::uptimeMs()),
+                  static_cast<unsigned long>(c.wakeTimer), static_cast<unsigned long>(c.wakeRadio),
+                  static_cast<unsigned long>(c.wakeInput), static_cast<unsigned long>(c.wakeOther),
+                  static_cast<unsigned long>(c.rejected), static_cast<unsigned long>(c.busy));
+}
+
+void standbyStep() {
+    uint32_t now = millis();
+    standbyUsb.update(now, digitalRead(board::USB_LAPTOP) == LOW, platform::usbMounted(), platform::usbSuspended());
+    const measure::LinkCounters& link = bench.link();
+    const uint32_t events = link.rxOk + link.rxBad + link.txFragments;
+    if (events != radioEvents) {
+        radioEvents = events;
+        radioHold.extend(now, standby::RADIO_HOLD_MS);
+    }
+    const bool vcom = display.extcominOk();
+    if (standbyVcom.tick(now)) standbyForceVcom();
+
+    standby::Plan plan(now);
+    if (bench.prep) plan.block(standby::Reason::PREP);
+    if (nodeRole()) plan.block(standby::Reason::NODE);
+    if (standbyUsb.blocks()) plan.block(standby::Reason::USB);
+    const uint32_t linkMs = bench.sleepableMs();
+    const bool radioHeld = radioHold.active(now), inputHeld = inputHold.active(now);  // co obieg: stan nie starzeje się
+    if (!linkMs || radioHeld) plan.block(standby::Reason::RADIO);
+    plan.wakeIn(linkMs);
+    if (panelHeld() || inputHeld) plan.block(standby::Reason::PANEL);
+    // Bit VCOM z programu (EMD niski, przewody przy stole) odwraca Display::maintain w obiegu co 500 ms: bez uśpienia.
+    if (screenDirty || displayPending || (vcom && vcomFailed) || display.softwareVcom()) plan.block(standby::Reason::SCREEN);
+    if (storeWork || rebootAtMs) plan.block(standby::Reason::WORK);
+    plan.wakeIn(annunciation.untilChangeMs(now));
+    if (wiciActive && linkAuto && !bench.silence) plan.wakeAt(wiciNextBeaconMs);
+    plan.wakeIn(standbyUsb.untilMs(now));
+    if (vcom) plan.wakeIn(standbyVcom.untilEdgeMs(now));
+    standbyReason = plan.reason();
+
+    // Powód trwały kończy czuwanie: EXTCOMIN wraca do licznika, stacja na magistralę USB.
+    if (standby::persistent(standbyReason)) {
+        if (standbyVcom.forced()) {
+            standbyVcom.release();
+            display.forceExtcomin(-1);
+        }
+        standbyAttach(true);
+    }
+    const uint32_t ms = plan.sleepMs();
+    if (!ms) {
+        delay(1);
+        return;
+    }
+    standbyAttach(false);  // przed uśpieniem: laptop nie zaczyna połączenia ze śpiącym MCU
+    if (vcom && !standbyVcom.forced()) {
+        standbyVcom.take(now, display.extcominLevel());
+        standbyForceVcom();
+        if (vcomFailed) {
+            delay(1);
+            return;
+        }
+    }
+    const mcu_sleep::Result r = platform::sleep(ms, &sleepHooks);
+    standby::Counters& c = standbyCounters;
+    now = millis();
+    switch (r.cause) {
+    case mcu_sleep::Cause::BUSY: ++c.busy; delay(1); return;
+    case mcu_sleep::Cause::REJECTED: ++c.rejected; delay(1); return;
+    case mcu_sleep::Cause::TIMER: ++c.wakeTimer; break;
+    case mcu_sleep::Cause::LINE:
+        if (r.line >= 0 && board::SLEEP_WAKE[r.line].pin == board::RADIO_DIO1) {
+            ++c.wakeRadio;
+            radioHold.extend(now, standby::RADIO_HOLD_MS);
+        } else {
+            ++c.wakeInput;  // także linia, która wróciła przed odczytem (drganie styku): r.line = -1
+            inputHold.extend(now, standby::INPUT_HOLD_MS);
+        }
+        break;
+    case mcu_sleep::Cause::OTHER:
+        ++c.wakeOther;
+        inputHold.extend(now, standby::INPUT_HOLD_MS);
+        break;
+    }
+    ++c.sleeps;
+    c.sleptMs += r.sleptMs;
+    bench.resumed(now);  // okno CCA od wybudzenia: w uśpieniu zadanie odbioru nie zbierało znaczników
+    if (standbyVcom.tick(now)) standbyForceVcom();
+    // Takt FreeRTOS w lekkim uśpieniu stoi: zadanie odbioru (vTaskDelay(1)) i USB dostają rdzeń, zanim pętla
+    // znowu uśnie, więc odbiór ramki po DIO1 i nadzór zadania odbioru (rx_watch.h) działają jak w pracy.
+    delay(standby::AFTER_WAKE_MS);
+}
+}  // namespace
+#endif
+
 #if defined(ARDUINO_ARCH_NRF52)
 // Cała praca stacji biegnie w osobnym zadaniu FreeRTOS z 16 KB stosu: zadanie loop() rdzenia
 // Adafruit ma 4 KB, a rysowanie ekranu z odczytem rekordów FRAM i `configure` przez USB
@@ -2472,6 +2746,10 @@ void setup() { stationSetup(); }
 
 void loop() {
     stationLoop();
+#if defined(WICI_STANDBY)
+    standbyStep();  // uśpienie do terminu albo zdarzenia, a bez uśpienia delay(1) jak niżej
+#else
     delay(1);  // oddaje rdzeń innym zadaniom (USB, bezczynność); obieg pętli zostaje co około 1 ms
+#endif
 }
 #endif

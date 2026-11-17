@@ -74,8 +74,8 @@ Obraz nie steruje pinami konfiguracyjnymi (GPIO0, 3, 45, 46), USB (19, 20), UART
 
 - Zegar ekranu. Na N1 SCK idzie przez P1.04 (pin, który Nordic zaleca do sygnałów wolnozmiennych ze względu na radio 2,4 GHz, tu nieużywane), przez 33 Ω (R17) i sieć długości około 300 mm, a 2 MHz to górna granica LS027B7DH01. Dlatego `bench-n1` taktuje ekran zegarem 1 MHz (`board::DISPLAY_SPI_HZ`; radio też 1 MHz, FRAM 8 MHz), z napędem H0H1 na SCK i MOSI, który ustawia `SPIClass::begin()` rdzenia. `DISPLAY 2000000` przełącza ekran na 2 MHz do restartu. Na stałe zegar 2 MHz można ustawić dopiero po pomiarze oscyloskopem przy J7 (poziomy, zbocza ≤50 ns, SCLK ≥200 ns) i obrazie bez błędów. Analizator na J11 sprawdza tylko kolejność i treść transmisji, nie poziomy ani zbocza ([pomiar oscyloskopem](../uruchomienie.md#pomiar-magistrali-oscyloskopem)).
 - FRAM przy 8 MHz: poziomy, zbocza i przerzuty przy U1 oscyloskopem, przy jednoczesnym nadawaniu, brzęczyku i odświeżaniu ekranu; `FRAM` i dziennik bez błędów.
-- Kroki A3–A5 [uruchomienia](../uruchomienie.md#stanowisko-a) z poleceniami `BTN`, `LED 5`, `BUZZ`, `VTEST` i `DISPLAY` ([firmware/README.md](../../../firmware/README.md#płytka-nośna-n1-bench-n1)).
-- Stanowisko B: zbocza SCK i MOSI ESP32-S3 przy najniższym napędzie (`DRIVE 0`) oscyloskopem przy J7 i U1, przy 1, 2 i 8 MHz. Wyższy napęd ustawia się tylko wtedy, gdy zbocza nie są czyste. Kroki B3–B4 [uruchomienia](../uruchomienie.md#stanowisko-b): `RADIO` z `partnumber: 0x03` i stanem `RX`, `VERIFY` bez niezgodności, dwa porty szeregowe w systemie ([firmware/README.md](../../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)).
+- Kroki A3–A5 [uruchomienia](../uruchomienie.md#stanowisko-a) z poleceniami `BTN`, `LED 5`, `BUZZ`, `VTEST` i `DISPLAY` ([firmware/README.md](../../../firmware/docs/stanowiska-a-b.md#płytka-nośna-n1-bench-n1)).
+- Stanowisko B: zbocza SCK i MOSI ESP32-S3 przy najniższym napędzie (`DRIVE 0`) oscyloskopem przy J7 i U1, przy 1, 2 i 8 MHz. Wyższy napęd ustawia się tylko wtedy, gdy zbocza nie są czyste. Kroki B3–B4 [uruchomienia](../uruchomienie.md#stanowisko-b): `RADIO` z `partnumber: 0x03` i stanem `RX`, `VERIFY` bez niezgodności, dwa porty szeregowe w systemie ([firmware/README.md](../../../firmware/docs/stanowiska-a-b.md#stanowisko-b-na-płytce-n1-bench-b)).
 
 ## Obraz okablowania przewodami na N1
 
@@ -83,7 +83,7 @@ Uruchomienie `bench-a` na wpiętej płytce N1 jest elektrycznie bezpieczne, ale 
 
 ## Potrzebne w oprogramowaniu
 
-Punkty 1–5 wykonane w środowisku `bench-n1` (opis w [firmware/README.md](../../../firmware/README.md#płytka-nośna-n1-bench-n1)), punkt 6 w środowisku `bench-b` ([opis](../../../firmware/README.md#stanowisko-b-na-płytce-n1-bench-b)).
+Punkty 1–5 wykonane w środowisku `bench-n1` (opis w [firmware/README.md](../../../firmware/docs/stanowiska-a-b.md#płytka-nośna-n1-bench-n1)), punkt 6 w środowisku `bench-b` ([opis](../../../firmware/docs/stanowiska-a-b.md#stanowisko-b-na-płytce-n1-bench-b)).
 
 1. Plik `src/board_bench_n1.h` i środowisko PlatformIO (na przykład `bench-n1` z `-DWICI_BENCH_N1`), wybierane zamiast `board_bench_a.h`. Przypisania z tabeli wyżej i z [połączeń](../polaczenia.md).
 2. Własna instancja `SPIClass` (rdzeń Adafruit: SPIM z pinami MISO P1.14, SCK P1.04, MOSI P1.13) zamiast domyślnego `SPI` z wariantu PCA10056 oraz napęd H0H1 na SCK i MOSI.

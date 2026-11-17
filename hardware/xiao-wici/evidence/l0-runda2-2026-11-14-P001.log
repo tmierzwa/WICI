@@ -1,0 +1,786 @@
+15:35:01.571 "tx_power_dbm":13,"uptime_s":35340,"service_s":34920,"boot_s":34,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":6,"rx_task_loops":34630,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:35:01.571 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0024","busy_timeouts":0,"p1_ok":true,"ok":true}
+15:35:01.571 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+15:35:01.571 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+15:35:01.571 {"fram":"MB85RS4MT","id":"047F4903FFFFFFFFFF","status":"0x02","ok":true,"volatile":false,"spi_hz":8000000}
+15:35:01.571 {"journal_ok":true,"debt_seq":2186,"debt_ms":0,"debt_written_at_s":34406,"debt_records":32,"tx_wait_ms":0,"clock_seq":588,"uptime_s":35340,"skip_s":420,"restarts":7,"event_seq":717,"max_debt_ms":10056,"journal_resets":0,"prep_entries":11,"prep_at_s":28527,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+15:35:03.517 >> INFO
+15:35:03.552 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35342,"service_s":34922,"boot_s":36,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":36632,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:35:05.704 >> FRAM
+15:35:05.747 {"fram":"MB85RS4MT","id":"047F4903FFFFFFFFFF","status":"0x02","ok":true,"volatile":false,"spi_hz":8000000}
+15:35:27.541 >> INFO
+15:35:27.549 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35366,"service_s":34946,"boot_s":60,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":60657,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:35:50.587 >> INFO
+15:35:50.639 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35389,"service_s":34969,"boot_s":83,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":83703,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:36:01.240 >> INFO
+15:36:01.290 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35400,"service_s":34980,"boot_s":94,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":94356,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:36:31.273 >> INFO
+15:36:31.325 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35430,"service_s":35010,"boot_s":124,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":124389,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:37:01.311 >> INFO
+15:37:01.327 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35460,"service_s":35040,"boot_s":154,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":154428,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:37:31.366 >> INFO
+15:37:31.383 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35490,"service_s":35070,"boot_s":184,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":184482,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:38:01.412 >> INFO
+15:38:01.457 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35520,"service_s":35100,"boot_s":214,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":214528,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:38:31.446 >> INFO
+15:38:31.498 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35550,"service_s":35130,"boot_s":244,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":244563,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:39:01.495 >> INFO
+15:39:01.535 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35580,"service_s":35160,"boot_s":274,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":274612,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:39:31.577 >> INFO
+15:39:31.615 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35610,"service_s":35190,"boot_s":304,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":304694,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:40:01.650 >> INFO
+15:40:01.689 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35640,"service_s":35220,"boot_s":334,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":334767,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:40:31.738 >> INFO
+15:40:31.763 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35670,"service_s":35250,"boot_s":364,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":364857,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:41:01.804 >> INFO
+15:41:01.828 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35701,"service_s":35281,"boot_s":395,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":394922,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:41:31.873 >> INFO
+15:41:31.879 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35731,"service_s":35311,"boot_s":425,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":424992,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:42:01.936 >> INFO
+15:42:01.972 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35761,"service_s":35341,"boot_s":455,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":455054,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:42:32.014 >> INFO
+15:42:32.027 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35791,"service_s":35371,"boot_s":485,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":485132,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:43:02.095 >> INFO
+15:43:02.157 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35821,"service_s":35401,"boot_s":515,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":515214,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:43:32.174 >> INFO
+15:43:32.184 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35851,"service_s":35431,"boot_s":545,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":545292,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:44:02.264 >> INFO
+15:44:02.318 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35881,"service_s":35461,"boot_s":575,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":575384,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:44:32.335 >> INFO
+15:44:32.350 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35911,"service_s":35491,"boot_s":605,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":605454,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:45:02.406 >> INFO
+15:45:02.424 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35941,"service_s":35521,"boot_s":635,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":635527,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:45:32.481 >> INFO
+15:45:32.507 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":35971,"service_s":35551,"boot_s":665,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":665601,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:46:02.585 >> INFO
+15:46:02.623 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36001,"service_s":35581,"boot_s":695,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":695705,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:46:32.674 >> INFO
+15:46:32.696 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36031,"service_s":35611,"boot_s":725,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":725794,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:47:02.743 >> INFO
+15:47:02.754 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36061,"service_s":35641,"boot_s":755,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":8,"rx_task_loops":755863,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:47:32.822 >> INFO
+15:47:32.858 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36092,"service_s":35672,"boot_s":786,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":785938,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:48:02.885 >> INFO
+15:48:02.933 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36122,"service_s":35702,"boot_s":816,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":816000,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:48:32.974 >> INFO
+15:48:33.005 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36152,"service_s":35732,"boot_s":846,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":846090,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:49:03.065 >> INFO
+15:49:03.100 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36182,"service_s":35762,"boot_s":876,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":876182,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:49:33.125 >> INFO
+15:49:33.156 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36212,"service_s":35792,"boot_s":906,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":906243,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:50:03.206 >> INFO
+15:50:03.239 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36242,"service_s":35822,"boot_s":936,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":936324,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:50:33.310 >> INFO
+15:50:33.373 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36272,"service_s":35852,"boot_s":966,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":966404,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:51:03.382 >> INFO
+15:51:03.409 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36302,"service_s":35882,"boot_s":996,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":996471,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:51:33.454 >> INFO
+15:51:33.467 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36332,"service_s":35912,"boot_s":1026,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":1026542,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+15:52:26.730 >> INFO
+15:52:26.742 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":36385,"service_s":35965,"boot_s":1079,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1077,"loop_max_ms":13,"rx_task_loops":1079818,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":754,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+16:22:17.735 >> INFO
+16:22:17.782 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":1,"tx_drop":0,"restarts":7,"bench":"L0","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":38176,"service_s":37756,"boot_s":2870,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x0000000B","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":false,"rx_ready_ms":1077,"loop_max_ms":37,"rx_task_loops":2870815,"rx_service_max_ms":6,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":755,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"451561708f5f4e9d","wdt_s":60,"board":"N1"}
+16:22:44.954 ## port lost read failed: [Errno 6] Device not configured
+16:22:45.259 ## port back
+16:22:46.014 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"L0","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":38247,"service_s":37767,"boot_s":1,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":false,"rx_ready_ms":1080,"loop_max_ms":0,"rx_task_loops":1021,"rx_service_max_ms":1,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":758,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"683692a43df13f7b","wdt_s":60,"board":"N1"}
+16:22:46.014 {"radio":"SX1262","version":"SX1261 V2D 2D02","status":"0x52","state":"RX","device_errors":"0x0000","busy":false,"dio1":0,"rxen":true,"irq_seen":"0x0000","busy_timeouts":0,"p1_ok":true,"ok":true}
+16:22:46.014 {"verify":true,"checked":12,"mismatches":0,"state":"RX"}
+16:22:46.014 {"rf_word":"0x36586666","hz":869524999.6,"target_hz":869525000,"error_hz":-0.4,"offset_step_hz":0.9537,"rf_offset":0,"bw_hz":125000,"sf":7}
+16:22:46.014 {"fram":"MB85RS4MT","id":"047F4903FFFFFFFFFF","status":"0x02","ok":true,"volatile":false,"spi_hz":8000000}
+16:22:46.014 {"journal_ok":true,"debt_seq":2186,"debt_ms":0,"debt_written_at_s":34406,"debt_records":32,"tx_wait_ms":0,"clock_seq":637,"uptime_s":38247,"skip_s":480,"restarts":8,"event_seq":734,"max_debt_ms":10056,"journal_resets":0,"prep_entries":13,"prep_at_s":38247,"prep_changes":0,"prep_config_sha":"0000","prep_restarted":false,"prep_corrupt":false}
+16:24:03.829 >> INFO
+16:24:03.883 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"L0","prep":true,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":38324,"service_s":37844,"boot_s":78,"screen":"main","lang":"EN","name":"WICI-374C8F","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":false,"rx_ready_ms":1080,"loop_max_ms":13,"rx_task_loops":78839,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":758,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"683692a43df13f7b","wdt_s":60,"board":"N1"}
+16:24:29.082 >> KEY OK
+16:24:29.160 {"screen":"menu","lang":"EN","lines":[" -- SERVICE MODE --","REQUEST","MESSAGES","TEST","STATUS             ▼"],"inverted":[true,true,false,false,false],"refreshes":14}
+16:24:30.259 >> PREP 0
+16:24:30.281 {"prep":false}
+16:24:45.661 >> INFO
+16:24:45.710 {"contract":2,"profile":"LoRa","radio":"SX1262","mcu":"ESP32-S3","fw":"l0-0.6","src":"USB","mv":0,"tx_wait_ms":0,"rx_ok":0,"rx_bad":0,"tx_drop":0,"restarts":8,"bench":"L0","prep":false,"silence":false,"radio_ok":true,"p1_ok":true,"fram_ok":true,"fram_volatile":false,"journal_ok":true,"journal_resets":0,"carrier_hz":869525000,"bw_hz":125000,"sf":7,"cr":"4/5","preamble":24,"sync_word":"0x12","tx_power_dbm":13,"uptime_s":38366,"service_s":37886,"boot_s":120,"screen":"menu","lang":"EN","name":"WICI-374C8F","reset_reason":"0x00000003","rns_state":"running","entropy_ok":true,"link":"lora","rx_task":true,"rx_armed":true,"rx_ready_ms":1080,"loop_max_ms":35,"rx_task_loops":120613,"rx_service_max_ms":5,"rx_stalled":false,"rx_mode_lost":0,"lock_timeouts":0,"lock_misses":0,"store_ok":true,"register":180,"inbox":0,"head":759,"node":false,"usb_open":false,"usb_flow":false,"usb_buffered":0,"usb_pinned":0,"usb_rns_in":0,"usb_rns_out":0,"usb_rx_drop":0,"usb_rx_large":0,"usb_tx_drop":0,"usb_ready":0,"usb_cmds":0,"usb_ann_limited":0,"usb_rx_ifac":0,"usb_rx_malformed":0,"usb_rx_invalid":0,"usb_k1":0,"computer_s":-1,"usb_data":false,"usb_in":0,"usb_out":0,"usb_rejected":0,"usb_boot":"683692a43df13f7b","wdt_s":60,"board":"N1"}
+16:24:47.334 >> APP
+16:24:47.360 {"link":true,"in_flight":0,"sent":0,"delivered":0,"failed":0,"received":0,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":180}
+16:25:19.184 {"lorarx":"raw","len":156,"rssi_dbm":-32}
+16:25:21.549 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:25:22.571 {"lorarx":"raw","len":156,"rssi_dbm":-22}
+16:25:46.281 >> APP
+16:25:46.326 {"link":true,"in_flight":0,"sent":0,"delivered":0,"failed":0,"received":0,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":180}
+16:27:19.406 {"lorarx":"raw","len":156,"rssi_dbm":-26}
+16:27:24.771 {"lorarx":"raw","len":156,"rssi_dbm":-26}
+16:27:25.145 {"lorarx":"raw","len":156,"rssi_dbm":-38}
+16:27:48.189 {"lorarx":"raw","len":29,"rssi_dbm":-40}
+16:27:49.477 {"lorarx":"raw","len":127,"rssi_dbm":-39}
+16:27:49.578 {"lorarx":"raw","len":29,"rssi_dbm":-22}
+16:27:50.809 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:27:50.917 {"lorarx":"raw","len":29,"rssi_dbm":-40}
+16:27:53.690 {"hack":"sent","len":29,"end_ms":106}
+16:27:53.690 {"lorarx":"raw","len":98,"rssi_dbm":-50}
+16:27:54.963 {"lorarx":"raw","len":29,"rssi_dbm":-48}
+16:27:57.121 {"lorarx":"raw","len":56,"rssi_dbm":-49}
+16:27:57.227 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:28:04.838 >> SCREEN
+16:28:04.846 {"screen":"result","lang":"EN","lines":["RECIPIENT SAVED IT","NOTE NUMBER 9478 –","GIVE IT TO THE","WARDEN TO CHECK THE","STATUS"],"inverted":[false,false,false,false,false],"refreshes":245}
+16:28:06.514 >> APP
+16:28:06.552 {"link":true,"in_flight":0,"sent":1,"delivered":1,"failed":0,"received":1,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":181}
+16:28:39.567 {"lorarx":"raw","len":105,"rssi_dbm":-15}
+16:28:39.669 {"lorarx":"raw","len":29,"rssi_dbm":-41}
+16:28:40.999 {"hack":"sent","len":29,"end_ms":105}
+16:28:41.051 {"lorarx":"raw","len":105,"rssi_dbm":-41}
+16:28:42.282 {"lorarx":"raw","len":29,"rssi_dbm":-41}
+16:28:44.590 {"lorarx":"raw","len":56,"rssi_dbm":-40}
+16:28:44.691 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:28:58.698 >> SCREEN
+16:28:58.729 {"screen":"result","lang":"EN","lines":["RECIPIENT READ IT","NOTE NUMBER 9478 –","GIVE IT TO THE","WARDEN TO CHECK THE","STATUS"],"inverted":[false,false,false,false,false],"refreshes":248}
+16:29:00.642 {"lorarx":"raw","len":105,"rssi_dbm":-15}
+16:29:00.748 {"lorarx":"raw","len":29,"rssi_dbm":-38}
+16:29:03.007 {"hack":"sent","len":29,"end_ms":105}
+16:29:03.007 {"lorarx":"raw","len":105,"rssi_dbm":-38}
+16:29:04.246 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:29:06.554 {"lorarx":"raw","len":56,"rssi_dbm":-40}
+16:29:06.662 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:29:21.216 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+16:29:24.962 >> APP
+16:29:24.971 {"link":true,"in_flight":0,"sent":1,"delivered":1,"failed":0,"received":3,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":181}
+16:29:26.639 >> SCREEN
+16:29:26.682 {"screen":"result","lang":"EN","lines":["FORWARDED (FIRE","SERVICE / AMBULANCE","/ COUNTY)","NOTE NUMBER 9478 –","GIVE IT TO THE     ▼"],"inverted":[false,false,false,false,false],"refreshes":263}
+16:29:27.330 {"lorarx":"raw","len":156,"rssi_dbm":-41}
+16:29:28.680 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:29:33.183 >> SCREEN
+16:29:33.203 {"screen":"result","lang":"EN","lines":["FORWARDED (FIRE","SERVICE / AMBULANCE","/ COUNTY)","NOTE NUMBER 9478 –","GIVE IT TO THE     ▼"],"inverted":[false,false,false,false,false],"refreshes":263}
+16:29:46.403 >> REQ 20
+16:29:46.575 {"numbers":[7842,2564,2244,875,8391,8696,4607,5734,3733,4101,2717,152,2872,7539,6829,5880,8279,4793,2826,8305],"created":20,"sa1_bytes":81}
+16:29:46.951 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:29:48.243 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:29:48.349 {"lorarx":"raw","len":29,"rssi_dbm":-16}
+16:29:49.576 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:29:49.683 {"lorarx":"raw","len":29,"rssi_dbm":-40}
+16:29:50.493 {"lorarx":"raw","len":29,"rssi_dbm":-41}
+16:29:53.666 {"lorarx":"raw","len":29,"rssi_dbm":-41}
+16:29:54.983 {"hack":"sent","len":29,"end_ms":105}
+16:29:54.983 {"lorarx":"raw","len":98,"rssi_dbm":-41}
+16:29:57.373 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:29:57.532 {"lorarx":"raw","len":29,"rssi_dbm":-16}
+16:29:57.914 {"lorarx":"raw","len":29,"rssi_dbm":-40}
+16:29:58.761 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:29:58.816 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:30:00.902 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:30:01.221 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:30:03.684 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:30:04.704 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:30:04.759 {"lorarx":"raw","len":29,"rssi_dbm":-16}
+16:30:05.814 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:30:07.253 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:30:09.445 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:30:09.547 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:30:10.878 {"lorarx":"raw","len":90,"rssi_dbm":-15}
+16:30:12.107 {"lorarx":"raw","len":29,"rssi_dbm":-43}
+16:30:13.229 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:13.773 {"hack":"sent","len":29,"end_ms":105}
+16:30:13.773 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:30:15.872 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:15.978 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:30:17.308 {"lorarx":"raw","len":132,"rssi_dbm":-38}
+16:30:17.415 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:30:19.457 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:30:20.829 {"hack":"sent","len":29,"end_ms":108}
+16:30:20.829 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:30:22.008 {"lorarx":"raw","len":98,"rssi_dbm":-16}
+16:30:22.116 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:22.640 >> APP
+16:30:22.659 {"link":true,"in_flight":0,"sent":7,"delivered":7,"failed":0,"received":7,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":18,"unsent":14,"next":187,"test_paused":false,"items":201}
+16:30:24.365 {"lorarx":"raw","len":132,"rssi_dbm":-38}
+16:30:24.471 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:30:25.712 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:25.816 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:28.449 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:28.935 {"hack":"sent","len":29,"end_ms":106}
+16:30:28.935 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:30:30.913 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:31.019 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:32.523 {"hack":"sent","len":29,"end_ms":107}
+16:30:32.524 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:30:33.389 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:33.498 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:35.844 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:36.653 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:37.980 {"hack":"sent","len":29,"end_ms":106}
+16:30:37.980 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:30:38.733 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:38.840 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:41.230 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:42.032 {"lorarx":"raw","len":132,"rssi_dbm":-37}
+16:30:42.138 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:30:44.805 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:45.823 {"hack":"sent","len":29,"end_ms":105}
+16:30:45.823 {"lorarx":"raw","len":98,"rssi_dbm":-36}
+16:30:47.266 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:47.376 {"lorarx":"raw","len":29,"rssi_dbm":-35}
+16:30:49.457 {"hack":"sent","len":29,"end_ms":105}
+16:30:49.457 {"lorarx":"raw","len":98,"rssi_dbm":-36}
+16:30:49.721 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:49.827 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:52.197 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:53.044 {"hack":"sent","len":29,"end_ms":104}
+16:30:53.044 {"lorarx":"raw","len":98,"rssi_dbm":-36}
+16:30:54.358 >> APP
+16:30:54.370 {"link":true,"in_flight":0,"sent":8,"delivered":8,"failed":0,"received":13,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":15,"unsent":13,"next":188,"test_paused":false,"items":201}
+16:30:54.687 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:54.789 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:56.672 {"hack":"sent","len":29,"end_ms":106}
+16:30:56.673 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:30:57.152 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:30:57.256 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:30:59.602 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:00.244 {"hack":"sent","len":29,"end_ms":102}
+16:31:00.244 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:31:02.705 {"hack":"sent","len":29,"end_ms":103}
+16:31:02.705 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:31:03.075 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:03.182 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:31:05.200 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:31:05.510 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:07.280 {"lorarx":"raw","len":56,"rssi_dbm":-37}
+16:31:07.381 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:09.144 {"hack":"sent","len":29,"end_ms":102}
+16:31:09.144 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:31:09.626 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:09.733 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:31:10.425 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:31:12.090 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:13.692 {"lorarx":"raw","len":68,"rssi_dbm":-37}
+16:31:13.853 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:14.490 {"lorarx":"raw","len":29,"rssi_dbm":-36}
+16:31:15.694 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:16.282 {"lorarx":"raw","len":29,"rssi_dbm":-37}
+16:31:18.006 {"hack":"sent","len":29,"end_ms":113}
+16:31:18.006 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:31:18.752 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:18.862 {"lorarx":"raw","len":29,"rssi_dbm":-36}
+16:31:21.183 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:21.557 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:31:21.665 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:23.653 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:24.772 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:25.905 {"hack":"sent","len":29,"end_ms":106}
+16:31:25.905 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:31:26.080 >> APP
+16:31:26.119 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":19,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":13,"unsent":11,"next":190,"test_paused":false,"items":201}
+16:31:27.248 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:27.354 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:29.436 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+16:31:29.541 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:30.880 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:32.591 {"hack":"sent","len":29,"end_ms":102}
+16:31:32.592 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:31:33.344 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:33.395 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:35.803 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:36.067 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:31:36.174 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:36.758 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:39.026 {"hack":"sent","len":29,"end_ms":102}
+16:31:39.026 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:31:39.397 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:39.503 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:41.861 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:42.455 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:31:42.564 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:43.254 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:45.412 {"hack":"sent","len":29,"end_ms":105}
+16:31:45.465 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:31:46.169 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:46.279 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:48.649 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:49.994 {"lorarx":"raw","len":60,"rssi_dbm":-39}
+16:31:50.103 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:51.874 {"hack":"sent","len":29,"end_ms":104}
+16:31:51.874 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:31:52.246 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:52.348 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:54.716 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:31:54.825 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:56.474 {"lorarx":"raw","len":64,"rssi_dbm":-39}
+16:31:56.581 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:31:57.797 >> APP
+16:31:57.853 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":23,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":13,"unsent":11,"next":190,"test_paused":false,"items":201}
+16:31:58.389 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:31:59.723 {"hack":"sent","len":29,"end_ms":105}
+16:31:59.723 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:00.748 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:00.853 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:03.219 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:04.229 {"hack":"sent","len":29,"end_ms":106}
+16:32:04.229 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:05.788 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:06.056 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:08.255 {"hack":"sent","len":29,"end_ms":102}
+16:32:08.255 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:08.523 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:08.624 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:12.627 {"lorarx":"raw","len":64,"rssi_dbm":-39}
+16:32:12.728 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:13.914 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:14.555 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:16.429 {"hack":"sent","len":29,"end_ms":103}
+16:32:16.429 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:17.007 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:17.112 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:19.465 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:19.836 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:32:19.997 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:20.374 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:22.836 {"hack":"sent","len":29,"end_ms":105}
+16:32:22.837 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:23.742 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:23.846 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:26.261 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:32:26.369 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:27.222 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:27.591 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:29.258 {"hack":"sent","len":29,"end_ms":108}
+16:32:29.258 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:29.521 >> APP
+16:32:29.524 {"link":true,"in_flight":0,"sent":10,"delivered":10,"failed":0,"received":29,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":11,"unsent":11,"next":190,"test_paused":false,"items":201}
+16:32:30.060 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:30.166 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:32.670 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:32:32.772 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:34.053 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:34.104 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:35.672 {"hack":"sent","len":29,"end_ms":102}
+16:32:35.672 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:38.135 {"hack":"sent","len":29,"end_ms":104}
+16:32:38.135 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:40.552 {"hack":"sent","len":29,"end_ms":102}
+16:32:40.602 {"lorarx":"raw","len":98,"rssi_dbm":-37}
+16:32:41.886 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:43.539 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:45.131 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:32:45.242 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:46.429 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:47.136 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:47.186 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:49.125 {"lorarx":"raw","len":68,"rssi_dbm":-39}
+16:32:49.232 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:50.149 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:52.278 {"hack":"sent","len":29,"end_ms":103}
+16:32:52.278 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:32:54.427 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:32:55.813 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:32:55.916 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:32:57.150 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:32:57.256 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:01.233 >> APP
+16:33:01.236 {"link":true,"in_flight":0,"sent":13,"delivered":13,"failed":0,"received":33,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":11,"unsent":8,"next":193,"test_paused":false,"items":201}
+16:33:03.232 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:33:03.341 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:03.668 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:04.582 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:05.448 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:07.271 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:08.936 {"hack":"sent","len":29,"end_ms":107}
+16:33:08.936 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:33:09.691 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:09.797 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:12.186 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:13.361 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:33:13.465 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:15.774 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:16.584 {"hack":"sent","len":29,"end_ms":102}
+16:33:16.584 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:33:17.982 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:18.413 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:18.466 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:20.890 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:21.105 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:33:21.211 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:21.908 {"lorarx":"raw","len":29,"rssi_dbm":-38}
+16:33:24.109 {"hack":"sent","len":29,"end_ms":108}
+16:33:24.109 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:33:24.480 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:24.590 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:26.958 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:27.653 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:33:27.760 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:28.414 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:30.512 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:31.962 {"hack":"sent","len":29,"end_ms":102}
+16:33:31.962 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:33:32.926 >> APP
+16:33:32.936 {"link":true,"in_flight":0,"sent":16,"delivered":16,"failed":0,"received":37,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":9,"unsent":5,"next":196,"test_paused":false,"items":201}
+16:33:32.989 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:33.094 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:35.465 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:38.160 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:38.640 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:33:38.747 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:42.586 {"hack":"sent","len":29,"end_ms":108}
+16:33:42.586 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:33:43.296 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:43.403 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:45.720 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:46.044 {"lorarx":"raw","len":60,"rssi_dbm":-38}
+16:33:46.153 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:47.719 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:49.071 {"hack":"sent","len":29,"end_ms":101}
+16:33:49.072 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:33:49.336 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:49.444 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:51.823 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:52.852 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:33:52.960 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:33:54.210 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:55.403 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:56.551 {"hack":"sent","len":29,"end_ms":101}
+16:33:56.552 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:33:57.989 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:33:58.095 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:33:59.983 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:34:00.086 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:00.522 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:01.603 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:02.956 {"hack":"sent","len":29,"end_ms":107}
+16:34:02.956 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:04.402 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:04.508 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:04.619 >> APP
+16:34:04.668 {"link":true,"in_flight":0,"sent":16,"delivered":16,"failed":0,"received":41,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":7,"unsent":5,"next":196,"test_paused":false,"items":201}
+16:34:06.415 {"lorarx":"raw","len":56,"rssi_dbm":-38}
+16:34:06.526 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:07.071 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:07.996 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:09.405 {"hack":"sent","len":29,"end_ms":104}
+16:34:09.405 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:10.487 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:10.597 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:12.817 {"lorarx":"raw","len":56,"rssi_dbm":-38}
+16:34:12.919 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:14.170 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:14.280 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:15.769 {"hack":"sent","len":29,"end_ms":106}
+16:34:15.825 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:16.629 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:16.735 {"lorarx":"raw","len":29,"rssi_dbm":-38}
+16:34:19.093 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:19.853 {"hack":"sent","len":29,"end_ms":102}
+16:34:19.853 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:21.141 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:21.565 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:23.453 {"hack":"sent","len":29,"end_ms":104}
+16:34:23.453 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:24.319 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:24.372 {"lorarx":"raw","len":29,"rssi_dbm":-38}
+16:34:26.917 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:34:27.023 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:28.241 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:28.344 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:29.893 {"hack":"sent","len":29,"end_ms":102}
+16:34:29.893 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:32.320 {"hack":"sent","len":29,"end_ms":101}
+16:34:32.320 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:34:34.687 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:36.026 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:34:36.132 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:36.309 >> APP
+16:34:36.403 {"link":true,"in_flight":0,"sent":16,"delivered":16,"failed":0,"received":47,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":6,"unsent":5,"next":196,"test_paused":false,"items":201}
+16:34:36.510 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:37.380 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:37.431 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:38.414 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:39.811 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:42.280 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:43.138 {"lorarx":"raw","len":64,"rssi_dbm":-39}
+16:34:43.244 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:44.693 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:45.862 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:47.148 {"hack":"sent","len":29,"end_ms":101}
+16:34:47.148 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:34:49.558 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:34:49.668 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:50.899 {"lorarx":"raw","len":90,"rssi_dbm":-15}
+16:34:52.066 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:53.247 {"lorarx":"raw","len":90,"rssi_dbm":-15}
+16:34:53.831 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:34:53.935 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:34:55.107 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:56.711 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:34:56.821 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:34:59.175 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:01.639 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:02.599 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:35:02.709 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:05.225 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:06.666 {"hack":"sent","len":29,"end_ms":104}
+16:35:06.666 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:35:07.681 {"lorarx":"raw","len":90,"rssi_dbm":-15}
+16:35:08.029 >> APP
+16:35:08.055 {"link":true,"in_flight":0,"sent":19,"delivered":19,"failed":0,"received":52,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":2,"next":199,"test_paused":false,"items":201}
+16:35:09.005 {"lorarx":"raw","len":60,"rssi_dbm":-39}
+16:35:09.055 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:10.083 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:11.157 {"lorarx":"raw","len":90,"rssi_dbm":-15}
+16:35:11.930 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:13.093 {"lorarx":"raw","len":64,"rssi_dbm":-39}
+16:35:13.200 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:14.618 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:14.725 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:15.707 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:17.110 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:17.554 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:35:17.668 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:18.224 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:20.706 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:21.882 {"hack":"sent","len":29,"end_ms":107}
+16:35:21.882 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:35:23.160 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:23.274 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:25.466 {"lorarx":"raw","len":133,"rssi_dbm":-39}
+16:35:25.520 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:26.777 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:28.606 {"hack":"sent","len":29,"end_ms":104}
+16:35:28.606 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:35:29.271 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:29.322 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:31.861 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:33.068 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:35:33.121 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:33.575 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:35.752 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:36.971 {"hack":"sent","len":29,"end_ms":101}
+16:35:36.971 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:35:38.233 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:38.285 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:39.751 >> APP
+16:35:39.811 {"link":true,"in_flight":0,"sent":21,"delivered":21,"failed":0,"received":56,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":2,"unsent":0,"next":-1,"test_paused":false,"items":201}
+16:35:40.428 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:35:40.538 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:41.272 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:41.837 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:43.430 {"hack":"sent","len":29,"end_ms":101}
+16:35:43.430 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:35:44.560 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:44.676 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:46.832 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:35:46.943 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:48.065 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:49.184 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:51.667 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:52.252 {"hack":"sent","len":29,"end_ms":105}
+16:35:52.311 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:35:54.111 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:54.223 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:55.697 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:35:55.807 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:35:56.541 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:35:57.746 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:35:58.712 {"hack":"sent","len":29,"end_ms":102}
+16:35:58.712 {"lorarx":"raw","len":98,"rssi_dbm":-38}
+16:36:00.291 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:00.406 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:02.144 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:36:02.258 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:03.218 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:03.895 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:05.775 {"hack":"sent","len":29,"end_ms":107}
+16:36:05.775 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:36:06.575 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:06.683 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:09.004 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:10.070 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:36:10.175 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:11.108 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:11.481 >> APP
+16:36:11.514 {"link":true,"in_flight":0,"sent":21,"delivered":21,"failed":0,"received":60,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":201}
+16:36:12.638 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:13.557 {"hack":"sent","len":29,"end_ms":104}
+16:36:13.557 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:36:15.088 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:15.208 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:17.009 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:36:17.117 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:18.674 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:18.788 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:20.144 {"hack":"sent","len":29,"end_ms":105}
+16:36:20.144 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:36:23.280 {"hack":"sent","len":29,"end_ms":103}
+16:36:23.281 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:36:25.583 {"lorarx":"raw","len":60,"rssi_dbm":-39}
+16:36:25.687 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:26.926 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+16:36:27.044 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:28.513 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:29.859 {"hack":"sent","len":29,"end_ms":102}
+16:36:29.859 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+16:36:31.331 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:33.324 {"lorarx":"raw","len":56,"rssi_dbm":-38}
+16:36:33.435 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:35.002 {"lorarx":"raw","len":64,"rssi_dbm":-39}
+16:36:35.122 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:35.639 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+16:36:37.949 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+16:36:38.060 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+16:36:46.736 >> APP
+16:36:46.773 {"link":true,"in_flight":0,"sent":21,"delivered":21,"failed":0,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":201}
+16:36:50.292 >> REQ 5
+16:36:50.370 {"numbers":[9089,6008,7852,579,1768],"created":5,"sa1_bytes":80}
+16:37:50.997 >> APP
+16:37:51.015 {"link":true,"in_flight":1,"sent":25,"delivered":21,"failed":3,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":205,"test_paused":false,"items":206}
+16:38:51.910 >> APP
+16:38:51.959 {"link":true,"in_flight":1,"sent":28,"delivered":21,"failed":6,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:39:52.798 >> APP
+16:39:52.810 {"link":true,"in_flight":1,"sent":31,"delivered":21,"failed":9,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:40:53.705 >> APP
+16:40:53.758 {"link":true,"in_flight":0,"sent":31,"delivered":21,"failed":10,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:41:54.611 >> APP
+16:41:54.636 {"link":true,"in_flight":1,"sent":34,"delivered":21,"failed":12,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":203,"test_paused":false,"items":206}
+16:42:55.524 >> APP
+16:42:55.583 {"link":true,"in_flight":0,"sent":36,"delivered":21,"failed":15,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:43:56.429 >> APP
+16:43:56.455 {"link":true,"in_flight":0,"sent":36,"delivered":21,"failed":15,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:44:57.314 >> APP
+16:44:57.369 {"link":true,"in_flight":0,"sent":36,"delivered":21,"failed":15,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:45:58.239 >> APP
+16:45:58.286 {"link":true,"in_flight":0,"sent":36,"delivered":21,"failed":15,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:46:59.151 >> APP
+16:46:59.381 {"link":true,"in_flight":1,"sent":38,"delivered":21,"failed":16,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:48:00.049 >> APP
+16:48:00.096 {"link":true,"in_flight":1,"sent":41,"delivered":21,"failed":19,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:49:00.943 >> APP
+16:49:00.987 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:50:01.845 >> APP
+16:50:01.881 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:51:02.763 >> APP
+16:51:02.774 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:52:03.675 >> APP
+16:52:03.712 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:53:04.570 >> APP
+16:53:04.583 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:54:05.484 >> APP
+16:54:05.521 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:55:06.395 >> APP
+16:55:06.434 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:55:31.051 {"lorarx":"raw","len":156,"rssi_dbm":-30}
+16:55:49.978 {"lorarx":"raw","len":156,"rssi_dbm":-15}
+16:56:07.305 >> APP
+16:56:07.324 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:57:08.212 >> APP
+16:57:08.227 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:58:09.113 >> APP
+16:58:09.165 {"link":true,"in_flight":0,"sent":41,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+16:59:10.020 >> APP
+16:59:10.050 {"link":true,"in_flight":1,"sent":42,"delivered":21,"failed":20,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:00:10.921 >> APP
+17:00:10.955 {"link":true,"in_flight":0,"sent":43,"delivered":21,"failed":22,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:01:11.833 >> APP
+17:01:11.869 {"link":true,"in_flight":0,"sent":43,"delivered":21,"failed":22,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:02:12.743 >> APP
+17:02:12.795 {"link":true,"in_flight":0,"sent":43,"delivered":21,"failed":22,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:03:13.650 >> APP
+17:03:13.686 {"link":true,"in_flight":0,"sent":43,"delivered":21,"failed":22,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:04:14.558 >> APP
+17:04:14.569 {"link":true,"in_flight":0,"sent":44,"delivered":21,"failed":23,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:05:15.458 >> APP
+17:05:15.513 {"link":true,"in_flight":0,"sent":46,"delivered":21,"failed":25,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:06:16.367 >> APP
+17:06:16.411 {"link":true,"in_flight":0,"sent":46,"delivered":21,"failed":25,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:07:17.263 >> APP
+17:07:17.303 {"link":true,"in_flight":0,"sent":46,"delivered":21,"failed":25,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:07:19.779 {"lorarx":"raw","len":156,"rssi_dbm":-39}
+17:07:20.543 >> APP
+17:07:20.573 {"link":true,"in_flight":0,"sent":46,"delivered":21,"failed":25,"received":64,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":5,"unsent":5,"next":-1,"test_paused":false,"items":206}
+17:07:23.331 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+17:07:23.451 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:07:24.695 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:07:24.752 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:27.665 {"hack":"sent","len":29,"end_ms":108}
+17:07:27.665 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:07:28.922 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:31.070 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:07:31.180 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:07:36.463 >> APP
+17:07:36.497 {"link":true,"in_flight":0,"sent":46,"delivered":21,"failed":25,"received":65,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":4,"unsent":4,"next":-1,"test_paused":false,"items":206}
+17:07:37.274 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:38.562 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+17:07:38.667 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:07:39.935 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:07:40.051 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:41.273 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:44.035 {"hack":"sent","len":29,"end_ms":106}
+17:07:44.035 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:07:45.406 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:47.340 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:48.756 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+17:07:48.807 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:07:50.061 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:07:50.181 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:52.378 >> APP
+17:07:52.423 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":66,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":3,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:07:52.541 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:07:53.002 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+17:07:53.113 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:07:56.149 {"hack":"sent","len":29,"end_ms":104}
+17:07:56.149 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:07:57.051 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:07:57.166 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:57.455 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:07:59.526 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:00.763 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:00.882 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:02.581 {"hack":"sent","len":29,"end_ms":108}
+17:08:02.581 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:08:03.083 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:03.203 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:03.880 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:05.557 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:07.129 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:07.248 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:08.282 >> APP
+17:08:08.324 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":68,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":2,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:08:08.997 {"hack":"sent","len":29,"end_ms":101}
+17:08:08.998 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:08:09.274 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:09.391 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:10.298 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:11.774 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:13.584 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:13.640 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:15.401 {"hack":"sent","len":29,"end_ms":106}
+17:08:15.401 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:08:15.687 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:15.740 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:16.702 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:18.100 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:19.964 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:20.084 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:21.827 {"hack":"sent","len":29,"end_ms":101}
+17:08:21.827 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:08:22.274 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:08:22.391 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:23.100 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:24.201 >> APP
+17:08:24.234 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":71,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":1,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:08:26.361 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:26.479 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:28.221 {"hack":"sent","len":29,"end_ms":103}
+17:08:28.221 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:08:29.514 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:08:31.641 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:31.752 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:33.290 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:08:33.395 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:08:40.115 >> APP
+17:08:40.164 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":72,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":1,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:08:56.016 >> APP
+17:08:56.073 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":72,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":1,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:09:11.927 >> APP
+17:09:11.946 {"link":true,"in_flight":0,"sent":49,"delivered":24,"failed":25,"received":72,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":1,"unsent":1,"next":-1,"test_paused":false,"items":206}
+17:09:13.350 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:09:14.654 {"lorarx":"raw","len":132,"rssi_dbm":-39}
+17:09:14.763 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:09:16.004 {"lorarx":"raw","len":98,"rssi_dbm":-15}
+17:09:16.125 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:09:18.964 {"hack":"sent","len":29,"end_ms":105}
+17:09:18.964 {"lorarx":"raw","len":98,"rssi_dbm":-39}
+17:09:20.267 {"lorarx":"raw","len":29,"rssi_dbm":-39}
+17:09:22.429 {"lorarx":"raw","len":56,"rssi_dbm":-39}
+17:09:22.546 {"lorarx":"raw","len":29,"rssi_dbm":-15}
+17:09:27.839 >> APP
+17:09:27.847 {"link":true,"in_flight":0,"sent":50,"delivered":25,"failed":25,"received":73,"rejected":0,"skipped":0,"bulletins_skipped":0,"inbox_full":0,"evicted":0,"intents":0,"unsent":0,"next":-1,"test_paused":false,"items":206}

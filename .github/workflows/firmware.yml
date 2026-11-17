@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# Kompilacja obrazów stacji (firmware/README.md): bench-a, bench-n1 (nRF52840), bench-b i l0 (ESP32-S3),
+# Kompilacja obrazów stacji (firmware/README.md): bench-a, bench-n1 (nRF52840), bench-b, l0 i v2 (ESP32-S3),
 # oraz programu węzła na komputerze (host), na którym stoją próby zgodności z Reticulum (tests/test_rns_stack.py).
 # Od etapów R6-3 i R6-4 obrazy stacji i host są na rdzeniu Reticulum stacji (lib/reticulum_core); obrazy z portem
 # (*-port, host-port) tylko się kompilują. Dla obrazów z rdzeniem rdzeń kompiluje się też osobno kompilatorem i flagami obrazu z -Werror, ze
@@ -26,7 +26,7 @@ jobs:
       fail-fast: false
       matrix:
         # *-port i host-port: obrazy z portem microReticulum (powrót do portu do etapu R6-5).
-        env: [bench-a, bench-n1, bench-b, l0, host, bench-a-port, bench-n1-port, bench-b-port, l0-port, host-port]
+        env: [bench-a, bench-n1, bench-b, l0, v2, host, bench-a-port, bench-n1-port, bench-b-port, l0-port, host-port]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0

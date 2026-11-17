@@ -1,6 +1,6 @@
 # Warstwa transportu: szew, koperta i nośniki
 
-**Stan: implementacja przed próbą D21, 2026-11-02.** Numerowana konfiguracja uruchamia WICI-Link v3 na surowym SX1262; konfiguracja bez numerów uruchamia Reticulum. Warunek przyjęcia D21 nadal wymaga próby przy stole na docelowym sprzęcie ([kryteria](#warunek-przyjęcia)).
+**Stan: D21 zamknięta 2026-11-17 na rzecz WICI-Link, z energią do potwierdzenia na płytce v2.** Numerowana konfiguracja uruchamia WICI-Link v3 na surowym SX1262; konfiguracja bez numerów uruchamia Reticulum, który nie dostaje nowych funkcji. Próby przy stole spełniły [warunek przyjęcia](#warunek-przyjęcia) poza budżetem energii, o którym rozstrzyga pomiar 48 h na płytce v2 ([wynik](#wynik-prób-przy-stole)).
 
 ## Po co
 
@@ -75,7 +75,7 @@ Narzut koperty: 25 B (9 B nagłówka i 16 B znacznika); koperta ma 25–281 B, c
 
 **Okna stanowiska.** `env_replay` i `env_parts` w SQLite są kluczowane przez (sieć, nadawca, odbiorca, SHA-256 klucza koperty pary): nowy klucz pary pod tym samym numerem zaczyna okno od nowa, jak odcisk klucza w rekordach FRAM stacji.
 
-**PRZENIEŚ STACJĘ.** Zaszyfrowana migawka 256 KiB obejmuje tożsamość, klucze koperty, zatwierdzone granice rezerwacji `ctr` i okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](usb-protocol.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Oprogramowanie obsługuje wznowienie po przerwaniu USB, wycofanie i trwałe oznaczenie wycofanej lub wyłączonej stacji. Próba zaniku zasilania na sprzęcie docelowym pozostaje warunkiem D21.
+**PRZENIEŚ STACJĘ.** Zaszyfrowana migawka 256 KiB obejmuje tożsamość, klucze koperty, zatwierdzone granice rezerwacji `ctr` i okna powtórzeń dla odbioru. Po imporcie stacja docelowa zaczyna nadawanie od przeniesionej granicy (nawet jeśli część zarezerwowanych wartości nie została użyta); nie zeruje licznika ani okien. Źródłowa przestaje nadawać przed utworzeniem paczki, zgodnie z [krokami przeniesienia](usb-protocol.md#przeniesienie-stacji). Brak któregokolwiek z tych pól albo niepewna granica blokuje aktywację z tą samą tożsamością; wymaga nowych kluczy i kart. Oprogramowanie obsługuje wznowienie po przerwaniu USB, wycofanie i trwałe oznaczenie wycofanej lub wyłączonej stacji. Przeniesienie z przerwaniem USB w każdym kroku przeszło na prototypach 2026-11-17 bez ponownego użycia licznika ([próba 16](../../hardware/xiao-wici/evidence/przeniesienie-2026-11-17.md)).
 
 **Odtworzenie stanowiska z kopii.** Starsza kopia SQLite może mieć niższą granicę rezerwacji `ctr` niż ostatnio użyta z tą samą tożsamością odbiorcy. Odtworzone stanowisko nie nadaje kopert pod tymi kluczami (`env_send_guard`), dopóki przygotowanie nie aktywuje nowej tożsamości odbiorcy i nowych kart. Zapasowa tożsamość odbiorcy nie ma granicy poza bazą stanowiska, które ją aktywuje, więc paczka zapasowa jest jednorazowa: pierwsza aktywacja oznacza paczkę jako użytą przed założeniem nośnika, a każda następna zaczyna z `env_send_guard` ([tożsamość zapasowa](stanowisko-osp.md#komputer-i-aplikacja-stanowiska)).
 
@@ -115,20 +115,20 @@ Reguły kontraktu:
 2. **Dowód po zapisie.** Cel WICI-Link wysyła HACK dopiero po trwałym zapisie skutku SA1 i okna powtórzeń (stacja: `wici_destination`; stanowisko: transakcja SQLite przed HACK), a stacja po tym samym zapisie także dowód doręczenia. Reticulum wysyła dowód po transakcji aplikacji (PROVE_APP).
 3. **Cisza i klasy czasu w nośniku stacji.** Oba nośniki stacji egzekwują ciszę radiową (W19) i klasy czasu kanału z [radio.md](radio.md). Nośnik bez nich (Meshtastic, MeshCore) może działać tylko na stanowisku, a próba „Wrogi węzeł” nie może być dla niego zaliczona.
 4. **Odbiór niepewny.** Koperta, której nie da się odszyfrować kluczem żadnej znanej pary, jest odrzucana i liczona. Nie trafia do kwarantanny SA1, bo nie ma uwierzytelnionego nadawcy. Kwarantanna dotyczy dalej stacji z kluczem spoza listy zaufanych, ale z poprawną kopertą.
-5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej).
+5. **Jeden nośnik radiowy na stację.** Układ SX1262 odbiera jednocześnie tylko jeden profil, a Meshtastic i MeshCore są całymi programami, nie bibliotekami. Kilka nośników naraz obsługuje tylko stanowisko odbiorcze (niżej). Drugie radio na stacji do nadawania kopert przez sieć Meshtastic albo MeshCore rozważono 2026-11-16 i odrzucono. Oba protokoły są jawne, ale koperta w MeshCore (SF8, 62,5 kHz) zajmuje kanał około 1,9 s na każdym przekaźniku sieci, a typowe zgłoszenie idzie w dwóch częściach; Meshtastic LongFast daje około 2 s na przeskok. Zalew zgłoszeń w kryzysie obciążyłby więc cudzą sieć, gdy mieszkańcy i tak ją zapychają. Do tego oba radia dzieliłyby limit 10% tego samego podpasma, cisza radiowa i badania zgodności objęłyby dwa nadajniki, a przekaźnikami tych sieci zarządzają prywatni operatorzy bez porozumienia z gminą.
 
 ## Nośniki
 
 | Nośnik | Rola | `max_payload` | `hop_ack` / `e2e_ack` | `airtime_classes` / `radio_silence` | Uwagi |
 |---|---|---|---|---|---|
-| [WICI-Link](wici-link.md) | domyślny w stacji (po D21) | 228 B | tak / w dół (dowód doręczenia) | tak / tak | własny protokół łącza; licencja MIT |
-| Reticulum (rdzeń stacji) | obecny; zapasowy do rozstrzygnięcia D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
-| Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty |
-| MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; domyślny budżet nadawania 50% wymaga ustawienia na ≤10% |
+| [WICI-Link](wici-link.md) | domyślny w stacji (D21, 2026-11-17) | 228 B | tak / w dół (dowód doręczenia) | tak / tak | własny protokół łącza; licencja MIT |
+| Reticulum (rdzeń stacji) | konfiguracja bez numerów; bez nowych funkcji po D21 | 492 B | nie / tak (dowód) | tak / tak | adapter wokół `rns_node`; licencja Reticulum |
+| Meshtastic (węzeł przez USB) | tylko stanowisko, po pilotażu | 227 B (PKI) | tak / tak (DM) | nie / nie | kanał bez uwierzytelnienia; ruch oznaczany jako niezweryfikowany, chyba że koperta ma klucz z karty; typowe zgłoszenie (koperta 199 B) w jednej ramce; program i biblioteka Python na GPL-3.0, więc adapter mówi protokołem szeregowym sam albo działa jako osobny proces |
+| MeshCore (węzeł przez USB) | tylko stanowisko, po pilotażu | 184 B | nie / tak | nie / nie | `RAW_CUSTOM` dla koperty; typowe zgłoszenie w dwóch częściach; węzeł z programem `kiss_modem` (surowe ramki LoRa do 255 B), a protokół MeshCore, limit 10% i ciszę prowadzi komputer stanowiska (np. biblioteka openhop_core, MIT); węzeł z programem companion ma domyślny budżet nadawania 50%, który wymaga ustawienia na ≤10% |
 | IP (MQTT lub HTTPS) | stanowisko ↔ powiat, gdy działa internet | 64 KiB | — / tak | — / — | poza siecią radiową; ta sama koperta |
 | Pamięć (symulator, testy) | testy i symulator | dowolne | konfigurowalne | konfigurowalne | wzorzec do prób zgodności |
 
-Wartości `max_payload` dla Meshtastic i MeshCore pochodzą ze źródeł tych projektów sprawdzonych 2026-11-01 (ramka 255 B, nagłówek Meshtastic 16 B, narzut PKI 12 B; ładunek MeshCore 184 B) i trzeba je potwierdzić w adapterze.
+Wartości `max_payload` dla Meshtastic i MeshCore pochodzą ze źródeł tych projektów sprawdzonych 2026-11-01 (ramka 255 B, nagłówek Meshtastic 16 B, narzut PKI 12 B; ładunek MeshCore 184 B; ponownie 2026-11-16 w Meshtastic 2.7.26 i 2.8.2 oraz MeshCore 1.18.0) i trzeba je potwierdzić w adapterze. Meshtastic 2.8 (2026-11 w fazie alfa) zmienia ponowienia i potwierdzenia oraz dodaje szyfrowanie kanału z uwierzytelnieniem i podpisy rozsyłanych wiadomości, więc adapter przypina wersję programu węzła. Protokół companion MeshCore jest według jego dokumentacji jeszcze rozwijany.
 
 ### Stanowisko odbiorcze z kilkoma nośnikami
 
@@ -157,7 +157,19 @@ D21 rozstrzyga się po próbie przy stole na dwóch zestawach RAK4631 i prototyp
 
 Dodatkowymi stacjami w kryteriach 1 i 2 oraz w pomiarze czasu HACK mogą być dwa zestawy XIAO ESP32-S3 z Wio-SX1262 z obrazem `xiao` ([procedura przy stole](../../hardware/xiao-wici/README.md)), a RAK4631 z narzędziem surowego LoRa [`lora-raw`](../../hardware/lora-raw/README.md) (nie z firmware RNode, które dokłada do ramek własny nagłówek) służą wtedy jako podsłuch kanału i węzeł wrogi. Zestaw XIAO trzyma obraz FRAM w PSRAM, więc nie zastępuje prototypu w kryteriach 3 i 4 ani stacji na płytce v2 w energii, zapasie RAM i zaniku zasilania; przekaźnik w próbach zaniku zasilania jest prototypem.
 
-Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument wraca do archiwum. Rozważane wcześniej oparcie stacji na rozwidleniu Meshtastic nie jest drogą zapasową, bo wymaga największych zmian i przenosi na zespół odpowiedzialność za cały obcy program (D20, CRA).
+Jeżeli WICI-Link nie spełni warunku, zostaje rdzeń Reticulum, a ten dokument wraca do archiwum.
+
+### Wynik prób przy stole
+
+Próby 2–17 na dwóch prototypach l0, dwóch zestawach XIAO i dwóch RAK4631 jako podsłuchu i węźle wrogim, 2026-11-02 do 2026-11-17 ([procedura i raporty](../../hardware/xiao-wici/README.md)). Właściciel zamknął D21 na rzecz WICI-Link 2026-11-17.
+
+1. W10: 50/50 RECEIVED przez przekaźnik w 13 min 2 s ([raport](../../hardware/xiao-wici/evidence/w10-2026-11-14.md)). HACK od końca DATA 96–118 ms na każdym skoku; pod zagłuszaniem jeden z 160 po 200,3 ms.
+2. „Wrogi węzeł”: 20/20 RECEIVED w 14 min 28 s i 21 min 2 s, dwa przebiegi po 2 h przy 50% zajętości kanału ([raport](../../hardware/xiao-wici/evidence/wrogi-2026-11-14.md)).
+3. Zapas RAM 69% na przekaźniku l0. Prąd modułu Wio: odbiór 6,2 mA i nadawanie około 60 mA przy 13 dBm, więcej niż w modelu ([raport](../../hardware/xiao-wici/evidence/prad-wio-2026-11-17.md)); o budżecie W23 rozstrzyga pomiar 48 h na płytce v2, który pozostaje warunkiem D21.
+4. Zanik zasilania przekaźnika (15 odcięć), stacji i zimny start bez utraty i bez podwójnego przyjęcia (próby 7, 13 i 14).
+5. Przeniesienie stacji z przerwaniem w każdym kroku bez ponownego użycia licznika i nonce (próba 16); rozsyłanie w dół bez pętli (próba 12).
+
+Rdzenia Reticulum nie sprawdzano tymi próbami, bo jest drogą zapasową tylko przy niespełnionym warunku. Rozważane wcześniej oparcie stacji na rozwidleniu Meshtastic nie jest drogą zapasową, bo wymaga największych zmian i przenosi na zespół odpowiedzialność za cały obcy program (D20, CRA).
 
 ## Kolejność prac
 
@@ -180,13 +192,8 @@ Drogi w dół root uczy się według planu sieci (`behind`, tylko w dokumencie r
 a przekaźnik tylko do swoich sąsiadów; do dalszych stacji ramka w dół idzie rozsyłaniem. Przy
 czekającym K1, które może teraz wyjść jednoadresowo, limit 25% dotyczy zachowawczo całego tranzytu i BEACON-ów.
 
-Pozostałe do zamknięcia D21: sprzętowe próby rozsyłania awaryjnego, pomiar
-200 ms HACK, W10, „Wrogi węzeł”, zaniki zasilania oraz budżet energii. Dwie płytki
-XIAO ESP32-S3 + Wio SX1262 przeszły [próbę toru radia przy stole](../../hardware/radio-pair/evidence/table-2026-11-01.md)
-(100/100 w każdym kierunku) na programie diagnostycznym i
-[próbę surowych ramek WICI](../../hardware/radio-pair/evidence/wici-raw-2026-11-01.md)
-(19, 44 i 255 B bez zmiany bajtów). Formalna próba D21
-na dwóch RAK4631 i prototypie pozostaje nierozstrzygnięta.
+Z D21 pozostaje tylko budżet energii: pomiar 48 h na płytce v2
+([wynik prób](#wynik-prób-przy-stole)).
 
 1. Szew nośnika (`LegacyBearer`) wokół obecnego `rns_node`, bez zmiany zachowania; próby jak dziś. Przed przełączeniem na numery u16: rozszerzenie kart i `configure` o `net_id` i numery obu końców, z kontrolą ich zgodności.
 2. Koperta w Pythonie z wektorami, potem w C++; próby różnicowe i rozszerzenie kontraktu PRZENIEŚ STACJĘ o liczniki oraz okna powtórzeń.

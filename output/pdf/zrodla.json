@@ -1,0 +1,12 @@
+{
+  "WICI-L0-montaz-i-testy.pdf": {
+    "source": "hardware/l0-diagnostic/MONTAZ-I-TESTY.md",
+    "source_sha256": "c64adc576a3d022bba9186a090fa425340fd681e75707336e8a4a82757e9b754",
+    "pdf_sha256": "8a4234c36d7ba65929df659f4be1a3cfbfc1850e509c319da3496c1524027011"
+  },
+  "WICI-L0-zlecenie.pdf": {
+    "source": "hardware/l0-diagnostic/ZLECENIE.md",
+    "source_sha256": "a194a11a9ba238f8d1f72b3aab995c878d86051178f67a0579944124312a6735",
+    "pdf_sha256": "e7ae4896e811b2c730c7cdc82522d38d304541787c7cc244dbc3837edf9cac31"
+  }
+}

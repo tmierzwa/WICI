@@ -11,7 +11,7 @@ To diagnostyka połączeń i podzespołów, nie aplikacja WICI.
 Kompilacja L0 i R0 zakończona poprawnie. Testy hosta sprawdzają logikę,
 raporty i USB przez pseudoporty szeregowe. Testy natywne wykonują rzeczywisty
 kod firmware i sterowników na symulowanych GPIO/SPI, z sanitizacją pamięci. Nie potwierdzają działania fizycznego
-sprzętu. Prototyp L0 nie został jeszcze zmontowany. R0 `pair-0.3` zaliczył próbę przy stole 2026-10-10; obecny obraz to `pair-0.4`.
+sprzętu. Oba prototypy L0 przeszły odbiór 2026-11-13 ([ODBIOR.md](ODBIOR.md), wyniki w [evidence/odbior-2026-11-13/](evidence/odbior-2026-11-13/README.md)). R0 `pair-0.3` zaliczył próbę przy stole 2026-10-10; obecny obraz to `pair-0.4`.
 `checks.json` i `SHA256SUMS.txt` zawierają wyniki i identyfikację plików.
 Pole `ready=1` w INFO potwierdza inicjalizację radia, rozpoznanie FRAM i
 konfigurację timerów LCD i brzęczyka; ekran nie ma kanału potwierdzania odbioru, wymaga oględzin.

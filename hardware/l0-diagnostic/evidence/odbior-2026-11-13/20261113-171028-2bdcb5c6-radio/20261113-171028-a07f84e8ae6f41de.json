@@ -1,0 +1,61 @@
+{
+  "session": "a07f84e8ae6f41de",
+  "started_utc": "2026-11-13T16:10:28.406571+00:00",
+  "hardware_test": true,
+  "requested_each_direction": 100,
+  "ports": {
+    "A": "/dev/cu.usbmodem21101",
+    "B": "/dev/cu.usbmodem214201"
+  },
+  "versions": {
+    "A": "l0-0.5",
+    "B": "pair-0.4"
+  },
+  "interval_s": 4.5,
+  "nodes": {
+    "B": {
+      "kind": "info",
+      "version": "pair-0.4",
+      "id": "A028AD76B144",
+      "ready": true,
+      "reset": 0,
+      "boot": "19A6F430",
+      "profile": [
+        "869.525",
+        "125",
+        "7",
+        "5",
+        "0",
+        "1.8"
+      ]
+    },
+    "A": {
+      "kind": "info",
+      "version": "l0-0.5",
+      "id": "50112F6B4580",
+      "ready": true,
+      "reset": 0,
+      "boot": "0D820158",
+      "profile": [
+        "869.525",
+        "125",
+        "7",
+        "5",
+        "0",
+        "1.8"
+      ]
+    }
+  },
+  "packets": [],
+  "passed": false,
+  "completed": false,
+  "issues": [
+    {
+      "error": "A: restart lub zmiana konfiguracji od rozpoczęcia próby."
+    }
+  ],
+  "received_unique": {
+    "A": 0,
+    "B": 0
+  }
+}

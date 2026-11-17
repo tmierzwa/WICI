@@ -20,7 +20,7 @@ Płytka v1 jest płytką prototypu, nie stacji pilotażowej. Proces kontroli jes
 - przymiarka wydruku 1:1;
 - przegląd autora z zapisem w [przeglądzie, F81](../../docs/review.md); przegląd przez drugą osobę, wymagany dla R02, tu nie obowiązuje.
 
-Nie obowiązuje kontrola impedancji ani kwalifikacja stosu warstw, bo płytka nie ma toru RF ani USB. Z procesu R02 pomija się też osobny `status.json` i manifest sum w `checks/` (sumy są w `manifest.json` repozytorium), porównanie eksportów z geometrią (gerbonara) i licencje wewnątrz paczki ZIP. Zamiast porównania eksporty ogląda się w przeglądarce Gerberów. `tools/export_fabrication.py` nie tworzy paczki, dopóki ERC i DRC bieżących plików (ze zgodnością PCB–schemat i kanarkiem reguł) nie dają 0.
+Nie obowiązuje kontrola impedancji ani kwalifikacja stosu warstw, bo płytka nie ma toru RF ani USB. Z procesu R02 pomija się też osobny `status.json` i manifest sum w `checks/` (sumy plików są w manifeście paczki źródłowej wydania), porównanie eksportów z geometrią (gerbonara) i licencje wewnątrz paczki ZIP. Zamiast porównania eksporty ogląda się w przeglądarce Gerberów. `tools/export_fabrication.py` nie tworzy paczki, dopóki ERC i DRC bieżących plików (ze zgodnością PCB–schemat i kanarkiem reguł) nie dają 0.
 
 ## Warunki
 

@@ -228,6 +228,12 @@ int main() {
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
            wici_hop::Receipt::REJECTED);  // a neighbour cannot hold two K1 slots
+    // The refusal counts as a full queue, upward; the occupied slots show.
+    assert(priorityRelay.queueStats().fullUp == 1 && priorityRelay.queueStats().fullDown == 0);
+    assert(priorityRelay.queuePending() == 3);
+    // First frame of neighbour 4 took its K1 slot, the next two went to K2 space.
+    assert(priorityRelay.queueStats().admittedK1 == 1 && priorityRelay.queueStats().admittedK2 == 2);
+    assert(priorityRelay.queuePendingK1() == 1);
     traffic.source = 5; traffic.payload[2] = 5; traffic.sequence = 76; traffic.payload[8] = 16;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(priorityRelay.receiveData(wire, n, 130, hack, sizeof(hack), hackLength) ==
@@ -322,6 +328,11 @@ int main() {
         assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==
                (i < 2 ? wici_hop::Receipt::HACK_READY : wici_hop::Receipt::REJECTED));
     }
+    assert(guarded.queueStats().fullUp == 1 && guarded.queuePending() == 2);
+    assert(guarded.queueStats().admittedK1 == 0 && guarded.queueStats().admittedK2 == 2 &&
+           guarded.queuePendingK1() == 0);
+    guarded.resetQueueStats();
+    assert(guarded.queueStats().fullUp == 0 && guarded.queueStats().admittedK2 == 0);
     traffic.sequence = 93; traffic.payload[4] = 90; traffic.payload[8] = 23;
     n = wici_link::encode(key, traffic, wire, sizeof(wire));
     assert(guarded.receiveData(wire, n, 140, hack, sizeof(hack), hackLength) ==

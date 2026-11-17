@@ -83,7 +83,7 @@ OWN_SYMBOLS = '(kicad_symbol_lib ' + ' '.join([
                 (P, 'PVCC', 14), (P, 'VCC', 12)],
                bottom=[(W, 'PGND', 1), (W, 'GND', 5), (W, 'GND', 6), (W, 'PGND', 10), (W, 'PGND', 11),
                        (W, 'PGND', 20), (W, 'PGND', 21)]),
-    # SOIC-8 single N-MOSFET (AO4264E): S 1-3, G 4, D 5-8.
+    # SOIC-8 single N-MOSFET (AO4292E): S 1-3, G 4, D 5-8.
     own_symbol('NMOS_SO8', 'N-MOSFET, SOIC-8, S 1-3, G 4, D 5-8', 'Package_SO:SOIC-8_3.9x4.9mm_P1.27mm',
                [(I, 'G', 4)], [(P, 'D', 5), (P, 'D', 6), (P, 'D', 7), (P, 'D', 8)],
                bottom=[(P, 'S', 1), (P, 'S', 2), (P, 'S', 3)]),
@@ -127,17 +127,18 @@ def effects(size=1.27, hide=False, justify=None):
 # Columns by block, top to bottom.
 GROUPS = [
     ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32'],
-    ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6'],
-    ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'C50'],
-    ['U6', 'J3', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12'],
+    ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6', 'R76'],
+    ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77', 'C50'],
+    ['U6', 'J3', 'D18', 'R84', 'C65', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78'],
     ['U7', 'L2', 'C40', 'C41', 'C42', 'C43', 'C44', 'C45', 'C46', 'C47', 'R60', 'R61', 'R62', 'C48', 'C49',
      'R67', 'C51', 'R68', 'R63'],
     ['Q9', 'R51', 'Q10', 'R53', 'R54', 'D14', 'R55', 'C52', 'J4', 'R65', 'R66', 'U8', 'R73', 'R74', 'D17', 'Q12', 'R75'],
     ['J5', 'J6', 'R18', 'J8', 'J9', 'JP3', 'C1', 'C2', 'R11', 'R12', 'R64'],
     ['J7', 'C4', 'C6', 'C7', 'R13', 'R19', 'U2', 'L1', 'C8', 'C9', 'R21', 'R22', 'C10'],
     ['U1', 'C3', 'R20', 'U4', 'C11', 'U3', 'C12', 'C13'],
-    ['SW1', 'SW2', 'SW3', 'SW4', 'SW5', 'SW6', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R16'],
-    ['D1', 'R1', 'BZ1', 'R2', 'D2', 'Q1', 'R3', 'R4', 'H1', 'H2', 'H3', 'H4'],
+    ['J10', 'U9', 'R80', 'R81', 'R82', 'R83', 'C60', 'C61', 'C62', 'C63', 'J11', 'D19', 'R16', 'C64', 'SW6', 'R5', 'R6', 'R7', 'R8',
+     'R9', 'R10'],
+    ['D1', 'R1', 'BZ1', 'R2', 'D2', 'Q1', 'R3', 'R4', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'],
 ]
 
 
@@ -264,16 +265,16 @@ def write_bom():
                            p['footprint']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'specyfikacja', 'footprint', 'uwagi'])
+        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'specyfikacja', 'footprint', 'uwagi'])
         for items in groups.values():
             p = items[0]
             notes = [i['note'] for i in items]
             note = notes[0] if len(set(notes)) == 1 else '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
-            w.writerow([' '.join(i['ref'] for i in items), len(items),
+            w.writerow([' '.join(i['ref'] for i in items), sum(i['qty'] for i in items),
                         ' / '.join(dict.fromkeys(i['value'] for i in items)), p['manufacturer'], p['mpn'],
-                        p['spec'], p['footprint'], note])
+                        p['lcsc'], p['spec'], p['footprint'], note])
         for refs, qty, manufacturer, mpn, spec, note in EXTRAS:
-            w.writerow([refs, qty, '', manufacturer, mpn, spec, 'bez footprintu', note])
+            w.writerow([refs, qty, '', manufacturer, mpn, '', spec, 'bez footprintu', note])
 
 
 def write_connections():

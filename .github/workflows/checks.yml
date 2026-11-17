@@ -44,12 +44,19 @@ jobs:
           python -m unittest discover -s software/reference -v 2>&1 | tee "$RUNNER_TEMP/tests.log"
           python -m unittest discover -s tests -v 2>&1 | tee -a "$RUNNER_TEMP/tests.log"
           ! grep -E "skipped '(.*C\+\+ compiler|cryptography|.*differs from Unicode)" "$RUNNER_TEMP/tests.log"
-      # Manifest hashes are refreshed after merging (CONTRIBUTING.md), so only a v* tag checks them.
       - name: Read-only source and controller checks
-        run: python tools/verify_repository.py ${{ !startsWith(github.ref, 'refs/tags/') && '--pull-request' || '' }}
+        run: python tools/verify_repository.py
+      # Wydanie: paczka źródłowa z manifest.json w środku i obok (docs/development.md); opiekun dołącza oba pliki do wydania.
       - name: Source archive
-        if: startsWith(github.ref, 'refs/tags/')
-        run: python tools/release.py --source-zip dist/WICI-0.5-source.zip
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: python tools/release.py --version "${GITHUB_REF_NAME#v}" --source-zip "dist/WICI-${GITHUB_REF_NAME#v}-source.zip"
+      - name: Upload source archive
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source-archive
+          path: dist/
       - name: License annotations (REUSE)
         run: pipx run reuse==5.0.2 lint
   dco:

@@ -1,0 +1,9 @@
+{
+  "started_utc": "2026-11-13T12:21:50.544429+00:00",
+  "command": "INFO",
+  "records": [],
+  "software_command_completed": false,
+  "physical_acceptance": false,
+  "error": "[Errno 2] could not open port PORT: [Errno 2] No such file or directory: 'PORT'",
+  "finished_utc": "2026-11-13T12:21:50.547005+00:00"
+}

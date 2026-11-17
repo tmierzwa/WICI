@@ -27,6 +27,8 @@ LANGS = ("PL", "UK", "EN")
 UNITS = {"PL": ("MIN", "H", "D"), "UK": ("ХВ", "ГОД", "Д"), "EN": ("MIN", "H", "D")}  # [czas]: minutes, hours, days
 DECIMAL = {"PL": ",", "UK": ",", "EN": "."}  # the EN version uses a decimal point
 MAX_COLUMNS = 20  # the screen shows at most 5 lines of 20 characters
+LIST_COLUMNS = MAX_COLUMNS - 1  # list items: the last column is kept for the scroll arrow
+ARROWS = "\u25b2\u25bc"  # ▲ ▼ in the last column of a list or text longer than the screen (ui.cpp, arrow)
 FOLD = str.maketrans("ĄĆĘŁŃÓŚŹŻ", "ACELNOSZZ")
 
 
@@ -100,6 +102,13 @@ def load(spec: Path = SPEC) -> dict:
                 raise ValueError(f"group not SA1-safe: {s!r}")
             if not all(unicodedata.category(c)[0] in "LNP" for c in s):
                 raise ValueError(f"group has a character outside letters, digits, punctuation: {s!r}")
+    # Pozycje list (menu, etykiety, kategorie) mają <= 19 znaków: na liście dłuższej niż ekran ostatnia kolumna
+    # górnego i dolnego wiersza pokazuje strzałkę przewijania. Frazy (do 48 znaków) lista i tak ucina.
+    for name, entries in (("menu", [m[1] for m in menu]), ("label", labels.values()), ("category", categories)):
+        for strings in entries:
+            for s in strings:
+                if len(s) > LIST_COLUMNS:
+                    raise ValueError(f"{name} does not fit {LIST_COLUMNS} columns: {s!r}")
     assert buttons and len(buttons) == 3 and all(len(b) == 4 for b in buttons), buttons
     assert len(categories) == 10 and len(menu) == 5, (len(categories), len(menu))
     return {"texts": texts, "labels": labels, "buttons": buttons, "menu": menu, "categories": categories, "phrases": phrases,
@@ -121,6 +130,7 @@ def charset(data: dict) -> set[str]:
         for s in units:
             chars.update(s)
     chars.update(DECIMAL.values())
+    chars.update(ARROWS)
     return chars
 
 

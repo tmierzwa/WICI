@@ -20,14 +20,14 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | LCD_DISP | GPIO16 (J5.9) | DISP | J7.5, R19.1, C7.1 |
 | LED_ALARM | GPIO18 (J5.11) | dioda alarmu | R1.1 |
 | BUZZER | GPIO15 (J5.8) | brzęczyk | R3.1 |
-| BTN_UP | GPIO41 (J6.7) | GÓRA | SW1.1, R5.2 |
-| BTN_DOWN | GPIO40 (J6.8) | DÓŁ | SW2.1, R6.2 |
-| BTN_OK | GPIO39 (J6.9) | OK | SW3.1, R7.2 |
-| BTN_BACK | GPIO2 (J6.5) | WSTECZ | SW4.1, R8.2 |
-| SW_CISZA | GPIO1 (J6.4) | CISZA | R9.2, R16.2 |
+| BTN_UP | GPIO41 (J6.7) | GÓRA | R80.2, C60.1, R5.2 |
+| BTN_DOWN | GPIO40 (J6.8) | DÓŁ | R81.2, C61.1, R6.2 |
+| BTN_OK | GPIO39 (J6.9) | OK | R82.2, C62.1, R7.2 |
+| BTN_BACK | GPIO2 (J6.5) | WSTECZ | R83.2, C63.1, R8.2 |
+| SW_CISZA | GPIO1 (J6.4) | CISZA | C64.1, R9.2, R16.2 |
 | BTN_PREP | GPIO6 (J5.6) | przygotowanie | SW6.1, R10.2 |
-| V_AA_ADC | GPIO4 (J5.4) | nowy: napięcie ogniw (ADC1) | R44.2, R45.1, C34.1, D11.3 |
-| V_12_ADC | GPIO5 (J5.5) | nowy: napięcie 12 V (ADC1; dawniej VTEST) | R38.2, R39.1, C33.1, D6.3 |
+| V_AA_ADC | GPIO4 (J5.4) | nowy: napięcie ogniw (ADC1) | C34.1, R77.2 |
+| V_12_ADC | GPIO5 (J5.5) | nowy: napięcie 12 V (ADC1; dawniej VTEST) | C33.1, R76.2 |
 | DIV_EN | GPIO46 (J5.14) | nowy: klucz dzielnika ogniw | Q7.1, R43.1 |
 | PWM_SYNC | GPIO45 (J6.15) | nowy: PWM przetwornicy na czas TX | U7.19, R63.1 |
 | PWR_INT | GPIO48 (J6.16) | nowy: INT sterownika przycisku | U6.8, R47.2 |
@@ -48,11 +48,15 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | BAT_R | R40.2, D7.2, D8.2 |
 | BST_FB | U2.4, R21.2, R22.1, C10.2 |
 | BST_SW | U2.1, L1.2 |
-| BTN_BACK | J6.5, SW4.1, R8.2 |
-| BTN_DOWN | J6.8, SW2.1, R6.2 |
-| BTN_OK | J6.9, SW3.1, R7.2 |
+| BTN_BACK | J6.5, R83.2, C63.1, R8.2 |
+| BTN_BACK_IN | J10.4, U9.6, R83.1 |
+| BTN_DOWN | J6.8, R81.2, C61.1, R6.2 |
+| BTN_DOWN_IN | J10.2, U9.3, R81.1 |
+| BTN_OK | J6.9, R82.2, C62.1, R7.2 |
+| BTN_OK_IN | J10.3, U9.4, R82.1 |
 | BTN_PREP | J5.6, SW6.1, R10.2 |
-| BTN_UP | J6.7, SW1.1, R5.2 |
+| BTN_UP | J6.7, R80.2, C60.1, R5.2 |
+| BTN_UP_IN | J10.1, U9.1, R80.1 |
 | BUZZER | J5.8, R3.1 |
 | BZ_N | BZ1.2, D2.2, Q1.3 |
 | BZ_P | BZ1.1, R2.2, D2.1 |
@@ -70,20 +74,22 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | FRAM_CS | J5.12, U4.1, R20.2 |
 | FRAM_CS_U1 | U1.1, U4.4 |
 | FRAM_GUARD | U3.1, U4.2 |
-| GND | J5.22, J6.1, J6.21, J6.22, J9.2, C1.2, C2.2, R12.2, R64.2, J4.A1, J4.A12, J4.B1, J4.B12, J4.SH, R65.2, R66.2, R74.2, D17.2, Q12.2, U8.2, J7.9, J7.10, J7.MP, R13.2, R19.2, C4.2, C6.2, C7.2, U1.4, U3.3, U4.3, C3.2, C11.2, C12.2, C13.2, SW1.2, SW2.2, SW3.2, SW4.2, SW5.1, SW6.2, D1.1, Q1.2, R4.2, U2.2, C8.2, C9.2, R22.2, J2.2, D4.2, U5.7, C30.2, R31.2, C32.2, Q5.2, R36.2, D15.2, R39.2, C33.2, D6.1, J1.2, Q7.2, R43.2, R45.2, C34.2, D11.1, C35.2, D10.2, C36.2, U6.4, R71.2, C53.2, D13.2, C37.2, J3.2, D16.2, Q11.2, R72.2, Q10.2, R54.2, D14.2, R55.2, C52.2, C50.2, U7.1, U7.5, U7.6, U7.10, U7.11, U7.20, U7.21, C40.2, C41.2, C42.2, C43.2, C46.2, C47.2, R60.2, R62.2, R63.2 |
+| GND | J5.22, J6.1, J6.21, J6.22, J9.2, C1.2, C2.2, R12.2, R64.2, J4.A1, J4.A12, J4.B1, J4.B12, J4.SH, R65.2, R66.2, R74.2, D17.2, Q12.2, U8.2, J7.9, J7.10, J7.MP, R13.2, R19.2, C4.2, C6.2, C7.2, U1.4, U3.3, U4.3, C3.2, C11.2, C12.2, C13.2, J10.5, J11.2, U9.2, C60.2, C61.2, C62.2, C63.2, D19.2, C64.2, SW6.2, D1.1, Q1.2, R4.2, U2.2, C8.2, C9.2, R22.2, J2.2, D4.2, U5.7, C30.2, R31.2, C32.2, Q5.2, R36.2, D15.2, R39.2, C33.2, D6.1, J1.2, Q7.2, R43.2, R45.2, C34.2, D11.1, C35.2, D10.2, C36.2, U6.4, R71.2, C53.2, C37.2, J3.2, D18.2, C65.2, R78.2, D16.2, Q11.2, R72.2, Q10.2, R54.2, D14.2, R55.2, C52.2, C50.2, U7.1, U7.5, U7.6, U7.10, U7.11, U7.20, U7.21, C40.2, C41.2, C42.2, C43.2, C46.2, C47.2, R60.2, R62.2, R63.2 |
 | KILL_MCU | J6.17, Q11.1, R72.1 |
 | LCD_CS | J5.7, J7.3, R13.1 |
 | LCD_DISP | J5.9, J7.5, R19.1, C7.1 |
 | LCD_EXTCOMIN | J5.10, J7.4 |
 | LED_A | D1.2, R1.2 |
 | LED_ALARM | J5.11, R1.1 |
-| ON | R35.1, Q8.3, R53.1 |
+| ON | R35.1, Q8.3, R78.1, R53.1 |
+| ON_DIV | D13.1, R70.1 |
 | PWM_SYNC | J6.15, U7.19, R63.1 |
 | PWR_ENB | U6.7, R50.2 |
 | PWR_INT | J6.16, U6.8, R47.2 |
 | PWR_KILL | U6.2, R48.2, D16.1, Q11.3 |
-| PWR_ON | U6.1, R70.2, R71.1, C53.1, D13.1 |
-| PWR_PB | U6.5, J3.1 |
+| PWR_ON | U6.1, R70.2, R71.1, C53.1 |
+| PWR_PB | U6.5, R84.2, C65.1 |
+| PWR_PB_IN | J3.1, D18.1, R84.1 |
 | PWR_TMR | U6.3, C37.1 |
 | Q10_G | Q10.1, R53.2, R54.1, D14.1 |
 | Q12_G | R73.2, R74.1, D17.1, Q12.1 |
@@ -111,20 +117,22 @@ Plik generuje `tools/make_schematic.py` z `tools/design.py`; nie edytować ręcz
 | SPI_MOSI | J5.17, J9.4, J7.2, U1.5 |
 | SPI_SCK | R18.2, J9.6, J7.1, U1.6 |
 | SPI_SCK_DEVKIT | J5.18, R18.1 |
-| SW_CISZA | J6.4, R9.2, R16.2 |
-| SW_COM | SW5.2, R16.1 |
+| SW_CISZA | J6.4, C64.1, R9.2, R16.2 |
+| SW_COM | J11.1, D19.1, R16.1 |
 | USB_CC1 | J4.A5, R65.1 |
 | USB_CC2 | J4.B5, R66.1 |
 | USB_DN | J6.20, J4.A7, J4.B7, U8.3, U8.4 |
 | USB_DP | J6.19, J4.A6, J4.B6, U8.1, U8.6 |
 | USB_LAPTOP | J5.13, Q12.3, R75.2 |
 | USB_VBUS | J4.A4, J4.B4, J4.A9, J4.B9, R73.1 |
-| V12_F | F1.2, D4.1, U5.2, Q2.1, Q2.2, Q2.3, Q4.2, R33.1, D5.1, R70.1 |
+| V12_F | F1.2, D4.1, U5.2, Q2.1, Q2.2, Q2.3, Q4.2, R33.1, D5.1, D13.2 |
 | V12_FLT | D9.2, R46.2, C35.1, D10.1 |
 | V12_MID | U5.3, U5.10, U5.12, Q2.5, Q2.6, Q2.7, Q2.8, Q3.5, Q3.6, Q3.7, Q3.8, C30.1, C31.2, R46.1 |
 | V12_SW | Q4.3, R37.1 |
 | VAA_SW | Q6.3, R44.1 |
 | VCTL | D8.1, D9.1, C36.1, U6.6, Q8.2, R49.1, D12.1, R48.1 |
 | VSYS | U5.9, Q3.1, Q3.2, Q3.3, D7.1, Q9.2, R51.1, C50.1, U7.13, U7.17, C40.1, C41.1, C46.1 |
-| V_12_ADC | J5.5, R38.2, R39.1, C33.1, D6.3 |
-| V_AA_ADC | J5.4, R44.2, R45.1, C34.1, D11.3 |
+| V_12_ADC | J5.5, C33.1, R76.2 |
+| V_12_DIV | R38.2, R39.1, D6.3, R76.1 |
+| V_AA_ADC | J5.4, C34.1, R77.2 |
+| V_AA_DIV | R44.2, R45.1, D11.3, R77.1 |
