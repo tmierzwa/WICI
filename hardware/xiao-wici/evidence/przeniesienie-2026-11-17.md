@@ -45,7 +45,7 @@ Między przebiegami 3 i 6 B nie nadał żadnej koperty, więc pierwsza koperta p
 
 **Stary prototyp po eksporcie nie nadaje.** Między eksportem a aktywacją podsłuch nie odebrał żadnej ramki z adresem łącza B (10). Po aktywacji ramki B pojawiały się tylko z nowego prototypu (koperty z nowym blokiem licznika).
 
-**Alarm na ekranie po odłączeniu w trakcie przeniesienia.** W każdym przebiegu 1–5 odłączony prototyp po ponownym podłączeniu pokazywał w trybie serwisowym „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE” i piszczał (cel w `receiving` i `imported`, źródło w `export` i `retired`). Alarm znikał po dokończeniu przeniesienia. Stan przeniesienia był za każdym razem cały, więc to nie uszkodzenie pamięci. Komunikat jednak myli osobę przy stacji: sugeruje utratę zgłoszenia, gdy stacja czeka tylko na dokończenie przeniesienia. Do oceny przez program.
+**Alarm na ekranie po odłączeniu w trakcie przeniesienia.** W każdym przebiegu 1–5 odłączony prototyp po ponownym podłączeniu pokazywał w trybie serwisowym „BŁĄD PAMIĘCI STACJI – ZGŁOSZENIE NIE ZAPISANE” i piszczał (cel w `receiving` i `imported`, źródło w `export` i `retired`). Alarm znikał po dokończeniu przeniesienia. Stan przeniesienia był za każdym razem cały, więc to nie uszkodzenie pamięci. Komunikat jednak myli osobę przy stacji: sugeruje utratę zgłoszenia, gdy stacja czeka tylko na dokończenie przeniesienia. Poprawione w `main` `f48f52bf` (PR 232): po restarcie w trakcie przeniesienia stacja pokazuje tylko pasek trybu serwisowego, bez alarmu, pisku i diody; uszkodzona bariera nadal daje błąd pamięci. Przy powtórzeniu odłączeń z tej próby wgrywa się obraz z tego commitu.
 
 ## Przywrócenie A
 
@@ -65,4 +65,4 @@ Pusty P001 dostał nową kartę jako A (`WICI-D7E2C5`, numer 20). Jego klucz tra
 - Stary prototyp po eksporcie nie nadaje: spełnione.
 - Zgłoszenia czekające przy przeniesieniu RECEIVED dokładnie raz: spełnione (przebieg 2 oraz zgłoszenia z przebiegu 0, które czekały na RECEIVED).
 - Po każdym przerwaniu ponowione polecenie kończy albo wycofuje przeniesienie, nigdy dwie stacje z tą samą tożsamością: spełnione.
-- Próba 16 **przeszła** w wersji uproszczonej. Do oceny przez program: alarm „BŁĄD PAMIĘCI STACJI” na prototypie w trakcie przeniesienia.
+- Próba 16 **przeszła** w wersji uproszczonej. Alarm „BŁĄD PAMIĘCI STACJI” na prototypie w trakcie przeniesienia poprawiony po próbie (`main` `f48f52bf`).
