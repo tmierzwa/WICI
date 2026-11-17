@@ -231,7 +231,7 @@
   "firmware/src/main.cpp": "904841211a6f93a920e5b9ac15c701d8a3ce7ebfd4bcccbec994004339563ce1",
   "firmware/src/mcu_sleep.h": "e78eff146506c31780c643ed234d38915e4afa40e131b5d5a4f3b2d1e144f0c8",
   "firmware/src/measure.cpp": "cab2648ac5cb73e2a152c8bee92d8c8c9fe997c4d0879295fc20f735eeeb11ef",
-  "firmware/src/measure.h": "be0960614427dae2d6aa14eaed34198021a0b94315f0cd255e13395a3195a0c7",
+  "firmware/src/measure.h": "a3fb1e2feb8d8f2744d01a088cbedbc447f2cc41abcb901de945e7b06f4f53c7",
   "firmware/src/migration_crypto.cpp": "550133971722d578b72bc4eb279d0c2cd52268002c0a73228a5bf03507a1361d",
   "firmware/src/migration_crypto.h": "c33b7c2734c691adcf234b9d11da81e725b2f91e4dee72f058f1d6b321c99d9a",
   "firmware/src/migration_image.cpp": "c0949e3463ad8c4c8a9bf71eff5451f7a8d2dcc82b28201a3c11257631f1dc76",
