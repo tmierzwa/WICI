@@ -994,6 +994,7 @@ int world() {
             status.radioOk = !a; status.channelJammed = a; w.con->setRadioFault(a, a);
         }
         else if (sscanf(line, "W %u", &a) == 1) { status.stackOk = a; w.con->setStackFault(!a); }   // stos sieciowy działa
+        else if (sscanf(line, "MF %u", &a) == 1) w.con->setMigrationFrozen(a);   // przeniesienie w toku (main.cpp)
         else if (sscanf(line, "U %u", &a) == 1) status.contactS = a;
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
         else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
@@ -3320,6 +3321,21 @@ class HostUnitTests(unittest.TestCase):
         # Alarm mieści się w 5 wierszach po 20 znaków (po 19 byłoby 6): zostaje przy 20, bez strzałek.
         self.assertEqual((s[1][3], self.shown(s[1])), ([""] * 5, texts["blad_pamieci"][0]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_frozen_migration_is_not_a_memory_fault(self):
+        # usb-protocol.md, „Przeniesienie stacji”: po restarcie w toku przeniesienia magazyn jest celowo zamknięty;
+        # ekran pokazuje tryb_przygotowania bez alarmu blad_pamieci (próba 16: odłączenie USB w każdym kroku).
+        # Ten sam magazyn bez przeniesienia daje alarm (wyżej, test awarii radia), a po przeniesieniu wraca.
+        texts = ui_texts.load()["texts"]
+        out = self.ui([self.CONFIG, "txreq 0 11 0 1", "tear 552", "txreq 0 11 1 0", "diag", "MF 1", "alarms", "L 0", "O 1", "P 1",
+                       "cause", "T 1000", "R", "T 2000", "R", "MF 0", "cause", "T 3000", "R"])
+        self.assertIn("ok=0", self.find(out, "diag ")[0])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["main", "main", "alarm"])
+        self.assertEqual(self.lines(s[0])[0].strip(), texts["tryb_przygotowania"][0])
+        self.assertNotIn(texts["blad_pamieci"][0][:20], " ".join(self.lines(s[0]) + self.lines(s[1])))
+        self.assertIn(texts["blad_pamieci"][0][:20], self.shown(s[2]))
+        self.assertEqual(self.find(out, "cause "), ["cause 0", "cause 1"])
 
     def test_jammed_channel_is_the_radio_fault_alarm(self):
         # R3-43: zagłuszanie kanału to druga przyczyna alarmu awarii radia, z tym samym ekranem alarmu do OK,

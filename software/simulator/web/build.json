@@ -85,8 +85,8 @@
  ],
  "outputs": {
   "wici-station.mjs": {
-   "sha256": "f3db615133215cd9b9c6a0dabf82d35550c239c380a652b271bbd5641922fa31",
-   "bytes": 784445,
+   "sha256": "51a17851b9cbc50ae13b186fab8bc0f052f870415c47caa73f4f2cbc08ff34b6",
+   "bytes": 784517,
    "sources": [
     "firmware/src/annunciator.cpp",
     "firmware/src/beacon_check_esp32.cpp",
@@ -190,8 +190,8 @@
   "firmware/src/cmdargs.h": "672b5a9dbf4aee0e75d15c30bc92d5ab52c28d05946fd7f31b9fbfacd8b11611",
   "firmware/src/config.cpp": "ed02155e7fadd43850a2eae316be854fc942447df48fe387212ff8456e8cb1be",
   "firmware/src/config.h": "3dacd4271a8be1dc20932e357000b63c2232ff33abb098ee9b92cade7f46b886",
-  "firmware/src/console.cpp": "ae4888195628da5baf9a767672c3e1571307676a862729861eece93f78dbb900",
-  "firmware/src/console.h": "604e7072760c70ee22d3578cf8a5a163f2ddd1ddbaefa5daf39b872cf1acf8e0",
+  "firmware/src/console.cpp": "69e1ed89195fbb1f74e440179844cda635d6d2dcbb10542552f65afe8b2b9541",
+  "firmware/src/console.h": "26934c544818c4436c006d561b2b84a70b268b5d721faa73d835b2c104b0715c",
   "firmware/src/core_selftest.cpp": "61844d783508ec06ad05aa03f149f94189a9e8719972c92eeec289c44911342f",
   "firmware/src/core_selftest.h": "d5d0a66bfb98a77ea0436a0addaa4c4796d6b8858ca2df44938b28fed5075570",
   "firmware/src/crc16.h": "4f9e7d888ba34bb3a37124ff0d713ef737253a048a6cdb02fcae9c7f172d64cb",
@@ -228,7 +228,7 @@
   "firmware/src/lora_profile.h": "2806f6f80cf8c417ec359bc94e77d9a00e915f4222a6a67e794b5e5a95b6697f",
   "firmware/src/loraframe.cpp": "ac18e321947f672f7c944f49559a4bdbfd7fb616fba2ae32d7345553594ec239",
   "firmware/src/loraframe.h": "8947d0c3c68f2bae3f9afdbc7fe5b165d89a341048a04b18ff40198c2200403a",
-  "firmware/src/main.cpp": "904841211a6f93a920e5b9ac15c701d8a3ce7ebfd4bcccbec994004339563ce1",
+  "firmware/src/main.cpp": "86eba12b57dd5cb4700c7a21ad2ea895835ad369589e380810a90976ad62ce02",
   "firmware/src/mcu_sleep.h": "e78eff146506c31780c643ed234d38915e4afa40e131b5d5a4f3b2d1e144f0c8",
   "firmware/src/measure.cpp": "cab2648ac5cb73e2a152c8bee92d8c8c9fe997c4d0879295fc20f735eeeb11ef",
   "firmware/src/measure.h": "a3fb1e2feb8d8f2744d01a088cbedbc447f2cc41abcb901de945e7b06f4f53c7",
