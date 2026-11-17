@@ -1,4 +1,4 @@
-# Próba 17: alarm zagłuszania na roocie bez ruchu i w panelu (2026-11-16, 13:10–16:01)
+# Próba 17: alarm zagłuszania na roocie bez ruchu, w panelu i zwykły ruch (2026-11-16 13:10 – 2026-11-17 08:50)
 
 Procedura: [próba 17](../README.md#próba-17-alarm-zagłuszania-kanału), krok 2, w piwnicy. Uzupełnia [noc z 2026-11-15](piwnica-noc-2026-11-15.md), w której alarmowała tylko A, bo root nie miał nic do nadania. Od specyfikacji 0.60 (R3-46) root sprawdza kanał co 5 s także bez ruchu.
 
@@ -46,9 +46,34 @@ Na roocie obraz z `main` `86c0e44a`, z licznikami `probes` (sprawdzenia kanału 
 
 **Próg CCA na roocie.** Próg to podłoga szumu plus 10 dB. W czasie zagłuszania i po nim progi wynosiły: A −97…−95, B −98…−97, XIAO nr 2 −86…−83, root (XIAO nr 1) −80…−73 dBm. L0 i XIAO nr 2 nie podnoszą progu w zagłuszaniu, więc to nie przeciek węzła wrogiego. Root ma −72…−73 dBm także bez zagłuszania (noc z 2026-11-15 i doba od 16:07); −85 było tylko tuż po starcie. Podłoga szumu wynosi więc około −83 dBm na XIAO nr 1, −94 na XIAO nr 2 i −107 na L0. Z wyłączonym stanowiskiem (zamknięty port danych, otwarta tylko konsola) root miał tak samo −72 dBm (15:31–15:33, przed startem stanowiska), więc port danych do stanowiska nie podnosi progu. Konsolę USB z odczytem co 10 s mają też XIAO nr 2 i oba L0, a ich progi są niskie. Różnica dotyczy więc tej jednej płytki albo jej miejsca na stole, nie samego połączenia USB. CCA na roocie jest przez to mniej czułe na słabą obcą energię. Wykrywania zagłuszania to nie zmienia, bo opiera się na odbiorniku (preambuła, nagłówek, ramka), a nie na samym RSSI. Nie sprawdzono jeszcze L0 jako roota ze stanowiskiem; ten krótki pomiar jest zaplanowany po dobie zwykłego ruchu.
 
+## Przebieg 3: zwykły ruch bez węzła wrogiego (2026-11-16 16:07:41 – 2026-11-17 08:50:24)
+
+Krok 3 procedury, skrócony z 24 h do 16 h 43 min decyzją właściciela. Uzasadnienie: najdłuższy czas bez wolnej przerwy przez cały przebieg wynosił 0–1 ms przy progu alarmu 5 min, piwnica nie ma dobowego rytmu obcego ruchu (ruch to tylko BEACON-y i zgłoszenia próby, każda godzina wygląda tak samo), a pamięć B stała od startu. Pełna doba dałaby tylko pewność co do liczników i zegarów po kilkunastu godzinach.
+
+Ten sam łańcuch i te same obrazy co w przebiegu 2 (root z `main` `86c0e44a`, reszta z `29d15b10`), węzeł wrogi wyłączony, stanowisko bez portu diagnostycznego. Zamiast `REQ 1` na A (procedura) `REQ 1` co 30 min na XIAO nr 2: rejestr zgłoszeń A był pełny (256 zgłoszeń bez decyzji z poprzednich prób), a nowe miejsce zwalnia dopiero zamknięcie albo anulowanie zgłoszenia. Co minutę skrót `P1` i `INFO` z czterech węzłów, co godzinę pełne `P1`, `INFO` i `RNS` (pamięć). Dowody: `doba-zwykly-ruch-l0-2026-11-16.out`, skrypt `doba-zwykly-ruch-skrypt.sh`, podsłuch `podsluch-doba-l0-2026-11-16.jsonl` (przerwany razem z przebiegiem, bez wiersza podsumowania).
+
+XIAO nr 2 dostał o 17:28 omyłkowy RESET (`restarts` 4 → 6, konfiguracja została), więc jego liczniki obejmują 15 h 22 min. Poza tym żaden węzeł się nie zrestartował.
+
+| Węzeł | `no_gap_ms_max` | `channel_jammed` | `tx_datagrams` | `tx_drop` | `deferrals` | `rx_ok` / `rx_bad` | próg CCA (dBm) |
+|---|---|---|---|---|---|---|---|
+| A (P001) | 0 | ani razu | 35 | 0 | 0 | 550 / 446 | −99…−96 |
+| B (P002) | 1 | ani razu | 254 | 0 | 1 | 329 / 22 | −97…−93 |
+| XIAO nr 2 (od 17:28) | 0 | ani razu | 136 | 0 | 0 | 397 / 2 | −84…−83 |
+| root (XIAO nr 1) | 0 | ani razu | 147 | 0 | 0 | 436 / 2 | −73…−72 |
+
+- Alarmu nie było na żadnym węźle w żadnym z 4012 odczytów minutowych. Root sprawdził kanał bez ruchu 12 033 razy (`probes` 23 → 12 056), 34 razy trafił na zajęty kanał (`probe_busy` 1 → 35), czyli na cudze ramki łańcucha.
+- Wszystkie 34 zgłoszenia z XIAO nr 2 są w panelu stanowiska.
+- Pamięć B: `heap_free` 148 044 B we wszystkich 18 odczytach, `heap_min` 142 552 → 142 544 B. Na pozostałych węzłach też bez trendu (A 147 948 B stale; XIAO mają PSRAM, wahania poniżej 100 B).
+- Podsłuch: 581 ramek, wszystkie z poprawnym CRC (BEACON 145, DATA 218, HACK 218).
+
+**Odrzucone ramki na A.** A miał `rx_bad` 446 przy `rx_ok` 550, równo około 27 na godzinę przez cały przebieg, a pozostałe węzły po 2–22. Podsłuch w tym samym torze nie widział żadnej ramki z błędnym CRC. `rx_bad` liczy przepełnienie, złą długość, ramkę niepełną i ramkę, której nie da się rozebrać; powodu odrzucenia konsola nie pokazuje, a portu diagnostycznego A nikt nie czytał. Dostarczenia to nie zepsuło (zgłoszenia i potwierdzenia przeszły), ale przyczyny nie ustalono. Do wyjaśnienia przez program, z portem diagnostycznym A.
+
+**Próg alarmu.** Rozkład `no_gap_ms_max` ze wszystkich przebiegów próby 17: zwykły ruch bez węzła wrogiego co najwyżej 1 ms (przebieg 3), 50% 3–8 s, 70% 15 s ([noc z 2026-11-15](piwnica-noc-2026-11-15.md#próg-alarmu)), 90% bez wolnej przerwy przez całe 20 min. Próg musi być dłuższy niż przerwy przy ruchu prawdziwym i krótszy niż czas zagłuszania, które ma wykryć. Proponuję zostawić `JAM_ALARM_MS` 5 min: zapas 20 razy wobec 70%, a przy 90% alarm przychodzi po około 5 min (przebiegi 1 i 2). Zmiana stałej należy do programu.
+
 ## Wynik
 
 - Root alarmuje o zagłuszaniu bez ruchu (R3-46): spełnione. Alarm po około 5 min, zgaśnięcie z końcem zagłuszania, przy braku własnych ramek do nadania (przebieg 2).
 - Panel stanowiska pokazuje alarm przy roocie i go zdejmuje: spełnione (przebieg 1).
 - Stacje i przekaźniki bez ruchu nie alarmują, z ruchem tak (R3-43): spełnione (przebieg 2 i noc z 2026-11-15).
-- Próba 17 nadal **spełniona częściowo**: brakuje 24 h zwykłego ruchu bez węzła wrogiego (krok 3) na obrazach z `main` `86c0e44a` lub nowszych, z odczytem `no_gap_ms_max` i pamięci B.
+- Brak alarmu przy zwykłym ruchu (krok 3): spełnione w wersji skróconej do 16 h 43 min (decyzja właściciela), `no_gap_ms_max` 0–1 ms, pamięć B stała (przebieg 3).
+- Próba 17 **spełniona**, z krokiem 3 skróconym. Otwarte: odrzucone ramki na A i próg CCA na roocie (pomiar L0 jako roota ze stanowiskiem i zamiana miejsc obu XIAO).

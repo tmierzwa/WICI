@@ -60,5 +60,5 @@ Górną granicę `no_gap_ms` przy zwykłym ruchu bez węzła wrogiego da 24 h ru
   - alarmu na roocie bez ruchu przy 90%: właściciel zdecydował, że root sprawdza kanał także bez ramki do nadania (specyfikacja 0.60, R3-46); zmiana jest w `main` `29d15b10` (PR 226). Na obrazie z tego commita oczekiwany alarm na roocie około 5 min po starcie zagłuszania i komunikat „KANAŁ ZAGŁUSZONY PRZY WĘŹLE” na stanowisku. Stacje na ogniwach zostają przy alarmie tylko z ruchem do nadania;
   - odczytu alarmu w panelu stanowiska przy 90% (krok 2), krótki przebieg w piwnicy;
   - 24 h zwykłego ruchu bez węzła wrogiego (krok 3), na obrazach z `main` `29d15b10` lub nowszych (z poprawką licznika z PR 225).
-- Uzupełnienie 2026-11-16: alarm na roocie bez ruchu i w panelu stanowiska spełnione ([raport](alarm-zagluszania-2026-11-16.md)); z próby 17 zostaje 24 h zwykłego ruchu.
+- Uzupełnienie 2026-11-16 i 2026-11-17: alarm na roocie bez ruchu, w panelu stanowiska i brak alarmu przy zwykłym ruchu (16 h 43 min zamiast 24 h, decyzja właściciela) spełnione; próba 17 przeszła ([raport](alarm-zagluszania-2026-11-16.md)).
 - Kandydaci: `CHANNEL 1 1` szybszy i z mniejszą liczbą odmów CAD, bez przekroczenia okna HACK poza jednym przypadkiem 200,3 ms. Wybór kandydata należy do sesji od programu.
