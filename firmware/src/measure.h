@@ -67,8 +67,8 @@ constexpr uint8_t MAX_DEFERRALS = 30;         // potem datagram odrzucony (wybó
 constexpr uint8_t MAX_DEFERRALS_LONG = 220;
 constexpr uint8_t HACK_CAD_RETRIES = 40;   // ponowne CAD przed HACK: limit, gdyby CAD nie zajmował czasu
 // Alarm zagłuszania kanału (R3-43, druga przyczyna radio_awaria): datagram do nadania przez tyle nie znalazł
-// wolnej przerwy (okno CCA, CAD). Parametr profilu; wartość tymczasowa do ustalenia pomiarem (polecenie P1:
-// no_gap_ms_max po 24 h zwykłego ruchu i przy 90% zagłuszania). Gaśnie przy pierwszej wolnej przerwie albo po
+// wolnej przerwy (okno CCA, CAD). Parametr profilu, ustalony pomiarem 2026-11-16 (P1 no_gap_ms_max): zwykły
+// ruch najwyżej 1 ms, zagłuszanie 70% 15 s, 90% bez przerwy; 5 min zostawia zapas na własny ruch dużej sieci. Gaśnie przy pierwszej wolnej przerwie albo po
 // tylu samych ms bez kolejnej próby (stacja bez ramki do nadania nie wie nic o kanale); po takiej przerwie
 // czas liczy się od nowa.
 constexpr uint32_t JAM_ALARM_MS = 5 * 60 * 1000;
