@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interfejsy lokalne, granice zapisu i odtwarzanie stanu w systemie WICI.">
-  <title>Interfejsy i trwałość — Specyfikacja WICI 0.61</title>
+  <title>Interfejsy i trwałość — Specyfikacja WICI 0.62</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Interfejsy i trwałość</h1>
-      <p><span class="status">Projekt 0.61</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.62</span> · 9 listopada 2026 r.</p>
       <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -50,7 +50,7 @@
         <thead><tr><th>Granica</th><th>Przenoszone dane i uprawnienia</th><th>Stan</th></tr></thead>
         <tbody>
           <tr><td>Stacja ↔ laptop schronienia</td><td>Drugi port USB CDC ACM: polecenia, zdarzenia, migawka i transfery przygotowania. Stacja przechowuje stan zgłoszeń, skrzynkę i konfigurację w FRAM; laptop ma ich kopię oraz własne dane mieszkańców. <a href="../../firmware/src/usbproto.h">Kod USB</a>, <a href="../../firmware/src/store.h">magazyn FRAM</a>, <a href="usb-protocol.md">kontrakt v2</a>.</td><td>Port stacji wdrożony; obsługa laptopa schronienia po pilotażu.</td></tr>
-          <tr><td>Root ↔ komputer stanowiska</td><td>USB KISS: ramki WICI-Link, HACK po decyzji komputera, echo nadania i odmowa. Root obsługuje radio i trasy; komputer uwierzytelnia kopertę oraz przyjmuje zgłoszenie. <a href="../../firmware/src/wici_gateway.cpp">Kod roota</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="wici-link.md#implementacja">kontrakt WICI-Link</a>.</td><td>Wdrożony; budżet czasu zapisu na docelowym nośniku czeka na pomiar D21.</td></tr>
+          <tr><td>Root ↔ komputer stanowiska</td><td>USB KISS: ramki WICI-Link, HACK po decyzji komputera, echo nadania i odmowa. Root obsługuje radio i trasy; komputer uwierzytelnia kopertę oraz przyjmuje zgłoszenie. <a href="../../firmware/src/wici_gateway.cpp">Kod roota</a>, <a href="../../software/laptop/wici/stanowisko/przyjecie.py">przyjęcie</a>, <a href="wici-link.md#implementacja">kontrakt WICI-Link</a>.</td><td>Wdrożony; budżet czasu zapisu na docelowym nośniku czeka na pomiar; D21 go nie objęła.</td></tr>
           <tr><td>Dyżurny ↔ komputer stanowiska</td><td>Panel HTTP dostępny tylko przez <code>127.0.0.1</code>. Logowanie, decyzje, zaufanie, kopie, odzyskanie i zamknięcie wymagają uprawnień opisanych przy <a href="stanowisko-osp.md#panel-dyżurnego">panelu dyżurnego</a>. <a href="../../software/laptop/wici/stanowisko/panel.py">Kod panelu</a>.</td><td>Wdrożony z <a href="system-wici-decyzje.html#wici-inv-018">lukami w operacjach</a>.</td></tr>
           <tr><td>Mieszkaniec ↔ laptop schronienia</td><td>Strona w LAN obiektu, a bez połączenia telefonów kiosk na laptopie. Panel gospodarza jest lokalny. Zgłoszenie mieszkańca trafia najpierw do kolejki gospodarza, bez wysłania SA1. <a href="oprogramowanie.md#api-lokalnej-strony-poziomy-23">Projekt API lokalnego</a>.</td><td>Po pilotażu; strona i kiosk niewdrożone.</td></tr>
         </tbody>
@@ -147,9 +147,9 @@
           <tr><td>Zamknięcie lub zniszczenie danych</td><td>ZAMKNIJ ZDARZENIE kończy ponawianie intencji, zapisuje archiwum i usuwa treść według procedury; kopie są usuwane po potwierdzeniu odbioru archiwum. ZNISZCZ DANE jest osobną czynnością. <a href="../../software/laptop/wici/stanowisko/zamkniecie.py">Kod archiwum i czyszczenia</a>, <a href="../../software/laptop/wici/stanowisko/panel.py">usunięcie kopii</a>. Stan kodu: <a href="system-wici-decyzje.html#wici-inv-021">WICI-INV-021</a>, <a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>.</td></tr>
         </tbody>
       </table>
-      <p>Pomiar D21 ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
+      <p>Pomiar ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. D21 zmierzyła HACK roota do 117,5 ms po końcu DATA z zapisem na dysku laptopa użytego przy stole, nie na docelowym USB SSD, więc tego nie rozstrzyga. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.61 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.62 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
