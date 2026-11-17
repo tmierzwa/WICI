@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Przedmiot, status, założenia i zasady utrzymania specyfikacji WICI.">
-  <title>Przedmiot i zasady — Specyfikacja WICI 0.62</title>
+  <title>Przedmiot i zasady — Specyfikacja WICI 0.63</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Przedmiot i zasady</h1>
-      <p><span class="status">Projekt 0.62</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.63</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#przedmiot">Przedmiot</a>
@@ -55,7 +55,7 @@
           <tr id="wici-zal-009"><td>WICI-ZAL-009</td><td>Wymagania dotyczą całych protokołów WICI, także 15 skoków, zalewu, przeciążenia i wrogiego węzła. Parametry pilotażu są jednym z profili i nie zawężają tych wymagań.</td></tr>
         </tbody>
       </table>
-      <p>Założenia WICI-ZAL-003 i WICI-ZAL-004 zależą od wyniku <a href="#warunek-d21">próby przy stole</a>. Jeśli WICI-Link jej nie zaliczy, zapasem jest Reticulum, a te założenia trzeba będzie zmienić.</p>
+      <p>Założenia WICI-ZAL-003 i WICI-ZAL-004 potwierdziła <a href="#warunek-d21">próba przy stole</a>, w której WICI-Link spełnił kryteria D21.</p>
       <h3 id="slowa-wymagan">Słowa wymagań</h3>
       <p><strong>MUSI</strong>, <strong>NIE MOŻE</strong>, <strong>POWINIEN</strong> i <strong>MOŻE</strong> mają znaczenie określone w RFC 2119 i RFC 8174, tylko gdy są zapisane wielkimi literami. <a href="system-wici-o-dokumencie.html#metamodel">Przedmowa</a> określa budowę wymagania.</p>
       <p>Stopień <em>normatywny</em> oznacza obowiązujące wymaganie z ustalonym sposobem sprawdzenia. Sam stopień nie stwierdza zgodności kodu ani wyrobu. Zakres normatywny i informacyjny określa <a href="system-wici-model.html#granice">rozdział 2</a>.</p>
@@ -70,10 +70,10 @@
           <tr><td>Wyrób poziomu 1</td><td>Stacja jako urządzenie: sprzęt, zasilanie, środowisko i badania z rozdziału 8 wraz z właściwymi wymaganiami stacji z rozdziałów 2–7.</td></tr>
         </tbody>
       </table>
-      <p>Implementacja zgodna przechodzi wspólne wektory. Po próbie przy stole wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu. Kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
-      <h3 id="warunek-d21">Warunek próby przy stole</h3>
-      <p><strong>Warunek zamknięcia D21.</strong> Zatwierdzenie WICI-Link wymaga zaliczenia próby przy stole na docelowym sprzęcie według <a href="system-wici-siec.html#warunek-d21-v1">ustalonych kryteriów D21</a>. Reticulum pozostaje zapasem, gdy oczekiwanych wyników nie da się osiągnąć w czasie ustalonym przez właściciela projektu. Dla wyboru protokołu „docelowy sprzęt” oznacza <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki po wyborze protokołu. D21 zamknięto 17 listopada 2026 r. na rzecz WICI-Link (<a href="system-wici-decyzje.html#wici-dec-022">WICI-DEC-022</a>).</p>
-      <p class="explain">Architektura zakłada pozytywny wynik próby przy stole (<a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21 w koncepcji</a>). Próba dała ten wynik, a protokołem jest WICI-Link.</p>
+      <p>Implementacja zgodna przechodzi wspólne wektory. Wektory SA1, koperty i WICI-Link staną się normatywnym załącznikiem (<a href="system-wici-zgodnosc.html#trwale-wektory">warunek zamknięcia</a>). <a href="system-wici-zgodnosc.html#sprawdzanie">Rejestr zgodności</a> odsyła do dowodów i raportu próby wystarczalności opisu. Kod źródłowy ani sam wektor nie są deklaracją zgodności.</p>
+      <h3 id="warunek-d21">Wynik próby przy stole</h3>
+      <p><strong>Zamknięcie D21.</strong> WICI-Link przeszedł próbę przy stole według <a href="system-wici-siec.html#warunek-d21-v1">ustalonych kryteriów D21</a> na docelowym sprzęcie, którym dla wyboru protokołu jest <a href="system-wici-siec.html#warunek-d21-v1">prototyp v1 z prawdziwym FRAM</a>. Właściciel projektu zamknął D21 17 listopada 2026 r. na rzecz WICI-Link (<a href="system-wici-decyzje.html#wici-dec-022">WICI-DEC-022</a>). Pełny budżet energii i powtórka zaniku na v2 należą do przyjęcia płytki.</p>
+      <p class="explain">Architektura opierała się na pozytywnym wyniku tej próby (<a href="../concept/08-plan-weryfikacji-i-decyzje.html#otwarte-decyzje-i-warunki-zamkniecia">D21 w koncepcji</a>). Reticulum zostaje konfiguracją bez numerów, bez nowych funkcji, poza podstawową architekturą (WICI-ZAL-004).</p>
       <h3 id="dokumenty-powolane">Dokumenty powołane</h3>
       <p>Znaczenie formatów i algorytmów ustala wskazany numer albo wersja dokumentu. Warunki prawne stosuje się według miejsca i daty oceny wyrobu.</p>
       <h4>Normatywne</h4>
@@ -96,7 +96,7 @@
       <h4>Pomocnicze</h4>
       <p><a href="https://reticulum.network/manual/">Dokumentacja Reticulum 1.6.0</a>, <a href="https://www.semtech.com/products/wireless-rf/lora-connect/sx1262">karta SX1261/SX1262 z 7 kwietnia 2025 r.</a>, <a href="https://lora-alliance.org/wp-content/uploads/2020/11/RP_2-1.0.2.pdf">LoRaWAN RP002-1.0.2</a> i <a href="https://meshtastic.org/docs/overview/radio-settings/">ustawienia Meshtastic</a> opisują otoczenie i źródła projektu. Nie dodają wymagań WICI.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.62 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.63 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
