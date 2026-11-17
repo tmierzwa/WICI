@@ -150,7 +150,7 @@ Zaliczenie jak w tabeli (z B zamiast A i P002 ↔ P001). Na końcu pusty prototy
 
 ### Próba 17: alarm zagłuszania kanału
 
-Alarm awarii radia ma drugą przyczynę: kanał bez wolnej przerwy do nadania dłużej niż próg `JAM_ALARM_MS` (w programie tymczasowo 5 min). Do pomiaru służą pola `P1` `no_gap_ms` (bieżący czas bez wolnej przerwy), `no_gap_ms_max` i `channel_jammed` oraz `channel_jammed` w `INFO`. Węzeł wrogi pracuje jak w próbie 9, więc obowiązują te same warunki miejsca ([wyżej](#próba-9-tylko-w-torze-przewodowym-w-komorze-albo-w-pomieszczeniu-odizolowanym)).
+Alarm awarii radia ma drugą przyczynę: kanał bez wolnej przerwy do nadania dłużej niż próg `JAM_ALARM_MS` (5 min, ustalony po tej próbie). Do pomiaru służą pola `P1` `no_gap_ms` (bieżący czas bez wolnej przerwy), `no_gap_ms_max` i `channel_jammed` oraz `channel_jammed` w `INFO`. Węzeł wrogi pracuje jak w próbie 9, więc obowiązują te same warunki miejsca ([wyżej](#próba-9-tylko-w-torze-przewodowym-w-komorze-albo-w-pomieszczeniu-odizolowanym)).
 
 1. Łańcuch A → B → root, `REQ 5` na A na początku każdego przebiegu. `hostile.py --mode junk --conducted` przy 50%, 70% i 90%, każdy przebieg 20 min (przy 90% co najmniej próg + 5 min), z przerwą 10 min. Na A, B i roocie `P1` i `INFO` co 10 s.
 2. Przy 90%: chwila włączenia alarmu na każdym urządzeniu i w panelu, oraz zgaśnięcie po końcu zagłuszania. Stacja i przekaźnik alarmują tylko z ramką do nadania; root także bez ruchu, bo co kilka sekund sprawdza kanał (R3-46 w specyfikacji 0.60, od obrazu z `main` `29d15b10`; stanowisko pokazuje wtedy „KANAŁ ZAGŁUSZONY PRZY WĘŹLE”).
