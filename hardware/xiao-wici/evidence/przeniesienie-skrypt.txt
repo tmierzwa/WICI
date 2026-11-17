@@ -1,0 +1,99 @@
+# mig.py
+"""Próba 16: mig.py destroy PORT | status PORT... | stop N SRC TGT  (przeniesienie zatrzymane po kroku N z 1..4,
+dokończenie zwykłym `python -m wici --migrate-...`). Kroki jak w docs/spec/usb-protocol.md#przeniesienie-stacji."""
+import sys,os,json,time,hashlib
+sys.path.insert(0,os.path.expanduser('~/Work/WICI/implementacja/.claude/worktrees/proby-przy-stole-l0-be3c91/software/laptop'))
+from wici import migration as M
+def T(): return time.strftime('%T')
+def say(*a): print(T(),*a,flush=True)
+a=sys.argv[1]
+if a=='destroy':
+    l=M._open(sys.argv[2])
+    for i in range(40):  # pytanie co 30 s, aż ktoś naciśnie OK (do 10 min)
+        try:
+            say('destroy: OK na stacji w ciągu 30 s'); r=l.request('destroy',timeout=40,on_pending=lambda m: say('pending')); say(json.dumps(r)); break
+        except M.Rejected as e: say('rejected',e)
+    l.close()
+elif a=='status':
+    for p in sys.argv[2:]:
+        l=M._open(p); s=M._status(l); say(p[-6:],json.dumps({k:s.get(k) for k in ('migration','mid','package')})); l.close()
+elif a=='stop':
+    n=int(sys.argv[2]); src=M._open(sys.argv[3]); tgt=M._open(sys.argv[4])
+    k=tgt.request('migrate',step='receive_key'); mid=k['mid']; say('1 receive_key',mid,'odcisk',k['fingerprint'])
+    if n>=2:
+        say('2 export: porównaj odcisk z ekranem docelowej i naciśnij OK na źródłowej')
+        for i in range(40):
+            try: pkg=src.read_transfer('export',mid=mid,target_key=k['key']); break
+            except M.Rejected as e:
+                if 'not_confirmed' not in str(e): raise
+                say('not_confirmed, ponawiam')
+        say('2 export',len(pkg),'B',hashlib.sha256(pkg).hexdigest()[:16])
+    if n>=3:
+        r=tgt.write_transfer('import',pkg,mid=mid); say('3 import ok'); conf=r['confirm']
+    if n>=4:
+        r=src.request('migrate',timeout=60,step='retire',mid=mid,confirm=conf); say('4 retire ok')
+    say('STOP po kroku',n); src.close(); tgt.close()
+
+# migloop.sh
+#!/bin/zsh
+# migloop.sh SRC TGT [--migrate-abort]: zwykłe polecenie przeniesienia, ponawiane po not_confirmed (do 20 min)
+cd ~/Work/WICI/implementacja/.claude/worktrees/proby-przy-stole-l0-be3c91/software/laptop
+for i in {1..40}; do
+  echo "START $(date +%T) $(python3 -c 'import time;print(time.time())')"
+  out=$(~/WICI-L0/stvenv/bin/python -m wici --migrate-source-port $1 --migrate-target-port $2 $3 2>&1); rc=$?
+  echo "$out"; echo "rc=$rc $(date +%T) $(python3 -c 'import time;print(time.time())')"
+  [[ $out == *not_confirmed* ]] || break
+done
+
+# r2.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+~/WICI-L0/stvenv/bin/python mig.py destroy /dev/cu.usbmodem80456B2D2FB83; sleep 8
+./prepwait.sh P001 P002 || exit 1
+./c P002 -w 1 'SILENCE 1' | tail -1; sleep 2; ./c P002 -w 1 'REQ 3' | grep -oE '"numbers":[^]]*]'
+sleep 15; ./c P002 -w .7 APP | grep -oE '"(in_flight|unsent|intents|sent)":[0-9]+' | tr '\n' ' '; echo
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 && ~/WICI-L0/stvenv/bin/python mig.py stop 2 /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 && echo ODLACZ_P002
+
+# r3.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+~/WICI-L0/stvenv/bin/python mig.py destroy /dev/cu.usbmodem80456B2F11503; sleep 8
+./prepwait.sh P001 P002 || exit 1
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2D2FB83 /dev/cu.usbmodem80456B2F11503 && ~/WICI-L0/stvenv/bin/python mig.py stop 3 /dev/cu.usbmodem80456B2D2FB83 /dev/cu.usbmodem80456B2F11503 && echo ODLACZ_P002
+
+# r4.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+~/WICI-L0/stvenv/bin/python mig.py destroy /dev/cu.usbmodem80456B2D2FB83; sleep 8
+./prepwait.sh P001 P002 || exit 1
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 && ~/WICI-L0/stvenv/bin/python mig.py stop 4 /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 && echo ODLACZ_P002
+
+# r5.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+~/WICI-L0/stvenv/bin/python mig.py destroy /dev/cu.usbmodem80456B2F11503; sleep 8
+./prepwait.sh P001 P002 || exit 1
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2D2FB83 /dev/cu.usbmodem80456B2F11503 && ~/WICI-L0/stvenv/bin/python mig.py stop 4 /dev/cu.usbmodem80456B2D2FB83 /dev/cu.usbmodem80456B2F11503 && echo ODLACZ_P002
+
+# r6.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+~/WICI-L0/stvenv/bin/python mig.py destroy /dev/cu.usbmodem80456B2D2FB83; sleep 8
+./prepwait.sh P001 P002 || exit 1
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 && ~/WICI-L0/stvenv/bin/python mig.py stop 2 /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 || exit 1
+~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83
+./migloop.sh /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 --migrate-abort
+sleep 5; ~/WICI-L0/stvenv/bin/python mig.py status /dev/cu.usbmodem80456B2F11503 /dev/cu.usbmodem80456B2D2FB83 2>&1 | tail -2
+for n in P001 P002; do echo "$n $(./c $n -w 1 RNS | grep -oE '"identity":"[0-9a-f]{8}') $(./c $n -w .7 INFO | grep -oE '"(prep|restarts)":[a-z0-9]+' | tr '\n' ' ')"; done
+echo KONIEC
+
+# a16.sh
+#!/bin/zsh
+cd ~/WICI-L0/proby
+./prepwait.sh P001 P002 || exit 1
+~/WICI-L0/.venv/bin/python setup2.py cards P001 2>&1 | grep -v journal
+~/WICI-L0/.venv/bin/python setup2.py config chain P002 P001 2>&1 | grep -v journal
+~/WICI-L0/.venv/bin/python setup2.py card2 P001 2>&1 | grep -v journal
+for n in P001 P002; do ./c $n -w .5 "PREP 0" >/dev/null; done
+~/WICI-L0/stvenv/bin/python trust_replace.py ~/WICI-L0/proby/card-P001-num.json 2>&1 | cut -c1-200
+echo KONIEC
