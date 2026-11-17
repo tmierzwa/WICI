@@ -31,7 +31,7 @@ Model ruchu w SF7: 50 zgłoszeń przez przekaźnik zajmuje 16,8–17,6 min nadaw
 
 SF8 daje 2 dB czułości więcej (−126 dBm), ale 50 zgłoszeń zajmuje 29,1–30,4 min, więc W10 nie mieści się w 30 min, a próba mieszana trwa około 61,6 min z 60. SF8 nie jest więc profilem stacji.
 
-Odbiornik SX1262 pobiera w modelu 4,6 mA, w trybie ze wzmocnieniem 5,3 mA, czyli o 0,7 mA więcej, poniżej 2% dopuszczalnego poboru dla W23. Przy założeniach przetwornicy z [projektu zasilania](../../hardware/r02/zasilanie.md) komplet ogniw AA Li-FeS2 daje ESP32-S3 około 70, 52 i 41 h przy 30, 45 i 60 mA poboru MCU. W23 (≥48 h) wymaga więc średnio najwyżej około 49 mA MCU (przy 45 mA model daje 52 h). Tor zasilania płytki v2 jest inny ([elektronika](elektronika.md#zasilanie-stacji)), więc o W23 rozstrzyga pomiar 48 h z minimum pilotażu, nie model.
+Odbiornik SX1262 pobiera w modelu 4,6 mA, w trybie ze wzmocnieniem 5,3 mA, czyli o 0,7 mA więcej, poniżej 2% dopuszczalnego poboru dla W23. Przy założeniach przetwornicy z [projektu zasilania](../../hardware/r02/zasilanie.md) komplet ogniw AA Li-FeS2 daje ESP32-S3 około 70, 52 i 41 h przy 30, 45 i 60 mA poboru MCU. W23 (≥48 h) wymaga więc średnio najwyżej około 49 mA MCU (przy 45 mA model daje 52 h). Moduł Wio-SX1262 zmierzony multimetrem 2026-11-17 pobiera więcej niż model: odbiór 6,2 mA, nadawanie około 60 mA przy 13 dBm ([raport](../../hardware/xiao-wici/evidence/prad-wio-2026-11-17.md)); model zostaje do pomiaru na płytce v2. Tor zasilania płytki v2 jest inny ([elektronika](elektronika.md#zasilanie-stacji)), więc o W23 rozstrzyga pomiar 48 h z minimum pilotażu, nie model.
 
 ### Ramka w eterze
 
