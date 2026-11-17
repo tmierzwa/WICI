@@ -1,0 +1,9 @@
+{
+ "envelopes": 546,
+ "nonce_reuse": [],
+ "flood_envelopes": 68,
+ "flood_senders": 69,
+ "repeated_floods": [],
+ "boundaries": [],
+ "ok": true
+}

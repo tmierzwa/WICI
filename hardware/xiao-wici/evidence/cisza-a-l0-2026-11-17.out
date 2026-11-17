@@ -1,0 +1,13 @@
+A 10:24:32 "rx_ok":559 "rx_bad":469 "tx_datagrams":38 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-98 
+A 10:26:33 "rx_ok":559 "rx_bad":469 "tx_datagrams":38 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:28:34 "rx_ok":559 "rx_bad":469 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-98 
+A 10:30:35 "rx_ok":559 "rx_bad":469 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:32:36 "rx_ok":559 "rx_bad":469 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-98 
+A 10:34:37 "rx_ok":559 "rx_bad":469 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:36:38 "rx_ok":559 "rx_bad":470 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:38:39 "rx_ok":559 "rx_bad":470 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:40:39 "rx_ok":559 "rx_bad":470 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-98 
+A 10:42:40 "rx_ok":559 "rx_bad":470 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:44:41 "rx_ok":559 "rx_bad":471 "tx_datagrams":39 "split_lost":0 "header_only":0 "rx_late":0 "rx_ring_overflow":0 "cca_threshold_dbm":-97 
+A 10:44:59 "rx_ok":559 "rx_bad":471 (przed podsłuchem 5 min)
+A 10:50:00 "rx_ok":559 "rx_bad":472 "tx_datagrams":39 (po podsłuchu)

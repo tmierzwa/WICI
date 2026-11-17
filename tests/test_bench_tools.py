@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT / "hardware" / "xiao-wici" / "tools"))
 
 import hostile  # noqa: E402
 import lora_raw  # noqa: E402
+import envelopes  # noqa: E402
 import monitor  # noqa: E402
 from wici.stanowisko import wici_link  # noqa: E402  (path set by lora_raw)
 
@@ -265,6 +266,53 @@ class Pacing(unittest.TestCase):
     def test_hostile_refuses_on_air_above_band_limit(self):
         with self.assertRaises(SystemExit), unittest.mock.patch("sys.stderr", io.StringIO()):
             hostile.main(["PORT", "--mode", "junk", "--out", "x.jsonl", "--occupancy", "0.5"])
+
+
+def _capture(*frames):
+    """monitor.py JSONL lines for DATA frames given as (host_ts, l_src, l_dst, seq, kind, src, dst, ctr, text)."""
+    lines = []
+    for ts, l_src, l_dst, seq, kind, src, dst, ctr, text in frames:
+        body = bytes([kind]) + src.to_bytes(2, "big") + dst.to_bytes(2, "big") + ctr.to_bytes(4, "big") + text
+        tail = bytes(8) if l_dst == 0xFFFF else bytes(16)
+        v3 = {"type": 0, "l_src": l_src, "l_dst": l_dst, "seq": seq}
+        lines.append(json.dumps({"host_ts": ts, "crc": True, "mac_ok": True, "v3": v3,
+                                 "hex": (bytes(11) + body + tail).hex()}))
+    return lines
+
+
+class Envelopes(unittest.TestCase):
+    def test_retries_and_forwarding_are_not_reuse(self):
+        lines = _capture((1, 20, 10, 5, 0x40, 20, 2, 64, b"a"), (2, 20, 10, 5, 0x40, 20, 2, 64, b"a"),
+                         (3, 10, 1, 9, 0x40, 20, 2, 64, b"a"))
+        self.assertTrue(envelopes.analyse(lines)["ok"])
+
+    def test_nonce_reuse(self):
+        lines = _capture((1, 20, 10, 5, 0x40, 20, 2, 64, b"a"), (2, 20, 10, 6, 0x40, 20, 2, 64, b"b"))
+        result = envelopes.analyse(lines)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["nonce_reuse"], [{"src": 20, "dst": 2, "kind": 0x40, "ctr": 64}])
+
+    def test_parts_share_ctr_with_different_kind(self):
+        lines = _capture((1, 20, 10, 5, 0x50, 20, 2, 64, b"a"), (2, 20, 10, 6, 0x60, 20, 2, 64, b"b"))
+        self.assertTrue(envelopes.analyse(lines)["ok"])
+
+    def test_boundary_after_mark(self):
+        frames = [(1, 20, 10, 1, 0x40, 20, 2, 70, b"a"), (2, 20, 10, 2, 0x50, 20, 2, 71, b"b"),
+                  (3, 2, 10, 9, 0x40, 2, 20, 75, b"z")]
+        old_copy = (5, 10, 1, 4, 0x40, 20, 2, 70, b"a")  # B forwards an older envelope after the restart
+        good = envelopes.analyse(_capture(*frames, old_copy, (6, 20, 10, 3, 0x60, 20, 2, 128, b"c")), [4], 20)
+        self.assertTrue(good["ok"])
+        self.assertEqual(len(good["boundaries"]), 1)
+        self.assertEqual((good["boundaries"][0]["last_before"], good["boundaries"][0]["first_after"]), (71, 128))
+        self.assertFalse(envelopes.analyse(_capture(*frames, (6, 20, 10, 3, 0x40, 20, 2, 72, b"c")), [4], 20)["ok"])
+        self.assertFalse(envelopes.analyse(_capture(*frames, (6, 20, 10, 3, 0x40, 20, 2, 64, b"c")), [4], 20)["ok"])
+
+    def test_flood_once_per_node(self):
+        once = _capture((1, 10, 0xFFFF, 7, 0x40, 2, 20, 64, b"a"), (2, 10, 0xFFFF, 7, 0x40, 2, 20, 64, b"a"),
+                        (3, 30, 0xFFFF, 3, 0x40, 2, 20, 64, b"a"))
+        self.assertTrue(envelopes.analyse(once)["ok"])
+        twice = once + _capture((200, 10, 0xFFFF, 8, 0x40, 2, 20, 64, b"a"))
+        self.assertEqual(envelopes.analyse(twice)["repeated_floods"][0]["seqs"], [7, 8])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # WICI: próby D21 przy stole z zestawami XIAO
 
-Procedura prób przy stole dla decyzji D21 ([warunek przyjęcia](../../docs/spec/transport.md#warunek-przyjęcia), [WICI-Link v3](../../docs/spec/wici-link.md)): dwa prototypy na płytce v1 z obrazem [`l0`](../../firmware/docs/prototyp-l0-i-xiao.md#stacja-l0-l0), dwa zestawy Seeed 102010611 (XIAO ESP32-S3 + Wio-SX1262) z obrazem [`xiao`](../../firmware/docs/prototyp-l0-i-xiao.md#zestaw-xiao-xiao) i dwa RAK4631 z zestawów [radiów RNode](../rnode/README.md), na czas prób z narzędziem surowego LoRa [`lora-raw`](../lora-raw/README.md) zamiast firmware RNode ([dlaczego](#podsłuch-i-węzeł-wrogi-lora-raw)). Stan: na dwóch zestawach XIAO (root i stacja A w jednym przeskoku, bez przekaźnika B) próby 2, 3, 4, 5 i 11 przeszły w wersji z jednym przeskokiem: 2026-11-02 próby 2 (bez ramek 255 B), 4, 5 i 11 skrócona do 3 min ([raporty](evidence/xiao-zestaw-2026-11-02.md)), 2026-11-03 próba 2 z ramkami 255 B, próba 3, pełna próba 11 oraz próby 4 i 5 przed poprawką dostępu do kanału i po niej ([raporty](evidence/xiao-zestaw-2026-11-03.md), [dostęp do kanału](evidence/cca-cad-2026-11-03.md)); 2026-11-14 na prototypach l0 w łańcuchu A → B → root (B: l0 nr 2, root: XIAO nr 1) przeszły próby 2, 3, 4, 5, 6 (w części z próbą 5), 7 (6 odcięć zamiast 15, decyzja właściciela), 8, 10 i 11; próba 9 rano tylko w wersji wstępnej w eterze przy 10% zajętości ([raporty](evidence/l0-zestaw-2026-11-14.md)); po poprawkach programu (`main` `32a5f2d6`) próby 3, 4 i 11 przeszły ponownie ([raport](evidence/ponowne-3-4-11-2026-11-14.md)); wieczorem w pomieszczeniu odizolowanym przeszła próba 9, oba przebiegi po 2 h przy 50% ([raport](evidence/wrogi-2026-11-14.md)), a próba 7 dostała 9 dalszych odcięć, razem 15 ([raport](evidence/zanik-B-2026-11-14.md)).
+Procedura prób przy stole dla decyzji D21 ([warunek przyjęcia](../../docs/spec/transport.md#warunek-przyjęcia), [WICI-Link v3](../../docs/spec/wici-link.md)): dwa prototypy na płytce v1 z obrazem [`l0`](../../firmware/docs/prototyp-l0-i-xiao.md#stacja-l0-l0), dwa zestawy Seeed 102010611 (XIAO ESP32-S3 + Wio-SX1262) z obrazem [`xiao`](../../firmware/docs/prototyp-l0-i-xiao.md#zestaw-xiao-xiao) i dwa RAK4631 z zestawów [radiów RNode](../rnode/README.md), na czas prób z narzędziem surowego LoRa [`lora-raw`](../lora-raw/README.md) zamiast firmware RNode ([dlaczego](#podsłuch-i-węzeł-wrogi-lora-raw)). Stan: na dwóch zestawach XIAO (root i stacja A w jednym przeskoku, bez przekaźnika B) próby 2, 3, 4, 5 i 11 przeszły w wersji z jednym przeskokiem: 2026-11-02 próby 2 (bez ramek 255 B), 4, 5 i 11 skrócona do 3 min ([raporty](evidence/xiao-zestaw-2026-11-02.md)), 2026-11-03 próba 2 z ramkami 255 B, próba 3, pełna próba 11 oraz próby 4 i 5 przed poprawką dostępu do kanału i po niej ([raporty](evidence/xiao-zestaw-2026-11-03.md), [dostęp do kanału](evidence/cca-cad-2026-11-03.md)); 2026-11-14 na prototypach l0 w łańcuchu A → B → root (B: l0 nr 2, root: XIAO nr 1) przeszły próby 2, 3, 4, 5, 6 (w części z próbą 5; część z próbą 9 uzupełniona z jej zapisu, [raport](evidence/w10-2026-11-14.md#próba-6-zapas-ram-na-b-l0-nr-2)), 7 (6 odcięć zamiast 15, decyzja właściciela), 8, 10 i 11; próba 9 rano tylko w wersji wstępnej w eterze przy 10% zajętości ([raporty](evidence/l0-zestaw-2026-11-14.md)); po poprawkach programu (`main` `32a5f2d6`) próby 3, 4 i 11 przeszły ponownie ([raport](evidence/ponowne-3-4-11-2026-11-14.md)); wieczorem w pomieszczeniu odizolowanym przeszła próba 9, oba przebiegi po 2 h przy 50% ([raport](evidence/wrogi-2026-11-14.md)), a próba 7 dostała 9 dalszych odcięć, razem 15 ([raport](evidence/zanik-B-2026-11-14.md)). 2026-11-15 na obrazach z `main` `ac5893e4` przeszły próby 12 ([raport](evidence/rozsylanie-2026-11-15.md)), 13 ([raport](evidence/zanik-stacji-2026-11-15.md)) i 14 ([raport](evidence/zimny-start-2026-11-15.md)), a w nocy w piwnicy porównanie kandydatów `CHANNEL` i część próby 17 ([raport](evidence/piwnica-noc-2026-11-15.md)), 2026-11-16 alarm zagłuszania na roocie bez ruchu i w panelu, a do 2026-11-17 zwykły ruch przez 16 h 43 min zamiast 24 h (decyzja właściciela), czym próba 17 przeszła ([raport](evidence/alarm-zagluszania-2026-11-16.md)); 2026-11-17 próba 16 w wersji uproszczonej ([raport](evidence/przeniesienie-2026-11-17.md)) i próba 15 multimetrem, bez oscyloskopu ([raport](evidence/prad-wio-2026-11-17.md)). Po próbach oba RAK4631 wróciły do firmware RNode 1.86 ([zapis](evidence/rnode-powrot-2026-11-17.txt)).
 
 Zestaw XIAO nie ma FRAM: obraz FRAM jest w PSRAM i ginie po odłączeniu zasilania ([opis](../../firmware/docs/prototyp-l0-i-xiao.md#zestaw-xiao-xiao)). Dlatego zestawy XIAO nie biorą udziału w próbach zaniku zasilania, a wyniki z nich nie zastępują prób prototypu ani stacji na płytce v2 w energii (W23), zapasie RAM (D14), zaniku zasilania i czułości. Poza zakresem: W23 (wymaga toru zasilania v2) i zasięg.
 
@@ -75,7 +75,87 @@ Kolejność jak w tabeli; próba późniejsza zakłada zaliczenie wcześniejszyc
 | 9 | Węzeł wrogi | tylko w torze przewodowym, w komorze albo w pomieszczeniu odizolowanym ([wyżej](#próba-9-tylko-w-torze-przewodowym-w-komorze-albo-w-pomieszczeniu-odizolowanym)); RAK4631 nr 2 z `hostile.py` na drodze do B, każdy przebieg 2 h: (a) bez klucza, (b) z kluczem sieci; w tym czasie A wysyła 20 zgłoszeń (`REQ 20`) | 20/20 RECEIVED na A w ≤30 min od COMMIT w każdym przebiegu; udziały klas według [odbioru, „Wrogi węzeł”](../../docs/spec/odbior.md#próby) z podsłuchu; brak restartu B; RAM jak w próbie 6 | JSONL podsłuchu i skryptu wrogiego, `APP`, `RNS`, `INFO` na B; `wrogi-RRRR-MM-DD.md` |
 | 10 | Trzy skoki | plan: A → XIAO nr 2 (przekaźnik) → B → root; `REQ 10` na A | 10/10 RECEIVED; w podsłuchu każda koperta przechodzi trzy skoki z HACK na każdym | plan sieci, podsłuch, `HACK` na przekaźnikach |
 | 11 | Cisza radiowa | na B `SILENCE 1` (albo przełącznik CISZA) na 30 min przy ruchu z A (`REQ 5`); potem `SILENCE 0` | w podsłuchu brak ramek B w ciszy (DATA, HACK, BEACON); kolejka B przyjmuje ramki bez HACK; po zdjęciu ciszy 5/5 RECEIVED | podsłuch, `LOG` B, `APP` A |
+| 12 | Rozsyłanie w dół i utrata drogi w górę | [niżej](#próba-12-rozsyłanie-w-dół-i-utrata-drogi-w-górę) | każdy węzeł rozsyła kopertę najwyżej raz, także po restarcie w oknie 120 s; po utracie rodzica stacja przechodzi na rodzica zapasowego bez rozsyłania w górę; wszystkie zgłoszenia i decyzje doszły dokładnie raz; tranzyt i BEACON-y każdego przekaźnika ≤60% godziny, BEACON-y ≤2% | podsłuch, `tools/envelopes.py`, `HACK`, `APP`; `rozsylanie-RRRR-MM-DD.md` |
+| 13 | Zanik zasilania stacji | [niżej](#próba-13-zanik-zasilania-stacji) | każde zgłoszenie RECEIVED dokładnie raz; każdy biuletyn na ekranie A dokładnie raz; licznik koperty po każdym starcie powyżej zarezerwowanej granicy, żaden nonce się nie powtarza; `STORE` `corrupt_slots` 0 | chwile odcięć, `LOG`, `JOURNAL`, `STORE`, podsłuch, `tools/envelopes.py --mark`; `zanik-stacji-RRRR-MM-DD.md` |
+| 14 | Zimny start | [niżej](#próba-14-zimny-start) | po wspólnym odcięciu A i B, bez ręcznego ogłoszenia: zgłoszenie RECEIVED i decyzja na ekranie A; drogi w dół z FRAM (decyzja idzie bez rozsyłania); B w ciszy po starcie nie nadaje żadnej ramki | `LOG`, podsłuch, `APP`; `zimny-start-RRRR-MM-DD.md` |
+| 15 | Prąd modułu Wio | [niżej](#próba-15-prąd-modułu-wio) | wyniki zapisane i porównane z budżetem W23; bez progu zaliczenia | odczyty miernika, `INFO`; `prad-wio-RRRR-MM-DD.md` |
+| 16 | Przeniesienie stacji | [niżej](#próba-16-przeniesienie-stacji) | pierwsza koperta B z nowego prototypu ma licznik powyżej zarezerwowanej granicy (wielokrotność 64, większy od każdego ze starego); żaden nonce się nie powtarza; stary prototyp po eksporcie nie nadaje; zgłoszenia czekające przy przeniesieniu RECEIVED dokładnie raz; po każdym przerwaniu ponowione polecenie kończy albo wycofuje przeniesienie, nigdy dwie stacje z tą samą tożsamością | podsłuch, `tools/envelopes.py --mark`, wyjście polecenia, `INFO` obu; `przeniesienie-RRRR-MM-DD.md` |
+| 17 | Alarm zagłuszania kanału | [niżej](#próba-17-alarm-zagłuszania-kanału) | przy 90% alarm na A (ruch do nadania) i na roocie także bez ruchu (R3-46) oraz w panelu stanowiska; brak alarmu przez 24 h zwykłego ruchu; próg z rozkładu `no_gap_ms_max` przy 50%, 70% i 90% | `P1` i `INFO` co 10 s, JSONL węzła wrogiego, panel; `alarm-zagluszania-RRRR-MM-DD.md` |
 
 Liczniki z `HACK` mierzą czas zegarem MCU od znacznika odbioru DATA w zadaniu odbioru do TxDone HACK; rozstrzyga pomiar z podsłuchu. W próbach 4, 5 i 9 wyniki z XIAO jako przekaźnika (próba 10) zapisuje się osobno od wyników prototypu.
+
+## Próby 12–16: reszta warunku wyboru protokołu
+
+Próby 12–16 zamykają część warunku D21 sprawdzaną na płytce v1 (specyfikacja systemu, rozdział 6, „Warunek D21 i granica płytki v2”; [warunek przyjęcia](../../docs/spec/transport.md#warunek-przyjęcia)): rozsyłanie, zanik zasilania stacji, zimny start, prąd Wio i przeniesienie. Obrazy z tego samego commita `main` na wszystkich czterech urządzeniach; liczniki `HACK` z `hop_no_key`, `hop_tag_bad` i `queue_k1/k2_admitted`. Próbę 16 robi się na końcu, bo P002 traci w niej rolę B. Zestawy XIAO zostają zasilone przez całą serię (FRAM w PSRAM), więc odcina się tylko prototypy l0.
+
+**Odcięcia ręczne.** Właściciel odłącza przewód USB prototypu (prototyp nie ma innego zasilania, więc odłączenie USB to zanik zasilania) na sygnał skryptu: skrypt czyta podsłuch albo log, w chwili zdarzenia wypisuje „TERAZ” i daje dźwięk, a chwilę odłączenia zapisuje po zniknięciu portu. Ręka spóźnia się o około 1 s, więc chwile bliższe niż 1 s od zdarzenia nie są dokładne; w raporcie wpisuje się zmierzone opóźnienie każdego odcięcia.
+
+**Liczniki koperty i nonce z podsłuchu:** `python3 tools/envelopes.py PODSŁUCH.jsonl [--mark HOST_TS …]`. Nagłówek koperty jest jawny od bajtu 11 ramki DATA (`kind`, `src`, `dst`, `ctr`), a nonce to `src ‖ dst ‖ kind ‖ 0 ‖ ctr` ([transport](../../docs/spec/transport.md)). Skrypt zgłasza nonce użyty dla dwóch różnych kopert, kopertę rozsyłaną przez jeden węzeł pod dwoma numerami `seq` oraz dla każdej chwili `--mark` (restart, przeniesienie) ostatni `ctr` przed nią i pierwszy po niej; pierwszy po musi być wielokrotnością 64 i większy od każdego wcześniejszego (rezerwacja blokami po 64). Ponowienia na łączu i przekazanie kopiują tę samą kopertę, więc nie są powtórzeniem nonce. Kod wyjścia 0 oznacza brak usterek.
+
+### Próba 12: rozsyłanie w dół i utrata drogi w górę
+
+WICI-Link rozsyła tylko w dół: przekaźnik bez drogi do stacji rozsyła ramkę od swojego rodzica do wszystkich sąsiadów (`l_dst` 0xFFFF, bez ACKREQ) i zapisuje tożsamość koperty w pierścieniu FRAM na 120 s ([WICI-Link, „Ruch w górę i w dół”](../../docs/spec/wici-link.md)). W górę rozsyłania nie ma: po trzech nadaniach bez HACK stacja przechodzi na następnego rodzica (planowy, zapasowy, dynamiczny).
+
+1. **Rozsyłanie w dół.** Plan trzech skoków jak w próbie 10: A (P001) → XIAO nr 2 → B (P002) → root. `behind` ma tylko root, więc B nie zna drogi do A i każdą wiadomość do A rozsyła. `HACK 0` na wszystkich. `REQ 10` na A, po dojściu w panelu dla każdego zgłoszenia PRZECZYTANE i decyzja (20 wiadomości w dół). Podsłuch przez cały czas.
+2. **Restart w oknie 120 s.** Przy pięciu wiadomościach w dół: odcięcie B na sygnał zaraz po jego rozsyłaniu (DATA od B z `l_dst` 65535), powrót po 5 s. Root nie ponawia (HACK od B przyszedł przed rozsyłaniem), a B po starcie nie rozsyła tej koperty drugi raz.
+3. **Utrata drogi w górę.** Plan: A z rodzicem XIAO nr 2 i rodzicem zapasowym B, XIAO nr 2 i B z rodzicem root. `SILENCE 1` na XIAO nr 2, `REQ 5` na A. A po trzech nadaniach bez HACK przechodzi na B; w podsłuchu nie ma DATA w górę z `l_dst` 65535. Po dojściu 5/5 `SILENCE 0`.
+
+Zaliczenie: `tools/envelopes.py` bez `repeated_floods` i bez `nonce_reuse`; zgłoszenia i decyzje dokładnie raz w bazie stanowiska i na ekranie A; czas nadawania każdego przekaźnika z podsumowania podsłuchu (`airtime_by_l_src_s`) w każdej godzinie ≤60%, BEACON-y ≤2%. Zakres 15 skoków i rozsyłania w długim łańcuchu sprawdza emulator.
+
+### Próba 13: zanik zasilania stacji
+
+Stacja A na P001 (prawdziwa FRAM), łańcuch A → B → root. Po każdym starcie A: `LOG`, `JOURNAL`, `STORE`, `APP`. Chwile odcięcia:
+
+| Chwila | Sygnał | Liczba |
+|---|---|---|
+| zaraz po utworzeniu zgłoszenia, przed jego dojściem | skrypt: odpowiedź na `REQ 1` (zapis zgłoszenia, pierwsze nadanie albo czekanie na wolny kanał) | 3 |
+| po HACK całej koperty, przed RECEIVED | podsłuch: HACK od B do A | 3 |
+| po HACK części 1/2 własnej koperty | podsłuch: DATA od A z częścią 1 (bity 5–4 bajtu 11 = 1), potem HACK od B z tym samym `seq`; część 2 czeka na dług ciszy (kilka sekund) | 5 |
+| po HACK części 1/2 biuletynu do A | panel: biuletyn 192 B do A (zawsze dwie części); podsłuch: HACK od A dla części 1 | 5 |
+| bez ruchu, po RECEIVED na ekranie | ekran A | 2 |
+
+Kopertę dwuczęściową z A daje zgłoszenie z SA1 dłuższym niż około 200 B: najdłuższe miejsce w konfiguracji A (64 B) i `REQ 1 96`; przed próbą sprawdzić w podsłuchu, że DATA od A ma część 1. Jeśli się nie da, ten wiersz zastępuje biuletyn.
+
+Zaliczenie: każde zgłoszenie RECEIVED dokładnie raz w bazie stanowiska; każdy biuletyn na ekranie A dokładnie raz (po złożeniu części albo po ponowieniu przez stanowisko); `tools/envelopes.py --mark` z chwilami odcięć bez usterek; `STORE` `corrupt_slots` 0; `journal_ok`.
+
+### Próba 14: zimny start
+
+Łańcuch A → B → root, wszystkie drogi nauczone ruchem (próba 3 albo `REQ 1`). Kryterium: [odbiór, „Zimny start trasy”](../../docs/spec/odbior.md#próby), w znaczeniu WICI-Link.
+
+1. Odcięcie A i B jednocześnie na 30 s; root zostaje zasilony. Bez żadnego polecenia po starcie: w `LOG` „wici station ready”; najpierw decyzja w panelu dla starszego zgłoszenia A (przed ruchem w górę), która idzie do A przez B jednoadresowo, bez rozsyłania; potem `REQ 1` na A: RECEIVED. BEACON B przychodzi dopiero po BEACON-ie roota (ranga, reguła 4), czyli do 36 min po starcie.
+2. Przełącznik CISZA na B w pozycji ciszy (nie `SILENCE 1`, które udaje przełącznik tylko w RAM i znika przy restarcie), odcięcie B na 30 s. Po starcie `INFO` `silence: true` i 10 min podsłuchu bez żadnej ramki od B. `REQ 1` na A w czasie ciszy, po 10 min przełącznik z powrotem: RECEIVED.
+
+### Próba 15: prąd modułu Wio
+
+Wio jest zasilany z linii 3,3 V przez zworkę POWER_BREAK ([montaż L0](../l0-diagnostic/MONTAZ-I-TESTY.md)). **Nigdy nie zasilać prototypu ze zdjętą zworką**: wyjścia MCU zasilałyby wtedy Wio przez diody wejść.
+
+1. Prototyp bez zasilania. Zworkę zastąpić miernikiem na zakresie mA (przewody do obu kołków), dopiero potem włączyć zasilanie.
+2. Odbiór (zwykła praca, bez ruchu): prąd ustalony, kilka mA.
+3. CAD i nadawanie trwają milisekundy i dziesiątki milisekund, więc miernik pokaże tylko średnią. Do przebiegu w czasie: rezystor 1 Ω w miejscu zworki i oscyloskop. Bez oscyloskopu: średnia przy serii ramek w trybie przygotowania (`TXPKT` z liczbą i długością) z wypełnieniem z czasów ramek; prąd nadawania = (średnia − prąd odbioru × (1 − wypełnienie)) / wypełnienie.
+4. Po pomiarze: zasilanie odłączone, zworka z powrotem, dopiero potem zasilanie.
+
+Czasu wybudzenia procesora obraz `l0` nie zapisuje: prototyp nie usypia procesora w zwykłej pracy (`NAP` w trybie przygotowania podaje tylko czas snu). Licznik wybudzeń (`STANDBY`) ma tylko obraz płytki v2.
+
+### Próba 16: przeniesienie stacji
+
+Przenosi się przekaźnik B z P002 na P001 ([przeniesienie stacji](../../docs/spec/usb-protocol.md#przeniesienie-stacji)). Przeniesiona stacja ma tę samą tożsamość, więc root, XIAO nr 2 (C, rodzic B) i stanowisko nie wymagają nowej konfiguracji. B jest też stacją z ekranem i rejestrem, więc licznik kopert sprawdza się na zgłoszeniach z samej B. Cel musi być pusty, więc na czas próby znika A.
+
+1. **Pusty cel.** `destroy` na P001 przez USB i OK na P001 w ciągu 30 s (ZNISZCZ DANE). Tryb przygotowania na P001 i P002 (przycisk 3 s).
+2. **Czekające zgłoszenia.** Przełącznik CISZA nie jest tu potrzebny: `REQ 3` na B tuż przed przeniesieniem, więc część zgłoszeń czeka w B w chwili eksportu.
+3. **Przeniesienie bez przerw:** `python -m wici --migrate-source-port PORT_DANYCH_ŹRÓDŁA --migrate-target-port PORT_DANYCH_CELU`, OK na źródłowej po porównaniu odcisku z ekranem docelowej. Chwila aktywacji to `--mark` dla `tools/envelopes.py --src 10`. Zgłoszenia czekające przy eksporcie idą potem z nowego prototypu.
+4. **Przerwane USB.** Dalej tam i z powrotem, pięć przebiegów: w każdym jedno odłączenie USB na sygnał w innym z 5 kroków (tabela w specyfikacji), na zmianę źródłowej i docelowej. Ponowne uruchomienie tego samego polecenia dokańcza przeniesienie. Szósty przebieg wycofuje się `--migrate-abort` po kroku 2. Odłączenie USB prototypu jest też zanikiem zasilania. Plan pilotażu przewiduje dwa przerwania na krok; jedno to odchylenie zapisywane w raporcie.
+5. Po każdym przebiegu `INFO` i `migrate` `status` obu: dokładnie jedna stacja w zwykłej pracy z tożsamością B, druga `retired` albo pusta.
+
+Zaliczenie jak w tabeli (z B zamiast A i P002 ↔ P001). Na końcu pusty prototyp dostaje nową kartę jako A; nowy klucz A trafia do `priority_keys` B (`configure`) i na listę zaufanych stanowiska (przepięcie numeru 20 w panelu, dwóch dyżurnych).
+
+### Próba 17: alarm zagłuszania kanału
+
+Alarm awarii radia ma drugą przyczynę: kanał bez wolnej przerwy do nadania dłużej niż próg `JAM_ALARM_MS` (5 min, ustalony po tej próbie). Do pomiaru służą pola `P1` `no_gap_ms` (bieżący czas bez wolnej przerwy), `no_gap_ms_max` i `channel_jammed` oraz `channel_jammed` w `INFO`. Węzeł wrogi pracuje jak w próbie 9, więc obowiązują te same warunki miejsca ([wyżej](#próba-9-tylko-w-torze-przewodowym-w-komorze-albo-w-pomieszczeniu-odizolowanym)).
+
+1. Łańcuch A → B → root, `REQ 5` na A na początku każdego przebiegu. `hostile.py --mode junk --conducted` przy 50%, 70% i 90%, każdy przebieg 20 min (przy 90% co najmniej próg + 5 min), z przerwą 10 min. Na A, B i roocie `P1` i `INFO` co 10 s.
+2. Przy 90%: chwila włączenia alarmu na każdym urządzeniu i w panelu, oraz zgaśnięcie po końcu zagłuszania. Stacja i przekaźnik alarmują tylko z ramką do nadania; root także bez ruchu, bo co kilka sekund sprawdza kanał (R3-46 w specyfikacji 0.60, od obrazu z `main` `29d15b10`; stanowisko pokazuje wtedy „KANAŁ ZAGŁUSZONY PRZY WĘŹLE”).
+3. 24 h zwykłego ruchu bez węzła wrogiego (np. `REQ 1` na A co 30 min, BEACON-y): brak alarmu, `no_gap_ms_max` zapisany.
+
+Próg: rozkład `no_gap_ms_max` z przebiegów 50% i 70% oraz z 24 h zwykłego ruchu (górna granica) i z przebiegu 90% (dolna granica). Proponowany próg wpisuje się w raporcie z uzasadnieniem; zmiana stałej należy do programu. Pomiar robi się tego samego wieczoru co przebiegi kandydatów zmian dostępu do kanału.
 
 Licencja tego pliku: CC-BY-4.0 ([LICENSE.md](../../LICENSE.md)).
