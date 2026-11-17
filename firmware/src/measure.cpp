@@ -158,6 +158,23 @@ uint32_t Bench::debtRemainingMs() const {
     return 0;
 }
 
+uint32_t Bench::sleepableMs() const {
+    if (cwActive_ || pktActive_ || emcActive_) return 0;
+    switch (txState_) {
+        case TxState::IDLE: return 0xFFFFFFFFu;
+        case TxState::WAIT_DEBT: return debtRemainingMs();
+        case TxState::BACKOFF: {
+            const int32_t left = static_cast<int32_t>(backoffUntilMs_ - millis());
+            return left > 0 ? static_cast<uint32_t>(left) : 0;
+        }
+        default: return 0;
+    }
+}
+
+void Bench::resumed(uint32_t nowMs) {
+    if (rxMode_ == RxMode::LINK) rxSinceMs_ = nowMs;
+}
+
 bool Bench::confirm() {
     // Pętla stacji stoi w czasie oczekiwania, więc nośna albo seria nie może trwać dłużej niż jej dług.
     if (cwActive_ || pktActive_) {
@@ -380,7 +397,16 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
         return false;
     }
     rxMode_ = RxMode::NONE;
-    const radiolink::Cad cad = radio_.cad();
+    radiolink::Cad cad = radio_.cad();
+    // Pomiar (CHANNEL): zajęty CAD powtarza się, dopóki HACK zdąży przed ostatnią chwilą startu; ramka zostaje
+    // w buforze układu, a pozostałe węzły wstrzymują się do 113 ms po DATA, więc późny HACK nadal jest chroniony.
+    // Limit prób na wypadek CAD bez upływu czasu (jeden CAD SX1262 z potwierdzeniem trwa kilka ms).
+    bool retried = false;
+    for (uint8_t tries = 0; hackCadRetry_ && cad == radiolink::Cad::Busy && millis() - receivedMs <= lastStartMs &&
+                            tries < HACK_CAD_RETRIES; ++tries) {
+        retried = true;
+        cad = radio_.cad();
+    }
     if (cad != radiolink::Cad::Free || millis() - receivedMs > lastStartMs) {
         enterRx(RxMode::LINK, 0);
         if (cad != radiolink::Cad::Free) refuseHack(HACK_CAD);
@@ -408,6 +434,7 @@ bool Bench::linkSendHack(const uint8_t* frame, size_t length, uint32_t receivedM
     const uint32_t endMs = millis() - receivedMs;   // sendPrepared returns at TxDone
     if (sent) {
         ++hack_.sent;
+        if (retried) ++hack_.cadRetried;
         hack_.lastMs = endMs;
         if (endMs > hack_.maxMs) hack_.maxMs = endMs;
         hack_.sumMs += endMs;
@@ -867,16 +894,16 @@ void Bench::startCca(uint32_t now, bool first) {
     ccaFrames_ = link_.rxOk + link_.rxBad;
 }
 
-bool Bench::channelBusy() {
+bool Bench::channelBusy(bool count) {
     if (hackHold_) {
-        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { ++link_.rxBusy; return true; }
+        if (static_cast<int32_t>(millis() - hackHoldUntilMs_) < 0) { if (count) ++link_.rxBusy; return true; }
         hackHold_ = false;
     }
     if (radio_.framing() == radiolink::Framing::RNODE) {
         // Okno 50 ms ze znaczników próbek odbioru (preambuła, nagłówek, ramka, RSSI ponad progiem), które
         // zbiera odbiór niezależnie od pętli, i RSSI w chwili decyzji.
         const radiolink::Activity activity = radio_.recentActivity(CCA_MS);
-        if (activity == radiolink::Activity::Rx) { ++link_.rxBusy; return true; }
+        if (activity == radiolink::Activity::Rx) { if (count) ++link_.rxBusy; return true; }
         bool rssiHigh = activity == radiolink::Activity::Rssi;
         if (!rssiHigh) {
             const radiolink::Rssi r = radio_.rssi();
@@ -885,8 +912,8 @@ bool Bench::channelBusy() {
         if (!rssiHigh) return false;
         // Sama energia zajmuje kanał tylko, gdy może być ramką, której początku odbiornik nie słyszał; dłużej to
         // sygnał obcy, a odroczenie przed nim nie chroni odbiorcy (radio.md, „Dostęp do kanału”, punkt 5).
-        if (radio_.rssiMayHideFrame()) { ++link_.rssiBusy; return true; }
-        ccaRssiIgnored_ = true;
+        if (radio_.rssiMayHideFrame()) { if (count) ++link_.rssiBusy; return true; }
+        if (count) ccaRssiIgnored_ = true;
         return false;
     }
     // P1: trwa odbiór po słowie synchronizacji, ramka przyszła w czasie okna CCA albo RSSI ponad progiem CCA.
@@ -897,8 +924,36 @@ bool Bench::channelBusy() {
     return r.valid && r.dbm > radio_.ccaThresholdDbm();
 }
 
+void Bench::noteBusy(uint32_t now, uint32_t since) {
+    if (!noGap_ || now - noGapLastMs_ >= JAM_ALARM_MS) { noGap_ = true; noGapSinceMs_ = since; }
+    noGapLastMs_ = now;
+    if (noGapMs() > noGapMaxMs_) noGapMaxMs_ = noGapMs();
+}
+
+void Bench::probeChannel(uint32_t now) {
+    if (radio_.framing() != radiolink::Framing::RNODE || rxMode_ != RxMode::LINK || txState_ != TxState::IDLE ||
+        busy() || silence || emcActive_ || static_cast<int32_t>(now - probeNextMs_) < 0 || now - rxSinceMs_ < CCA_MS) return;
+    platform::RadioLock lock(RADIO_LOCK_WAIT_MS);
+    if (!lock.held()) return;   // bez blokady bez sprawdzenia; następna próba w kolejnym obiegu
+    probeNextMs_ = now + JAM_PROBE_MS;
+    ++link_.probes;
+    if (channelBusy(false)) { ++link_.probeBusy; noteBusy(now, now); }
+    else noGap_ = false;   // wolna przerwa: koniec czasu bez niej
+}
+
+bool Bench::channelJammed() const {
+    if (!noGap_ || silence || emcActive_) return false;
+    return noGapMs() >= JAM_ALARM_MS && millis() - noGapLastMs_ < JAM_ALARM_MS;
+}
+
 void Bench::defer(uint32_t now) {
-    if (++txDeferrals_ > MAX_DEFERRALS) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
+    // Zajęty kanał (CCA, CAD, ramka w odbiorze): czas bez wolnej przerwy liczy się od pierwszej próby
+    // datagramu, który ją zastał, i trwa przez odrzucenie za odroczenia aż do wolnego kanału. Po przerwie
+    // bez prób dłuższej niż JAM_ALARM_MS (jak przy gaśnięciu alarmu) liczy się od nowa: o kanale w tej
+    // przerwie stacja nic nie wie, a przekaźnik bez ruchu dałby inaczej fałszywy alarm z jednym zajętym
+    // kanałem minuty po zagłuszaniu (próba 17, B: 17 s w zagłuszaniu i 361 s po nim).
+    noteBusy(now, ccaFirstMs_);
+    if (++txDeferrals_ > maxDeferrals_) { ++link_.txDrop; finishLinkTx("too many deferrals"); return; }
     ++link_.deferrals;
     backoffUntilMs_ = now + backoffMs();
     txState_ = TxState::BACKOFF;
@@ -928,6 +983,7 @@ void Bench::pollLinkTx() {
         }
             [[fallthrough]];
         case TxState::SEND: {
+            noGap_ = false;  // wolna przerwa: koniec czasu bez niej (alarm zagłuszania kanału)
             if (now - ccaFirstMs_ > LONG_DEFERRAL_MS) ++link_.longDeferrals;
             const uint8_t count = p1frame::fragmentCount(txLength_);
             const uint32_t txMs = count * radio_.frameAirMs(p1frame::MAX_LEN + 1);  // rezerwacja: najdłuższe ramki
@@ -1013,6 +1069,7 @@ void Bench::sendLora(uint32_t now) {
         return;
     }
     if (cad != radiolink::Cad::Free) { ++link_.txDrop; finishLinkTx("tx error"); return; }
+    noGap_ = false;  // wolna przerwa: koniec czasu bez niej (alarm zagłuszania kanału)
     // Dług po wolnym CAD, przed pierwszą ramką; błąd zapisu: bez nadania, odbiór wraca (finishLinkTx).
     const uint32_t txMs = rawLora_ ? radio_.frameAirMs(txLength_) : loraframe::reservedTxMs(txLength_);
     if (!reserveDebt(txMs)) return;
@@ -1062,11 +1119,12 @@ const char* Bench::txStateName() const {
 
 void Bench::printHack(const char* tail) {
     Serial.printf("{\"hack_sent\":%lu,\"hack_late\":%lu,\"hack_refused\":%lu,\"hack_over_200ms\":%lu,"
-                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu",
+                  "\"end_ms_last\":%lu,\"end_ms_max\":%lu,\"end_ms_mean\":%lu,\"hack_cad_retried\":%lu",
                   static_cast<unsigned long>(hack_.sent), static_cast<unsigned long>(hack_.late),
                   static_cast<unsigned long>(hack_.refused), static_cast<unsigned long>(hack_.over),
                   static_cast<unsigned long>(hack_.lastMs), static_cast<unsigned long>(hack_.maxMs),
-                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0));
+                  static_cast<unsigned long>(hack_.sent ? hack_.sumMs / hack_.sent : 0),
+                  static_cast<unsigned long>(hack_.cadRetried));
     // Osobne wywołania: Print::printf rdzenia nRF52 formatuje do bufora 256 B (zob. printRns w main.cpp).
     const uint32_t* r = hack_.refusedBy;
     Serial.printf(",\"refused_by\":{\"state\":%lu,\"lock\":%lu,\"rx_pending\":%lu,\"prep\":%lu,\"cad\":%lu,"
@@ -1087,6 +1145,11 @@ void Bench::printLink() {
                   static_cast<unsigned long>(link_.rxDatagrams), static_cast<unsigned long>(link_.txDatagrams),
                   static_cast<unsigned long>(link_.txFragments), static_cast<unsigned long>(link_.txDrop),
                   static_cast<unsigned long>(link_.deferrals), static_cast<unsigned long>(link_.longDeferrals));
+    // Alarm zagłuszania kanału: czas bez wolnej przerwy teraz i najdłuższy od startu (pomiar progu); sprawdzenia
+    // kanału bez ruchu u roota (R3-46) i z nich zajęte.
+    Serial.printf("\"no_gap_ms\":%lu,\"no_gap_ms_max\":%lu,\"channel_jammed\":%s,\"probes\":%lu,\"probe_busy\":%lu,",
+                  static_cast<unsigned long>(noGapMs()), static_cast<unsigned long>(noGapMaxMs_), boolName(channelJammed()),
+                  static_cast<unsigned long>(link_.probes), static_cast<unsigned long>(link_.probeBusy));
     if (radio_.framing() == radiolink::Framing::RNODE) {
         const loraframe::Stats& a = loraAssembler_.stats();
         Serial.printf("\"cad_busy\":%lu,\"cad_unconfirmed\":%lu,\"rssi_busy\":%lu,\"rssi_ignored\":%lu,\"rx_busy\":%lu,\"split_lost\":%lu,\"header_only\":%lu,\"assembly_timeout\":%lu,"

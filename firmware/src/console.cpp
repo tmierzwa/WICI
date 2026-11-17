@@ -206,7 +206,7 @@ Console::Fault* Console::fault(ui::AlarmKind kind) {
 }
 
 bool Console::alarm(ui::AlarmInfo& out) {
-    memory_.set(!store_.ok());
+    memory_.set(!store_.ok() && !migrationFrozen_);
     station::Alarm a;
     if (!station_.alarm(a)) {
         // Awarie stacji w kolejności ekranów alarmu (oprogramowanie.md, Alarmy).
@@ -215,6 +215,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
         for (ui::AlarmKind kind : FAULTS) {
             if (fault(kind)->pending()) {
                 out.kind = kind;
+                out.jammed = kind == ui::AlarmKind::RADIO_FAULT && radioJammed_;
                 break;
             }
         }

@@ -15,6 +15,7 @@ namespace {
 constexpr uint32_t TIMER_HZ = 10000;
 constexpr uint32_t PERIOD_TICKS = TIMER_HZ * 2 * EXTCOMIN_HALF_PERIOD_MS / 1000;  // 1 s
 bool started = false;
+mcpwm_gen_handle_t generator = nullptr;  // wymuszanie stanu w czuwaniu (forceExtcomin)
 }  // namespace
 
 // Błąd sterownika MCPWM zwraca false i zostawia pin w stanie niskim. Bitu VCOM nie włącza się
@@ -41,7 +42,6 @@ bool Display::beginExtcomin() {
     cmprConfig.flags.update_cmp_on_tez = 1;
     if (mcpwm_new_comparator(oper, &cmprConfig, &comparator) != ESP_OK ||
         mcpwm_comparator_set_compare_value(comparator, PERIOD_TICKS / 2) != ESP_OK) return false;
-    mcpwm_gen_handle_t generator = nullptr;
     mcpwm_generator_config_t genConfig = {};
     genConfig.gen_gpio_num = pinExtcomin_;
     genConfig.flags.io_loop_back = 1;  // wejście pinu włączone, żeby extcominLevel() czytało stan
@@ -60,6 +60,11 @@ bool Display::beginExtcomin() {
 uint32_t Display::extcominCounter() const { return MCPWM0.timer[0].timer_status.timer_value; }
 
 bool Display::extcominLevel() const { return gpio_get_level(static_cast<gpio_num_t>(pinExtcomin_)) != 0; }
+
+// Stan wymuszony trwale (hold_on): generator trzyma go do zdjęcia wymuszenia (-1), a licznik liczy dalej.
+bool Display::forceExtcomin(int level) {
+    return started && generator && mcpwm_generator_set_force_level(generator, level, true) == ESP_OK;
+}
 
 }  // namespace sharp
 

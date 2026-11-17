@@ -64,6 +64,12 @@ int32_t heapMinFree() { return -1; }
 
 bool handle(const char*, char*[], size_t) { return false; }
 
+// Lekkie uśpienie tylko na płytkach z WICI_MCU_SLEEP (L0, v2); symulator stanowiska B nie śpi.
+mcu_sleep::Result sleep(uint32_t, const mcu_sleep::Hooks*) { return {mcu_sleep::Cause::BUSY, -1, 0}; }
+bool usbMounted() { return true; }
+bool usbSuspended() { return false; }
+void usbAttach(bool) {}
+
 const char* helpCommands() { return ""; }
 
 }  // namespace platform

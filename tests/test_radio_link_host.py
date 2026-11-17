@@ -1022,6 +1022,22 @@ int main() {
     airEnd(40, 0x58);
     const sx1262::RxService afterGap = link.serviceRx(rxf, false);  // nagłówek tej ramki skasowany przy GAPLATE
     printf("AFTERGAP %d %d\n", static_cast<int>(afterGap), bytesFrom(rxf, 0x58));
+    // Lekkie uśpienie (pętla czuwania): nagłówek i koniec ramki w czasie uśpienia, przerwa w próbkach 500 ms.
+    // DIO1 budzi MCU tuż po RxDone, a resumed() (pod blokadą radia) przyjmuje wybudzenie za chwilę ostatniej
+    // próbki: ramka jest dobra. Bez resumed() ta sama ramka szłaby do rx_late (to drugie rx_late zostawia
+    // headerSeen_ jak przed następną ramką, więc przypadek z resumed() idzie pierwszy, a LATE1 i LATE2 liczą o jeden więcej).
+    for (const bool resumed : {true, false}) {
+        link.serviceRx(rxf, false);
+        fakeUs += 500000;
+        airHeader(0x60, 0);
+        airEnd(20, 0x60);
+        if (resumed) link.resumed(millis());
+        fakeUs += 1000;
+        const unsigned long lateBefore = link.rxLate();
+        const sx1262::RxService slept = link.serviceRx(rxf, false);
+        printf("SLEPT%d %d %zu %d %lu\n", resumed ? 1 : 0, static_cast<int>(slept), rxf.length, bytesFrom(rxf, 0x60),
+               link.rxLate() - lateBefore);
+    }
 
     // Spóźnienie: nagłówek ramki widziany wcześniej, a przy RxDone już nagłówek następnej (przed odczytem),
     // albo nagłówek w trakcie odczytu bufora (po odczycie). Ramka odrzucona i policzona, flagi widziane skasowane.
@@ -1794,6 +1810,59 @@ int main() {
            static_cast<unsigned long>(bench.link().cadBusy - before.cadBusy), static_cast<unsigned long>(bench.link().txDrop - before.txDrop),
            static_cast<unsigned long>(dj.debt().a));
 
+    // Alarm zagłuszania kanału (R3-43): czas bez wolnej przerwy trwa przez kolejne datagramy odrzucone za
+    // odroczenia; alarm od JAM_ALARM_MS, gaśnie bez kolejnej próby po tym samym czasie, a wolny CAD go kończy.
+    const bool jamAfter30 = bench.noGapMs() > 0 && !bench.channelJammed();
+    const uint32_t jamCadBefore = bench.link().cadBusy;
+    radio.cadBusy = 1000000;
+    unsigned jamDatagrams = 0;
+    while (bench.noGapMs() < measure::JAM_ALARM_MS && jamDatagrams < 40) {
+        txDone = -1;
+        bench.linkSend(d20.data(), d20.size(), true);
+        untilDone(60000);
+        ++jamDatagrams;
+    }
+    radio.cadBusy = 0;
+    const bool jammed = bench.channelJammed();
+    const bool maxKept = bench.noGapMaxMs() >= measure::JAM_ALARM_MS;
+    runFor(measure::JAM_ALARM_MS);
+    const bool faded = !bench.channelJammed() && bench.noGapMs() >= measure::JAM_ALARM_MS;
+    // Po przerwie bez prób dłuższej niż próg (alarm już zgasł) zajęty kanał nie łączy się z dawnym czasem:
+    // liczy się od nowa, od pierwszej próby nowego datagramu (bez wolnego kanału pomiędzy).
+    radio.cadBusy = 1000000;
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    for (int i = 0; i < 300; ++i) { fakeUs += 10000; bench.poll(); }
+    const bool fresh = bench.noGapMs() > 0 && bench.noGapMs() < 5000 && !bench.channelJammed();
+    untilDone(60000);
+    radio.cadBusy = 0;
+    txDone = -1;
+    bench.linkSend(d20.data(), d20.size(), true);
+    untilDone(3000);
+    printf("JAMRESTART %d\n", fresh);
+    // R3-46: root bez ruchu sprawdza kanał co JAM_PROBE_MS oknem CCA (bez liczników nadania); zajęty kanał
+    // przez JAM_ALARM_MS daje alarm, wolne okno go kończy.
+    const uint32_t probeRxBusy = bench.link().rxBusy;
+    const uint32_t probesBefore = bench.link().probes, probeBusyBefore = bench.link().probeBusy;
+    const uint32_t probeEnd = millis() + measure::JAM_ALARM_MS + 10000;
+    radio.mark = radiolink::Activity::Rx;
+    while (static_cast<int32_t>(millis() - probeEnd) < 0) {
+        fakeUs += 1000000;
+        radio.markMs = millis();
+        bench.probeChannel(millis());
+    }
+    const bool probeJammed = bench.channelJammed();
+    radio.mark = radiolink::Activity::None;
+    fakeUs += (measure::JAM_PROBE_MS + 100) * 1000;
+    bench.probeChannel(millis());
+    printf("JAMPROBE %d %d %lu %lu\n", probeJammed, bench.channelJammed(), static_cast<unsigned long>(bench.noGapMs()),
+           static_cast<unsigned long>(bench.link().rxBusy - probeRxBusy));
+    printf("JAMPROBES %lu %lu\n", static_cast<unsigned long>(bench.link().probes - probesBefore),
+           static_cast<unsigned long>(bench.link().probeBusy - probeBusyBefore));
+    printf("JAM %d %d %d %d %d %lu %lu\n", jamAfter30, jammed, maxKept, faded, txDone,
+           static_cast<unsigned long>(bench.noGapMs()), static_cast<unsigned long>(bench.link().cadBusy - jamCadBefore));
+    settle();
+
     // Błąd zapisu długu po wolnym CAD: bez nadania, odbiór wraca.
     txDone = -1;
     radio.sent.clear();
@@ -2064,6 +2133,25 @@ int main() {
     printf("HACK_FULL_DEBT %d %d\n", fullDebtHack, radio.sent.size() == beforeRefusal);
     printf("HACK_STATS ");
     bench.printHack();
+    // Pomiar (CHANNEL 1 x): zajęty CAD przed HACK powtarza się, dopóki HACK zdąży; bez przełącznika rezygnacja.
+    bench.restoreDebt(0);
+    bench.resetHackStats();
+    radio.cadBusy = 2;
+    const bool busyDefault = bench.linkSendHack(hack, sizeof(hack), millis());
+    bench.setChannelTrial(true, false);
+    radio.cadBusy = 2;
+    const bool busyRetried = bench.linkSendHack(hack, sizeof(hack), millis());
+    radio.cadBusy = 1000;
+    const bool busyAlways = bench.linkSendHack(hack, sizeof(hack), millis());
+    radio.cadBusy = 0;
+    const bool lateRetry = bench.linkSendHack(hack, sizeof(hack), millis() - 120);   // po ostatniej chwili startu
+    printf("HACK_RETRY %d %d %d %d %lu %lu %u\n", busyDefault, busyRetried, busyAlways, lateRetry,
+           static_cast<unsigned long>(bench.hackStats().cadRetried), static_cast<unsigned long>(bench.hackStats().refusedBy[measure::HACK_CAD]),
+           static_cast<unsigned>(bench.maxDeferrals()));
+    bench.setChannelTrial(false, true);
+    printf("HACK_TRIAL %d %u\n", bench.hackCadRetry(), static_cast<unsigned>(bench.maxDeferrals()));
+    bench.setChannelTrial(false, false);
+    bench.resetHackStats();
     // Po usłyszanej DATA v3 z ACKREQ własna ramka czeka do 200 ms − czas HACK (29 B) od DATA, czyli do
     // ostatniej chwili, gdy HACK odbiorcy musi już nadawać; DATA bez ACKREQ trzyma tylko okno 50 ms.
     bench.restoreDebt(0);
@@ -2090,6 +2178,32 @@ int main() {
                static_cast<unsigned long>(bench.link().rxBusy - busyBefore),
                static_cast<unsigned long>(lora::frameAirMs(wici_link::RADIO_HACK)));
     }
+    // Pętla czuwania (standby.h): łącze bez zadania pozwala spać bez końca, datagram czekający na dług do końca
+    // długu, okno CCA wcale. Po wybudzeniu (resumed) okno 50 ms liczy się od wybudzenia, bo w uśpieniu zadanie
+    // odbioru nie zbierało znaczników aktywności: decyzja o kanale dopiero po 50 ms pracy.
+    settle();
+    const uint32_t idleSleep = bench.sleepableMs();
+    bench.restoreDebt(1000);
+    txDone = -1;
+    radio.ops.clear();
+    radio.sent.clear();
+    bench.linkSend(d20.data(), d20.size(), true);
+    const uint32_t debtSleep = bench.sleepableMs();
+    fakeUs += 1000ull * 1000;  // uśpienie do końca długu, bez obiegów pętli
+    const uint32_t wokeMs = millis();
+    bench.resumed(wokeMs);
+    bench.poll();
+    const uint32_t ccaSleep = bench.sleepableMs();
+    runFor(48);
+    const std::string beforeWindow = ops();
+    while (radio.sent.empty() && millis() - wokeMs < 1000) {
+        fakeUs += 1000;
+        bench.poll();
+    }
+    const uint32_t decidedMs = millis() - wokeMs;
+    untilDone(1000);
+    printf("STANDBY_LINK %d %lu %lu [%s] %lu %d\n", idleSleep == 0xFFFFFFFFu, static_cast<unsigned long>(debtSleep),
+           static_cast<unsigned long>(ccaSleep), beforeWindow.c_str(), static_cast<unsigned long>(decidedMs), txDone);
     return 0;
 }
 """
@@ -2587,11 +2701,16 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "GAPLATE"), "GAPLATE 3 0 1 0000")
         self.assertEqual(line(self.out, "AFTERGAP"), "AFTERGAP 1 1")
 
+    def test_frame_received_during_light_sleep_is_not_late_after_resumed(self):
+        # Without resumed(): the 500 ms gap makes the frame's own header unattributable (Late, 3); with it: Frame (1).
+        self.assertEqual(line(self.out, "SLEPT0"), "SLEPT0 3 0 0 1")
+        self.assertEqual(line(self.out, "SLEPT1"), "SLEPT1 1 20 1 0")
+
     def test_late_frame_dropped_and_counted(self):
         # Header seen earlier and a new HeaderValid with RxDone (before the read); HeaderValid during the
         # buffer read (after it).
-        self.assertEqual(line(self.out, "LATE1"), "LATE1 3 0 2 0000")
-        self.assertEqual(line(self.out, "LATE2"), "LATE2 3 0 3 0000")
+        self.assertEqual(line(self.out, "LATE1"), "LATE1 3 0 3 0000")
+        self.assertEqual(line(self.out, "LATE2"), "LATE2 3 0 4 0000")
 
     def test_only_seen_flags_are_cleared(self):
         # CrcErr set between GetIrqStatus and ClearIrqStatus survives and is reported by the next sample.
@@ -2859,8 +2978,15 @@ class LoraBenchTests(unittest.TestCase):
         # The model's TxDone comes at once, so the end times are 0 ms here; on the board they include the airtime.
         # refused_by splits them: 4 state (silence, malformed, untagged, v2), 1 busy CAD, 2 debt (failed write, full).
         self.assertEqual(line(self.out, "HACK_STATS"), 'HACK_STATS {"hack_sent":2,"hack_late":3,"hack_refused":7,'
-                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,'
+                         '"hack_over_200ms":0,"end_ms_last":0,"end_ms_max":0,"end_ms_mean":0,"hack_cad_retried":0,'
                          '"refused_by":{"state":4,"lock":0,"rx_pending":0,"prep":0,"cad":1,"debt":2,"tx":0}}')
+
+    def test_channel_trial_retries_cad_before_hack_and_lengthens_deferrals(self):
+        # Kandydaci do pomiaru przy zagłuszaniu (CHANNEL), domyślnie wyłączeni: bez przełącznika zajęty CAD to
+        # rezygnacja; z nim CAD się powtarza i HACK wychodzi; kanał zajęty do końca albo HACK po ostatniej chwili
+        # startu (103 ms po DATA) nadal rezygnuje. Drugi przełącznik podnosi limit odroczeń z 30 do 220.
+        self.assertEqual(line(self.out, "HACK_RETRY"), "HACK_RETRY 0 1 0 0 1 2 30")
+        self.assertEqual(line(self.out, "HACK_TRIAL"), "HACK_TRIAL 0 220")
 
     def test_own_frame_waits_for_the_hack_after_heard_data_with_ackreq(self):
         # Po DATA z ACKREQ (0xC1) kanał jest zajęty do 200 − 87 = 113 ms: HACK odbiorcy może zacząć się
@@ -2883,6 +3009,11 @@ class LoraBenchTests(unittest.TestCase):
         # Six task cycles during the two frames skip (lock held by the loop), none waits or fails; after
         # the transmit the task gets the lock; the datagram went out and the loop released the lock.
         self.assertEqual(line(self.out, "TRYLOCK"), "TRYLOCK 6 1 1 0")
+
+    def test_standby_sleeps_through_debt_and_restarts_the_cca_window_after_a_wake(self):
+        # Idle link: no limit; queued datagram: the remaining debt (1000 ms); CCA: no sleep. No channel decision
+        # in the first 49 ms after the wake, the frame goes out at 50 ms of observation.
+        self.assertEqual(line(self.out, "STANDBY_LINK"), "STANDBY_LINK 1 1000 0 [] 50 1")
 
     def test_restart_with_debt_waits_the_journal_debt(self):
         self.assertEqual(line(self.out, "RESTART"), "RESTART 10056 0 1 1")
@@ -2917,6 +3048,20 @@ class LoraBenchTests(unittest.TestCase):
     def test_30_deferrals_then_drop_without_debt(self):
         self.assertEqual(line(self.out, "DEFER30"), "DEFER30 0 30 31 1 0")
 
+    def test_jammed_channel_alarm_from_time_without_a_free_gap(self):
+        # R3-43: after one dropped datagram (about 16 s) no alarm yet; further datagrams on a busy channel add up
+        # to JAM_ALARM_MS and raise it; without another attempt it fades after the same time; a free CAD ends it.
+        self.assertEqual(line(self.out, "JAM").split()[1:7], ["1", "1", "1", "1", "1", "0"])
+        # After a gap without attempts longer than the threshold a busy channel starts the time anew (trial 17).
+        self.assertEqual(line(self.out, "JAMRESTART"), "JAMRESTART 1")
+        # R3-46: the root checks the channel without traffic; busy for the threshold raises the alarm, a free
+        # window ends it, and the periodic check adds nothing to the transmit counters.
+        self.assertEqual(line(self.out, "JAMPROBE"), "JAMPROBE 1 0 0 0")
+        # P1 counts the checks and the busy ones: every check while jammed was busy, the last one was free.
+        probes, busy = map(int, line(self.out, "JAMPROBES").split()[1:])
+        self.assertEqual(probes, busy + 1)
+        self.assertGreaterEqual(busy, 300 // 5)  # JAM_ALARM_MS / JAM_PROBE_MS
+
     def test_failed_debt_write_after_free_cad_sends_nothing(self):
         self.assertEqual(line(self.out, "DEBTFAIL"), "DEBTFAIL 0 0 1 window prep:0 cad:0 rx")
         self.assertTrue(any(l.startswith('{"loratx":"debt journal write failed"') for l in self.out))
@@ -2930,7 +3075,11 @@ class LoraBenchTests(unittest.TestCase):
         lora = json.loads(next(l for l in self.out if l.startswith('{"lora":')))["lora"]
         self.assertEqual((lora["rx_datagrams"], lora["header_only"], lora["assembly_timeout"], lora["split_lost"]), (2, 1, 1, 1))
         self.assertEqual((lora["rx_late"], lora["rx_ring_overflow"], lora["cca_threshold_dbm"]), (2, 0, -100))
-        self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (33, 1, 3))
+        jam_cads = int(line(self.out, "JAM").split()[7])   # zajęte CAD próby zagłuszania kanału (JAM)
+        self.assertEqual((lora["cad_busy"], lora["rssi_busy"], lora["rx_busy"]), (33 + jam_cads, 1, 3))
+        # Alarm zagłuszania kanału w LINK: czas bez wolnej przerwy teraz i najdłuższy od startu.
+        self.assertEqual((lora["no_gap_ms"], lora["channel_jammed"]), (0, False))
+        self.assertGreaterEqual(lora["no_gap_ms_max"], 5 * 60 * 1000)
 
     def test_assembly_limit_counts_from_frame_time_after_a_long_loop_pass(self):
         # The second part waiting in the ring completes the datagram after a 1.1 s loop stall (508 B); a lone

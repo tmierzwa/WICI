@@ -1,0 +1,66 @@
+{
+ "envelopes": 26,
+ "nonce_reuse": [],
+ "flood_envelopes": 1,
+ "flood_senders": 1,
+ "repeated_floods": [],
+ "boundaries": [
+  {
+   "mark": 1794926934.98,
+   "src": 10,
+   "dst": 2,
+   "last_before": 2,
+   "first_after": 64,
+   "ok": true
+  },
+  {
+   "mark": 1794928330.85,
+   "src": 10,
+   "dst": 2,
+   "last_before": 66,
+   "first_after": 128,
+   "ok": true
+  },
+  {
+   "mark": 1794929986.56,
+   "src": 10,
+   "dst": 2,
+   "last_before": 129,
+   "first_after": 192,
+   "ok": true
+  },
+  {
+   "mark": 1794930939.72,
+   "src": 10,
+   "dst": 2,
+   "last_before": 197,
+   "first_after": 256,
+   "ok": true
+  },
+  {
+   "mark": 1794931131.53,
+   "src": 10,
+   "dst": 2,
+   "last_before": 197,
+   "first_after": 256,
+   "ok": true
+  },
+  {
+   "mark": 1794931306.78,
+   "src": 10,
+   "dst": 2,
+   "last_before": 197,
+   "first_after": 256,
+   "ok": true
+  },
+  {
+   "mark": 1794931394.78,
+   "src": 10,
+   "dst": 2,
+   "last_before": 197,
+   "first_after": 256,
+   "ok": true
+  }
+ ],
+ "ok": true
+}

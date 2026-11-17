@@ -1,0 +1,12 @@
+czas,rodzaj,stacja,numer,id,rewizja,kategoria,osoby,pilnosc,adres,tresc,stan,adresat,potwierdzil,kanal,dyzurny
+2026-11-13T22:30:45+01:00,zaufana_dodana,WICI-374C8F,,,,,,,,,,,,,dyzurny-1
+2026-11-13T22:35:15+01:00,odbior,WICI-374C8F,8068,6da48b73506e4803f2f88df09d1d1386,0,0,1,0,Schronienie testowe A,REQ 1...................................,,,,,
+2026-11-13T22:35:42+01:00,stan_2,WICI-374C8F,8068,6da48b73506e4803f2f88df09d1d1386,0,0,1,0,Schronienie testowe A,REQ 1...................................,2,,,,dyzurny-1
+2026-11-13T22:38:17+01:00,odbior,WICI-374C8F,1488,53f05edf66a67317087489e4d6d96807,0,3,5,1,Schronienie testowe A,,,,,,
+2026-11-13T22:38:32+01:00,stan_2,WICI-374C8F,1488,53f05edf66a67317087489e4d6d96807,0,3,5,1,Schronienie testowe A,,2,,,,dyzurny-1
+2026-11-14T10:18:59+01:00,zaufana_dodana,WICI-6637A7,,,,,,,,,,,,,dyzurny-1
+2026-11-14T10:19:24+01:00,odbior,WICI-374C8F,3754,aaea61c8924fd9b3b04e7e4997dd3583,0,0,1,0,Schronienie testowe A,,,,,,
+2026-11-14T10:20:11+01:00,odbior,WICI-374C8F,3980,abccefa2d2f62d12d5d46b63614ef158,0,0,1,0,Schronienie testowe A,REQ 1...........................................................................................,,,,,
+2026-11-14T10:23:27+01:00,odbior,WICI-374C8F,0214,9d16d1f137c5ad35853f75c2eed27cb5,0,3,1,1,Schronienie testowe A,,,,,,
+2026-11-14T10:24:32+01:00,stan_2,WICI-374C8F,0214,9d16d1f137c5ad35853f75c2eed27cb5,0,3,1,1,Schronienie testowe A,,2,,,,dyzurny-1
+2026-11-14T10:24:52+01:00,stan_4,WICI-374C8F,0214,9d16d1f137c5ad35853f75c2eed27cb5,0,3,1,1,Schronienie testowe A,,4,PSP / POGOTOWIE / POWIAT,,,dyzurny-1

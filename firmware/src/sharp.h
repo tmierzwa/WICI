@@ -59,6 +59,10 @@ public:
     uint32_t spiHz() const { return spiHz_; }
     uint32_t extcominCounter() const;  // licznik źródła EXTCOMIN (RTC2: 0..4), do diagnostyki
     bool extcominLevel() const;        // stan pinu EXTCOMIN
+    // Pętla czuwania (standby.h): licznik EXTCOMIN stoi w lekkim uśpieniu ESP32-S3, więc pętla wymusza stan
+    // pinu (0 albo 1) ponad przebieg licznika i sama go odwraca; -1 oddaje pin licznikowi. false, gdy licznik
+    // nie działa albo nie ma wymuszania (nRF52840: RTC2 liczy także w uśpieniu).
+    bool forceExtcomin(int level);
 
 private:
     bool beginExtcomin();

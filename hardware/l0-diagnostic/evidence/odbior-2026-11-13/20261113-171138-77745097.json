@@ -1,0 +1,29 @@
+{
+  "started_utc": "2026-11-13T16:11:38.676399+00:00",
+  "command": "INFO",
+  "records": [
+    "CMD INFO",
+    "INFO l0-0.5 50112F6B4580 1 0 E32BCC9C 869.525 125 7 5 0 1.8",
+    "CMD INFO",
+    "INFO l0-0.5 50112F6B4580 1 0 E32BCC9C 869.525 125 7 5 0 1.8"
+  ],
+  "software_command_completed": true,
+  "physical_acceptance": false,
+  "node": {
+    "kind": "info",
+    "version": "l0-0.5",
+    "id": "50112F6B4580",
+    "ready": true,
+    "reset": 0,
+    "boot": "E32BCC9C",
+    "profile": [
+      "869.525",
+      "125",
+      "7",
+      "5",
+      "0",
+      "1.8"
+    ]
+  },
+  "finished_utc": "2026-11-13T16:11:38.684317+00:00"
+}

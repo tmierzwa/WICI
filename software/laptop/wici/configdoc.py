@@ -253,6 +253,97 @@ def check(doc):
     return problems
 
 
+def check_plan(docs):
+    """List of (place, message) problems of the whole network plan: one `configure` document per numbered
+    station and one for the root (system specification, chapter 6, „Sprawdzenie całego planu”).
+
+    A document that fails `check` is reported by its position and left out of the rest. Checked across the
+    plan: one network and root, no repeated station number, the parent graph ends at the root without a
+    cycle, every station holds the keys of the root, its parent and backup parent, and neighbour keys come
+    in pairs. The root's key is a neighbour key only at a station whose parent or backup parent is the root;
+    elsewhere it serves only to verify the epoch signature and needs no pair. The plan sets that role, so the
+    card has no field for it. One station number has one key in the whole plan: a different one is a stale
+    card. Not checked here yet: `behind` against the parents and the longest route against `network.ttl`.
+    The second root identity with the same number (chapter 6) does not exist in the configuration yet, so
+    "the keys of the root" are the one `priority_keys` entry with the number `network.root`."""
+    if not isinstance(docs, list) or not docs:
+        return [("plan", "plan to lista dokumentów configure: stacje i root")]
+    problems, by_number, root_doc = [], {}, None
+    for i, doc in enumerate(docs):
+        doc = normalize(doc)
+        if check(doc) or "network" not in doc:
+            problems.append((f"dokument {i}", "dokument nie przechodzi sprawdzenia albo nie ma numeru w sieci"))
+            continue
+        n = doc["network"]
+        if n["station"] in by_number:
+            problems.append((f"dokument {i}", f"numer {n['station']} powtarza się w planie"))
+            continue
+        by_number[n["station"]] = doc
+        if doc["role"] == "wezel":
+            root_doc = root_doc or doc
+    if root_doc is None:
+        return problems + [("plan", "plan nie ma dokumentu roota")]
+    network = root_doc["network"]
+    root = network["root"]
+
+    def keys(doc):
+        return {e["id"]: e for e in doc["priority_keys"]}
+
+    def place(number):
+        return f"{'root' if number == root else 'stacja'} {number}"
+
+    known = {}   # numer -> (ed25519, x25519) z pierwszego dokumentu, który go podaje
+    for number, doc in sorted(by_number.items()):
+        n = doc["network"]
+        if (n["id"], n["root"], n["receiver_main"], n["receiver_backup"]) != (
+                network["id"], root, network["receiver_main"], network["receiver_backup"]):
+            problems.append((place(number), "inna sieć, inny root albo inni odbiorcy niż w dokumencie roota"))
+            continue
+        held = keys(doc)
+        for need, what in ((root, "roota"), (n["parent"], "rodzica z planu"), (n["backup_parent"], "rodzica zapasowego")):
+            if need and need != number and need not in held:
+                problems.append((place(number), f"brak klucza {what} ({need}) w priority_keys"))
+        for other, entry in sorted(held.items()):
+            pair = (entry["ed25519"], entry["x25519"])
+            if known.setdefault(other, pair) != pair:
+                problems.append((place(number), f"klucz stacji {other} inny niż w pozostałych dokumentach planu"))
+            if other == root and root not in (n["parent"], n["backup_parent"]):
+                continue   # klucz roota tylko do sprawdzania podpisu epoki: bez pary
+            if other not in by_number:
+                problems.append((place(number), f"klucz sąsiada {other}, którego nie ma w planie"))
+            elif number not in keys(by_number[other]):
+                problems.append((place(number), f"klucz sąsiada {other}, który nie ma klucza tej stacji"))
+    reaches = _routes_to_root(by_number, root)
+    for number in sorted(by_number):
+        if number != root and not reaches[number]:
+            problems.append((place(number), "droga rodziców z planu lub zapasowych ma cykl albo nie kończy się w roocie"))
+    return problems
+
+
+def _routes_to_root(by_number, root):
+    """{number: True when every route over planned and backup parents ends at the root without a cycle}."""
+    def parents(v):
+        n = by_number[v]["network"]
+        return [p for p in (n["parent"], n["backup_parent"]) if p]
+
+    done = {root: True}
+    for start in by_number:
+        if start in done:
+            continue
+        path, rest = [start], [iter(parents(start))]       # przeszukiwanie w głąb bez rekurencji
+        while path:
+            p = next(rest[-1], None)
+            if p is None:
+                v = path.pop()
+                rest.pop()
+                # Rodzic spoza planu albo jeszcze na ścieżce (cykl) nie ma wpisu w `done`, więc daje False.
+                done[v] = all(done.get(q, False) for q in parents(v))
+            elif p in by_number and p not in done and p not in path:
+                path.append(p)
+                rest.append(iter(parents(p)))
+    return done
+
+
 def compact(value, limit):
     """Compact UTF-8 JSON without escape sequences (texts were checked), at most `limit` bytes.
 

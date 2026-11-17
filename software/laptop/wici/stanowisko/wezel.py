@@ -3,8 +3,8 @@
 
 The node has two USB interfaces on one cable (firmware/src/main.cpp): data, where Reticulum speaks KISS, and
 diagnostics with text commands. The application opens diagnostics next to KISS and every POLL_S sends only
-`INFO`; from its JSON line it takes `silence` (CISZA switch or command), `radio_ok` and `tx_wait_ms` (silence
-debt). Nothing changes in KISS, Reticulum or the firmware. A change of `silence` goes to the action log as
+`INFO`; from its JSON line it takes `silence` (CISZA switch or command), `radio_ok`, `channel_jammed` (the
+node's alarm of a jammed channel, R3-44; absent in older images) and `tx_wait_ms` (silence debt). Nothing changes in KISS, Reticulum or the firmware. A change of `silence` goes to the action log as
 `cisza_wezel` (a "cisza" row in the register, next to the duty officer's entries), the rest to the node view.
 Without the port the application works as before: the panel says the node state is unknown, without an alarm.
 """
@@ -93,8 +93,10 @@ class Wezel:
             self.changed(silence, before is None)
 
     def status(self):
-        """For the panel: None before the first INFO, otherwise silence, radio_ok, silence debt and age."""
+        """For the panel: None before the first INFO, otherwise silence, radio_ok, channel_jammed, silence debt
+        and age."""
         if self.info is None:
             return None
         return {"silence": bool(self.info.get("silence")), "radio_ok": bool(self.info.get("radio_ok")),
+                "channel_jammed": bool(self.info.get("channel_jammed")),
                 "tx_wait_s": round(self.info.get("tx_wait_ms", 0) / 1000), "age_s": self.monotonic() - self.at}

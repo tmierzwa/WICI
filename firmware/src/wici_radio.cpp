@@ -84,6 +84,7 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
             frame.destination == own_ && frame.sequence == ownSeq_[ownPart_] &&
             wici_link::hackEcho(frame) == wici_link::macEcho(ownFrames_[ownPart_], ownLengths_[ownPart_])) {
             ownAwaiting_ = ownDelayPending_ = false;
+            if (ownNext_ == relay_.routes().parent()) ++parentHacks_;
             relay_.heard(ownNext_);
             relay_.routes().hopResult(ownNext_, true, nowS);
             if (++ownPart_ == ownCount_) finishOwn(true);
@@ -91,6 +92,7 @@ Event Shelter::receive(const uint8_t* wire, size_t length, uint32_t receivedMs, 
             return Event::ADMITTED;
         }
         if (!relay_.receiveHack(wire, length, nowS)) return Event::IGNORED;
+        if (frame.source == relay_.routes().parent()) ++parentHacks_;
         if (!relay_.active()) {  // a late HACK of a yielded attempt leaves another transfer running
             submitted_ = awaitingHack_ = false;
             delayPending_ = false;
@@ -189,6 +191,7 @@ Event Shelter::applyBeacon(uint32_t nowS) {
     if (p.ms > beaconStats_.maxMs) beaconStats_.maxMs = p.ms;
     const bool admitted = p.valid && relay_.routes().beacon(p.sender, p.beacon, p.cost16, nowS);
     if (admitted) relay_.heard(p.sender);  // a root back with its laptop ends the hold at once
+    if (admitted && p.sender == relay_.routes().parent()) ++parentBeacons_;  // after a return to the planned parent too
     pendingState_.store(IDLE, std::memory_order_release);
     return admitted ? Event::ADMITTED : Event::REJECTED;
 }
