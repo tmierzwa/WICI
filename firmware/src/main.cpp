@@ -224,6 +224,9 @@ void screenChanged();
 void setStationName();
 void wipeStack();
 void freezeMigration();
+// Przeniesienie stacji w toku (bariera w stanie innym niż none): magazyn i dziennik celowo zamknięte.
+// Uszkodzona bariera (ready() = false) to nadal awaria pamięci: naprawia ją tylko ZNISZCZ DANE.
+bool migrationFrozen() { return migrationBarrier.ready() && !migrationBarrier.permitsTransmit(); }
 void restartSoon(const char* why);
 
 // Usługi stacji dla protokołu USB.
@@ -658,6 +661,7 @@ void wipeStack() {
 // station follows the same frozen boot path before any store or clock writes.
 void freezeMigration() {
     applySilence();
+    screenHost.setMigrationFrozen(true);
     bench.dropLinkTx();
     if (wiciShelter) wiciShelter->cancelOwn();
     rnsnode::dropQueue();
@@ -1183,7 +1187,8 @@ ui::Status screenStatus() {
     s.radioOk = !radioFault();
     s.channelJammed = channelJammed();
     s.stackOk = !stackFault();
-    s.storeOk = stationStore.ok();
+    // Przeniesienie w toku: magazyn celowo zamknięty (freezeMigration, start z barierą), nie awaria pamięci.
+    s.storeOk = stationStore.ok() || migrationFrozen();
     // Kontakt z odbiorcą: znany od ostatniej przyjętej wiadomości; bez niej dolne oszacowanie z czasu pracy.
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
@@ -2334,7 +2339,9 @@ void stationSetup() {
     if (!extcominOk) bench.log("EXTCOMIN timer failed");
 #endif
 #endif
-    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarmy i ZNISZCZ DANE działają.
+    // Bez magazynu ekran nie ma kreatora ani wiadomości, ale alarmy i ZNISZCZ DANE działają. Przeniesienie
+    // w toku zamyka magazyn celowo: ekran trybu przygotowania bez alarmu blad_pamieci (usb-protocol.md).
+    screenHost.setMigrationFrozen(migrationFrozen());
     if (storeOk) screenModel.attach(&screenHost);
     else screenModel.attachAlarms(&screenHost);
     beginScreen();
