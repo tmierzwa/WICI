@@ -19,6 +19,8 @@
 // Pętla czuwania (standby.h): uśpienie między terminami w zwykłej pracy. Wymaga wykrywania napięcia na VBUS
 // (USB_LAPTOP) dla zasady 10 s, więc jest tylko na v2; L0 i XIAO śpią wyłącznie w poleceniu NAP.
 #define WICI_STANDBY 1
+// Pomiar ogniw i 12 V (power.h): napięcia na ekranie, w STAN, `status.power` i alarm wymien_ogniwa.
+#define WICI_POWER_SENSE 1
 
 namespace board {
 
@@ -72,7 +74,7 @@ constexpr uint8_t VTEST_ADC_CHANNEL = 4;
 constexpr uint8_t VTEST_DIVIDER = 16;
 
 // Pomiar ogniw (V_AA_ADC) na GPIO4 (ADC1_CH3) przez klucz Q6 (DIV_EN wysoki podłącza dzielnik): R44 39,0 kΩ
-// / R45 10,0 kΩ (0,1%), czyli V_AA = V_AA_DIV × 4,9. Program jeszcze go nie mierzy.
+// / R45 10,0 kΩ (0,1%), czyli V_AA = V_AA_DIV × 4,9. Program włącza dzielnik tylko na czas pomiaru (power.h).
 constexpr uint8_t BATTERY_ADC = 4;  // J5.4
 constexpr uint8_t BATTERY_ADC_CHANNEL = 3;
 constexpr uint8_t BATTERY_DIV_EN = 46;  // J5.14; pin konfiguracji startu, R43 100 kΩ do masy (niski przy resecie)
@@ -101,8 +103,9 @@ constexpr int16_t LED_USB = -1;
 // płytki ściągnęłyby je do stanu, który resetuje radio (R12 1 kΩ do masy na NRESET), wyłącza odbiór (RXEN do
 // masy) albo wygasza ekran (DISP do masy); CS-y nieaktywne, a brzęczyk w stanie niskim.
 // Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL. Tryb przetwornicy poza nadawaniem jest niski
-// (Burst Mode), więc hold zatrzaskuje go niskim, chyba że CONVERTER pwm go wymusił. Klucza dzielnika i KILL program
-// jeszcze nie steruje, więc hold zatrzaskuje stan z rezystorów do masy (R43, R72: niski, stacja zostaje włączona).
+// (Burst Mode), więc hold zatrzaskuje go niskim, chyba że CONVERTER pwm go wymusił. Klucz dzielnika jest niski poza
+// pomiarem (20 ms co minutę; uśpienie w trakcie pomiaru trzyma go wysokim do odczytu). KILL program jeszcze nie
+// steruje, więc hold zatrzaskuje stan z R72 do masy (niski, stacja zostaje włączona).
 constexpr uint8_t SLEEP_HOLD[] = {RADIO_CS, RADIO_RESET, RADIO_RXEN, FRAM_CS, DISPLAY_CS, DISPLAY_EXTCOMIN,
                                  DISPLAY_DISP, LED_ALARM, BUZZER, BATTERY_DIV_EN, CONVERTER_PWM, POWER_KILL};
 // Linie budzenia: DIO1 stanem wysokim; przyciski, CISZA, INT wyłącznika i wykrywanie laptopa przy każdej zmianie

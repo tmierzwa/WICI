@@ -69,7 +69,11 @@ struct Status {
     uint32_t contactS = 0;       // czas od ostatniego kontaktu albo dolne oszacowanie [s]
     bool mains12 = true;         // praca z 12 V (false: ogniwa)
     uint16_t millivolts = 0;     // napięcie 12 V
+    bool cellsMeasured = false;  // stacja mierzy ogniwa (v2, po pierwszym pomiarze): ogniwa_napiecie w STAN
+    uint16_t cellMillivolts = 0; // napięcie kompletu ogniw (filtrowana średnia, power.h)
+    bool cellHoursKnown = false; // jest szacunek czasu pracy z ogniw (bez niego wiersz 3 to ogniwa_napiecie)
     uint32_t cellHours = 0;      // szacowany czas pracy z ogniw [h]
+    bool replaceCells = false;   // wymien_ogniwa: wpis w PRZEKAZANIU ZMIANY do usunięcia przyczyny
     uint32_t queued = 0;         // niewysłane zgłoszenia
     uint32_t queueAgeS = 0;      // wiek najstarszego [s]
     uint32_t newMessages = 0;
@@ -151,8 +155,9 @@ struct TestInfo {
 // Awarie stacji (bez wpisu rejestru): RADIO_FAULT: radio_awaria, układ radiowy nie działa, albo
 // kanal_zagluszony (druga przyczyna, ten sam alarm: AlarmInfo::jammed); MEMORY_FAULT:
 // blad_pamieci, magazyn nie wystartował albo zatrzymał się po błędzie zapisu FRAM; STACK_FAULT:
-// brak_lacznosci, stos sieciowy stacji nie działa.
-enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT };
+// brak_lacznosci, stos sieciowy stacji nie działa; CELLS_LOW: wymien_ogniwa, średnia napięcia ogniw poniżej progu
+// (power.h), z przypomnieniem dźwiękiem co 15 min po potwierdzeniu.
+enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT, CELLS_LOW };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
     bool jammed = false;     // RADIO_FAULT z powodu zagłuszania kanału

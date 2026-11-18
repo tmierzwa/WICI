@@ -27,7 +27,7 @@ import ui_texts  # noqa: E402
 
 SOURCES = ("testframe.cpp", "annunciator.cpp", "journal.cpp", "p1frame.cpp", "ui.cpp", "font.cpp", "jsonlite.cpp", "sa1.cpp",
            "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp",
-           "migration_state.cpp")
+           "migration_state.cpp", "power.cpp")
 
 HARNESS = r"""
 #include <cstdio>
@@ -38,6 +38,7 @@ HARNESS = r"""
 #include <vector>
 #include "annunciator.h"
 #include "cmdargs.h"
+#include "power.h"
 #include "config.h"
 #include "console.h"
 #include "crc16.h"
@@ -999,6 +1000,10 @@ int world() {
         else if (sscanf(line, "N %u", &a) == 1) status.newMessages = a;
         else if (sscanf(line, "C %u %u", &a, &b) == 2) { status.queued = a; status.queueAgeS = b; }
         else if (sscanf(line, "V %u", &a) == 1) status.millivolts = static_cast<uint16_t>(a);
+        else if (sscanf(line, "PW %u %u %u", &a, &b, &c) == 3) {   // źródło (1: 12 V), pomiar ogniw, napięcie ogniw (main.cpp)
+            status.mains12 = a; status.cellsMeasured = b; status.cellMillivolts = static_cast<uint16_t>(c);
+        } else if (sscanf(line, "CL %u", &a) == 1) { status.replaceCells = a; w.con->setCellsLow(a); }   // wymien_ogniwa (main.cpp)
+        else if (!strcmp(cmd, "remind")) printf("remind %d\n", w.con->remindCells());
         else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
             status.rxOk = a; status.rxBad = b; status.txDatagrams = c; status.txDrop = d; status.deferrals = e; status.debtMs = f;
         } else if (sscanf(line, "F %u", &a) == 1) { status.foffValid = true; status.foffHz = static_cast<int32_t>(a); }
@@ -1103,7 +1108,7 @@ int assembleScript() {
 int main(int argc, char** argv) {
     if (argc >= 3 && !strcmp(argv[1], "annun")) {
         // Kroki "<ms>/<znaczniki>/<nieprzeczytane>": S ekran alarmu, C przyczyna alarmu, Q cisza,
-        // M wyciszony dźwięk; wynik na krok "<dioda>,<sygnał ms>".
+        // M wyciszony dźwięk, R przypomnienie (potwierdzony wymien_ogniwa); wynik na krok "<dioda>,<sygnał ms>".
         annunciator::Annunciator a;
         for (int i = 2; i < argc; ++i) {
             char flags[8] = {};
@@ -1114,9 +1119,28 @@ int main(int argc, char** argv) {
             in.alarmCause = strchr(flags, 'C') != nullptr;
             in.silence = strchr(flags, 'Q') != nullptr;
             in.muted = strchr(flags, 'M') != nullptr;
+            in.remind = strchr(flags, 'R') != nullptr;
             in.unread = unread;
             const uint32_t beep = a.poll(ms, in);
             printf("%d,%u\n", a.led() ? 1 : 0, static_cast<unsigned>(beep));
+        }
+        return 0;
+    }
+    if (argc >= 3 && !strcmp(argv[1], "power")) {
+        // Kroki "<ms>/<od nadawania ms>[/<mV pinu ogniw>/<mV pinu 12 V>]": poll(), a przy READ sample() z podanymi
+        // napięciami (bez nich 1000 i 800 mV). Wynik na krok: krok, czas do następnego, pomiar, średnia ogniw,
+        // ostatni pomiar ogniw, 12 V, źródło, wymien_ogniwa, wyłączenie, przerwane.
+        static const char* STEPS[] = {"none", "enable", "read", "disable"};
+        power::Monitor m;
+        for (int i = 2; i < argc; ++i) {
+            unsigned ms = 0, cells = 1000, mains = 800;
+            long since = 0;
+            if (sscanf(argv[i], "%u/%ld/%u/%u", &ms, &since, &cells, &mains) < 2) return 2;
+            const power::Step step = m.poll(ms, since < 0 ? 0xFFFFFFFFu : static_cast<uint32_t>(since));
+            if (step == power::Step::READ) m.sample(ms, cells, mains);
+            printf("%s %lu %d %u %u %u %s %d %d %lu\n", STEPS[static_cast<int>(step)], static_cast<unsigned long>(m.untilMs(ms)),
+                   m.measured(), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), power::sourceName(m.source()), m.replaceCells(),
+                   m.shutdown(), static_cast<unsigned long>(m.aborted()));
         }
         return 0;
     }
@@ -1364,6 +1388,68 @@ class HostUnitTests(unittest.TestCase):
     def test_alarm_beeps_every_two_seconds_until_ok(self):
         steps = ["0//0", "100/SC/0", "1000/SC/0", "2100/SC/0", "3000/C/0", "4200/C/0", "4300/SC/0"]
         self.assertEqual([beep for _, beep in self.annun(*steps)], [0, 200, 0, 200, 0, 0, 200])
+
+    def test_cells_reminder_every_fifteen_minutes(self):
+        # oprogramowanie.md: wymien_ogniwa przypomina dźwiękiem co 15 min. Ekran alarmu daje sygnał co 2 s; po
+        # potwierdzeniu OK pierwsze przypomnienie 15 min później, potem co 15 min, do wymiany ogniw.
+        q = 15 * 60 * 1000
+        steps = ["0//0", "100/SC/0", "1000/CR/0", f"{1000 + q - 1}/CR/0", f"{1000 + q}/CR/0", f"{1000 + q + 2000}/CR/0",
+                 f"{1000 + 2 * q}/CR/0", f"{1000 + 2 * q + 10}/C/0", f"{1000 + 3 * q}/CR/0", f"{1000 + 4 * q}/CR/0"]
+        self.assertEqual([beep for _, beep in self.annun(*steps)], [0, 200, 0, 0, 200, 0, 200, 0, 0, 200])
+        # Nowy ekran alarmu zeruje okres: przypomnienie liczy się od kolejnego potwierdzenia.
+        steps = ["0/SC/0", "10/CR/0", f"{q - 10}/SC/0", f"{q}/CR/0", f"{q + 10}/CR/0", f"{2 * q - 1}/CR/0", f"{2 * q}/CR/0"]
+        self.assertEqual([beep for _, beep in self.annun(*steps)], [200, 0, 200, 0, 0, 0, 200])
+
+    def power(self, *steps):
+        out = subprocess.run([str(self.binary), "power", *steps], capture_output=True, text=True, check=True).stdout
+        return [line.split() for line in out.splitlines()]
+
+    def power_reads(self, pins):
+        """Pomiary co minutę bez nadawania: (mV pinu ogniw, mV pinu 12 V) na pomiar; wynik z kroku READ."""
+        steps, t = [], 0
+        for cells, mains in pins:
+            steps += [f"{t}/-1", f"{t + 20}/-1/{cells}/{mains}"]
+            t += 20 + 60000
+        out = self.power(*steps)
+        self.assertEqual([x[0] for x in out], ["enable", "read"] * len(pins))
+        return [x[3:] for x in out[1::2]]
+
+    def test_power_measurement_timing(self):
+        # power.h: pierwszy pomiar od razu, odczyt 20 ms po DIV_EN, potem co 60 s; nie przez 2 s po nadawaniu,
+        # a nadawanie w trakcie przerywa pomiar (DIV_EN wyłączony, pomiar po przerwie).
+        out = self.power("0/-1", "10/-1", "20/-1/1000/800", "60019/-1", "60020/500", "61519/1999", "61520/2000", "61530/0",
+                         "61540/10", "63540/2000", "63559/2019", "63560/2020/900/800")
+        self.assertEqual([x[:2] for x in out], [["enable", "20"], ["none", "10"], ["read", "60000"], ["none", "1"],
+                                                ["none", "1500"], ["none", "1"], ["enable", "20"], ["disable", "2000"],
+                                                ["none", "1990"], ["enable", "20"], ["none", "1"], ["read", "60000"]])
+        # V_AA = pin × 4,9, V12 = pin × 16; średnia z dwóch pomiarów; jedno przerwanie.
+        self.assertEqual(out[2][3:], ["4900", "4900", "12800", "12v", "0", "0", "0"])
+        self.assertEqual(out[11][3:], ["4655", "4410", "12800", "12v", "0", "0", "1"])
+
+    def test_power_cells_alarm_mean_and_hysteresis(self):
+        # Progi na średniej kroczącej z 5 pomiarów: wymien_ogniwa poniżej 4,4 V, zejście od 4,6 V (przyjęte
+        # 2026-11-18); przy 12 V bez wyłączenia nawet bez ogniw.
+        reads = self.power_reads([(1000, 800)] + [(880, 800)] * 5 + [(940, 800)] * 5 + [(0, 800)])
+        self.assertEqual([r[0] for r in reads], ["4900", "4606", "4508", "4459", "4429", "4312",
+                                                 "4370", "4429", "4488", "4547", "4606", "3684"])
+        self.assertEqual([r[4] for r in reads], ["0", "0", "0", "0", "0", "1", "1", "1", "1", "1", "0", "1"])
+        self.assertEqual({r[3] for r in reads}, {"12v"})
+        self.assertEqual({r[5] for r in reads}, {"0"})
+        # 12 V bez ogniw: średnia około 0 V, alarm wymien_ogniwa, bez wyłączenia.
+        self.assertEqual(self.power_reads([(0, 800)])[0], ["0", "0", "12800", "12v", "1", "0", "0"])
+
+    def test_power_source_like_the_12v_switch(self):
+        # Źródło jak łącznik 12 V: ogniwa poniżej 10,5 V i powyżej 17 V, 12 V od 12,4 V, w paśmie stan poprzedni;
+        # pierwszy pomiar w paśmie zostaje przy 12 V. Wyłączenie przy średniej poniżej 4,0 V tylko z ogniw.
+        mains = [700, 800, 700, 650, 600, 700, 774, 775, 1062, 1063, 800]
+        reads = self.power_reads([(1000, m) for m in mains])
+        self.assertEqual([r[2] for r in reads], [str(m * 16) for m in mains])
+        self.assertEqual([r[3] for r in reads], ["12v", "12v", "12v", "aa", "aa", "aa", "aa", "12v", "12v", "aa", "12v"])
+        # 10 400 mV: ogniwa; 12 384 mV w paśmie; 16 992 mV jeszcze 12 V, 17 008 mV odcięte.
+        self.assertEqual(reads[3][3], "aa")
+        # Start z wyczerpanymi ogniwami bez 12 V: decyzja z pierwszego pomiaru.
+        self.assertEqual(self.power_reads([(800, 0)])[0], ["3920", "3920", "0", "aa", "1", "1", "0"])
+        self.assertEqual(self.power_reads([(800, 800)])[0][3:6], ["12v", "1", "0"])
 
     def test_new_message_beep_respects_mute_only(self):
         # Wyciszenie dotyczy tylko zwykłego sygnału nowej wiadomości; po starcie bez sygnału za stare.
@@ -3321,6 +3407,59 @@ class HostUnitTests(unittest.TestCase):
         # Alarm mieści się w 5 wierszach po 20 znaków (po 19 byłoby 6): zostaje przy 20, bez strzałek.
         self.assertEqual((s[1][3], self.shown(s[1])), ([""] * 5, texts["blad_pamieci"][0]))
         self.assertEqual(self.lines(s[2])[0], texts["radio_awaria"][0])
+
+    def test_cells_low_alarm(self):
+        # oprogramowanie.md: wymien_ogniwa to alarm krytyczny jak radio_awaria: ekran alarmu do OK, przyczyna
+        # (dioda, PRZEKAZANIE ZMIANY) do wymiany ogniw; po potwierdzeniu przypomnienie dźwiękiem (annunciator).
+        # Przy pracy z ogniw bez szacunku godzin wiersz 3 to ogniwa_napiecie (STAN ma o wiersz ogniw więcej).
+        texts = ui_texts.load()["texts"]
+        out = self.ui(["H", self.CONFIG, "L 0", "O 1", "PW 0 1 4300", "CL 1", "cause", "remind", "T 1000", "R", "K OK 1000",
+                       "T 2000", "R", "remind", "K OK 2050", "K DOWN 2100", "K DOWN 2200", "K DOWN 2300", "K OK 2400"] +
+                      ["K DOWN 2500"] * 16 + ["K OK 2600", "R", "CL 0", "cause", "remind", "K BACK 2700", "K BACK 2800",
+                                              "K BACK 2900", "T 4000", "R"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "main", "handover", "main"])
+        self.assertEqual(self.shown(s[0]), texts["wymien_ogniwa"][0])
+        self.assertEqual(self.lines(s[1])[0], texts["radio_wlaczone"][0])
+        self.assertEqual(self.lines(s[1])[2], texts["ogniwa_napiecie"][0].replace("[x]", "4,3"))
+        self.assertIn(texts["wymien_ogniwa"][0], self.shown(s[2]))
+        self.assertNotIn(texts["wymien_ogniwa"][0], self.shown(s[3]))
+        self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
+        self.assertEqual(self.find(out, "remind "), ["remind 0", "remind 1", "remind 0"])
+        # Kolejność ekranów alarmu: awaria radia, potem wymien_ogniwa, każdy do OK.
+        out = self.ui(["H", self.CONFIG, "L 0", "O 0", "CL 1", "T 1000", "R", "K OK 1000", "T 2000", "R", "K OK 2000",
+                       "T 3000", "R"])
+        s = self.screens(out)
+        self.assertEqual([x[0] for x in s], ["alarm", "alarm", "main"])
+        self.assertEqual([self.shown(x) for x in s[:2]], [texts["radio_awaria"][0], texts["wymien_ogniwa"][0]])
+        for lang in range(3):
+            alarm = self.screens(self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "CL 1", "T 1000", "R"]))[0]
+            self.assertEqual(self.shown(alarm), texts["wymien_ogniwa"][lang])
+
+    def test_status_shows_cells_voltage(self):
+        # STAN: napięcie 12 V zawsze, ogniwa_napiecie po pierwszym pomiarze ogniw (v2), bez ogniwa_czas bez szacunku.
+        texts = ui_texts.load()["texts"]
+        open_status = ["L 0", "O 1", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] + ["K DOWN 0", "R"] * 22
+
+        def status_lines(power):
+            seen = []
+            for name, _, rows, _ in self.screens(self.ui(power + open_status)):
+                if name == "status":
+                    for _, text in rows:
+                        if text not in seen:
+                            seen.append(text)
+            return seen
+
+        mains = texts["zasilanie_12v"][0].replace("[x]", "12,8")
+        cells = texts["ogniwa_napiecie"][0].replace("[x]", "4,9")
+        seen = status_lines(["V 12800", "PW 1 1 4900"])
+        self.assertEqual(seen[seen.index(mains) + 1], cells)
+        seen = status_lines(["V 0", "PW 0 1 4900"])
+        self.assertIn(texts["zasilanie_12v"][0].replace("[x]", "0,0"), seen)
+        self.assertIn(cells, seen)
+        seen = status_lines(["V 12800", "PW 1 0 0"])   # stanowisko i L0: bez pomiaru ogniw
+        self.assertIn(mains, seen)
+        self.assertFalse([x for x in seen if x.startswith(texts["ogniwa_napiecie"][0].split("[x]")[0])])
 
     def test_frozen_migration_is_not_a_memory_fault(self):
         # usb-protocol.md, „Przeniesienie stacji”: po restarcie w toku przeniesienia magazyn jest celowo zamknięty;

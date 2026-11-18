@@ -121,6 +121,7 @@ public:
     Converter converter() const { return converter_; }
     bool pwmHigh() const { return pwm_; }   // bieżący poziom linii przetwornicy
     bool hasConverter() const { return pinPwm_ >= 0; }
+    uint32_t sinceTxMs(uint32_t nowMs) const override;
     // Zapis profilu LoRa po resecie (układ w STDBY_RC) i weryfikacja odczytem.
     VerifyResult configure();
     VerifyResult verify();
@@ -217,6 +218,8 @@ private:
     Converter converter_ = Converter::AUTO;
     bool pwm_ = false;
     bool transmitting_ = false;
+    bool txEver_ = false;
+    volatile uint32_t txEndMs_ = 0;   // koniec ostatniego nadawania (supply)
     bool rxActive_ = false;
     size_t txLength_ = 0;  // ramka załadowana do nadania (limit czasu TxDone)
     bool rxVariable_ = false;

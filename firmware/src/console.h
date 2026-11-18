@@ -55,12 +55,18 @@ public:
     // jammed: przyczyną jest zagłuszanie kanału (Bench::channelJammed), ten sam alarm co układ radiowy.
     void setRadioFault(bool fault, bool jammed = false) { radio_.set(fault); radioJammed_ = fault && jammed; }
     void setStackFault(bool fault) { stack_.set(fault); }
+    // wymien_ogniwa (power.h): alarm do potwierdzenia OK jak awarie, dioda do wymiany ogniw, a po potwierdzeniu
+    // przypomnienie dźwiękiem co 15 min (remindCells, annunciator.h).
+    void setCellsLow(bool low) { cells_.set(low); }
+    bool remindCells() const { return cells_.active && cells_.acked; }
     // Przeniesienie stacji w toku (usb-protocol.md, „Przeniesienie stacji”): magazyn celowo zamknięty do
     // końca albo wycofania przeniesienia, więc to nie awaria pamięci (bez blad_pamieci i bez alarmu).
     void setMigrationFrozen(bool frozen) { migrationFrozen_ = frozen; }
-    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia albo stosu, magazyn niedziałający albo
-    // alarm zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
-    bool alarmCause() const { return radio_.active || stack_.active || (!store_.ok() && !migrationFrozen_) || station_.alarmCause(); }
+    // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia albo stosu, ogniwa do wymiany, magazyn
+    // niedziałający albo alarm zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
+    bool alarmCause() const {
+        return radio_.active || stack_.active || cells_.active || (!store_.ok() && !migrationFrozen_) || station_.alarmCause();
+    }
 
 private:
     static_assert(ui::ADDRESS_CHOICES == config::ADDRESSES, "lista obiektów ekranu i konfiguracji");
@@ -95,6 +101,7 @@ private:
     Fault memory_;   // magazyn wraca dopiero po restarcie, więc potwierdzenie trwa do niego
     bool migrationFrozen_ = false;
     Fault stack_;    // stos startuje tylko przy włączeniu, więc też do restartu
+    Fault cells_;    // ogniwa: przyczyna schodzi po wymianie (średnia ≥ power::CLEAR_MV)
     size_t count_ = 0;
     Entry list_[MAX_ITEMS];
     // Treść ostatnio otwartej pozycji: liczba osób i fraza zmieniają się tylko z nową rewizją,

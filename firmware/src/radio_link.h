@@ -166,6 +166,9 @@ public:
     // Opróżnia pierścień zadania odbioru (strona pętli): przy stop() i zmianie trybu odbioru ramki ze starego
     // trybu nie mogą trafić do nowego. Układy bez zadania odbioru nie mają pierścienia.
     virtual void discardRx() {}
+    // Czas od końca ostatniego nadawania (ramka, nośna) [ms]: 0 w trakcie nadawania, 0xFFFFFFFF bez nadawania
+    // od startu albo w układzie, który tego nie śledzi. Pomiar ogniw (power.h) czeka po nadawaniu.
+    virtual uint32_t sinceTxMs(uint32_t) const { return 0xFFFFFFFFu; }
 };
 
 }  // namespace radiolink

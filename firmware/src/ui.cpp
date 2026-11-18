@@ -115,7 +115,24 @@ Id faultText(const AlarmInfo& alarm) {
         case AlarmKind::RADIO_FAULT: return radioFaultText(alarm.jammed);
         case AlarmKind::MEMORY_FAULT: return Id::BLAD_PAMIECI;
         case AlarmKind::STACK_FAULT: return Id::BRAK_LACZNOSCI_ALARM;
+        case AlarmKind::CELLS_LOW: return Id::WYMIEN_OGNIWA;
         default: return Id::COUNT;
+    }
+}
+
+// Wiersz 3 ekranu głównego: zasilanie_12v z napięciem 12 V albo przy pracy z ogniw zasilanie_aa z szacunkiem
+// godzin; bez szacunku (program go jeszcze nie liczy) ogniwa_napiecie z napięciem ogniw.
+void powerLine(const Status& s, Lang lang, char* out, size_t size) {
+    char value[24];
+    if (s.mains12) {
+        voltage(s.millivolts, lang, value, sizeof(value));
+        substitute(text(Id::ZASILANIE_12V, lang), "[x]", value, out, size);
+    } else if (s.cellHoursKnown) {
+        formatNumber(value, sizeof(value), s.cellHours);
+        substitute(text(Id::ZASILANIE_AA, lang), "[x]", value, out, size);
+    } else {
+        voltage(s.cellMillivolts, lang, value, sizeof(value));
+        substitute(text(Id::OGNIWA_NAPIECIE, lang), "[x]", value, out, size);
     }
 }
 
@@ -932,13 +949,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         // Węzeł OSP: radio, komputer stanowiska, zasilanie (w ciszy: cisza, zasilanie, komputer).
         char computer[LINE_BYTES];
         computerLine(s, computer, sizeof(computer));
-        if (s.mains12) {
-            voltage(s.millivolts, lang_, value, sizeof(value));
-            substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
-        } else {
-            formatNumber(value, sizeof(value), s.cellHours);
-            substitute(text(Id::ZASILANIE_AA, lang_), "[x]", value, tmp, sizeof(tmp));
-        }
+        powerLine(s, lang_, tmp, sizeof(tmp));
         const char* lines[LINES] = {};
         char silence[3][LINE_BYTES];
         if (s.silence) {
@@ -967,13 +978,7 @@ void Model::renderMain(const Status& s, char out[][LINE_BYTES], size_t count) co
         substitute(text(s.contactKnown ? Id::KONTAKT_KROTKI : Id::KONTAKT_PONAD_KROTKI, lang_), "[czas]", value, tmp, sizeof(tmp));
         copyLine(out[n++], LINE_BYTES, tmp);
     }
-    if (s.mains12) {
-        voltage(s.millivolts, lang_, value, sizeof(value));
-        substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
-    } else {
-        formatNumber(value, sizeof(value), s.cellHours);
-        substitute(text(Id::ZASILANIE_AA, lang_), "[x]", value, tmp, sizeof(tmp));
-    }
+    powerLine(s, lang_, tmp, sizeof(tmp));
     copyLine(out[n++], LINE_BYTES, tmp);
     if (s.queued) {
         duration(s.queueAgeS, lang_, value, sizeof(value));
@@ -1016,14 +1021,20 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
         const size_t wrapped = wrap(tmp, lines, 4, COLS - 1);   // STAN jest zawsze dłuższy niż okno: strzałki
         for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
-    if (s.mains12) {
-        voltage(s.millivolts, lang_, value, sizeof(value));
-        substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
-    } else {
+    // Energia: napięcie 12 V zawsze, ogniwa po pierwszym pomiarze, czas pracy z ogniw, gdy jest szacunek.
+    voltage(s.millivolts, lang_, value, sizeof(value));
+    substitute(text(Id::ZASILANIE_12V, lang_), "[x]", value, tmp, sizeof(tmp));
+    put(tmp);
+    if (s.cellsMeasured) {
+        voltage(s.cellMillivolts, lang_, value, sizeof(value));
+        substitute(text(Id::OGNIWA_NAPIECIE, lang_), "[x]", value, tmp, sizeof(tmp));
+        put(tmp);
+    }
+    if (!s.mains12 && s.cellHoursKnown) {
         formatNumber(value, sizeof(value), s.cellHours);
         substitute(text(Id::OGNIWA_CZAS, lang_), "[x]", value, tmp, sizeof(tmp));
+        put(tmp);
     }
-    put(tmp);
     if (s.foffValid) snprintf(tmp, sizeof(tmp), "FOFF %+ld HZ", static_cast<long>(s.foffHz));
     else snprintf(tmp, sizeof(tmp), "FOFF ---");
     put(tmp);
@@ -1188,6 +1199,7 @@ void Model::buildHandover(const Status& status, Text& t) {
     if (!status.radioOk) t.addLine(text(radioFaultText(status.channelJammed), lang_));  // wpis alarmu do usunięcia przyczyny
     if (!status.stackOk) t.addLine(text(Id::BRAK_LACZNOSCI, lang_));
     if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
+    if (status.replaceCells) t.add(text(Id::WYMIEN_OGNIWA, lang_));
     if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
     copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
     substituteNumber(tmp, sizeof(tmp), "[n]", status.newMessages);
