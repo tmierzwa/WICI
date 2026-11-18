@@ -202,6 +202,8 @@ Console::Fault* Console::fault(ui::AlarmKind kind) {
         case ui::AlarmKind::MEMORY_FAULT: return &memory_;
         case ui::AlarmKind::STACK_FAULT: return &stack_;
         case ui::AlarmKind::CELLS_LOW: return &cells_;
+        case ui::AlarmKind::MAINS_LOW: return &mainsLow_;
+        case ui::AlarmKind::MAINS_HIGH: return &mainsHigh_;
         default: return nullptr;
     }
 }
@@ -212,7 +214,7 @@ bool Console::alarm(ui::AlarmInfo& out) {
     if (!station_.alarm(a)) {
         // Awarie stacji w kolejności ekranów alarmu (oprogramowanie.md, Alarmy).
         static constexpr ui::AlarmKind FAULTS[] = {ui::AlarmKind::RADIO_FAULT, ui::AlarmKind::MEMORY_FAULT, ui::AlarmKind::STACK_FAULT,
-                                                   ui::AlarmKind::CELLS_LOW};
+                                                   ui::AlarmKind::CELLS_LOW, ui::AlarmKind::MAINS_HIGH, ui::AlarmKind::MAINS_LOW};
         out = ui::AlarmInfo();
         for (ui::AlarmKind kind : FAULTS) {
             if (fault(kind)->pending()) {

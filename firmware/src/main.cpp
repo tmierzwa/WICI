@@ -915,6 +915,7 @@ void pollPower(uint32_t now) {
         case power::Step::DISABLE: digitalWrite(board::BATTERY_DIV_EN, LOW); break;
         case power::Step::READ: {
             const bool replace = powerMonitor.replaceCells(), first = !powerMonitor.measured();
+            const power::Alarm alarmBefore = powerMonitor.alarm();
             const power::Source source = powerMonitor.source();
             powerMonitor.sample(now, platform::pinMilliVolts(board::BATTERY_ADC), platform::pinMilliVolts(board::VTEST));
             digitalWrite(board::BATTERY_DIV_EN, LOW);
@@ -932,7 +933,11 @@ void pollPower(uint32_t now) {
             }
             // Zdarzenie `power` dla laptopa (usb-protocol.md): zmiana źródła albo alarmu energii. Pierwszy pomiar daje
             // zdarzenie tylko wtedy, gdy różni się od stanu przyjętego przed nim (12 V bez alarmu).
-            if ((source != powerMonitor.source() || replace != powerMonitor.replaceCells()) && storeOk && !nodeRole() &&
+            if (powerMonitor.alarm() != alarmBefore) {
+                snprintf(line, sizeof(line), "power alarm %s: 12v %u mV", power::alarmName(powerMonitor.alarm()), powerMonitor.mainsMv());
+                bench.log(line);
+            }
+            if ((source != powerMonitor.source() || alarmBefore != powerMonitor.alarm()) && storeOk && !nodeRole() &&
                 !app.powerEvent(powerMonitor.source() == power::Source::CELLS, static_cast<uint8_t>(powerMonitor.alarm()),
                                 powerMonitor.cellsMv(), powerMonitor.mainsMv()))
                 bench.log("power event: store write failed");
@@ -940,7 +945,7 @@ void pollPower(uint32_t now) {
         }
         case power::Step::NONE: break;
     }
-    screenHost.setCellsLow(powerMonitor.replaceCells());
+    screenHost.setPowerAlarms(powerMonitor.replaceCells(), powerMonitor.mainsLow(), powerMonitor.mainsHigh());
 }
 
 // POWER: stan pomiaru zasilania (power.h) do sprawdzenia ADC przy stole.
@@ -1409,6 +1414,8 @@ ui::Status screenStatus() {
     s.replaceCells = powerMonitor.replaceCells();
     s.cellHoursKnown = cellEstimator.known();
     s.cellHours = cellEstimator.hours(s.replaceCells);
+    s.mainsLow = powerMonitor.mainsLow();
+    s.mainsHigh = powerMonitor.mainsHigh();
 #else
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)

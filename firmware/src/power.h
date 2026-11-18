@@ -45,11 +45,18 @@ constexpr uint16_t SHUTDOWN_MV = 4000;    // kontrolowane wyłączenie przy prac
 constexpr uint16_t MAINS_OFF_MV = 10500;  // łącznik 12 V odłącza najpóźniej tu
 constexpr uint16_t MAINS_ON_MV = 12400;   // i załącza najpóźniej tu
 constexpr uint16_t MAINS_HIGH_MV = 17000; // powyżej: wejście odcięte przez OVP
+constexpr uint16_t MAINS_PRESENT_MV = 8000;  // od tego pomiaru źródło 12 V jest podłączone (alarmy 12 V)
 
 enum class Source : uint8_t { MAINS12, CELLS };
 const char* sourceName(Source source);   // "12v" albo "aa" (usb-protocol.md, `power.source`)
-// Alarm energii (usb-protocol.md, `power.alarm`). Alarmów 12 V (odcięcie podnapięciowe i OVP) program jeszcze nie
-// wykrywa; kody są w zdarzeniu `power`, żeby ich dodanie nie zmieniało formatu wpisu pierścienia.
+// Alarm energii (usb-protocol.md, `power.alarm`; elektronika.md, „Stany zasilania 12 V”), tylko przy pracy z ogniw:
+// - MAINS_HIGH (za_wysokie_12v): pomiar 12 V powyżej MAINS_HIGH_MV, łącznik odciął wejście (OVP);
+// - MAINS_LOW (odlaczone_12v): źródło 12 V podłączone (pomiar od MAINS_PRESENT_MV), ale za niskie, by łącznik je
+//   załączył albo utrzymał (poniżej 10,5 V w pracy albo poniżej 12,4 V przy podłączeniu). Bez przewodu 12 V
+//   (pomiar około 0 V) alarmu nie ma, bo stacja może pracować z samych ogniw;
+// - REPLACE_CELLS (wymien_ogniwa) ma pierwszeństwo w jednym polu `alarm`, bo bez wymiany stacja się wyłączy; ekran
+//   pokazuje każdy z alarmów osobno.
+// Próg MAINS_PRESENT_MV (dolna granica zbocza samoczynnego włączenia) przyjął właściciel 2026-11-18.
 enum class Alarm : uint8_t { NONE, REPLACE_CELLS, MAINS_LOW, MAINS_HIGH };
 // Nagłówkowa (bez power.cpp), bo używa jej też usbproto.cpp.
 inline const char* alarmName(Alarm alarm) {
@@ -87,7 +94,13 @@ public:
     uint32_t aborted() const { return aborted_; }   // pomiary przerwane nadawaniem
     Source source() const { return source_; }
     bool replaceCells() const { return replace_; }  // alarm wymien_ogniwa
-    Alarm alarm() const { return replace_ ? Alarm::REPLACE_CELLS : Alarm::NONE; }
+    bool mainsHigh() const { return measured() && source_ == Source::CELLS && mainsMv_ > MAINS_HIGH_MV; }
+    bool mainsLow() const {
+        return measured() && source_ == Source::CELLS && mainsMv_ >= MAINS_PRESENT_MV && mainsMv_ <= MAINS_HIGH_MV;
+    }
+    Alarm alarm() const {
+        return replace_ ? Alarm::REPLACE_CELLS : mainsHigh() ? Alarm::MAINS_HIGH : mainsLow() ? Alarm::MAINS_LOW : Alarm::NONE;
+    }
     bool shutdown() const { return measured() && source_ == Source::CELLS && cellsMv_ < SHUTDOWN_MV; }
 
 private:

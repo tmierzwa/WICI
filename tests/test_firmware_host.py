@@ -1009,7 +1009,10 @@ int world() {
             status.mains12 = a; status.cellsMeasured = b; status.cellMillivolts = static_cast<uint16_t>(c);
         } else if (sscanf(line, "PO %u", &a) == 1) status.powerOff = static_cast<ui::PowerOff>(a);   // wyłączanie (main.cpp)
         else if (sscanf(line, "CH %u %u", &a, &b) == 2) { status.cellHoursKnown = a; status.cellHours = b; }   // szacunek (main.cpp)
-        else if (sscanf(line, "CL %u", &a) == 1) { status.replaceCells = a; w.con->setCellsLow(a); }   // wymien_ogniwa (main.cpp)
+        else if (sscanf(line, "CL %u", &a) == 1) {   // alarmy energii: bit 0 wymien_ogniwa, 1 odlaczone_12v, 2 za_wysokie_12v
+            status.replaceCells = a & 1; status.mainsLow = a & 2; status.mainsHigh = a & 4;
+            w.con->setPowerAlarms(a & 1, a & 2, a & 4);
+        }
         else if (!strcmp(cmd, "remind")) printf("remind %d\n", w.con->remindCells());
         else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
             status.rxOk = a; status.rxBad = b; status.txDatagrams = c; status.txDrop = d; status.deferrals = e; status.debtMs = f;
@@ -1195,7 +1198,7 @@ int main(int argc, char** argv) {
     if (argc >= 3 && !strcmp(argv[1], "power")) {
         // Kroki "<ms>/<od nadawania ms>[/<mV pinu ogniw>/<mV pinu 12 V>]": poll(), a przy READ sample() z podanymi
         // napięciami (bez nich 1000 i 800 mV). Wynik na krok: krok, czas do następnego, pomiar, średnia ogniw,
-        // ostatni pomiar ogniw, 12 V, źródło, wymien_ogniwa, wyłączenie, przerwane.
+        // ostatni pomiar ogniw, 12 V, źródło, wymien_ogniwa, wyłączenie, przerwane, alarm energii.
         static const char* STEPS[] = {"none", "enable", "read", "disable"};
         power::Monitor m;
         for (int i = 2; i < argc; ++i) {
@@ -1204,9 +1207,9 @@ int main(int argc, char** argv) {
             if (sscanf(argv[i], "%u/%ld/%u/%u", &ms, &since, &cells, &mains) < 2) return 2;
             const power::Step step = m.poll(ms, since < 0 ? 0xFFFFFFFFu : static_cast<uint32_t>(since));
             if (step == power::Step::READ) m.sample(ms, cells, mains);
-            printf("%s %lu %d %u %u %u %s %d %d %lu\n", STEPS[static_cast<int>(step)], static_cast<unsigned long>(m.untilMs(ms)),
+            printf("%s %lu %d %u %u %u %s %d %d %lu %s\n", STEPS[static_cast<int>(step)], static_cast<unsigned long>(m.untilMs(ms)),
                    m.measured(), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), power::sourceName(m.source()), m.replaceCells(),
-                   m.shutdown(), static_cast<unsigned long>(m.aborted()));
+                   m.shutdown(), static_cast<unsigned long>(m.aborted()), power::alarmName(m.alarm()));
         }
         return 0;
     }
@@ -1589,8 +1592,8 @@ class HostUnitTests(unittest.TestCase):
                                                 ["none", "1500"], ["none", "1"], ["enable", "20"], ["disable", "2000"],
                                                 ["none", "1990"], ["enable", "20"], ["none", "1"], ["read", "60000"]])
         # V_AA = pin × 4,9, V12 = pin × 16; średnia z dwóch pomiarów; jedno przerwanie.
-        self.assertEqual(out[2][3:], ["4900", "4900", "12800", "12v", "0", "0", "0"])
-        self.assertEqual(out[11][3:], ["4655", "4410", "12800", "12v", "0", "0", "1"])
+        self.assertEqual(out[2][3:], ["4900", "4900", "12800", "12v", "0", "0", "0", "none"])
+        self.assertEqual(out[11][3:], ["4655", "4410", "12800", "12v", "0", "0", "1", "none"])
 
     def test_power_cells_alarm_mean_and_hysteresis(self):
         # Progi na średniej kroczącej z 5 pomiarów: wymien_ogniwa poniżej 4,4 V, zejście od 4,6 V (przyjęte
@@ -1602,7 +1605,18 @@ class HostUnitTests(unittest.TestCase):
         self.assertEqual({r[3] for r in reads}, {"12v"})
         self.assertEqual({r[5] for r in reads}, {"0"})
         # 12 V bez ogniw: średnia około 0 V, alarm wymien_ogniwa, bez wyłączenia.
-        self.assertEqual(self.power_reads([(0, 800)])[0], ["0", "0", "12800", "12v", "1", "0", "0"])
+        self.assertEqual(self.power_reads([(0, 800)])[0], ["0", "0", "12800", "12v", "1", "0", "0", "wymien_ogniwa"])
+
+    def test_power_12v_alarms(self):
+        # elektronika.md, „Stany zasilania 12 V”: przy pracy z ogniw odlaczone_12v, gdy źródło jest podłączone (pomiar od
+        # 8,0 V, przyjęte 2026-11-18), ale za niskie; za_wysokie_12v powyżej 17 V. Bez przewodu (0 V) i przy 12 V bez
+        # alarmu; wymien_ogniwa ma pierwszeństwo w jednym polu.
+        mains = [800, 600, 499, 500, 700, 775, 1063, 1062, 0]
+        reads = self.power_reads([(1000, m) for m in mains])
+        self.assertEqual([(r[3], r[7]) for r in reads],
+                         [("12v", "none"), ("aa", "odlaczone_12v"), ("aa", "none"), ("aa", "odlaczone_12v"), ("aa", "odlaczone_12v"),
+                          ("12v", "none"), ("aa", "za_wysokie_12v"), ("12v", "none"), ("aa", "none")])
+        self.assertEqual(self.power_reads([(850, 600)])[0][7], "wymien_ogniwa")
 
     def test_power_source_like_the_12v_switch(self):
         # Źródło jak łącznik 12 V: ogniwa poniżej 10,5 V i powyżej 17 V, 12 V od 12,4 V, w paśmie stan poprzedni;
@@ -1614,7 +1628,7 @@ class HostUnitTests(unittest.TestCase):
         # 10 400 mV: ogniwa; 12 384 mV w paśmie; 16 992 mV jeszcze 12 V, 17 008 mV odcięte.
         self.assertEqual(reads[3][3], "aa")
         # Start z wyczerpanymi ogniwami bez 12 V: decyzja z pierwszego pomiaru.
-        self.assertEqual(self.power_reads([(800, 0)])[0], ["3920", "3920", "0", "aa", "1", "1", "0"])
+        self.assertEqual(self.power_reads([(800, 0)])[0], ["3920", "3920", "0", "aa", "1", "1", "0", "wymien_ogniwa"])
         self.assertEqual(self.power_reads([(800, 800)])[0][3:6], ["12v", "1", "0"])
 
     def test_new_message_beep_respects_mute_only(self):
@@ -3614,6 +3628,23 @@ class HostUnitTests(unittest.TestCase):
         for lang in range(3):
             alarm = self.screens(self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "CL 1", "T 1000", "R"]))[0]
             self.assertEqual(self.shown(alarm), texts["wymien_ogniwa"][lang])
+
+    def test_mains_alarms_on_screen(self):
+        # odlaczone_12v i za_wysokie_12v jak awarie stacji: ekran alarmu do OK (OK tylko wycisza), przyczyna (dioda,
+        # PRZEKAZANIE ZMIANY) do powrotu 12 V; bez przypomnienia co 15 min. Kolejność po wymien_ogniwa.
+        texts = ui_texts.load()["texts"]
+        for bits, name in ((2, "odlaczone_12v"), (4, "za_wysokie_12v")):
+            for lang in range(3):
+                out = self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "PW 0 1 5900", "CL %d" % bits, "cause", "T 1000", "R", "K OK 1000",
+                               "T 2000", "R", "remind", "CL 0", "cause"])
+                s = self.screens(out)
+                self.assertEqual([x[0] for x in s], ["alarm", "main"], (name, lang))
+                self.assertEqual(self.shown(s[0]), texts[name][lang])
+                self.assertLessEqual(len([x for x in self.lines(s[0]) if x.strip()]), 5)
+                self.assertEqual(self.find(out, "cause "), ["cause 1", "cause 0"])
+                self.assertEqual(self.find(out, "remind "), ["remind 0"])
+        out = self.ui(["H", self.CONFIG, "L 0", "O 1", "CL 3", "T 1000", "R", "K OK 1000", "T 2000", "R", "K OK 2000", "T 3000", "R"])
+        self.assertEqual([self.shown(x) for x in self.screens(out)[:2]], [texts["wymien_ogniwa"][0], texts["odlaczone_12v"][0]])
 
     def test_power_off_screens(self):
         # oprogramowanie.md: wylaczanie, potem mozna_wyjac; przy nieudanym KILL także nie_wylaczona. Przykrywa

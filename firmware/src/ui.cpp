@@ -116,6 +116,8 @@ Id faultText(const AlarmInfo& alarm) {
         case AlarmKind::MEMORY_FAULT: return Id::BLAD_PAMIECI;
         case AlarmKind::STACK_FAULT: return Id::BRAK_LACZNOSCI_ALARM;
         case AlarmKind::CELLS_LOW: return Id::WYMIEN_OGNIWA;
+        case AlarmKind::MAINS_LOW: return Id::ODLACZONE_12V;
+        case AlarmKind::MAINS_HIGH: return Id::ZA_WYSOKIE_12V;
         default: return Id::COUNT;
     }
 }
@@ -1202,6 +1204,8 @@ void Model::buildHandover(const Status& status, Text& t) {
     if (!status.stackOk) t.addLine(text(Id::BRAK_LACZNOSCI, lang_));
     if (!status.storeOk) t.add(text(Id::BLAD_PAMIECI, lang_));
     if (status.replaceCells) t.add(text(Id::WYMIEN_OGNIWA, lang_));
+    if (status.mainsLow) t.add(text(Id::ODLACZONE_12V, lang_));
+    if (status.mainsHigh) t.add(text(Id::ZA_WYSOKIE_12V, lang_));
     if (addressMissing_) t.add(text(Id::ADRES_BRAK, lang_));   // następna zmiana wie o NIE w kontroli adresu
     copyLine(tmp, sizeof(tmp), text(Id::NOWE_KROTKI, lang_));
     substituteNumber(tmp, sizeof(tmp), "[n]", status.newMessages);
