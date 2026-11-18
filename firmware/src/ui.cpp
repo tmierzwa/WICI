@@ -1323,6 +1323,12 @@ void Model::renderScreen(const Status& s, Lines& out, size_t first, size_t windo
     char tmp[320];
     Text t;
     t.cols = cols;
+    if (s.powerOff != PowerOff::NONE) {
+        t.add(text(s.powerOff == PowerOff::SAVING ? Id::WYLACZANIE : Id::MOZNA_WYJAC, lang_));
+        if (s.powerOff == PowerOff::FAILED) t.add(text(Id::NIE_WYLACZONA, lang_));
+        renderText(t, window, out, first);
+        return;
+    }
     switch (screen_) {
         case Screen::LANGUAGE:
         case Screen::LANGUAGE_MENU:

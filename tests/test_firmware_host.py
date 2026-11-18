@@ -27,7 +27,7 @@ import ui_texts  # noqa: E402
 
 SOURCES = ("testframe.cpp", "annunciator.cpp", "journal.cpp", "p1frame.cpp", "ui.cpp", "font.cpp", "jsonlite.cpp", "sa1.cpp",
            "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp",
-           "migration_state.cpp", "power.cpp")
+           "migration_state.cpp", "power.cpp", "shutdown.cpp")
 
 HARNESS = r"""
 #include <cstdio>
@@ -39,6 +39,7 @@ HARNESS = r"""
 #include "annunciator.h"
 #include "cmdargs.h"
 #include "power.h"
+#include "shutdown.h"
 #include "config.h"
 #include "console.h"
 #include "crc16.h"
@@ -1002,7 +1003,8 @@ int world() {
         else if (sscanf(line, "V %u", &a) == 1) status.millivolts = static_cast<uint16_t>(a);
         else if (sscanf(line, "PW %u %u %u", &a, &b, &c) == 3) {   // źródło (1: 12 V), pomiar ogniw, napięcie ogniw (main.cpp)
             status.mains12 = a; status.cellsMeasured = b; status.cellMillivolts = static_cast<uint16_t>(c);
-        } else if (sscanf(line, "CL %u", &a) == 1) { status.replaceCells = a; w.con->setCellsLow(a); }   // wymien_ogniwa (main.cpp)
+        } else if (sscanf(line, "PO %u", &a) == 1) status.powerOff = static_cast<ui::PowerOff>(a);   // wyłączanie (main.cpp)
+        else if (sscanf(line, "CL %u", &a) == 1) { status.replaceCells = a; w.con->setCellsLow(a); }   // wymien_ogniwa (main.cpp)
         else if (!strcmp(cmd, "remind")) printf("remind %d\n", w.con->remindCells());
         else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
             status.rxOk = a; status.rxBad = b; status.txDatagrams = c; status.txDrop = d; status.deferrals = e; status.debtMs = f;
@@ -1123,6 +1125,23 @@ int main(int argc, char** argv) {
             in.unread = unread;
             const uint32_t beep = a.poll(ms, in);
             printf("%d,%u\n", a.led() ? 1 : 0, static_cast<unsigned>(beep));
+        }
+        return 0;
+    }
+    if (argc >= 3 && !strcmp(argv[1], "shutdown")) {
+        // Kroki "<ms>/<znaczniki>": I INT niski, E ogniwa wyczerpane, S zapis zakończony (saved() po poll()).
+        // Wynik na krok: faza, powód, KILL, zmiana, wpis o nieudanym KILL, ponowienia, czas do następnej zmiany.
+        shutdown::Sequence q;
+        for (int i = 2; i < argc; ++i) {
+            char flags[8] = {};
+            unsigned ms = 0;
+            if (sscanf(argv[i], "%u/%7[A-Z]", &ms, flags) < 1) return 2;
+            const bool changed = q.poll(ms, strchr(flags, 'I') != nullptr, strchr(flags, 'E') != nullptr);
+            if (strchr(flags, 'S')) q.saved(ms);
+            const bool log = q.failedLog();
+            if (log) q.logged();
+            printf("%s %s %d %d %d %lu %ld\n", shutdown::phaseName(q.phase()), shutdown::reasonName(q.reason()), q.kill(), changed, log,
+                   static_cast<unsigned long>(q.retries()), q.untilMs(ms) == 0xFFFFFFFFu ? -1L : static_cast<long>(q.untilMs(ms)));
         }
         return 0;
     }
@@ -1399,6 +1418,41 @@ class HostUnitTests(unittest.TestCase):
         # Nowy ekran alarmu zeruje okres: przypomnienie liczy się od kolejnego potwierdzenia.
         steps = ["0/SC/0", "10/CR/0", f"{q - 10}/SC/0", f"{q}/CR/0", f"{q + 10}/CR/0", f"{2 * q - 1}/CR/0", f"{2 * q}/CR/0"]
         self.assertEqual([beep for _, beep in self.annun(*steps)], [200, 0, 200, 0, 0, 0, 200])
+
+    def shutdown(self, *steps):
+        out = subprocess.run([str(self.binary), "shutdown", *steps], capture_output=True, text=True, check=True).stdout
+        return [line.split() for line in out.splitlines()]
+
+    def test_shutdown_after_two_second_hold(self):
+        # shutdown.h: INT niski 2 s (program odmierza), zapis, mozna_wyjac 2 s, KILL; krótsze naciśnięcie nic nie robi.
+        out = self.shutdown("0/", "100/I", "1500/", "2000/I", "3999/I", "4000/I", "4001/IS", "5000/", "6000/", "6001/",
+                            "7000/")
+        self.assertEqual([x[0] for x in out], ["run", "run", "run", "run", "run", "saving", "removable", "removable",
+                                               "removable", "killed", "killed"])
+        self.assertEqual(out[1][6], "2000")             # czeka na koniec przytrzymania
+        self.assertEqual(out[5][1:4], ["button", "0", "1"])
+        self.assertEqual(out[9][2:4], ["1", "1"])       # KILL 2 s po zapisie
+        self.assertEqual(out[10][2:4], ["1", "0"])
+
+    def test_shutdown_ignores_hold_from_power_on_and_runs_on_empty_cells(self):
+        # Przycisk trzymany przy włączaniu nie wyłącza: INT liczy się po pierwszym puszczeniu. Wyczerpane ogniwa
+        # (power::Monitor::shutdown) wyłączają bez przycisku.
+        out = self.shutdown("0/I", "5000/I", "5100/", "5200/I", "7200/I")
+        self.assertEqual([x[0] for x in out], ["run", "run", "run", "run", "saving"])
+        out = self.shutdown("0/E", "0/S", "2000/")
+        self.assertEqual([x[:3] for x in out], [["saving", "cells", "0"], ["removable", "cells", "0"], ["killed", "cells", "1"]])
+
+    def test_shutdown_failed_kill_stays_off_and_retries(self):
+        # Decyzja 2026-11-18: KILL bez skutku po 5 s: bez restartu, jeden wpis w dzienniku, KILL ponawiany co 5 s
+        # (puszczony na 100 ms). Przycisk ani ogniwa nic już nie zmieniają.
+        out = self.shutdown("0/E", "0/S", "2000/", "6999/", "7000/", "8000/I", "12000/", "12099/", "12100/", "17100/",
+                            "17200/")
+        self.assertEqual([x[0] for x in out[4:]], ["failed"] * 7)
+        self.assertEqual(out[3][0], "killed")
+        self.assertEqual([x[4] for x in out[4:]], ["1", "0", "0", "0", "0", "0", "0"])
+        self.assertEqual([x[2] for x in out[4:]], ["1", "1", "0", "0", "1", "0", "1"])
+        self.assertEqual([x[5] for x in out[4:]], ["0", "0", "0", "0", "1", "1", "2"])
+        self.assertEqual(out[4][6], "5000")
 
     def power(self, *steps):
         out = subprocess.run([str(self.binary), "power", *steps], capture_output=True, text=True, check=True).stdout
@@ -3435,6 +3489,19 @@ class HostUnitTests(unittest.TestCase):
         for lang in range(3):
             alarm = self.screens(self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "CL 1", "T 1000", "R"]))[0]
             self.assertEqual(self.shown(alarm), texts["wymien_ogniwa"][lang])
+
+    def test_power_off_screens(self):
+        # oprogramowanie.md: wylaczanie, potem mozna_wyjac; przy nieudanym KILL także nie_wylaczona. Przykrywa
+        # każdy ekran, także alarm (przycisków main.cpp w trakcie wyłączania nie obsługuje).
+        texts = ui_texts.load()["texts"]
+        for lang in range(3):
+            out = self.ui(["H", self.CONFIG, "L %d" % lang, "O 1", "CL 1", "PO 1", "T 1000", "R",
+                           "PO 2", "R", "PO 3", "R", "PO 0", "T 2000", "R"])
+            s = self.screens(out)
+            self.assertEqual([self.shown(x) for x in s[:4]],
+                             [texts["wylaczanie"][lang], texts["mozna_wyjac"][lang],
+                              texts["mozna_wyjac"][lang] + " " + texts["nie_wylaczona"][lang], texts["wymien_ogniwa"][lang]], lang)
+            self.assertLessEqual(len([x for x in self.lines(s[2]) if x.strip()]), 5)   # alarm wraca, gdy stacja pracuje dalej
 
     def test_status_shows_cells_voltage(self):
         # STAN: napięcie 12 V zawsze, ogniwa_napiecie po pierwszym pomiarze ogniw (v2), bez ogniwa_czas bez szacunku.

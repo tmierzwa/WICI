@@ -57,6 +57,10 @@ enum class Screen : uint8_t {
 };
 const char* screenName(Screen screen);
 
+// Wyłączanie stacji (shutdown.h): cały ekran zajmuje wylaczanie, potem mozna_wyjac, a przy nieudanym KILL
+// mozna_wyjac z nie_wylaczona. Przykrywa każdy ekran, także alarm, i nie reaguje na przyciski.
+enum class PowerOff : uint8_t { NONE, SAVING, REMOVABLE, FAILED };
+
 // Stan stacji pokazywany na ekranie; wartości dostarcza main.cpp.
 struct Status {
     bool prep = false;
@@ -74,6 +78,7 @@ struct Status {
     bool cellHoursKnown = false; // jest szacunek czasu pracy z ogniw (bez niego wiersz 3 to ogniwa_napiecie)
     uint32_t cellHours = 0;      // szacowany czas pracy z ogniw [h]
     bool replaceCells = false;   // wymien_ogniwa: wpis w PRZEKAZANIU ZMIANY do usunięcia przyczyny
+    PowerOff powerOff = PowerOff::NONE;
     uint32_t queued = 0;         // niewysłane zgłoszenia
     uint32_t queueAgeS = 0;      // wiek najstarszego [s]
     uint32_t newMessages = 0;

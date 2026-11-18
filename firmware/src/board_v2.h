@@ -21,6 +21,8 @@
 #define WICI_STANDBY 1
 // Pomiar ogniw i 12 V (power.h): napięcia na ekranie, w STAN, `status.power` i alarm wymien_ogniwa.
 #define WICI_POWER_SENSE 1
+// Wyłączanie przez sterownik wyłącznika (shutdown.h): INT 2 s albo wyczerpane ogniwa, zapis, mozna_wyjac, KILL.
+#define WICI_POWER_OFF 1
 
 namespace board {
 
@@ -84,7 +86,7 @@ constexpr uint8_t BATTERY_DIV_EN = 46;  // J5.14; pin konfiguracji startu, R43 1
 constexpr uint8_t CONVERTER_PWM = 45;  // J6.15; pin konfiguracji startu, R63 100 kΩ do masy (niski przy resecie)
 
 // Sterownik wyłącznika U6 (LTC2955-2): INT to otwarty dren z R47 10 kΩ do 3,3 V, niski przy naciśniętym
-// wyłączniku. KILL_MCU wysoki otwiera Q11, który ściąga KILL i wyłącza stację; R72 100 kΩ do masy trzyma Q11
+// wyłączniku (19–45 ms po naciśnięciu, do puszczenia; 2 s odmierza program, shutdown.h). KILL_MCU wysoki otwiera Q11, który ściąga KILL i wyłącza stację; R72 100 kΩ do masy trzyma Q11
 // wyłączony przy resecie i bez sterowania.
 constexpr uint8_t POWER_INT = 48;   // J6.16
 constexpr uint8_t POWER_KILL = 47;  // J6.17
@@ -104,8 +106,8 @@ constexpr int16_t LED_USB = -1;
 // masy) albo wygasza ekran (DISP do masy); CS-y nieaktywne, a brzęczyk w stanie niskim.
 // Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL. Tryb przetwornicy poza nadawaniem jest niski
 // (Burst Mode), więc hold zatrzaskuje go niskim, chyba że CONVERTER pwm go wymusił. Klucz dzielnika jest niski poza
-// pomiarem (20 ms co minutę; uśpienie w trakcie pomiaru trzyma go wysokim do odczytu). KILL program jeszcze nie
-// steruje, więc hold zatrzaskuje stan z R72 do masy (niski, stacja zostaje włączona).
+// pomiarem (20 ms co minutę; uśpienie w trakcie pomiaru trzyma go wysokim do odczytu). KILL jest niski do końca
+// wyłączania (shutdown.h), potem wysoki; hold zatrzaskuje go w obu stanach.
 constexpr uint8_t SLEEP_HOLD[] = {RADIO_CS, RADIO_RESET, RADIO_RXEN, FRAM_CS, DISPLAY_CS, DISPLAY_EXTCOMIN,
                                  DISPLAY_DISP, LED_ALARM, BUZZER, BATTERY_DIV_EN, CONVERTER_PWM, POWER_KILL};
 // Linie budzenia: DIO1 stanem wysokim; przyciski, CISZA, INT wyłącznika i wykrywanie laptopa przy każdej zmianie
