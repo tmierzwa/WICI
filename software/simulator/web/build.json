@@ -286,7 +286,7 @@
   "firmware/src/sharp_extcomin_esp32.cpp": "6f28d5c83412b7f4038bea925e9168019f007aa7c55b19b83eeebe00c5c3d40e",
   "firmware/src/sharp_extcomin_nrf.cpp": "a9a479ef26ac0ed30d656892dffb4320d7db4a82bda762640b12585bd07a7ae6",
   "firmware/src/shutdown.cpp": "6d5753b606597ce229fa1b238135b5020a430cbe35debe205c1b5063be14d72d",
-  "firmware/src/shutdown.h": "e1277403fd50cd3087a52fff0ef098056a9455a0695d75848eaca15f7e28d1d6",
+  "firmware/src/shutdown.h": "2bba6a158bbdf3261a8121d67eeb1aa0d315605420a490d068a1958300a70d96",
   "firmware/src/spsc_ring.h": "36b4fc8c72a7a3e9917dad612dbb5c4128b773489827f4d04160f2162cccfd09",
   "firmware/src/standby.h": "d5d0b29c841092bd8814844fe9e09f62fda86a6a54209debdd2a9baf86cad502",
   "firmware/src/station.cpp": "3a8b79175b4796bc5595c51cf545ac175683b18bd1de223ff89d32c8d7923d87",
