@@ -182,9 +182,26 @@ Program mierzy co minutę napięcie kompletu ogniw i wejścia 12 V (`src/power.h
 - `wymien_ogniwa`, gdy średnia spadnie poniżej 4,4 V. Alarm schodzi przy średniej co najmniej 4,6 V, czyli po włożeniu nowego kompletu. Alarm jest też przy 12 V bez ogniw (średnia około 0 V), bo stacja nie ma wtedy rezerwy.
 - Źródło rozpoznaje program tak jak łącznik 12 V: ogniwa, gdy pomiar 12 V jest poniżej 10,5 V albo powyżej 17 V (wejście odcięte przez OVP). Od 12,4 V źródłem jest 12 V, a w paśmie 10,5–12,4 V zostaje stan poprzedni. Przed pierwszym pomiarem i przy pierwszym pomiarze w paśmie program przyjmuje 12 V.
 - Stan `shutdown` w `POWER`: średnia poniżej 4,0 V przy pracy z ogniw. Wtedy stacja sama się [wyłącza](#wyłączanie-przez-ltc2955).
-- Wynik widać w wierszu 3 ekranu głównego (`zasilanie_12v` albo przy pracy z ogniw `ogniwa_napiecie`, bo program nie liczy jeszcze godzin pracy), w STAN (`zasilanie_12v` i `ogniwa_napiecie`), w PRZEKAZANIU ZMIANY (`wymien_ogniwa`), w `INFO` (`src`, `mv`), w `status.power` protokołu USB i w `POWER`. Zmiana źródła i alarmu trafia do `LOG`.
+- Wynik widać w wierszu 3 ekranu głównego (`zasilanie_12v` albo przy pracy z ogniw `zasilanie_aa` z [szacunkiem godzin](#szacunek-godzin-pracy-z-ogniw), a przed pierwszym szacunkiem `ogniwa_napiecie`), w STAN (`zasilanie_12v`, `ogniwa_napiecie`, przy pracy z ogniw `ogniwa_czas`), w PRZEKAZANIU ZMIANY (`wymien_ogniwa`), w `INFO` (`src`, `mv`), w `status.power` protokołu USB i w `POWER`. Zmiana źródła i alarmu trafia do `LOG`.
 
 Okres 60 s, średnią z 5 pomiarów, przerwę 2 s po nadawaniu, zejście alarmu przy 4,6 V, alarm bez ogniw i rozpoznanie źródła przyjął właściciel 2026-11-18. Wszystko to trzeba sprawdzić na płytce: przerwę po nadawaniu oscyloskopem na V_AA przy zimnych ogniwach, a progi łącznika zasilaczem regulowanym wobec `POWER`. Błąd ADC wobec woltomierza (cel ≤2%, [odbiór](../../docs/spec/odbior.md)) sprawdza `POWER` przy znanych napięciach ogniw i 12 V.
+
+### Szacunek godzin pracy z ogniw
+
+Stacja nie mierzy prądu, więc godziny liczy bilans energii (`src/cells.h`, przyjęty przez właściciela 2026-11-18). Przy każdym pomiarze zasilania program dolicza energię pobraną z ogniw od poprzedniego pomiaru. Czas pracy MCU bez uśpienia, czas uśpienia (pętla czuwania) i czas nadawania (sterownik SX1262) mnoży przez stałe prądy szyny 3,3 V, dzieli przez sprawność przetwornicy i dolicza spadek na diodzie ogniw. Godziny to pozostała energia kompletu podzielona przez średni pobór (średnia wykładnicza z wagą 1/30, około pół godziny). Energia liczy się tylko przy pracy z ogniw. Przy `wymien_ogniwa` ekran pokazuje 1 h, a poza alarmem najmniej 1 h.
+
+| Stała | Wartość | Źródło |
+|---|---|---|
+| energia użytkowa kompletu | 14,4 Wh (4 × 4,5 Wh × 0,8) | model energii, `software/reference/obliczenia.py` |
+| MCU bez uśpienia / w uśpieniu | 45 mA / 3 mA | model energii (środkowy wariant ESP32-S3, czuwanie) |
+| radio w odbiorze / w nadawaniu 13 dBm | 6,2 mA / około 60 mA | pomiar Wio-SX1262 z 2026-11-17 ([raport](../../hardware/xiao-wici/evidence/prad-wio-2026-11-17.md)) |
+| ekran, FRAM, przyciski, nadzorca | 1,0 mA | model energii (0,5 + 0,5 mA) |
+| sprawność LTC3115-1 przy 3,3 V | 78% | środek oszacowania 74–83% ([projekt zasilania](../../hardware/r02/zasilanie.md)) |
+| spadek na diodzie ogniw | 0,35 V | model energii |
+
+Nowy komplet program rozpoznaje po skoku napięcia. Licznik zeruje się, gdy pierwszy pomiar po starcie albo po przerwie bez ogniw (poniżej 1 V) jest o co najmniej 0,4 V wyższy od ostatniego zapisanego przy tym samym źródle zasilania. Napięcie pod obciążeniem (praca z ogniw) i bez niego (12 V) się różni, więc program porównuje je tylko w obrębie jednego źródła. Częściowo zużyty komplet też może wyzerować licznik i wtedy szacunek jest za wysoki aż do `wymien_ogniwa`. Zużyta energia i ostatnie napięcie leżą w pierścieniu 8 rekordów w FRAM pod 0xFA00 (luka między zbiorem powtórzeń BULLETIN a rejestrem, `journal::CELLS_BASE`). Zapis idzie przy każdym pomiarze z ogniw, a poza nimi przy zmianie napięcia o co najmniej 50 mV albo zmianie źródła. ZNISZCZ DANE kasuje licznik, więc szacunek zaczyna się wtedy od pełnego kompletu. Przeniesienie stacji kopiuje licznik z obrazem, a nowy komplet w nowej skrzynce rozpoznaje skok napięcia. `POWER` podaje `hours`, `used_mwh`, `capacity_mwh`, `avg_mw` i `new_sets`.
+
+Wszystkie stałe trzeba zmierzyć na płytce v2: prąd z ogniw w pracy, w czuwaniu i przy nadawaniu, sprawność przetwornicy i napięcie świeżego i zużytego kompletu pod obciążeniem i bez niego (próg 0,4 V). Pomiar 48 h na ogniwach z minimum pilotażu sprawdza, czy szacunek zgadza się z czasem do `wymien_ogniwa`.
 
 ### Wyłączanie przez LTC2955
 

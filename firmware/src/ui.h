@@ -75,8 +75,8 @@ struct Status {
     uint16_t millivolts = 0;     // napięcie 12 V
     bool cellsMeasured = false;  // stacja mierzy ogniwa (v2, po pierwszym pomiarze): ogniwa_napiecie w STAN
     uint16_t cellMillivolts = 0; // napięcie kompletu ogniw (filtrowana średnia, power.h)
-    bool cellHoursKnown = false; // jest szacunek czasu pracy z ogniw (bez niego wiersz 3 to ogniwa_napiecie)
-    uint32_t cellHours = 0;      // szacowany czas pracy z ogniw [h]
+    bool cellHoursKnown = false; // jest szacunek czasu pracy z ogniw (cells.h; bez niego wiersz 3 to ogniwa_napiecie)
+    uint32_t cellHours = 0;      // szacowany czas pracy z ogniw [h], najmniej 1
     bool replaceCells = false;   // wymien_ogniwa: wpis w PRZEKAZANIU ZMIANY do usunięcia przyczyny
     PowerOff powerOff = PowerOff::NONE;
     uint32_t queued = 0;         // niewysłane zgłoszenia

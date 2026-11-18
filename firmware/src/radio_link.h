@@ -169,6 +169,8 @@ public:
     // Czas od końca ostatniego nadawania (ramka, nośna) [ms]: 0 w trakcie nadawania, 0xFFFFFFFF bez nadawania
     // od startu albo w układzie, który tego nie śledzi. Pomiar ogniw (power.h) czeka po nadawaniu.
     virtual uint32_t sinceTxMs(uint32_t) const { return 0xFFFFFFFFu; }
+    // Łączny czas nadawania od startu [ms] (bilans energii ogniw, cells.h); 0 w układzie, który go nie liczy.
+    virtual uint32_t txOnMs() const { return 0; }
 };
 
 }  // namespace radiolink

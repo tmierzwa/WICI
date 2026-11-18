@@ -27,7 +27,7 @@ import ui_texts  # noqa: E402
 
 SOURCES = ("testframe.cpp", "annunciator.cpp", "journal.cpp", "p1frame.cpp", "ui.cpp", "font.cpp", "jsonlite.cpp", "sa1.cpp",
            "config.cpp", "sha2.cpp", "drbg.cpp", "store.cpp", "station.cpp", "usbproto.cpp", "console.cpp",
-           "migration_state.cpp", "power.cpp", "shutdown.cpp")
+           "migration_state.cpp", "power.cpp", "shutdown.cpp", "cells.cpp")
 
 HARNESS = r"""
 #include <cstdio>
@@ -38,6 +38,7 @@ HARNESS = r"""
 #include <vector>
 #include "annunciator.h"
 #include "cmdargs.h"
+#include "cells.h"
 #include "power.h"
 #include "shutdown.h"
 #include "config.h"
@@ -1004,6 +1005,7 @@ int world() {
         else if (sscanf(line, "PW %u %u %u", &a, &b, &c) == 3) {   // źródło (1: 12 V), pomiar ogniw, napięcie ogniw (main.cpp)
             status.mains12 = a; status.cellsMeasured = b; status.cellMillivolts = static_cast<uint16_t>(c);
         } else if (sscanf(line, "PO %u", &a) == 1) status.powerOff = static_cast<ui::PowerOff>(a);   // wyłączanie (main.cpp)
+        else if (sscanf(line, "CH %u %u", &a, &b) == 2) { status.cellHoursKnown = a; status.cellHours = b; }   // szacunek (main.cpp)
         else if (sscanf(line, "CL %u", &a) == 1) { status.replaceCells = a; w.con->setCellsLow(a); }   // wymien_ogniwa (main.cpp)
         else if (!strcmp(cmd, "remind")) printf("remind %d\n", w.con->remindCells());
         else if (sscanf(line, "X %u %u %u %u %u %u", &a, &b, &c, &d, &e, &f) == 6) {
@@ -1126,6 +1128,48 @@ int main(int argc, char** argv) {
             const uint32_t beep = a.poll(ms, in);
             printf("%d,%u\n", a.led() ? 1 : 0, static_cast<unsigned>(beep));
         }
+        return 0;
+    }
+    if (argc >= 3 && !strcmp(argv[1], "cells")) {
+        // Kroki "<praca ms>/<uśpienie ms>/<nadawanie ms>/<ostatni mV>/<średnia mV>/<1: ogniwa>"; pierwszy argument
+        // "B<µWh>/<mV>/<1: ogniwa>" podaje stan z FRAM ("B-" bez stanu). Wynik na krok: zapis, zużyta energia [µWh],
+        // średni pobór [µW], godziny, godziny przy wymien_ogniwa, nowe komplety.
+        cells::Estimator e;
+        cells::Saved saved;
+        unsigned used = 0, mv = 0, on = 0;
+        if (sscanf(argv[2], "B%u/%u/%u", &used, &mv, &on) == 3) {
+            saved.valid = true; saved.usedUwh = used; saved.lastMv = static_cast<uint16_t>(mv); saved.lastOnCells = on;
+        }
+        e.begin(saved);
+        for (int i = 3; i < argc; ++i) {
+            unsigned awake = 0, slept = 0, tx = 0, last = 0, mean = 0, onCells = 0;
+            if (sscanf(argv[i], "%u/%u/%u/%u/%u/%u", &awake, &slept, &tx, &last, &mean, &onCells) != 6) return 2;
+            const bool save = e.update(awake, slept, tx, static_cast<uint16_t>(last), static_cast<uint16_t>(mean), onCells);
+            printf("%d %lu %lu %lu %lu %lu\n", save, static_cast<unsigned long>(e.usedUwh()), static_cast<unsigned long>(e.averageUw()),
+                   static_cast<unsigned long>(e.hours(false)), static_cast<unsigned long>(e.hours(true)),
+                   static_cast<unsigned long>(e.freshSets()));
+        }
+        return 0;
+    }
+    if (argc == 2 && !strcmp(argv[1], "cellsfram")) {
+        // Pierścień licznika ogniw w luce magazynów: pusty, zapisy, odczyt po „restarcie” (nowy Journal), ZNISZCZ DANE.
+        RamStorage ram;
+        journal::Journal j(ram);
+        journal::SmallRecord r;
+        const bool begun = j.begin();
+        const bool blank = !j.loadCells(r);
+        bool written = true;
+        for (unsigned k = 1; k <= 20; ++k) written = written && j.writeCells(k * 1000, 6000 - k, k & 1);
+        journal::Journal again(ram);
+        again.begin();
+        const bool loaded = again.loadCells(r);
+        const bool inGap = std::all_of(ram.bytes.begin() + journal::CELLS_BASE + journal::CELLS_SLOTS * journal::SMALL_RECORD,
+                                       ram.bytes.begin() + store::REGISTER_BASE, [](uint8_t b) { return b == 0xFF; });
+        std::fill(ram.bytes.begin() + store::TX_BASE, ram.bytes.end(), 0xFF);   // ZNISZCZ DANE kasuje TX_BASE..FRAM_END
+        journal::Journal erased(ram);
+        erased.begin();
+        printf("cellsfram %d %d %d %d %lu %lu %lu %d %d\n", begun, blank, written, loaded, static_cast<unsigned long>(r.a),
+               static_cast<unsigned long>(r.b), static_cast<unsigned long>(r.c), inGap, !erased.loadCells(r));
         return 0;
     }
     if (argc >= 3 && !strcmp(argv[1], "shutdown")) {
@@ -1418,6 +1462,71 @@ class HostUnitTests(unittest.TestCase):
         # Nowy ekran alarmu zeruje okres: przypomnienie liczy się od kolejnego potwierdzenia.
         steps = ["0/SC/0", "10/CR/0", f"{q - 10}/SC/0", f"{q}/CR/0", f"{q + 10}/CR/0", f"{2 * q - 1}/CR/0", f"{2 * q}/CR/0"]
         self.assertEqual([beep for _, beep in self.annun(*steps)], [200, 0, 200, 0, 0, 0, 200])
+
+    def cells(self, *steps):
+        out = subprocess.run([str(self.binary), "cells", *steps], capture_output=True, text=True, check=True).stdout
+        return [[int(v) for v in line.split()] for line in out.splitlines()]
+
+    @staticmethod
+    def model_input_uw(awake_ms, slept_ms, tx_ms, mean_mv):
+        """cells.h niezależnie, w liczbach rzeczywistych: szyna 3,3 V, sprawność 78%, dioda 0,35 V."""
+        total = awake_ms + slept_ms
+        rail_ma = (awake_ms * 45 + slept_ms * 3) / total + 6.2 + 1.0 + tx_ms / total * (60 - 6.2)
+        return rail_ma * 3.3 / 0.78 * mean_mv / (mean_mv - 350) * 1000
+
+    def test_cells_hours_from_energy_balance(self):
+        # Bilans energii (przyjęty 2026-11-18): godziny = (14,4 Wh − zużyte) / średni pobór, pobór ze stałych prądów
+        # według czasu pracy, uśpienia i nadawania. Pierwszy pomiar bez czasu nie daje szacunku.
+        out = self.cells("B-", "0/0/0/6000/6000/1", "60000/0/0/6000/6000/1")
+        self.assertEqual(out[0][3], 0)
+        uw = self.model_input_uw(60000, 0, 0, 6000)
+        self.assertAlmostEqual(out[1][2], uw, delta=uw * 0.01)
+        self.assertAlmostEqual(out[1][1], uw * 60 / 3600, delta=2)
+        self.assertEqual(out[1][3], int((14400000 - out[1][1]) / out[1][2]))
+        self.assertTrue(55 <= out[1][3] <= 65)   # MCU stale bez uśpienia: około 61 h
+        # Czuwanie (MCU śpi 95% czasu) z nadawaniem 1%: kilka razy dłużej.
+        out = self.cells("B-", "0/0/0/6000/6000/1", "3000/57000/600/6000/6000/1")
+        uw = self.model_input_uw(3000, 57000, 600, 6000)
+        self.assertAlmostEqual(out[1][2], uw, delta=uw * 0.01)
+        self.assertGreater(out[1][3], 150)
+        # Średnia wykładnicza z wagą 1/30: nagła praca bez uśpienia zmienia średnią o 1/30 różnicy.
+        out = self.cells("B-", "0/0/0/6000/6000/1", "3000/57000/0/6000/6000/1", "60000/0/0/6000/6000/1")
+        low, high = self.model_input_uw(3000, 57000, 0, 6000), self.model_input_uw(60000, 0, 0, 6000)
+        self.assertAlmostEqual(out[2][2], low + (high - low) / 30, delta=high * 0.01)
+
+    def test_cells_hours_limits_and_mains(self):
+        # Przy 12 V ogniwa nie oddają energii: bez zużycia i bez szacunku. Przy wymien_ogniwa najwyżej 1 h, po
+        # zużyciu całej energii modelu najmniej 1 h.
+        out = self.cells("B-", "0/0/0/6200/6200/0", "60000/0/0/6200/6200/0")
+        self.assertEqual([x[1:4] for x in out], [[0, 0, 0], [0, 0, 0]])
+        out = self.cells("B14399000/5000/1", "0/0/0/5000/5000/1", "60000/0/0/5000/5000/1", "60000/0/0/5000/5000/1")
+        self.assertEqual([x[3:5] for x in out[1:]], [[1, 1], [1, 1]])
+        out = self.cells("B1000000/6000/1", "0/0/0/6000/6000/1", "60000/0/0/6000/6000/1")
+        self.assertGreater(out[1][3], 1)
+        self.assertEqual(out[1][4], 1)
+
+    def test_cells_new_set_by_voltage_step(self):
+        # Przyjęte 2026-11-18: nowy komplet, gdy pierwszy pomiar po starcie albo po przerwie bez ogniw (< 1 V) jest
+        # o ≥0,4 V wyższy od zapisanego przy tym samym źródle. Mniejszy skok, inne źródło albo skok w trakcie pracy
+        # nie zerują licznika.
+        self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/6200/6200/1")[0][1:], [0, 0, 0, 0, 1])
+        self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/6199/6199/1")[0][1], 9000000)
+        self.assertEqual(self.cells("B9000000/5800/0", "0/0/0/6300/6300/1")[0][1], 9000000)
+        self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/5800/5800/1", "60000/0/0/6300/6300/1")[1][5], 0)
+        # Wymiana przy 12 V: pomiar bez ogniw, potem nowy komplet bez obciążenia.
+        out = self.cells("B9000000/6000/0", "0/0/0/6000/6000/0", "60000/0/0/0/3000/0", "60000/0/0/7100/5000/0")
+        self.assertEqual([x[1] for x in out], [9000000, 9000000, 0])
+        self.assertEqual(out[2][5], 1)
+        # Zapis do FRAM: przy każdym pomiarze z ogniw, przy zmianie napięcia o ≥50 mV albo źródła; bez tego nie.
+        out = self.cells("B9000000/6000/0", "0/0/0/6000/6000/0", "60000/0/0/6030/6000/0", "60000/0/0/6060/6000/0",
+                         "60000/0/0/6060/6000/1")
+        self.assertEqual([x[0] for x in out], [0, 0, 1, 1])
+
+    def test_cells_counter_ring_in_store_gap(self):
+        # Pierścień 8 rekordów pod 0xFA00 (przyjęte 2026-11-18): najnowszy po „restarcie”, nic poza pierścieniem
+        # w luce, ZNISZCZ DANE go kasuje.
+        out = self.run_harness("cellsfram")
+        self.assertEqual(out, ["cellsfram", "1", "1", "1", "1", "20000", "5980", "0", "1", "1"])
 
     def shutdown(self, *steps):
         out = subprocess.run([str(self.binary), "shutdown", *steps], capture_output=True, text=True, check=True).stdout
@@ -3502,6 +3611,29 @@ class HostUnitTests(unittest.TestCase):
                              [texts["wylaczanie"][lang], texts["mozna_wyjac"][lang],
                               texts["mozna_wyjac"][lang] + " " + texts["nie_wylaczona"][lang], texts["wymien_ogniwa"][lang]], lang)
             self.assertLessEqual(len([x for x in self.lines(s[2]) if x.strip()]), 5)   # alarm wraca, gdy stacja pracuje dalej
+
+    def test_cells_hours_on_screen(self):
+        # Wiersz 3 przy pracy z ogniw: zasilanie_aa z szacunkiem godzin, bez szacunku ogniwa_napiecie; STAN dodaje
+        # ogniwa_czas pod napięciem ogniw. Przy 12 V bez zmian.
+        texts = ui_texts.load()["texts"]
+        for lang in range(3):
+            main = self.screens(self.ui([f"L {lang}", "O 1", "PW 0 1 5900", "CH 1 37", "R"]))[0]
+            self.assertEqual(self.lines(main)[2], texts["zasilanie_aa"][lang].replace("[x]", "37"))
+            self.assertLessEqual(len(texts["zasilanie_aa"][lang].replace("[x]", "999")), 20)
+        main = self.screens(self.ui(["L 0", "O 1", "PW 0 1 5900", "CH 0 0", "R"]))[0]
+        self.assertEqual(self.lines(main)[2], texts["ogniwa_napiecie"][0].replace("[x]", "5,9"))
+        main = self.screens(self.ui(["L 0", "O 1", "V 12800", "PW 1 1 5900", "CH 1 37", "R"]))[0]
+        self.assertEqual(self.lines(main)[2], texts["zasilanie_12v"][0].replace("[x]", "12,8"))
+        open_status = ["L 0", "O 1", "PW 0 1 5900", "CH 1 37", "K OK 0", "K DOWN 0", "K DOWN 0", "K DOWN 0", "K OK 0", "R"] + \
+            ["K DOWN 0", "R"] * 24
+        seen = []
+        for name, _, rows, _ in self.screens(self.ui(open_status)):
+            if name == "status":
+                seen += [t for _, t in rows if t not in seen]
+        joined = " ".join(seen)
+        self.assertIn(texts["ogniwa_czas"][0].replace("[x]", "37"), joined)
+        self.assertLess(joined.index(texts["ogniwa_napiecie"][0].replace("[x]", "5,9")),
+                        joined.index(texts["ogniwa_czas"][0].replace("[x]", "37")[:10]))
 
     def test_status_shows_cells_voltage(self):
         # STAN: napięcie 12 V zawsze, ogniwa_napiecie po pierwszym pomiarze ogniw (v2), bez ogniwa_czas bez szacunku.

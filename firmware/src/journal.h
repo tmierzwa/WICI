@@ -54,6 +54,11 @@ constexpr uint32_t PREP_CONFIG = 0x0001;   // w wejściu zatwierdzono nową konf
 constexpr uint32_t PREP_RESTARTED = 0x8000;  // licznik niepewny po uszkodzonym rekordzie pierścienia (przechodzi dalej)
 constexpr uint32_t PREP_CHANGES = 0xFFFF;  // młodsze 16 bitów c: zmiany; starsze: 16 bitów SHA-256 konfiguracji
 static_assert(PREP_BASE + PREP_SLOTS * SMALL_RECORD <= EVENT_BASE, "pierścienie przed dziennikiem zdarzeń");
+// Licznik energii ogniw (cells.h): pierścień małych rekordów poza jawnym obszarem, w wolnej luce magazynów między
+// zbiorem powtórzeń BULLETIN a rejestrem (store.h sprawdza granice). ZNISZCZ DANE kasuje go z magazynami, więc
+// szacunek wraca wtedy do pełnego kompletu; przeniesienie stacji kopiuje go z obrazem.
+constexpr uint32_t CELLS_BASE = 0x00FA00;
+constexpr uint32_t CELLS_SLOTS = 8;
 
 struct Storage {
     virtual ~Storage() = default;
@@ -150,6 +155,11 @@ public:
     // w tryb przygotowania zostają.
     bool erase();
 
+    // Licznik energii ogniw (cells.h): a = zużyta energia [µWh], b = ostatnie napięcie ogniw [mV], c = 1 przy
+    // pracy z ogniw w chwili tego napięcia. loadCells: false bez poprawnego rekordu (nowa albo skasowana pamięć).
+    bool loadCells(SmallRecord& out);
+    bool writeCells(uint32_t usedUwh, uint32_t lastMv, uint32_t onCells);
+
 private:
     bool scanSmall(uint32_t base, SmallRecord& latest, uint32_t& validCount, uint32_t& corruptCount, uint32_t slots = SMALL_SLOTS);
     bool writeSmall(uint32_t base, SmallRecord& current, uint32_t a, uint32_t b, uint32_t c, uint32_t slots = SMALL_SLOTS);
@@ -164,6 +174,7 @@ private:
     SmallRecord reserve_;
     SmallRecord format_;
     SmallRecord prep_;
+    SmallRecord cells_;
     bool prepCorrupt_ = false;
     uint32_t prepCorruptSlots_ = 0;   // bity gniazd pierścienia wejść z rekordem uszkodzonym
     FormatState formatState_ = FormatState::BLANK;

@@ -187,6 +187,18 @@ bool Journal::writeClock(uint32_t counterS) {
     return writeSmall(CLOCK_BASE, clock_, counterS, clock_.b, clock_.c);
 }
 
+bool Journal::loadCells(SmallRecord& out) {
+    uint32_t valid = 0, corrupt = 0;
+    cells_ = SmallRecord();
+    if (!scanSmall(CELLS_BASE, cells_, valid, corrupt, CELLS_SLOTS) || !valid) return false;
+    out = cells_;
+    return true;
+}
+
+bool Journal::writeCells(uint32_t usedUwh, uint32_t lastMv, uint32_t onCells) {
+    return writeSmall(CELLS_BASE, cells_, usedUwh, lastMv, onCells, CELLS_SLOTS);
+}
+
 bool Journal::adoptClock(uint32_t minimumS) {
     if (minimumS <= clock_.a) return true;
     const uint32_t delta = minimumS - clock_.a;
