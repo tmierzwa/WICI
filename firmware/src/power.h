@@ -48,6 +48,18 @@ constexpr uint16_t MAINS_HIGH_MV = 17000; // powyżej: wejście odcięte przez O
 
 enum class Source : uint8_t { MAINS12, CELLS };
 const char* sourceName(Source source);   // "12v" albo "aa" (usb-protocol.md, `power.source`)
+// Alarm energii (usb-protocol.md, `power.alarm`). Alarmów 12 V (odcięcie podnapięciowe i OVP) program jeszcze nie
+// wykrywa; kody są w zdarzeniu `power`, żeby ich dodanie nie zmieniało formatu wpisu pierścienia.
+enum class Alarm : uint8_t { NONE, REPLACE_CELLS, MAINS_LOW, MAINS_HIGH };
+// Nagłówkowa (bez power.cpp), bo używa jej też usbproto.cpp.
+inline const char* alarmName(Alarm alarm) {
+    switch (alarm) {
+        case Alarm::REPLACE_CELLS: return "wymien_ogniwa";
+        case Alarm::MAINS_LOW: return "odlaczone_12v";
+        case Alarm::MAINS_HIGH: return "za_wysokie_12v";
+        default: return "none";
+    }
+}
 
 // Co zrobić teraz z dzielnikiem ogniw.
 enum class Step : uint8_t {
@@ -75,6 +87,7 @@ public:
     uint32_t aborted() const { return aborted_; }   // pomiary przerwane nadawaniem
     Source source() const { return source_; }
     bool replaceCells() const { return replace_; }  // alarm wymien_ogniwa
+    Alarm alarm() const { return replace_ ? Alarm::REPLACE_CELLS : Alarm::NONE; }
     bool shutdown() const { return measured() && source_ == Source::CELLS && cellsMv_ < SHUTDOWN_MV; }
 
 private:
