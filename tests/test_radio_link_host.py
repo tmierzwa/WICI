@@ -789,6 +789,7 @@ int main() {
     link.begin();
     printf("PWMBEGIN %d %d %s\n", chip.pwm, link.pwmHigh(), sx1262::converterName(link.converter()));
     fakeUs = 1000000;
+    const uint32_t sinceNever = link.sinceTxMs(millis());   // bez nadawania od startu
 
     // Reset i identyfikacja z tekstu wersji; profil utracony przed CONFIG.
     const bool reset = radio.reset();
@@ -836,7 +837,13 @@ int main() {
     const bool cw = link.startCw();
     printf("CW %d %s %d %d\n", cw, link.stateName(), chip.rxenAtTx, indexOf(sx1262::OP_SET_TX_CW) >= 0);
     const bool cwPwm = chip.pwm;
+    const uint32_t sinceInCw = link.sinceTxMs(millis());   // w trakcie nadawania: 0
     link.stopCw();
+    const uint32_t cwEnd = millis();
+    fakeUs += 1500000;
+    // Czas od końca nadawania (pomiar ogniw, power.h): bez nadawania 0xFFFFFFFF, w nadawaniu 0, potem od końca.
+    printf("SINCETX %lu %lu %lu\n", static_cast<unsigned long>(sinceNever), static_cast<unsigned long>(sinceInCw),
+           static_cast<unsigned long>(link.sinceTxMs(millis()) - (millis() - cwEnd)));
     printf("CWSTOP %s\n", link.stateName());
     // Przetwornica w PWM od chwili przed SetTxContinuousWave przez całą nośną, po STOP znów Burst Mode.
     printf("CWPWM %d %d %d\n", chip.pwmAtTx, cwPwm, chip.pwm);
@@ -850,6 +857,7 @@ int main() {
            chip.rxenAtTx, link.stateName(), timing.valid, timing.totalUs > 0);
     // PWM przy SetTx ramki, po TxDone (powrót sam do STDBY_XOSC) znów Burst Mode.
     printf("TXPWM %d %d\n", chip.pwmAtTx, chip.pwm);
+    printf("TXSINCE %lu\n", static_cast<unsigned long>(link.sinceTxMs(millis())));   // ramka skończona przed chwilą
     printf("TXLEN %d %d\n", link.transmit(frame, 0, false, nullptr), link.transmit(frame, 256, false, nullptr));
     chip.holdTx = true;
     const uint32_t before = millis();
@@ -2630,6 +2638,8 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "PWMBEGIN"), "PWMBEGIN 0 0 auto")
         self.assertEqual(line(self.out, "CWPWM"), "CWPWM 1 1 0")
         self.assertEqual(line(self.out, "TXPWM"), "TXPWM 1 0")
+        self.assertEqual(line(self.out, "SINCETX"), "SINCETX 4294967295 0 0")
+        self.assertEqual(line(self.out, "TXSINCE"), "TXSINCE 0")
         self.assertEqual(line(self.out, "TXSTUCKPWM"), "TXSTUCKPWM 1 0")
         # CONVERTER pwm / burst hold the level in idle, receive and transmit; auto returns to Burst Mode at once.
         self.assertEqual(line(self.out, "PWMFORCED"), "PWMFORCED 1 1 1 1 pwm")

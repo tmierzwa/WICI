@@ -32,6 +32,7 @@
 #include "board.h"
 #include "cmdargs.h"
 #include "console.h"
+#include "power.h"
 #if defined(WICI_RNS_CORE)
 #include "core_selftest.h"
 #include "identity.h"
@@ -774,6 +775,10 @@ void alarmLed(bool on) {
     digitalWrite(board::LED_ALARM, on ? HIGH : LOW);  // dioda alarmu aktywna stanem wysokim
 }
 
+#if defined(WICI_POWER_SENSE)
+void beginPower();  // pomiar zasilania, niżej
+#endif
+
 void beginPanel() {
     pinMode(board::LED_ALARM, OUTPUT);
     alarmLed(false);
@@ -782,6 +787,9 @@ void beginPanel() {
     pinMode(board::SW_SILENCE, INPUT);  // podciągnięcia na płytce
     pinMode(board::BTN_PREP, INPUT);
     platform::beginVtest();
+#if defined(WICI_POWER_SENSE)
+    beginPower();
+#endif
     silenceSwitchLevel = silenceSwitchState = silenceSwitch();
     silenceSwitchSince = millis();
     switchSilence = silenceSwitchState;  // położenie przełącznika przy starcie (przed radiem i stosem)
@@ -820,6 +828,7 @@ void pollPanel(uint32_t now) {
     in.alarmCause = alarmCause;
     in.silence = silenceAny();
     in.muted = screenModel.muted();
+    in.remind = screenHost.remindCells();
     in.unread = storeOk ? static_cast<uint32_t>(stationStore.unread()) : 0;
     const uint32_t ms = annunciation.poll(now, in);
     if (ms) beep(ms);
@@ -829,6 +838,54 @@ void pollPanel(uint32_t now) {
     }
     if (!ledManual && annunciation.led() != alarmLedOn) alarmLed(annunciation.led());
 }
+
+#if defined(WICI_POWER_SENSE)
+// Pomiar ogniw i 12 V (power.h): DIV_EN wysoki tylko od kroku ENABLE do odczytu, odczyt najwcześniej 20 ms później
+// i nie w okresie nadawania; wynik na ekranie (wiersz 3, STAN), w INFO i `status.power`, alarm wymien_ogniwa.
+power::Monitor powerMonitor;
+
+void beginPower() {
+    pinMode(board::BATTERY_DIV_EN, OUTPUT);
+    digitalWrite(board::BATTERY_DIV_EN, LOW);
+}
+
+void pollPower(uint32_t now) {
+    switch (powerMonitor.poll(now, radiocon::link().sinceTxMs(now))) {
+        case power::Step::ENABLE: digitalWrite(board::BATTERY_DIV_EN, HIGH); break;
+        case power::Step::DISABLE: digitalWrite(board::BATTERY_DIV_EN, LOW); break;
+        case power::Step::READ: {
+            const bool replace = powerMonitor.replaceCells(), first = !powerMonitor.measured();
+            const power::Source source = powerMonitor.source();
+            powerMonitor.sample(now, platform::pinMilliVolts(board::BATTERY_ADC), platform::pinMilliVolts(board::VTEST));
+            digitalWrite(board::BATTERY_DIV_EN, LOW);
+            char line[96];
+            if (first || source != powerMonitor.source()) {
+                snprintf(line, sizeof(line), "power source %s: 12v %u mV, cells %u mV", power::sourceName(powerMonitor.source()),
+                         powerMonitor.mainsMv(), powerMonitor.lastCellsMv());
+                bench.log(line);
+            }
+            if (replace != powerMonitor.replaceCells()) {
+                snprintf(line, sizeof(line), "cells %s: mean %u mV", powerMonitor.replaceCells() ? "low (wymien_ogniwa)" : "replaced",
+                         powerMonitor.cellsMv());
+                bench.log(line);
+            }
+            break;
+        }
+        case power::Step::NONE: break;
+    }
+    screenHost.setCellsLow(powerMonitor.replaceCells());
+}
+
+// POWER: stan pomiaru zasilania (power.h) do sprawdzenia ADC przy stole.
+void printPower() {
+    const power::Monitor& m = powerMonitor;
+    Serial.printf("{\"source\":\"%s\",\"mv_aa\":%u,\"mv_aa_last\":%u,\"mv_12v\":%u,\"samples\":%u,\"aborted\":%lu,"
+                  "\"alarm\":\"%s\",\"shutdown\":%s,\"next_ms\":%lu}\n",
+                  power::sourceName(m.source()), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), m.samples(),
+                  static_cast<unsigned long>(m.aborted()), m.replaceCells() ? "wymien_ogniwa" : "none", boolName(m.shutdown()),
+                  static_cast<unsigned long>(m.untilMs(millis())));
+}
+#endif
 
 #endif
 
@@ -854,8 +911,17 @@ void BenchHost::showCard(const char* fingerprint) {
     screenChanged();
 }
 
+#if defined(WICI_POWER_SENSE)
+// Pomiar płytki v2 (power.h): mv_aa to filtrowana średnia ogniw, mv_12v ostatni pomiar wejścia 12 V; przed
+// pierwszym pomiarem zera i źródło 12v.
+void BenchHost::power(char* out, size_t size) {
+    snprintf(out, size, "\"source\":\"%s\",\"mv_aa\":%u,\"mv_12v\":%u,\"alarm\":\"%s\"", power::sourceName(powerMonitor.source()),
+             powerMonitor.cellsMv(), powerMonitor.mainsMv(), powerMonitor.replaceCells() ? "wymien_ogniwa" : "none");
+}
+#else
 // Stanowisko jest zasilane z USB i nie mierzy napięć: źródło "12v", napięcia 0, bez alarmu energii.
 void BenchHost::power(char* out, size_t size) { snprintf(out, size, "\"source\":\"12v\",\"mv_aa\":0,\"mv_12v\":0,\"alarm\":\"none\""); }
+#endif
 
 void BenchHost::diag(char* out, size_t size) {
     const station::Stats& a = app.stats();
@@ -1193,8 +1259,16 @@ ui::Status screenStatus() {
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
     s.contactS = storeOk && m.contactKnown ? nowS - m.contactS : nowS;
+#if defined(WICI_POWER_SENSE)
+    s.mains12 = powerMonitor.source() == power::Source::MAINS12;
+    s.millivolts = powerMonitor.mainsMv();
+    s.cellsMeasured = powerMonitor.measured();
+    s.cellMillivolts = powerMonitor.cellsMv();
+    s.replaceCells = powerMonitor.replaceCells();
+#else
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
+#endif
     uint32_t oldest = 0;
     s.queued = storeOk ? static_cast<uint32_t>(stationStore.unsent(oldest)) : 0;
     s.queueAgeS = s.queued && nowS > oldest ? nowS - oldest : 0;
@@ -1407,13 +1481,22 @@ void printFram() {
 }
 
 void printInfo() {
-    // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
+    // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy (v2 mierzy, power.h).
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
     // Wiersz w częściach poniżej 256 znaków (Print::printf rdzenia nRF52, zob. printRns).
     const measure::LinkCounters& c = bench.link();
+#if defined(WICI_POWER_SENSE)
+    // v2: źródło i jego napięcie z pomiaru (power.h): AA ze średnią ogniw, 12V z pomiarem wejścia.
+    const bool cells = powerMonitor.source() == power::Source::CELLS;
+    const char* src = cells ? "AA" : "12V";
+    const unsigned mv = cells ? powerMonitor.cellsMv() : powerMonitor.mainsMv();
+#else
+    const char* src = "USB";
+    const unsigned mv = 0;
+#endif
     Serial.printf("{\"contract\":2,\"profile\":\"%s\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
-                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
-                  radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
+                  "\"src\":\"%s\",\"mv\":%u,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
+                  radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, src, mv, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
     // channel_jammed: alarm zagłuszania kanału (R3-43); stanowisko pokazuje go przy roocie (R3-44).
@@ -1541,6 +1624,9 @@ void printHelp() {
 #endif
 #if defined(WICI_STANDBY)
                  ",\"STANDBY\""
+#endif
+#if defined(WICI_POWER_SENSE)
+                 ",\"POWER\""
 #endif
 #if defined(WICI_RNS_CORE)
                  ",\"RNS SELFTEST\""
@@ -1903,6 +1989,9 @@ void handle(char* cmd) {
 #endif
 #if defined(WICI_STANDBY)
     else if (!strcmp(cmd, "STANDBY") && n == 0) printStandby();
+#endif
+#if defined(WICI_POWER_SENSE)
+    else if (!strcmp(cmd, "POWER") && n == 0) printPower();
 #endif
     else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
 #if !defined(WICI_HEADLESS)
@@ -2493,6 +2582,9 @@ void stationLoop() {
 #if defined(WICI_BOARD_N1)
     pollPanel(now);
 #endif
+#if defined(WICI_POWER_SENSE)
+    pollPower(now);
+#endif
     screenModel.tick(now);
     persistScreen();
     static uint32_t lastScreen = 0;
@@ -2656,6 +2748,9 @@ void standbyStep() {
     if (screenDirty || displayPending || (vcom && vcomFailed) || display.softwareVcom()) plan.block(standby::Reason::SCREEN);
     if (storeWork || rebootAtMs) plan.block(standby::Reason::WORK);
     plan.wakeIn(annunciation.untilChangeMs(now));
+#if defined(WICI_POWER_SENSE)
+    plan.wakeIn(powerMonitor.untilMs(now));
+#endif
     if (wiciActive && linkAuto && !bench.silence) plan.wakeAt(wiciNextBeaconMs);
     plan.wakeIn(standbyUsb.untilMs(now));
     if (vcom) plan.wakeIn(standbyVcom.untilEdgeMs(now));

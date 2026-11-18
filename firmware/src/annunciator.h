@@ -6,7 +6,8 @@
 // - ekran alarmu daje sygnał co 2 s do potwierdzenia OK; nowy alarm wraca z ekranem alarmu;
 // - nowa wiadomość daje jeden krótki sygnał, chyba że gospodarz wyciszył dźwięk (WYCISZ DŹWIĘK
 //   dotyczy tylko tego sygnału); cisza radiowa sama nie daje dźwięku.
-// Przypomnienie `wymien_ogniwa` co 15 min przyjdzie z pomiarem ogniw (płytka R02).
+// - potwierdzony alarm `wymien_ogniwa` przypomina sygnałem alarmu co 15 min, dopóki trwa przyczyna; pierwszy
+//   sygnał 15 min po potwierdzeniu (ekran alarmu sam daje sygnał co 2 s).
 // Bez zależności od Arduino; sprawdzany na komputerze w tests/test_firmware_host.py.
 #pragma once
 
@@ -19,12 +20,14 @@ constexpr uint32_t FLASH_EVERY_MS = 5000;
 constexpr uint32_t ALARM_BEEP_MS = 200;
 constexpr uint32_t ALARM_BEEP_EVERY_MS = 2000;
 constexpr uint32_t MESSAGE_BEEP_MS = 100;
+constexpr uint32_t REMIND_EVERY_MS = 15UL * 60 * 1000;
 
 struct Inputs {
     bool alarmScreen = false;  // ekran alarmu czeka na potwierdzenie OK
     bool alarmCause = false;   // przyczyna alarmu trwa (także po potwierdzeniu)
     bool silence = false;
     bool muted = false;        // WYCISZ DŹWIĘK
+    bool remind = false;       // potwierdzony alarm z przypomnieniem (wymien_ogniwa) trwa
     uint32_t unread = 0;       // nieprzeczytane wiadomości w skrzynce
 };
 
@@ -35,7 +38,7 @@ public:
     bool led() const { return led_; }        // stan diody po ostatnim poll()
     bool active() const { return active_; }  // jest powód do migania
     // Czas do najbliższej zmiany diody albo sygnału alarmu [ms] po ostatnim poll() (pętla czuwania, standby.h):
-    // koniec błysku, następny błysk, następny sygnał ekranu alarmu; 0xFFFFFFFF, gdy nic nie czeka.
+    // koniec błysku, następny błysk, następny sygnał ekranu alarmu albo przypomnienia; 0xFFFFFFFF, gdy nic nie czeka.
     uint32_t untilChangeMs(uint32_t nowMs) const;
 
 private:
@@ -46,6 +49,8 @@ private:
     uint32_t flashAt_ = 0;
     bool alarmBeeped_ = false;
     uint32_t alarmBeepAt_ = 0;
+    bool reminding_ = false;
+    uint32_t remindAt_ = 0;
     uint32_t unread_ = 0;
 };
 

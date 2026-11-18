@@ -134,9 +134,20 @@ void LinkDriver::begin() {
 }
 
 void LinkDriver::supply(bool transmitting) {
+    if (transmitting_ && !transmitting) {
+        txEndMs_ = millis();
+        txEver_ = true;
+    }
     transmitting_ = transmitting;
     pwm_ = converter_ == Converter::PWM || (converter_ == Converter::AUTO && transmitting);
     if (pinPwm_ >= 0) digitalWrite(static_cast<uint8_t>(pinPwm_), pwm_ ? HIGH : LOW);
+}
+
+uint32_t LinkDriver::sinceTxMs(uint32_t nowMs) const {
+    if (transmitting_) return 0;
+    if (!txEver_) return 0xFFFFFFFFu;
+    const int32_t since = static_cast<int32_t>(nowMs - txEndMs_);   // koniec zapisany po odczycie nowMs: 0
+    return since > 0 ? static_cast<uint32_t>(since) : 0;
 }
 
 void LinkDriver::setConverter(Converter mode) {

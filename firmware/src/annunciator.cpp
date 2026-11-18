@@ -26,6 +26,16 @@ uint32_t Annunciator::poll(uint32_t nowMs, const Inputs& in) {
     } else {
         alarmBeeped_ = false;
     }
+    // Przypomnienie: okres liczy się od potwierdzenia (zejścia ekranu alarmu), a ekran alarmu go zeruje.
+    if (!in.remind || in.alarmScreen) {
+        reminding_ = false;
+    } else if (!reminding_) {
+        reminding_ = true;
+        remindAt_ = nowMs;
+    } else if (nowMs - remindAt_ >= REMIND_EVERY_MS) {
+        remindAt_ = nowMs;
+        if (!beep) beep = ALARM_BEEP_MS;
+    }
     // Nowa wiadomość: przyrost nieprzeczytanych (po starcie bez sygnału za wcześniejsze). Sygnał
     // alarmu ma pierwszeństwo.
     if (started_ && in.unread > unread_ && !in.muted && !beep) beep = MESSAGE_BEEP_MS;
@@ -44,6 +54,7 @@ uint32_t Annunciator::untilChangeMs(uint32_t nowMs) const {
     if (led_) left(flashAt_, FLASH_MS);
     else if (active_) left(flashAt_, flashed_ ? FLASH_EVERY_MS : 0);
     if (alarmBeeped_) left(alarmBeepAt_, ALARM_BEEP_EVERY_MS);
+    if (reminding_) left(remindAt_, REMIND_EVERY_MS);
     return next;
 }
 
