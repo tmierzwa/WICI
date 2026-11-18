@@ -79,6 +79,8 @@ struct Status {
     uint32_t cellHours = 0;      // szacowany czas pracy z ogniw [h], najmniej 1
     bool replaceCells = false;   // wymien_ogniwa: wpis w PRZEKAZANIU ZMIANY do usunięcia przyczyny
     PowerOff powerOff = PowerOff::NONE;
+    bool mainsLow = false;       // odlaczone_12v: wpis w PRZEKAZANIU ZMIANY do usunięcia przyczyny
+    bool mainsHigh = false;      // za_wysokie_12v: jak wyżej
     uint32_t queued = 0;         // niewysłane zgłoszenia
     uint32_t queueAgeS = 0;      // wiek najstarszego [s]
     uint32_t newMessages = 0;
@@ -161,8 +163,10 @@ struct TestInfo {
 // kanal_zagluszony (druga przyczyna, ten sam alarm: AlarmInfo::jammed); MEMORY_FAULT:
 // blad_pamieci, magazyn nie wystartował albo zatrzymał się po błędzie zapisu FRAM; STACK_FAULT:
 // brak_lacznosci, stos sieciowy stacji nie działa; CELLS_LOW: wymien_ogniwa, średnia napięcia ogniw poniżej progu
-// (power.h), z przypomnieniem dźwiękiem co 15 min po potwierdzeniu.
-enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT, CELLS_LOW };
+// (power.h), z przypomnieniem dźwiękiem co 15 min po potwierdzeniu; MAINS_LOW, MAINS_HIGH: odlaczone_12v
+// i za_wysokie_12v przy pracy z ogniw (power.h), OK tylko wycisza.
+enum class AlarmKind : uint8_t { NONE, NO_CONFIRMATION, NO_READ, RADIO_FAULT, MEMORY_FAULT, STACK_FAULT, CELLS_LOW, MAINS_LOW,
+                                 MAINS_HIGH };
 struct AlarmInfo {
     AlarmKind kind = AlarmKind::NONE;
     bool jammed = false;     // RADIO_FAULT z powodu zagłuszania kanału

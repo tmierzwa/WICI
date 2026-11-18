@@ -55,9 +55,13 @@ public:
     // jammed: przyczyną jest zagłuszanie kanału (Bench::channelJammed), ten sam alarm co układ radiowy.
     void setRadioFault(bool fault, bool jammed = false) { radio_.set(fault); radioJammed_ = fault && jammed; }
     void setStackFault(bool fault) { stack_.set(fault); }
-    // wymien_ogniwa (power.h): alarm do potwierdzenia OK jak awarie, dioda do wymiany ogniw, a po potwierdzeniu
-    // przypomnienie dźwiękiem co 15 min (remindCells, annunciator.h).
-    void setCellsLow(bool low) { cells_.set(low); }
+    // Alarmy energii (power.h) jak awarie: ekran do potwierdzenia OK, dioda do usunięcia przyczyny. wymien_ogniwa po
+    // potwierdzeniu przypomina dźwiękiem co 15 min (remindCells, annunciator.h); odlaczone_12v i za_wysokie_12v nie.
+    void setPowerAlarms(bool cellsLow, bool mainsLow, bool mainsHigh) {
+        cells_.set(cellsLow);
+        mainsLow_.set(mainsLow);
+        mainsHigh_.set(mainsHigh);
+    }
     bool remindCells() const { return cells_.active && cells_.acked; }
     // Przeniesienie stacji w toku (usb-protocol.md, „Przeniesienie stacji”): magazyn celowo zamknięty do
     // końca albo wycofania przeniesienia, więc to nie awaria pamięci (bez blad_pamieci i bez alarmu).
@@ -65,7 +69,8 @@ public:
     // Przyczyna alarmu trwa (także po potwierdzeniu): awaria radia albo stosu, ogniwa do wymiany, magazyn
     // niedziałający albo alarm zgłoszenia. Alarmy zgłoszeń liczą się z indeksu w RAM, więc działają też po zatrzymaniu magazynu.
     bool alarmCause() const {
-        return radio_.active || stack_.active || cells_.active || (!store_.ok() && !migrationFrozen_) || station_.alarmCause();
+        return radio_.active || stack_.active || cells_.active || mainsLow_.active || mainsHigh_.active ||
+               (!store_.ok() && !migrationFrozen_) || station_.alarmCause();
     }
 
 private:
@@ -102,6 +107,8 @@ private:
     bool migrationFrozen_ = false;
     Fault stack_;    // stos startuje tylko przy włączeniu, więc też do restartu
     Fault cells_;    // ogniwa: przyczyna schodzi po wymianie (średnia ≥ power::CLEAR_MV)
+    Fault mainsLow_;   // odlaczone_12v: do powrotu 12 V albo odłączenia źródła
+    Fault mainsHigh_;  // za_wysokie_12v: do spadku poniżej progu OVP
     size_t count_ = 0;
     Entry list_[MAX_ITEMS];
     // Treść ostatnio otwartej pozycji: liczba osób i fraza zmieniają się tylko z nową rewizją,
