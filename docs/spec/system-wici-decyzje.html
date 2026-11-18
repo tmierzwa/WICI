@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.63</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.64</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.63</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.64</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -120,7 +120,7 @@
           <h4>WICI-INV-010</h4>
           <dl>
             <div><dt>Stan zastany</dt><dd>Bez pola <code>network</code> stacja używa Reticulum i nie używa koperty WICI. Stanowisko może uruchomić równoległy port Reticulum (<code>--reticulum-port</code>).</dd></div>
-            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Opis</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/laptop/wici/stanowisko/__main__.py">stanowisko</a>; <a href="#wici-dec-008">WICI-DEC-008</a> pozostawia Reticulum poza częścią normatywną. D21 jest zamknięta (<a href="#wici-dec-022">WICI-DEC-022</a>); Reticulum zostaje konfiguracją bez numerów, bez nowych funkcji, a automatyczny powrót na nie czeka na usunięcie (<a href="#wici-inv-048">WICI-INV-048</a>).</dd></div>
+            <div><dt>Źródło i luka</dt><dd><a href="transport.md">Opis</a>, <a href="../../firmware/src/station.cpp">stacja</a>, <a href="../../software/laptop/wici/stanowisko/__main__.py">stanowisko</a>; <a href="#wici-dec-008">WICI-DEC-008</a> pozostawia Reticulum poza częścią normatywną. D21 jest zamknięta (<a href="#wici-dec-022">WICI-DEC-022</a>); Reticulum zostaje konfiguracją bez numerów, bez nowych funkcji, a automatyczny powrót na nie jest usunięty (<a href="#wici-inv-048">WICI-INV-048</a>).</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-011">
@@ -387,8 +387,8 @@
         <article class="record" id="wici-inv-048">
           <h4>WICI-INV-048</h4>
           <dl>
-            <div><dt>Stan zastany</dt><dd><a href="../../software/laptop/wici/stanowisko/bearers.py"><code>bearers.py</code></a> przechodzi od razu z WICI-Link na Reticulum, gdy pierwszy nośnik nie może przenieść odpowiedzi.</dd></div>
-            <div><dt>Luka i termin</dt><dd>Automatyczny powrót jest niezgodny z <a href="system-wici-zasady.html#wici-zal-004">architekturą podstawową</a> i <a href="#wici-dec-008">zakresem normatywnym</a>. Warunek usunięcia, zamknięcie D21, jest spełniony od 17 listopada 2026 r. (<a href="#wici-dec-022">WICI-DEC-022</a>). Powrót jest nadal w <code>bearers.py</code> w <code>main</code>; usunięcie czeka na zmianę kodu.</dd></div>
+            <div><dt>Stan przed poprawką</dt><dd><a href="../../software/laptop/wici/stanowisko/bearers.py"><code>bearers.py</code></a> przechodził od razu z WICI-Link na Reticulum, gdy pierwszy nośnik nie mógł przenieść odpowiedzi, a po nieudanym dostarczeniu ponawiał drugim nośnikiem.</dd></div>
+            <div><dt>Stan</dt><dd>Zamknięta. <a href="https://github.com/tmierzwa/WICI/pull/234">PR #234</a>, scalony do <code>main</code> jako <code>bc5b91eb</code>, usuwa oba przejścia. Stanowisko nie zmienia nośnika samo: gdy wybrany nośnik nie może teraz nieść odpowiedzi (brak połączenia, stacja bez numeru, blokada po odzyskaniu) albo dostarczenie się nie udało, odpowiedź czeka w kolejce i następna próba idzie tym samym nośnikiem, bez osobnego błędu ani ostrzeżenia. Panel pokazuje oczekujące odpowiedzi i nośnik każdej stacji; na inny nośnik przenosi stację tylko dyżurny. Opisy w <a href="transport.md">transporcie</a> i <a href="stanowisko-osp.md">stanowisku</a> są uzgodnione w tym samym PR.</dd></div>
           </dl>
         </article>
         <article class="record" id="wici-inv-049">
@@ -544,7 +544,7 @@
           <tr id="wici-dec-002"><td>WICI-DEC-002</td><td><a href="system-wici-o-dokumencie.html#zatwierdzanie">Właściciel sam zatwierdza rozdziały</a> do próby albo jako normatywne; każda zmiana treści wymaga ponownego zatwierdzenia. <a href="system-wici-o-dokumencie.html#utrzymanie-zgodnosci-z-kodem">Kontrola repozytorium</a> działa od wersji normatywnej, bez ochrony gałęzi; ścieżki zostaną wtedy wybrane. Stan rozdziałów: <a href="#stan-zatwierdzen">tabela</a>.</td></tr>
           <tr id="wici-dec-004"><td>WICI-DEC-004</td><td><a href="system-wici-bezpieczenstwo.html#rozstrzygniecia-dec-004">Pięć rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa format tożsamości, odcięcie przejętej stacji i granice ochrony. Luki wdrożenia są w WICI-INV-022–025.</td></tr>
           <tr id="wici-dec-005"><td>WICI-DEC-005</td><td><a href="system-wici-sa1.html#rozstrzygniecia-dec-005">Dwanaście rozstrzygnięć właściciela projektu z 4 listopada 2026 r.</a> określa gwarancje przyjęcia, odzyskania, ponawiania i decyzji. Sposób przełączenia stacji na tożsamość zapasową zmienia <a href="#wici-dec-014">przegląd rozdziałów 1–2 WICI-DEC-014</a>. Nazwę wyniku skoku zmienia <a href="#wici-dec-015">WICI-DEC-015</a>. Zmiany kodu pozostają w WICI-INV-014–021 oraz <a href="#wici-inv-059">WICI-INV-059</a>–<a href="#wici-inv-060">060</a>; czasy i progi są parametrami profilu <a href="#wici-dec-006">WICI-DEC-006</a>.</td></tr>
-          <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum pozostaje do usunięcia; jego warunek, zamknięcie D21, jest spełniony (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
+          <tr id="wici-dec-008"><td>WICI-DEC-008</td><td><a href="system-wici-interfejsy.html#szew-nosnika">Cztery właściwości szwu</a> są normatywne, WICI-Link jest jedynym normatywnym nośnikiem. Interfejsy kodu i pozostałe nośniki są informacyjne. Automatyczny powrót do Reticulum jest usunięty; nośnik odpowiedzi zmienia tylko dyżurny (<a href="#wici-inv-048">WICI-INV-048</a>).</td></tr>
           <tr id="wici-dec-009"><td>WICI-DEC-009</td><td><a href="system-wici-siec.html#rozstrzygniecia-dec-009">Pięć rozstrzygnięć właściciela projektu z 5 listopada 2026 r.</a> określa drogi w dół, brak postępu, limit rozsyłania i sprawdzenie 3–15 skoków. Część wdrożenia, kalibracja i próby pozostają lukami (<a href="#wici-inv-036">WICI-INV-036</a>–<a href="#wici-inv-041">041</a>); lista <code>behind</code> u roota wymaga decyzji przy wdrożeniu. Emulator jest w <code>main</code> od <code>8968e2c</code>.</td></tr>
           <tr id="wici-dec-010"><td>WICI-DEC-010</td><td>Rozstrzygnięcia właściciela z 6 listopada 2026 r.: <a href="system-wici-sa1.html#typy-i-uklad">odrzucenie <code>0x00</code> w SA1</a>, <a href="system-wici-siec.html#warunek-d21-v1">wybór protokołu na v1 i kryteria prób</a> oraz <a href="#wici-inv-042">sprawdzenie kandydata przeciw zalewowi</a>. Wynik emulatora doprowadził do <a href="#wici-dec-013">wyboru reguły</a>; D21 zamyka <a href="#wici-dec-022">WICI-DEC-022</a>. Stan wdrożenia i pozostałe luki: <a href="#wici-inv-043">WICI-INV-043</a>–<a href="#wici-inv-045">045</a>.</td></tr>
           <tr id="wici-dec-011"><td>WICI-DEC-011</td><td>Rozstrzygnięcia właściciela z 8 listopada 2026 r.: <a href="system-wici-siec.html#trasy">przygotowany z góry zapasowy root</a>, <a href="system-wici-siec.html#plan-sieci">normatywne reguły całego planu</a>, <a href="system-wici-wyrob.html#przekaznik-terenowy">informacyjny profil przekaźnika terenowego</a> oraz zaczep dla późniejszego zarządzania planem przez sieć. Luki wdrożenia i prób: <a href="#wici-inv-049">WICI-INV-049</a>–<a href="#wici-inv-053">053</a>.</td></tr>
@@ -576,6 +576,7 @@
           <tr><td>0.61</td><td>Wyniki prób 12–17 na <code>l0</code> w rejestrze zgodności: rozsyłanie, zanik stacji, zimny start, przeniesienie, prąd Wio i alarm zagłuszania; WICI-INV-045 i WICI-INV-063 zaktualizowane.</td></tr>
           <tr><td>0.62</td><td>Zapisano WICI-DEC-022: D21 zamknięta 17 listopada 2026 r. na rzecz WICI-Link, z budżetem energii do potwierdzenia na v2. Stan D21 uzgodniony w rozdziałach, rejestrze zgodności i inwentaryzacji; warunek usunięcia automatycznego powrotu do Reticulum spełniony.</td></tr>
           <tr><td>0.63</td><td>Rozdział 1 opisuje wynik próby przy stole zamiast warunku; założenia o własnych protokołach WICI są potwierdzone, a Reticulum zostaje konfiguracją bez numerów.</td></tr>
+          <tr><td>0.64</td><td>WICI-INV-048 zamknięta: stanowisko nie zmienia nośnika odpowiedzi samo, a na inny nośnik przenosi stację tylko dyżurny (PR #234); rozdział 7 opisuje tę regułę.</td></tr>
           <tr><td>0.59</td><td>Zapisano WICI-DEC-020: język z FRAM po każdym starcie (rozdział 8), ostrzeżenie stanowiska o zgłoszeniach bez stanu 6 (nowe R3-45), licznik wybudzeń na v1 i czas wybudzenia na v2 (rozdział 6, rejestr zgodności); nowe WICI-INV-064. Rozdział 6: rozsyłanie awaryjne tylko w dół, BEACON stacji bez rangi i przekaźnika po zimnym starcie.</td></tr>
           <tr><td>0.58</td><td>Raport z prób przy stole w <code>main</code>: rejestr zgodności z wynikami (HACK i kolejki, cisza, zalew, współistnienie w kanale, zanik przekaźnika) i nowym wierszem alarmu zagłuszania; WICI-INV-061, 062 i 063 ze stanem wdrożeń w <code>main</code>; wiersz D21 w rozdziale 6 z odnośnikiem do raportu.</td></tr>
           <tr><td>0.57</td><td>Zapisano WICI-DEC-019: alarm zagłuszania kanału (nowe R3-43 i R3-44 w rozdziale 3), dłuższe odroczenia przed porzuceniem ramki jako kandydat do pomiaru, odrzucone krótsze okno wolnego kanału. Rozdział 6: szacunek zysku z ponownego CAD przed HACK i granica milknięcia sieci przy zagłuszaniu.</td></tr>
@@ -635,7 +636,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.63 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.64 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

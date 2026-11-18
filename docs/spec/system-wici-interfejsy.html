@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Interfejsy lokalne, granice zapisu i odtwarzanie stanu w systemie WICI.">
-  <title>Interfejsy i trwałość — Specyfikacja WICI 0.63</title>
+  <title>Interfejsy i trwałość — Specyfikacja WICI 0.64</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Interfejsy i trwałość</h1>
-      <p><span class="status">Projekt 0.63</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.64</span> · 9 listopada 2026 r.</p>
       <p>Rozdział określa, gdzie kończy się odpowiedzialność za dane i kiedy wolno potwierdzić ich zapis. Kontrakty bajtowe USB, KISS i SA1 pozostają w dokumentach źródłowych.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -63,7 +63,7 @@
         <li>Nośnik przenosi co najmniej <code>MIN_PAYLOAD</code> z <a href="../../firmware/src/envelope.h">formatu koperty</a> (153 B), tak aby dwie części pomieściły każdą wiadomość SA1.</li>
         <li>Wiadomość dochodząca kilkoma drogami jest przyjmowana raz.</li>
       </ol>
-      <p class="explain">WICI-Link jest jedynym nośnikiem normatywnym. <code>station::Services</code> i <code>bearers.Bearers</code> są interfejsami kodu, nie kontraktem specyfikacji. Reticulum, Meshtastic, MeshCore i IP wymagałyby osobnego opisu wymiany danych, tożsamości i potwierdzeń. Obecny automatyczny powrót z WICI-Link na Reticulum jest <a href="system-wici-decyzje.html#wici-inv-048">luką przejściową</a>.</p>
+      <p class="explain">WICI-Link jest jedynym nośnikiem normatywnym. <code>station::Services</code> i <code>bearers.Bearers</code> są interfejsami kodu, nie kontraktem specyfikacji. Reticulum, Meshtastic, MeshCore i IP wymagałyby osobnego opisu wymiany danych, tożsamości i potwierdzeń. Stanowisko nie zmienia nośnika samo: gdy wybrany nośnik nie może teraz nieść odpowiedzi albo dostarczenie się nie udało, odpowiedź czeka w kolejce i następna próba idzie tym samym nośnikiem. Na inny nośnik przenosi stację tylko dyżurny w panelu (<a href="system-wici-decyzje.html#wici-inv-048">WICI-INV-048</a>).</p>
       <p class="explain">Włączenie pozostałych nośników do części normatywnej wymagałoby opisania tożsamości i potwierdzeń dla ścieżek bez kodu lub przeznaczonych do usunięcia. Pominięcie szwu zostawiłoby bez zapisu niezależność SA1 i koperty od nośnika.</p>
     </section>
 
@@ -149,7 +149,7 @@
       </table>
       <p>Pomiar ma wykazać, czy <code>fsync</code> dziennika przyjęć na docelowym USB SSD mieści się w 80 ms potrzebnych do HACK roota. D21 zmierzyła HACK roota do 117,5 ms po końcu DATA z zapisem na dysku laptopa użytego przy stole, nie na docelowym USB SSD, więc tego nie rozstrzyga. <a href="system-wici-decyzje.html#wici-dec-008">Zakres nośników</a> jest rozstrzygnięty; liczbowe parametry profilu pozostają otwarte (<a href="system-wici-decyzje.html#wici-dec-006">WICI-DEC-006</a>). Próby zaniku zasilania i odtwarzania są opisane w <a href="odbior.md#próby">planie odbioru</a>.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.63 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.64 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
