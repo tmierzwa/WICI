@@ -4,6 +4,7 @@
 #include "platform.h"
 
 #include <math.h>
+#include <string.h>
 
 namespace sx1262 {
 
@@ -107,9 +108,40 @@ void setBits(Radio& radio, uint16_t address, uint8_t bits) { radio.writeReg(addr
 
 }  // namespace
 
+const char* converterName(Converter mode) {
+    switch (mode) {
+        case Converter::PWM: return "pwm";
+        case Converter::BURST: return "burst";
+        default: return "auto";
+    }
+}
+
+bool parseConverter(const char* word, Converter& mode) {
+    const Converter modes[] = {Converter::AUTO, Converter::PWM, Converter::BURST};
+    for (Converter m : modes)
+        if (!strcmp(word, converterName(m))) {
+            mode = m;
+            return true;
+        }
+    return false;
+}
+
 void LinkDriver::begin() {
     pinMode(pinRxen_, OUTPUT);
     rxen(false);
+    if (pinPwm_ >= 0) pinMode(static_cast<uint8_t>(pinPwm_), OUTPUT);
+    supply(false);
+}
+
+void LinkDriver::supply(bool transmitting) {
+    transmitting_ = transmitting;
+    pwm_ = converter_ == Converter::PWM || (converter_ == Converter::AUTO && transmitting);
+    if (pinPwm_ >= 0) digitalWrite(static_cast<uint8_t>(pinPwm_), pwm_ ? HIGH : LOW);
+}
+
+void LinkDriver::setConverter(Converter mode) {
+    converter_ = mode;
+    supply(transmitting_);
 }
 
 void LinkDriver::rxen(bool on) {
@@ -119,6 +151,7 @@ void LinkDriver::rxen(bool on) {
 
 bool LinkDriver::toStandby() {
     rxen(false);  // RXEN niski w TX i spoczynku (polaczenia-MCU-L0.csv)
+    supply(false);  // koniec nadawania (także przerwanego): przetwornica wraca do Burst Mode
     rxActive_ = false;
     inFrame_ = false;
     return radio_.command(OP_SET_STANDBY, &STDBY_XOSC, 1);
@@ -126,6 +159,7 @@ bool LinkDriver::toStandby() {
 
 void LinkDriver::toStandbyRc() {
     rxen(false);
+    supply(false);
     rxActive_ = false;
     inFrame_ = false;
     radio_.command(OP_SET_STANDBY, &STDBY_RC, 1);
@@ -236,6 +270,7 @@ void LinkDriver::idle() {
 
 bool LinkDriver::startCw() {
     idle();
+    supply(true);  // PWM przed nadawaniem: wzmacniacz bierze więcej, niż daje Burst Mode
     radio_.command(OP_SET_TX_CW);  // DIO2 przełącza tor na nadawanie
     return radio_.status().mode() == MODE_TX;
 }
@@ -307,6 +342,7 @@ bool LinkDriver::sendPrepared(radiolink::TxTiming* timing) {
     const uint32_t t0 = micros();
     bool sent = false;
     const uint8_t noTimeout[3] = {0, 0, 0};  // limit czasu pilnuje program
+    supply(true);  // PWM przed SetTx: wzmacniacz bierze więcej, niż daje Burst Mode
     if (radio_.clearIrq(IRQ_TX_DONE | IRQ_TIMEOUT) && radio_.command(OP_SET_TX, noTimeout, 3)) {
         const uint32_t start = millis();
         const uint32_t limitMs = lora::frameAirMs(txLength_) + TX_MARGIN_MS;
@@ -324,6 +360,7 @@ bool LinkDriver::sendPrepared(radiolink::TxTiming* timing) {
     }
     // Po TxDone układ wraca sam do STDBY_XOSC (tryb powrotu); inaczej przerwanie nadawania.
     if (!sent || radio_.status().mode() != MODE_STBY_XOSC) toStandby();
+    supply(false);
     if (timing) {
         timing->valid = false;  // bez wyjścia „pakiet w powietrzu”: tylko czas całkowity
         timing->totalUs = micros() - t0;

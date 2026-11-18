@@ -3,7 +3,8 @@
 // Polecenia jak na stanowiskach A i B, z różnicami układu: RADIO podaje tekst wersji z rejestru 0x0320,
 // tryb z bajtu statusu, błędy układu i stany BUSY, DIO1, RXEN; CONFIG i VERIFY dotyczą profilu LoRa
 // (pole p1_ok w INFO i RADIO oznacza tu zapisany i zweryfikowany profil LoRa); REG i REGW mają adres
-// 16-bitowy; SLEEP sprawdza zachowanie trybu Rx Boosted po uśpieniu. Bez CAL i SDN.
+// 16-bitowy; SLEEP sprawdza zachowanie trybu Rx Boosted po uśpieniu. Bez CAL i SDN. Na płytce v2 sterownik
+// przełącza przetwornicę 3,3 V w PWM na czas nadawania (board::CONVERTER_PWM), a CONVERTER wymusza tryb do pomiarów.
 // Odbiór w tle (plan interfejsu LoRa, L6): zadanie odbioru (platform::startRxTask, rdzeń 0) obsługuje układ
 // zawsze, gdy sterownik jest w odbiorze (stos i polecenia pomiarowe), a pętla czyta ramki z pierścienia.
 // Pętla dotyka układu tylko pod blokadą operacji radia: Bench przez radiolink::LockedDriver, polecenia,
@@ -31,7 +32,11 @@ const int8_t TX_POWER_DBM = lora::TX_POWER_DBM;
 namespace {
 
 sx1262::Radio chip(platform::bus(), board::RADIO_CS, board::RADIO_RESET, board::RADIO_BUSY, board::SPI_HZ);
+#if defined(WICI_V2)
+sx1262::LinkDriver driver(chip, board::RADIO_RXEN, board::CONVERTER_PWM);
+#else
 sx1262::LinkDriver driver(chip, board::RADIO_RXEN);
+#endif
 radiolink::LockedDriver lockedLink(driver, measure::RADIO_LOCK_WAIT_MS);  // widok dla Bench (pętla)
 measure::Bench* bench = nullptr;
 bool radioOk = false;
@@ -42,7 +47,11 @@ rxwatch::Watch watch;
 bool stalledWas = false;
 uint32_t modeLostCount = 0;
 // Polecenia układu (handle): przy blokadzie radia niedostępnej odpowiedź z błędem zamiast obsługi.
-const char* const COMMANDS[] = {"RADIO", "RESET", "CONFIG", "VERIFY", "FREQ", "IDLE", "RSSI", "STATE", "REG", "REGW", "SLEEP"};
+const char* const COMMANDS[] = {"RADIO", "RESET", "CONFIG", "VERIFY", "FREQ", "IDLE", "RSSI", "STATE", "REG", "REGW", "SLEEP",
+#if defined(WICI_V2)
+                                "CONVERTER",
+#endif
+};
 bool configured = false;  // profil LoRa zapisany i zweryfikowany odczytem
 bool modified = false;    // rejestr zmieniony poleceniem REGW (tylko w trybie przygotowania; CONFIG cofa)
 
@@ -50,16 +59,24 @@ using cmdargs::boolName;
 
 void identify() { radioOk = chip.identify().sx126x; }
 
+// Tryb przetwornicy i bieżący poziom PWM_SYNC (v2): pola RADIO albo odpowiedź na CONVERTER.
+void printConverter(const char* lead) {
+    Serial.printf("%s\"converter\":\"%s\",\"pwm_sync\":%s", lead, sx1262::converterName(driver.converter()),
+                  boolName(driver.pwmHigh()));
+}
+
 void printRadio() {
     const sx1262::Identity id = chip.identify();
     radioOk = id.sx126x;
     const sx1262::Status st = chip.status();
     const uint16_t errors = chip.deviceErrors();
     Serial.printf("{\"radio\":\"SX1262\",\"version\":\"%s\",\"status\":\"0x%02X\",\"state\":\"%s\",\"device_errors\":\"0x%04X\","
-                  "\"busy\":%s,\"dio1\":%d,\"rxen\":%s,\"irq_seen\":\"0x%04X\",\"busy_timeouts\":%lu,\"p1_ok\":%s,\"ok\":%s}\n",
+                  "\"busy\":%s,\"dio1\":%d,\"rxen\":%s,\"irq_seen\":\"0x%04X\",\"busy_timeouts\":%lu,\"p1_ok\":%s,\"ok\":%s",
                   id.version, st.raw, sx1262::modeName(st.mode()), errors, boolName(chip.busy()), digitalRead(board::RADIO_DIO1),
                   boolName(driver.rxenHigh()), driver.irqSeen(), static_cast<unsigned long>(chip.busyTimeouts()), boolName(configured),
                   boolName(radioOk));
+    if (driver.hasConverter()) printConverter(",");
+    Serial.println("}");
 }
 
 void printVerify(const char* step, const sx1262::VerifyResult& result) {
@@ -153,6 +170,11 @@ bool check() {
     if (fault && !lockFault) bench->log("radio lock timeout: radio fault until the next check");
     lockFault = fault;
     if (!lock.held()) return false;
+    // Wymuszony tryb przetwornicy (CONVERTER) obowiązuje tylko w trybie przygotowania.
+    if (!bench->prep && driver.converter() != sx1262::Converter::AUTO) {
+        driver.setConverter(sx1262::Converter::AUTO);
+        bench->log("converter back to auto: preparation mode off");
+    }
     identify();
     if (!radioOk) { lost = lost || configured; configured = false; return false; }
     if (configured ? !modified && driver.profileLost() : lost) {
@@ -287,6 +309,26 @@ bool handleLocked(const char* cmd, char* words[], size_t n) {
         modified = true;
         Serial.printf("{\"reg\":\"0x%04X\",\"written\":\"0x%02X\",\"value\":\"0x%02X\"}\n", static_cast<unsigned>(address),
                       static_cast<unsigned>(value), chip.readReg(static_cast<uint16_t>(address)));
+#if defined(WICI_V2)
+    } else if (!strcmp(cmd, "CONVERTER") && n <= 1) {
+        // Tryb przetwornicy 3,3 V (LTC3115-1): auto = PWM tylko na czas nadawania (zwykła praca), pwm i burst na
+        // stałe do pomiarów tętnień, sprawności i spadku 3,3 V. Tylko w trybie przygotowania: po wyjściu z niego
+        // kontrola radia (check, co 10 s) przywraca auto, tak jak restart.
+        if (n == 1) {
+            sx1262::Converter mode = sx1262::Converter::AUTO;
+            if (!sx1262::parseConverter(words[0], mode)) {
+                Serial.println("{\"error\":\"CONVERTER [auto|pwm|burst]\"}");
+                return true;
+            }
+            if (!bench->prep && mode != sx1262::Converter::AUTO) {
+                Serial.println("{\"error\":\"preparation mode off: PREP 1\"}");
+                return true;
+            }
+            driver.setConverter(mode);
+        }
+        printConverter("{");
+        Serial.println("}");
+#endif
     } else if (!strcmp(cmd, "SLEEP")) {
         // Uśpienie z ciepłym startem i wybudzenie: Rx Boosted (0x08AC = 0x96) ma przetrwać dzięki liście
         // rejestrów zachowywanych (radio.md, profil LoRa). Odbiór wraca poleceniem RX.
@@ -302,7 +344,11 @@ bool handleLocked(const char* cmd, char* words[], size_t n) {
 }  // namespace
 
 const char* helpCommands() {
-    return ",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <0000-FFFF>\",\"REGW <0000-FFFF> <00-FF>\",\"SLEEP\"";
+    return ",\"RADIO\",\"RESET\",\"CONFIG\",\"VERIFY\",\"FREQ\",\"IDLE\",\"RSSI\",\"STATE\",\"REG <0000-FFFF>\",\"REGW <0000-FFFF> <00-FF>\",\"SLEEP\""
+#if defined(WICI_V2)
+           ",\"CONVERTER [auto|pwm|burst]\""
+#endif
+        ;
 }
 
 }  // namespace radiocon
