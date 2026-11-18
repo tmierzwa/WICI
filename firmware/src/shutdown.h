@@ -13,7 +13,7 @@
 // - KILLED: KILL trzymany. Sterownik ignoruje KILL przez 304–720 ms po włączeniu, a trzymany KILL działa po tym
 //   oknie sam, więc start z wyczerpanymi ogniwami też kończy się wyłączeniem.
 // - FAILED: zasilanie nie zgasło w FAIL_MS. Stacja zostaje wyłączona programowo (stan zapisany, radio wyłączone),
-//   ekran pokazuje `mozna_wyjac` i `kill_nie_zadzialal`, a KILL jest ponawiany co RETRY_MS (puszczony na RELEASE_MS
+//   ekran pokazuje `mozna_wyjac` i `nie_wylaczona`, a KILL jest ponawiany co RETRY_MS (puszczony na RELEASE_MS
 //   i znowu ściągnięty), z jednym wpisem w dzienniku. Bez restartu: restart włączałby stację wbrew wyłącznikowi,
 //   a przy 4,0 V na ogniwach zapętlałby się i dalej rozładowywał ogniwa (decyzja właściciela 2026-11-18).
 // Wartości SHOW_MS, FAIL_MS i RETRY_MS przyjął właściciel 2026-11-18; do sprawdzenia na płytce.
