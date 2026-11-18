@@ -33,6 +33,7 @@
 #include "cmdargs.h"
 #include "console.h"
 #include "power.h"
+#include "shutdown.h"
 #if defined(WICI_RNS_CORE)
 #include "core_selftest.h"
 #include "identity.h"
@@ -778,6 +779,9 @@ void alarmLed(bool on) {
 #if defined(WICI_POWER_SENSE)
 void beginPower();  // pomiar zasilania, niżej
 #endif
+#if defined(WICI_POWER_OFF)
+void beginShutdown();
+#endif
 
 void beginPanel() {
     pinMode(board::LED_ALARM, OUTPUT);
@@ -789,6 +793,9 @@ void beginPanel() {
     platform::beginVtest();
 #if defined(WICI_POWER_SENSE)
     beginPower();
+#endif
+#if defined(WICI_POWER_OFF)
+    beginShutdown();
 #endif
     silenceSwitchLevel = silenceSwitchState = silenceSwitch();
     silenceSwitchSince = millis();
@@ -884,6 +891,75 @@ void printPower() {
                   power::sourceName(m.source()), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), m.samples(),
                   static_cast<unsigned long>(m.aborted()), m.replaceCells() ? "wymien_ogniwa" : "none", boolName(m.shutdown()),
                   static_cast<unsigned long>(m.untilMs(millis())));
+}
+#endif
+
+#if defined(WICI_POWER_OFF)
+#if !defined(WICI_POWER_SENSE)
+#error "WICI_POWER_OFF wymaga WICI_POWER_SENSE (wyłączenie przy wyczerpanych ogniwach)"
+#endif
+// Wyłączanie (shutdown.h): INT 2 s albo wyczerpane ogniwa. Stacja zatrzymuje stos i radio, zapisuje tablice stosu
+// i zegar dziennika, pokazuje mozna_wyjac i ściąga KILL; przy nieudanym KILL zostaje wyłączona programowo.
+shutdown::Sequence powerOff;
+
+void beginShutdown() {
+    pinMode(board::POWER_KILL, OUTPUT);
+    digitalWrite(board::POWER_KILL, LOW);   // R72 trzyma Q11 wyłączony do tej chwili
+    pinMode(board::POWER_INT, INPUT);       // R47 10 kΩ do 3,3 V
+}
+
+ui::PowerOff powerOffScreen() {
+    switch (powerOff.phase()) {
+        case shutdown::Phase::RUN: return ui::PowerOff::NONE;
+        case shutdown::Phase::SAVING: return ui::PowerOff::SAVING;
+        case shutdown::Phase::FAILED: return ui::PowerOff::FAILED;
+        default: return ui::PowerOff::REMOVABLE;
+    }
+}
+
+// Zapis przed odcięciem: pętla już nie woła stosu, magazynu ani radia, więc żaden zapis nie jest w toku.
+void stopForShutdown() {
+    if (rnsOk) {
+        rnsnode::persist();   // tablice stosu w FRAM jak przed restartem
+        rnsnode::halt();      // stos staje, interfejs nie nadaje
+    }
+    if (journalOk && !destroyed && !stationJournal.writeClock(counterS())) journalFailed();
+    platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
+    radiocon::setRxArmed(false);
+    radiocon::link().idle();   // koniec odbioru i nadawania
+}
+
+// Wołane na początku obiegu pętli; true: stacja się wyłącza i obieg kończy się tu (tylko ekran i KILL).
+bool pollShutdown(uint32_t now) {
+    const shutdown::Phase before = powerOff.phase();
+    const bool changed = powerOff.poll(now, digitalRead(board::POWER_INT) == LOW, powerMonitor.shutdown());
+    if (!powerOff.active()) return false;
+    if (changed) {
+        if (before == shutdown::Phase::RUN) {
+            char line[64];
+            snprintf(line, sizeof(line), "shutdown: %s, cells %u mV", shutdown::reasonName(powerOff.reason()), powerMonitor.cellsMv());
+            bench.log(line);
+            screenChanged();
+            updateScreen(true);   // wylaczanie na ekranie przed zapisem
+            stopForShutdown();
+            powerOff.saved(millis());
+        }
+        digitalWrite(board::POWER_KILL, powerOff.kill() ? HIGH : LOW);
+        if (powerOff.failedLog()) {
+            bench.log("shutdown: KILL had no effect, station stays off in software, KILL retried");
+            powerOff.logged();
+        }
+        screenChanged();
+    }
+    if (screenDirty) {
+        screenDirty = false;
+        updateScreen(false);
+    }
+#if !defined(WICI_HEADLESS)
+    displayPending = display.refresh() > 0;
+    display.maintain(now);
+#endif
+    return true;
 }
 #endif
 
@@ -1268,6 +1344,9 @@ ui::Status screenStatus() {
 #else
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
+#endif
+#if defined(WICI_POWER_OFF)
+    s.powerOff = powerOffScreen();
 #endif
     uint32_t oldest = 0;
     s.queued = storeOk ? static_cast<uint32_t>(stationStore.unsent(oldest)) : 0;
@@ -2473,6 +2552,9 @@ void stationLoop() {
     platform::feedWatchdog();
     platform::uptimeMs();  // licznik 64-bitowy liczy przejścia przez zero przy każdym obiegu
     bench.debtRemainingMs();   // odczekany dług gaśnie, zanim millis() przejdzie przez 2^31 ms
+#if defined(WICI_POWER_OFF)
+    if (pollShutdown(now)) return;
+#endif
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
@@ -2750,6 +2832,9 @@ void standbyStep() {
     plan.wakeIn(annunciation.untilChangeMs(now));
 #if defined(WICI_POWER_SENSE)
     plan.wakeIn(powerMonitor.untilMs(now));
+#endif
+#if defined(WICI_POWER_OFF)
+    plan.wakeIn(powerOff.untilMs(now));   // przytrzymanie wyłącznika, mozna_wyjac, ponowienie KILL
 #endif
     if (wiciActive && linkAuto && !bench.silence) plan.wakeAt(wiciNextBeaconMs);
     plan.wakeIn(standbyUsb.untilMs(now));
