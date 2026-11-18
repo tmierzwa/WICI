@@ -930,6 +930,12 @@ void pollPower(uint32_t now) {
                          powerMonitor.cellsMv());
                 bench.log(line);
             }
+            // Zdarzenie `power` dla laptopa (usb-protocol.md): zmiana źródła albo alarmu energii. Pierwszy pomiar daje
+            // zdarzenie tylko wtedy, gdy różni się od stanu przyjętego przed nim (12 V bez alarmu).
+            if ((source != powerMonitor.source() || replace != powerMonitor.replaceCells()) && storeOk && !nodeRole() &&
+                !app.powerEvent(powerMonitor.source() == power::Source::CELLS, static_cast<uint8_t>(powerMonitor.alarm()),
+                                powerMonitor.cellsMv(), powerMonitor.mainsMv()))
+                bench.log("power event: store write failed");
             break;
         }
         case power::Step::NONE: break;
@@ -944,7 +950,7 @@ void printPower() {
     Serial.printf("{\"source\":\"%s\",\"mv_aa\":%u,\"mv_aa_last\":%u,\"mv_12v\":%u,\"samples\":%u,\"aborted\":%lu,"
                   "\"alarm\":\"%s\",\"shutdown\":%s,\"next_ms\":%lu,",
                   power::sourceName(m.source()), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), m.samples(),
-                  static_cast<unsigned long>(m.aborted()), m.replaceCells() ? "wymien_ogniwa" : "none", boolName(m.shutdown()),
+                  static_cast<unsigned long>(m.aborted()), power::alarmName(m.alarm()), boolName(m.shutdown()),
                   static_cast<unsigned long>(m.untilMs(millis())));
     // Szacunek godzin (cells.h): hours 0 bez średniego poboru z pracy z ogniw.
     Serial.printf("\"hours\":%lu,\"used_mwh\":%lu,\"capacity_mwh\":%lu,\"avg_mw\":%lu,\"new_sets\":%lu}\n",
@@ -1052,7 +1058,7 @@ void BenchHost::showCard(const char* fingerprint) {
 // pierwszym pomiarem zera i źródło 12v.
 void BenchHost::power(char* out, size_t size) {
     snprintf(out, size, "\"source\":\"%s\",\"mv_aa\":%u,\"mv_12v\":%u,\"alarm\":\"%s\"", power::sourceName(powerMonitor.source()),
-             powerMonitor.cellsMv(), powerMonitor.mainsMv(), powerMonitor.replaceCells() ? "wymien_ogniwa" : "none");
+             powerMonitor.cellsMv(), powerMonitor.mainsMv(), power::alarmName(powerMonitor.alarm()));
 }
 #else
 // Stanowisko jest zasilane z USB i nie mierzy napięć: źródło "12v", napięcia 0, bez alarmu energii.

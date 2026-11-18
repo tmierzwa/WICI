@@ -851,6 +851,9 @@ int world() {
             unsigned ok = 0;
             for (unsigned i = 0; i < strtoul(arg, nullptr, 10); ++i) ok += w.app->stationEvent(store::PREP, i);
             printf("sevents %u\n", ok);
+        } else if (!strcmp(cmd, "powerev")) {   // źródło (1: ogniwa), kod alarmu, mV ogniw, mV 12 V (main.cpp)
+            sscanf(arg, "%u %u %u %u", &a, &b, &c, &d);
+            printf("powerev %d\n", w.app->powerEvent(a != 0, static_cast<uint8_t>(b), static_cast<uint16_t>(c), static_cast<uint16_t>(d)));
         } else if (!strcmp(cmd, "radioev")) {
             const bool ok = w.app->radioEvent(atoi(arg) != 0);
             printf("radioev %d\n", ok);
@@ -2812,6 +2815,19 @@ class HostUnitTests(unittest.TestCase):
         # nonce: jeden TEST; krótki numer już w pierwszej odpowiedzi (ponowienie liczy go z id).
         self.assertEqual((r[15]["id"], r[15]["number"]), (r[16]["id"], r[16]["number"]))
         self.assertIn("log usb submit", out)
+
+    def test_usb_power_event(self):
+        # usb-protocol.md, zdarzenie `power`: źródło, napięcia i alarm energii przy zmianie źródła albo alarmu (main.cpp
+        # po pomiarze, power.h). Wpis pierścienia 24 B niesie źródło i kod alarmu w `a`, napięcia w `value`.
+        u = self.Lines()
+        epoch = self.replies(self.world(["connect"]))[0]["epoch"]
+        out = self.world([self.CONFIG, "powerev 1 0 5900 9800", "powerev 1 1 4380 9700", "powerev 0 1 4390 13200",
+                          "powerev 0 3 0 65535", "connect", u("sync", boot="b", epoch=epoch, cursor=0), "ms 1000", "upoll"])
+        self.assertEqual(self.find(out, "powerev "), ["powerev 1"] * 4)
+        events = [e for e in self.replies(out) if e["type"] == "event" and e["kind"] == "power"]
+        self.assertEqual([(e["source"], e["mv_aa"], e["mv_12v"], e["alarm"]) for e in events],
+                         [("aa", 5900, 9800, "none"), ("aa", 4380, 9700, "wymien_ogniwa"), ("12v", 4390, 13200, "wymien_ogniwa"),
+                          ("12v", 0, 65535, "za_wysokie_12v")])
 
     def test_usb_sync_events_window_resend_and_snapshot(self):
         x = self.rid(1234)

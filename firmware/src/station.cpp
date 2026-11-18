@@ -711,6 +711,14 @@ bool Station::stationEvent(store::StationWhat what, uint32_t detail) {
     return note(e);
 }
 
+bool Station::powerEvent(bool cells, uint8_t alarm, uint16_t mvAa, uint16_t mv12) {
+    store::Event e;
+    e.kind = store::EventKind::POWER;
+    e.a = static_cast<uint8_t>((cells ? store::POWER_CELLS : 0) | ((alarm << store::POWER_ALARM_SHIFT) & store::POWER_ALARM_MASK));
+    e.value = mvAa | static_cast<uint32_t>(mv12) << 16;
+    return note(e);
+}
+
 bool Station::setSilence(bool on, const uint8_t* exception, bool switchOn) {
     store::Tx tx(store_);
     store::Meta& m = tx.meta();

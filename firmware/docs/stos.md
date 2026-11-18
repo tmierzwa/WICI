@@ -288,7 +288,7 @@ RAM statyczna portu nie obejmuje jego puli: na nRF52840 pula TLSF (106 496 B) i 
 - Uwierzytelnienie nadawcy (na rdzeniu od etapu rdzenia 3): zaufanie do odbiorcy po kluczu z karty zamiast adresu w treści koperty; rozpoznanie ruchu od odbiorcy po nadawcy.
 - Szyfrowanie rekordów FRAM (AEAD, generacja klucza w nagłówku gniazda, F99) z kluczem KEK w chronionej pamięci MCU, bezpieczny rozruch; PRZENIEŚ STACJĘ (`migrate`, `export`, `import`) i aktualizacja oprogramowania czekają na te klucze.
 - Pamięć: LXMF dokłada router i bufor wiadomości; budżet z tabeli wyżej (D14).
-- Energia i ekran zasilania: zdarzenie `power` w protokole USB i alarmy 12 V (`odlaczone_12v`, `za_wysokie_12v`). Pomiar ogniw i 12 V, szacunek godzin pracy z ogniw, `status.power` i `wymien_ogniwa` ma obraz `v2` ([pomiar](prototyp-l0-i-xiao.md#pomiar-ogniw-i-12-v)).
+- Energia i ekran zasilania: alarmy 12 V (`odlaczone_12v`, `za_wysokie_12v`). Pomiar ogniw i 12 V, szacunek godzin pracy z ogniw, `status.power`, zdarzenie `power` i `wymien_ogniwa` ma obraz `v2` ([pomiar](prototyp-l0-i-xiao.md#pomiar-ogniw-i-12-v)).
 
 ## Rozmiar i wydajność
 
