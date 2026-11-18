@@ -838,6 +838,7 @@ int main() {
     printf("CW %d %s %d %d\n", cw, link.stateName(), chip.rxenAtTx, indexOf(sx1262::OP_SET_TX_CW) >= 0);
     const bool cwPwm = chip.pwm;
     const uint32_t sinceInCw = link.sinceTxMs(millis());   // w trakcie nadawania: 0
+    fakeUs += 250000;   // nośna przez 250 ms (łączny czas nadawania niżej)
     link.stopCw();
     const uint32_t cwEnd = millis();
     fakeUs += 1500000;
@@ -858,6 +859,8 @@ int main() {
     // PWM przy SetTx ramki, po TxDone (powrót sam do STDBY_XOSC) znów Burst Mode.
     printf("TXPWM %d %d\n", chip.pwmAtTx, chip.pwm);
     printf("TXSINCE %lu\n", static_cast<unsigned long>(link.sinceTxMs(millis())));   // ramka skończona przed chwilą
+    // Łączny czas nadawania (bilans energii ogniw, cells.h): nośna 250 ms i ramka 20 B.
+    printf("TXON %d\n", link.txOnMs() >= 250 && link.txOnMs() < 260);   // nośna 250 ms i ramka modelu (chwila)
     printf("TXLEN %d %d\n", link.transmit(frame, 0, false, nullptr), link.transmit(frame, 256, false, nullptr));
     chip.holdTx = true;
     const uint32_t before = millis();
@@ -2640,6 +2643,7 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "TXPWM"), "TXPWM 1 0")
         self.assertEqual(line(self.out, "SINCETX"), "SINCETX 4294967295 0 0")
         self.assertEqual(line(self.out, "TXSINCE"), "TXSINCE 0")
+        self.assertEqual(line(self.out, "TXON"), "TXON 1")
         self.assertEqual(line(self.out, "TXSTUCKPWM"), "TXSTUCKPWM 1 0")
         # CONVERTER pwm / burst hold the level in idle, receive and transmit; auto returns to Burst Mode at once.
         self.assertEqual(line(self.out, "PWMFORCED"), "PWMFORCED 1 1 1 1 pwm")

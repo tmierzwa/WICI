@@ -137,6 +137,9 @@ void LinkDriver::supply(bool transmitting) {
     if (transmitting_ && !transmitting) {
         txEndMs_ = millis();
         txEver_ = true;
+        txOnMs_ = txOnMs_ + (txEndMs_ - txStartMs_);
+    } else if (!transmitting_ && transmitting) {
+        txStartMs_ = millis();
     }
     transmitting_ = transmitting;
     pwm_ = converter_ == Converter::PWM || (converter_ == Converter::AUTO && transmitting);

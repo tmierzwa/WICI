@@ -70,7 +70,9 @@ constexpr size_t TEST_NONCES = 8;
 constexpr size_t REVISION_TIMES = 8;                   // COMMIT niepotwierdzonych rewizji (alarm)
 constexpr uint32_t WRITE_BLOCK = 1024;                 // rezerwacja numerów zapisu
 static_assert(RING_BASE + RING_BLOCKS * SLOT == STORE_END, "pierścień zdarzeń kończy magazyny");
-static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= REGISTER_BASE, "zbiór powtórzeń przed rejestrem");
+static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= journal::CELLS_BASE &&
+                  journal::CELLS_BASE + journal::CELLS_SLOTS * journal::SMALL_RECORD <= REGISTER_BASE,
+              "licznik energii ogniw w luce między zbiorem powtórzeń a rejestrem");
 static_assert(CONFIG_BASE + 2 * CONFIG_COPY <= META_BASE, "kopie konfiguracji przed meta");
 static_assert(TX_BASE + 2 * TX_AREA <= CONFIG_BASE, "rekordy transakcji przed konfiguracją");
 static_assert(journal::EVENT_BASE + journal::EVENT_SLOTS * journal::EVENT_RECORD <= TX_BASE, "dziennik przed magazynami");

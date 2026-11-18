@@ -1033,7 +1033,9 @@ size_t Model::statusLines(const Status& s, char out[][LINE_BYTES], size_t max) c
     if (!s.mains12 && s.cellHoursKnown) {
         formatNumber(value, sizeof(value), s.cellHours);
         substitute(text(Id::OGNIWA_CZAS, lang_), "[x]", value, tmp, sizeof(tmp));
-        put(tmp);
+        char lines[3][LINE_BYTES];
+        const size_t wrapped = wrap(tmp, lines, 3, COLS - 1);   // pełny tekst dłuższy niż wiersz STAN
+        for (size_t i = 0; i < wrapped; ++i) put(lines[i]);
     }
     if (s.foffValid) snprintf(tmp, sizeof(tmp), "FOFF %+ld HZ", static_cast<long>(s.foffHz));
     else snprintf(tmp, sizeof(tmp), "FOFF ---");

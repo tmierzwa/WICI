@@ -32,6 +32,7 @@
 #include "board.h"
 #include "cmdargs.h"
 #include "console.h"
+#include "cells.h"
 #include "power.h"
 #include "shutdown.h"
 #if defined(WICI_RNS_CORE)
@@ -850,6 +851,58 @@ void pollPanel(uint32_t now) {
 // Pomiar ogniw i 12 V (power.h): DIV_EN wysoki tylko od kroku ENABLE do odczytu, odczyt najwcześniej 20 ms później
 // i nie w okresie nadawania; wynik na ekranie (wiersz 3, STAN), w INFO i `status.power`, alarm wymien_ogniwa.
 power::Monitor powerMonitor;
+// Szacunek godzin pracy z ogniw (cells.h): bilans energii przy każdym pomiarze, stan w FRAM.
+cells::Estimator cellEstimator;
+bool cellsLoaded = false;
+#if defined(WICI_STANDBY)
+uint64_t standbySleptMs();  // pętla czuwania, niżej
+#endif
+
+// Czasy od poprzedniego pomiaru: praca bez uśpienia, uśpienie (pętla czuwania), nadawanie (sterownik radia).
+void updateCells(uint32_t now) {
+    static uint64_t lastUptime = 0, lastSlept = 0;
+    static uint32_t lastTx = 0;
+    static bool first = true;
+    const uint64_t uptime = platform::uptimeMs();
+#if defined(WICI_STANDBY)
+    const uint64_t slept = standbySleptMs();
+#else
+    const uint64_t slept = 0;
+#endif
+    const uint32_t tx = radiocon::link().txOnMs();
+    uint32_t sleptMs = 0, awakeMs = 0, txMs = 0;
+    if (!first) {
+        sleptMs = static_cast<uint32_t>(slept - lastSlept);
+        const uint64_t total = uptime - lastUptime;
+        awakeMs = total > sleptMs ? static_cast<uint32_t>(total - sleptMs) : 0;
+        txMs = tx - lastTx;
+    }
+    first = false;
+    lastUptime = uptime;
+    lastSlept = slept;
+    lastTx = tx;
+    if (!cellsLoaded && journalOk) {
+        cellsLoaded = true;
+        journal::SmallRecord r;
+        cells::Saved saved;
+        if (stationJournal.loadCells(r)) {
+            saved.valid = true;
+            saved.usedUwh = r.a;
+            saved.lastMv = static_cast<uint16_t>(r.b);
+            saved.lastOnCells = r.c != 0;
+        }
+        cellEstimator.begin(saved);
+    }
+    const uint32_t before = cellEstimator.freshSets();
+    const bool save = cellEstimator.update(awakeMs, sleptMs, txMs, powerMonitor.lastCellsMv(), powerMonitor.cellsMv(),
+                                           powerMonitor.source() == power::Source::CELLS);
+    if (cellEstimator.freshSets() != before) bench.log("cells: new set detected (voltage step), energy counter reset");
+    if (save && journalOk && !destroyed) {
+        const cells::Saved st = cellEstimator.saved();
+        if (!stationJournal.writeCells(st.usedUwh, st.lastMv, st.lastOnCells)) bench.log("cells: FRAM write failed");
+    }
+    (void)now;
+}
 
 void beginPower() {
     pinMode(board::BATTERY_DIV_EN, OUTPUT);
@@ -865,6 +918,7 @@ void pollPower(uint32_t now) {
             const power::Source source = powerMonitor.source();
             powerMonitor.sample(now, platform::pinMilliVolts(board::BATTERY_ADC), platform::pinMilliVolts(board::VTEST));
             digitalWrite(board::BATTERY_DIV_EN, LOW);
+            updateCells(now);
             char line[96];
             if (first || source != powerMonitor.source()) {
                 snprintf(line, sizeof(line), "power source %s: 12v %u mV, cells %u mV", power::sourceName(powerMonitor.source()),
@@ -886,11 +940,17 @@ void pollPower(uint32_t now) {
 // POWER: stan pomiaru zasilania (power.h) do sprawdzenia ADC przy stole.
 void printPower() {
     const power::Monitor& m = powerMonitor;
+    const cells::Estimator& e = cellEstimator;
     Serial.printf("{\"source\":\"%s\",\"mv_aa\":%u,\"mv_aa_last\":%u,\"mv_12v\":%u,\"samples\":%u,\"aborted\":%lu,"
-                  "\"alarm\":\"%s\",\"shutdown\":%s,\"next_ms\":%lu}\n",
+                  "\"alarm\":\"%s\",\"shutdown\":%s,\"next_ms\":%lu,",
                   power::sourceName(m.source()), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), m.samples(),
                   static_cast<unsigned long>(m.aborted()), m.replaceCells() ? "wymien_ogniwa" : "none", boolName(m.shutdown()),
                   static_cast<unsigned long>(m.untilMs(millis())));
+    // Szacunek godzin (cells.h): hours 0 bez średniego poboru z pracy z ogniw.
+    Serial.printf("\"hours\":%lu,\"used_mwh\":%lu,\"capacity_mwh\":%lu,\"avg_mw\":%lu,\"new_sets\":%lu}\n",
+                  static_cast<unsigned long>(e.hours(m.replaceCells())), static_cast<unsigned long>(e.usedUwh() / 1000),
+                  static_cast<unsigned long>(cells::CAPACITY_UWH / 1000), static_cast<unsigned long>(e.averageUw() / 1000),
+                  static_cast<unsigned long>(e.freshSets()));
 }
 #endif
 
@@ -1341,6 +1401,8 @@ ui::Status screenStatus() {
     s.cellsMeasured = powerMonitor.measured();
     s.cellMillivolts = powerMonitor.cellsMv();
     s.replaceCells = powerMonitor.replaceCells();
+    s.cellHoursKnown = cellEstimator.known();
+    s.cellHours = cellEstimator.hours(s.replaceCells);
 #else
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
@@ -2764,6 +2826,9 @@ standby::Vcom standbyVcom;
 standby::Hold radioHold;
 standby::Hold inputHold;
 standby::Counters standbyCounters;
+#if defined(WICI_POWER_SENSE)
+uint64_t standbySleptMs() { return standbyCounters.sleptMs; }
+#endif
 standby::Reason standbyReason = standby::Reason::WORK;
 bool usbOnBus = true;         // rdzeń podłącza USB przed setup()
 uint32_t radioEvents = 0;     // ramki odebrane i nadane (LinkCounters) przy ostatnim obiegu
