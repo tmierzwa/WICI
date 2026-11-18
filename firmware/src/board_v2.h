@@ -77,7 +77,8 @@ constexpr uint8_t BATTERY_ADC = 4;  // J5.4
 constexpr uint8_t BATTERY_ADC_CHANNEL = 3;
 constexpr uint8_t BATTERY_DIV_EN = 46;  // J5.14; pin konfiguracji startu, R43 100 kΩ do masy (niski przy resecie)
 
-// Przetwornica 3,3 V (U7 LTC3115-1): PWM_SYNC wysoki = PWM na czas nadawania, niski = Burst Mode.
+// Przetwornica 3,3 V (U7 LTC3115-1): PWM_SYNC wysoki = PWM na czas nadawania, niski = Burst Mode. Steruje nim
+// sterownik SX1262 (sx1262_link.cpp, radio_console_sx1262.cpp), polecenie CONVERTER wymusza tryb do pomiarów.
 constexpr uint8_t CONVERTER_PWM = 45;  // J6.15; pin konfiguracji startu, R63 100 kΩ do masy (niski przy resecie)
 
 // Sterownik wyłącznika U6 (LTC2955-2): INT to otwarty dren z R47 10 kΩ do 3,3 V, niski przy naciśniętym
@@ -99,8 +100,9 @@ constexpr int16_t LED_USB = -1;
 // Lekkie uśpienie (mcu_sleep.h, platform::sleep): wyjścia trzymane w uśpieniu przez gpio_hold_en, bo rezystory
 // płytki ściągnęłyby je do stanu, który resetuje radio (R12 1 kΩ do masy na NRESET), wyłącza odbiór (RXEN do
 // masy) albo wygasza ekran (DISP do masy); CS-y nieaktywne, a brzęczyk w stanie niskim.
-// Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL; program ich jeszcze nie steruje, więc hold
-// zatrzaskuje stan z rezystorów do masy (R43, R63, R72: niski, stacja zostaje włączona).
+// Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL. Tryb przetwornicy poza nadawaniem jest niski
+// (Burst Mode), więc hold zatrzaskuje go niskim, chyba że CONVERTER pwm go wymusił. Klucza dzielnika i KILL program
+// jeszcze nie steruje, więc hold zatrzaskuje stan z rezystorów do masy (R43, R72: niski, stacja zostaje włączona).
 constexpr uint8_t SLEEP_HOLD[] = {RADIO_CS, RADIO_RESET, RADIO_RXEN, FRAM_CS, DISPLAY_CS, DISPLAY_EXTCOMIN,
                                  DISPLAY_DISP, LED_ALARM, BUZZER, BATTERY_DIV_EN, CONVERTER_PWM, POWER_KILL};
 // Linie budzenia: DIO1 stanem wysokim; przyciski, CISZA, INT wyłącznika i wykrywanie laptopa przy każdej zmianie

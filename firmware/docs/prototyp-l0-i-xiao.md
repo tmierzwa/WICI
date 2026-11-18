@@ -164,14 +164,18 @@ Próby 1–8 z [przejścia na rdzeń](stos.md#przejście-na-rdzeń-i-powrót-do-
 |---|---|---|
 | pomiar 12 V (V_12_ADC) | 5 (ADC1_CH4) | polecenie `VTEST`: `vtest_mv` to napięcie 12 V, `divider` wynosi 16 |
 | pomiar ogniw (V_AA_ADC) i klucz dzielnika (DIV_EN) | 4 (ADC1_CH3) i 46 | jeszcze nic; DIV_EN niesterowany (R43 do masy), w uśpieniu zatrzaśnięty |
-| PWM przetwornicy (PWM_SYNC) | 45 | jeszcze nic; niesterowany (R63 do masy: Burst Mode), w uśpieniu zatrzaśnięty |
+| PWM przetwornicy (PWM_SYNC) | 45 | stan wysoki (PWM) na czas nadawania, poza nim niski (Burst Mode); polecenie `CONVERTER` do pomiarów (opis pod tabelą); w uśpieniu zatrzaśnięty w stanie niskim |
 | INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (`NAP` i [pętla czuwania](#pętla-czuwania-v2)); wyłączenia z programu jeszcze nie ma |
 | wyłączenie stacji (KILL_MCU) | 47 | jeszcze nic; pin nie jest sterowany, R72 trzyma go w stanie niskim (stacja zostaje włączona), a w uśpieniu jest zatrzaśnięty |
 | laptop podłączony (USB_LAPTOP) | 3 | budzi z uśpienia; w [pętli czuwania](#pętla-czuwania-v2) zasada 10 s i odłączanie od magistrali USB |
 
 **Przelicznik 12 V.** Pomiar korzysta z dzielnika UV sterownika U5: R37 221 kΩ, R38 10,0 kΩ i R39 15,4 kΩ, wszystkie 0,1%. Napięcie na pinie to 12 V × 15,4 / 246,4, czyli dokładnie 1/16 (na L0 dzielnik VTEST dawał 1/6). R76 10 kΩ i C33 100 nF to filtr przed pinem, a nie część dzielnika. Napięcie jest tylko przy włączonej stacji, bo dzielnik podłącza Q4 z szyny ON. 36 V daje 2,25 V, czyli mieści się w zakresie tłumienia 11 dB.
 
-Czego nie da się sprawdzić bez płytki v2: odczytu `VTEST` wobec woltomierza (upływ BAV199 i pinu EN/UVLO zmienia go do około 0,06 V, [README płytki](../../hardware/plytka-v2/README.md)), poziomu INT przy krótkim i długim naciśnięciu wyłącznika i poziomu USB_LAPTOP z laptopem i ładowarką.
+**Tryb przetwornicy 3,3 V.** LTC3115-1 (U7) pracuje w Burst Mode przy niskim PWM_SYNC i w stałej częstotliwości (PWM) przy wysokim. Burst Mode ma mały prąd spoczynkowy, ale obsługuje typowo poniżej 50 mA, a moduł radia bierze w nadawaniu około 60 mA (pomiar na L0 z 2026-11-17, [README płytki](../../hardware/plytka-v2/README.md)). Sterownik SX1262 (`src/sx1262_link.cpp`) ustawia więc PWM_SYNC wysoko tuż przed SetTx i SetTxContinuousWave i nisko po końcu nadawania: po TxDone, po przekroczeniu czasu i przy każdym wyjściu układu do spoczynku. Odbiór, CAD i czuwanie są w Burst Mode. Linia R63 100 kΩ do masy trzyma Burst Mode przy resecie i przed startem programu.
+
+Polecenie `CONVERTER pwm` albo `CONVERTER burst` (tryb przygotowania) wymusza tryb na stałe, żeby zmierzyć tętnienia, sprawność i spadek 3,3 V przy nadawaniu w obu trybach ([pomiary na pierwszych sztukach](../../hardware/plytka-v2/README.md#na-pierwszych-sztukach-v2)). Gdyby 3,3 V spadało już przy starcie, ten sam sterownik pozwala przejść na PWM od startu bez zmiany płytki. `CONVERTER auto` wraca do zwykłej pracy, tak jak wyjście z trybu przygotowania i restart.
+
+Czego nie da się sprawdzić bez płytki v2: czasu przejścia z Burst Mode do PWM przed pierwszym symbolem ramki (oscyloskop na +3V3 i PWM_SYNC przy `TXPKT`), odczytu `VTEST` wobec woltomierza (upływ BAV199 i pinu EN/UVLO zmienia go do około 0,06 V, [README płytki](../../hardware/plytka-v2/README.md)), poziomu INT przy krótkim i długim naciśnięciu wyłącznika i poziomu USB_LAPTOP z laptopem i ładowarką.
 
 ## Lekkie uśpienie (NAP)
 
