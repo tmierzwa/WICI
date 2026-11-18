@@ -726,7 +726,7 @@ class Przyjecie:
         """Called by Wysylka on the DB thread: reserve the nonce durably, seal and queue for KISS TX.
 
         None when WICI-Link cannot carry this reply now (offline, station without a number, sending blocked
-        after a recovery, uncertain counters), so bearers.Bearers may try Reticulum."""
+        after a recovery, uncertain counters); the intent then waits in the queue for the next try."""
         from .. import envelope
         from . import wici_link
 
