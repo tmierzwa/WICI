@@ -159,33 +159,28 @@ class BearerSetTest(unittest.TestCase):
         self.assertEqual(wici.sent, [(source, b"reply")])
         self.assertEqual(legacy.sent, [(source, b"reply2")])
         self.assertTrue(collection.outcome(second))
+        # WICI-Link that cannot carry a reply now gives no delivery: the intent waits, Reticulum is not tried.
         collection.reception.last_bearer.clear()
         collection.reception.send_wici = lambda *_: None
-        third = collection.send(source, b"fallback")
-        self.assertEqual(third.bearer, "reticulum")
-        self.assertEqual(legacy.sent[-1], (source, b"fallback"))
+        self.assertIsNone(collection.send(source, b"waits"))
+        self.assertEqual(legacy.sent[-1], (source, b"reply2"))
         collection.reception.bearer_override[source] = "wici"
         self.assertIsNone(collection.send(source, b"operator-choice"))
+        collection.reception.bearer_override[source] = "reticulum"   # only the duty officer moves the station
+        self.assertEqual(collection.send(source, b"manual").bearer, "reticulum")
         collection.reception.send_wici = Reception.send_wici
         collection.reception.bearer_override[source] = "wici"
         collection.reception.last_bearer[source] = "reticulum"
         self.assertEqual(collection.send(source, b"manual").bearer, "wici")
 
-        # A failed delivery on the remembered bearer sends the next attempt on the other one.
+        # A failed delivery does not change the bearer: the retry goes the same way, in both directions.
         collection.reception.bearer_override.clear()
-        collection.reception.last_bearer[source] = "wici"
-        failed = collection.send(source, b"lost")
-        failed.message.result = False
-        self.assertFalse(collection.outcome(failed))
-        retry = collection.send(source, b"lost")
-        self.assertEqual(retry.bearer, "reticulum")
-        self.assertTrue(collection.outcome(retry))
-        self.assertEqual(collection.send(source, b"next").bearer, "wici")
-        collection.reception.bearer_override[source] = "wici"
-        failed = collection.send(source, b"operator")
-        failed.message.result = False
-        collection.outcome(failed)
-        self.assertEqual(collection.send(source, b"operator").bearer, "wici")   # the operator's choice holds
+        for remembered in ("wici", "reticulum"):
+            collection.reception.last_bearer[source] = remembered
+            failed = collection.send(source, b"lost")
+            failed.message.result = False
+            self.assertFalse(collection.outcome(failed))
+            self.assertEqual(collection.send(source, b"lost").bearer, remembered)
 
 
 def request(mid=None, revision=1, kind=0, people=3, text="piwnica"):
