@@ -6,6 +6,7 @@
 |---|---|
 | [schemat.pdf](schemat.pdf) | schemat (arkusz A0, połączenia przez etykiety sieci, jak w v1) |
 | [polaczenia.md](polaczenia.md) | sygnały MCU i wszystkie sieci |
+| [proby.md](proby.md) | plan prób pierwszych sztuk: program zasilania, stałe szacunku, T6 |
 | [bom.csv](bom.csv) | lista części z producentami, numerami i numerami LCSC, tam gdzie są już wybrane |
 | `cad/plytka-v2.kicad_sch`, `cad/plytka-v2.kicad_pcb` | projekt KiCad 10.0.6: schemat i płytka z rozmieszczeniem wstępnym, bez ścieżek |
 | `checks/erc.json`, `checks/netlist.xml`, `checks/drc.json` | ERC (0 naruszeń), lista połączeń i DRC rozmieszczenia (tylko uwagi o sitodruku i niepołączone pady) |
@@ -250,7 +251,7 @@ Do rozstrzygnięcia przed ścieżkami i pierwszym zamówieniem płytki:
 
 ## Na pierwszych sztukach v2
 
-Prototyp v2 w 2 sztukach, jak L0, przed zamówieniem serii pilotażowej. Poniższych punktów nie da się sprawdzić bez zmontowanego toru zasilania v2 (LM74800, D7, sterownik wyłącznika, dzielniki). Wynik każdego punktu decyduje o zapisanej przy nim poprawce przed zamówieniem serii.
+Prototyp v2 w 2 sztukach, jak L0, przed zamówieniem serii pilotażowej. Kolejność i przebieg prób są w [planie prób](proby.md). Poniższych punktów nie da się sprawdzić bez zmontowanego toru zasilania v2 (LM74800, D7, sterownik wyłącznika, dzielniki). Wynik każdego punktu decyduje o zapisanej przy nim poprawce przed zamówieniem serii.
 - **C50 (kondensator szyny VSYS):** wartość i część po próbie 20 przełączeń 12 V ↔ ogniwa bez restartu ([T6 „Tor zasilania stacji pilotażowej”](../../docs/spec/odbior.md#próby)). Płytka testowa przetwornicy nie ma toru 12 V ani diody ogniw, więc próba wymaga v2. Na prototyp 100 µF 25 V; gdyby moduł się restartował, większa pojemność albo dłuższy czas startu przetwornicy z ogniw. Większa pojemność wymaga przeliczenia C32 i upływu: C32 27 nF jest dobrany na około 120 µF na VSYS przy prądzie włączania około 250 mA, więc 1000 µF dałoby około 2 A wbrew „narastanie ≤1 A” ([BOM stacji](../../docs/spec/bom-stacji.csv), [elektronika](../../docs/spec/elektronika.md#zasilanie-stacji)), a większy elektrolit ma większy upływ w stanie wyłączonym;
 - **napięcie EN/UVLO przy pracy z ogniw bez 12 V** (upływ U5 z C do A): wejście 12 V obciążają tylko dzielniki (246 kΩ równolegle z 329 kΩ, około 140 kΩ), więc EN/UVLO dojdzie do 0,3 V dopiero przy kilkunastu µA upływu. Pomiar EN i prądu z ogniw w 25 i 60 °C ([T6 „Tor zasilania stacji pilotażowej”](../../docs/spec/odbior.md#próby), pobór w stanie wyłączonym i w czuwaniu). Gdyby EN zbliżało się do 0,3 V, dzielnik UV o mniejszej rezystancji (te same progi i ten sam stosunek pomiaru 12 V). Podnosi to pobór z 12 V przy włączonej stacji (dziś około 50 µA w [elektronice](../../docs/spec/elektronika.md#zasilanie-stacji)), więc tę liczbę trzeba wtedy zmienić;
 - **prąd w stanie wyłączonym z ogniw:** typowo około 13 µA z R48 (około 4% pojemności ogniw na rok przechowywania); z wartości maksymalnych kart i upływu C50 najgorszy przypadek przekracza 20 µA (cel z projektu zasilania), mieści się w 0,1 mA ze specyfikacji. Pomiar w 25 i 60 °C ([T6 „Tor zasilania stacji pilotażowej”](../../docs/spec/odbior.md#próby));
