@@ -27,7 +27,11 @@
 //   przekroczenie czasu BUSY przerywa próbkę bez ramki;
 // - DIO1 tylko dla RxDone, CrcErr i HeaderErr (zadanie odbioru sprawdza poziom linii); TxDone
 //   i CadDone sterownik czyta sam przez SPI;
-// - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz).
+// - nośna CW poleceniem SetTxContinuousWave; korekta częstotliwości słowem RF (krok 0,954 Hz);
+// - tryb przetwornicy 3,3 V na czas nadawania (płytka v2: PWM_SYNC układu LTC3115-1, wysoki = PWM, niski =
+//   Burst Mode, który obsługuje typowo poniżej 50 mA, a nadawanie bierze około 60 mA): w trybie AUTO pin jest
+//   wysoki od chwili przed SetTx albo SetTxContinuousWave do końca nadawania (TxDone, błąd, wyjście do
+//   spoczynku), poza nadawaniem niski. PWM i BURST wymuszają poziom na stałe (pomiary przetwornicy).
 // Łącze stosu w ramkach RNode (framing() = RNODE), bez łącza P1. Wywołujący trzyma blokadę operacji radia (platform::RadioLock),
 // gdy pracuje też zadanie odbioru (pętla: przez radiolink::LockedDriver, radio_lock.h); sterownik sam jej nie bierze,
 // z wyjątkiem obiegu zadania odbioru (taskCycle: próba bez czekania).
@@ -101,11 +105,24 @@ struct Activity {
     void clear() { seen.store(0, std::memory_order_release); }
 };
 
+// Tryb przetwornicy zasilania układu: AUTO = PWM tylko na czas nadawania, PWM i BURST na stałe.
+enum class Converter : uint8_t { AUTO, PWM, BURST };
+const char* converterName(Converter mode);
+bool parseConverter(const char* word, Converter& mode);  // "auto", "pwm", "burst"
+
 class LinkDriver : public radiolink::Driver {
 public:
-    LinkDriver(Radio& radio, uint8_t pinRxen) : radio_(radio), pinRxen_(pinRxen) {}
+    // pinPwm: linia trybu przetwornicy (wysoki = PWM), -1 bez niej (L0, XIAO).
+    LinkDriver(Radio& radio, uint8_t pinRxen, int16_t pinPwm = -1) : radio_(radio), pinRxen_(pinRxen), pinPwm_(pinPwm) {}
 
-    void begin();  // RXEN jako wyjście w stanie niskim (spoczynek)
+    void begin();  // RXEN i linia przetwornicy jako wyjścia w stanie niskim (spoczynek, Burst Mode)
+    // Tryb przetwornicy; nowy poziom pinu od razu (w nadawaniu AUTO zostaje PWM do końca nadawania).
+    void setConverter(Converter mode);
+    Converter converter() const { return converter_; }
+    bool pwmHigh() const { return pwm_; }   // bieżący poziom linii przetwornicy
+    bool hasConverter() const { return pinPwm_ >= 0; }
+    uint32_t sinceTxMs(uint32_t nowMs) const override;
+    uint32_t txOnMs() const override { return txOnMs_; }
     // Zapis profilu LoRa po resecie (układ w STDBY_RC) i weryfikacja odczytem.
     VerifyResult configure();
     VerifyResult verify();
@@ -189,6 +206,7 @@ private:
     void noteActivity(uint16_t irq, uint32_t now);
     bool frameInProgress(uint32_t now) const;  // preambuła albo nagłówek bez końca, nie dłużej niż FRAME_MAX_MS
     void rxen(bool on);
+    void supply(bool transmitting);  // poziom linii przetwornicy według trybu
     bool setPacketParams(uint8_t payloadLength);
     bool readRssi(radiolink::Rssi& out);  // false przy przekroczeniu czasu BUSY; out.valid tylko w RX
     void writeFrequency();
@@ -196,7 +214,15 @@ private:
 
     Radio& radio_;
     uint8_t pinRxen_;
+    int16_t pinPwm_;
     bool rxen_ = false;
+    Converter converter_ = Converter::AUTO;
+    bool pwm_ = false;
+    bool transmitting_ = false;
+    bool txEver_ = false;
+    volatile uint32_t txEndMs_ = 0;   // koniec ostatniego nadawania (supply)
+    uint32_t txStartMs_ = 0;
+    volatile uint32_t txOnMs_ = 0;    // łączny czas nadawania
     bool rxActive_ = false;
     size_t txLength_ = 0;  // ramka załadowana do nadania (limit czasu TxDone)
     bool rxVariable_ = false;

@@ -150,6 +150,8 @@ public:
     bool setSilence(bool on, const uint8_t* exception, bool switchOn);
     bool radioEvent(bool switchOn);
     bool stationEvent(store::StationWhat what, uint32_t detail);   // zdarzenie `station` (restart, przygotowanie)
+    // Zdarzenie `power` (usb-protocol.md): źródło, kod alarmu energii (power::Alarm) i napięcia [mV].
+    bool powerEvent(bool cells, uint8_t alarm, uint16_t mvAa, uint16_t mv12);
 
     // Najpilniejszy alarm (bez potwierdzonych przez ackAlarm, chyba że withAcked).
     bool alarm(Alarm& out, bool withAcked = false) const;

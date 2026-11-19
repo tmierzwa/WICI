@@ -19,6 +19,10 @@
 // Pętla czuwania (standby.h): uśpienie między terminami w zwykłej pracy. Wymaga wykrywania napięcia na VBUS
 // (USB_LAPTOP) dla zasady 10 s, więc jest tylko na v2; L0 i XIAO śpią wyłącznie w poleceniu NAP.
 #define WICI_STANDBY 1
+// Pomiar ogniw i 12 V (power.h): napięcia na ekranie, w STAN, `status.power` i alarm wymien_ogniwa.
+#define WICI_POWER_SENSE 1
+// Wyłączanie przez sterownik wyłącznika (shutdown.h): INT 2 s albo wyczerpane ogniwa, zapis, mozna_wyjac, KILL.
+#define WICI_POWER_OFF 1
 
 namespace board {
 
@@ -72,16 +76,17 @@ constexpr uint8_t VTEST_ADC_CHANNEL = 4;
 constexpr uint8_t VTEST_DIVIDER = 16;
 
 // Pomiar ogniw (V_AA_ADC) na GPIO4 (ADC1_CH3) przez klucz Q6 (DIV_EN wysoki podłącza dzielnik): R44 39,0 kΩ
-// / R45 10,0 kΩ (0,1%), czyli V_AA = V_AA_DIV × 4,9. Program jeszcze go nie mierzy.
+// / R45 10,0 kΩ (0,1%), czyli V_AA = V_AA_DIV × 4,9. Program włącza dzielnik tylko na czas pomiaru (power.h).
 constexpr uint8_t BATTERY_ADC = 4;  // J5.4
 constexpr uint8_t BATTERY_ADC_CHANNEL = 3;
 constexpr uint8_t BATTERY_DIV_EN = 46;  // J5.14; pin konfiguracji startu, R43 100 kΩ do masy (niski przy resecie)
 
-// Przetwornica 3,3 V (U7 LTC3115-1): PWM_SYNC wysoki = PWM na czas nadawania, niski = Burst Mode.
+// Przetwornica 3,3 V (U7 LTC3115-1): PWM_SYNC wysoki = PWM na czas nadawania, niski = Burst Mode. Steruje nim
+// sterownik SX1262 (sx1262_link.cpp, radio_console_sx1262.cpp), polecenie CONVERTER wymusza tryb do pomiarów.
 constexpr uint8_t CONVERTER_PWM = 45;  // J6.15; pin konfiguracji startu, R63 100 kΩ do masy (niski przy resecie)
 
 // Sterownik wyłącznika U6 (LTC2955-2): INT to otwarty dren z R47 10 kΩ do 3,3 V, niski przy naciśniętym
-// wyłączniku. KILL_MCU wysoki otwiera Q11, który ściąga KILL i wyłącza stację; R72 100 kΩ do masy trzyma Q11
+// wyłączniku (19–45 ms po naciśnięciu, do puszczenia; 2 s odmierza program, shutdown.h). KILL_MCU wysoki otwiera Q11, który ściąga KILL i wyłącza stację; R72 100 kΩ do masy trzyma Q11
 // wyłączony przy resecie i bez sterowania.
 constexpr uint8_t POWER_INT = 48;   // J6.16
 constexpr uint8_t POWER_KILL = 47;  // J6.17
@@ -99,8 +104,10 @@ constexpr int16_t LED_USB = -1;
 // Lekkie uśpienie (mcu_sleep.h, platform::sleep): wyjścia trzymane w uśpieniu przez gpio_hold_en, bo rezystory
 // płytki ściągnęłyby je do stanu, który resetuje radio (R12 1 kΩ do masy na NRESET), wyłącza odbiór (RXEN do
 // masy) albo wygasza ekran (DISP do masy); CS-y nieaktywne, a brzęczyk w stanie niskim.
-// Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL; program ich jeszcze nie steruje, więc hold
-// zatrzaskuje stan z rezystorów do masy (R43, R63, R72: niski, stacja zostaje włączona).
+// Na v2 dochodzą klucz dzielnika ogniw, tryb przetwornicy i KILL. Tryb przetwornicy poza nadawaniem jest niski
+// (Burst Mode), więc hold zatrzaskuje go niskim, chyba że CONVERTER pwm go wymusił. Klucz dzielnika jest niski poza
+// pomiarem (20 ms co minutę; uśpienie w trakcie pomiaru trzyma go wysokim do odczytu). KILL jest niski do końca
+// wyłączania (shutdown.h), potem wysoki; hold zatrzaskuje go w obu stanach.
 constexpr uint8_t SLEEP_HOLD[] = {RADIO_CS, RADIO_RESET, RADIO_RXEN, FRAM_CS, DISPLAY_CS, DISPLAY_EXTCOMIN,
                                  DISPLAY_DISP, LED_ALARM, BUZZER, BATTERY_DIV_EN, CONVERTER_PWM, POWER_KILL};
 // Linie budzenia: DIO1 stanem wysokim; przyciski, CISZA, INT wyłącznika i wykrywanie laptopa przy każdej zmianie

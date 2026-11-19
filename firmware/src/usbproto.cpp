@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "hexstr.h"
+#include "power.h"
 #include "sha2.h"
 
 namespace usbproto {
@@ -651,6 +652,12 @@ bool Protocol::sendEvent(const store::Event& e) {
             n += radioFields(fields + n, sizeof(fields) - n, e.a, known ? id : nullptr, e.revision, (e.a & store::RADIO_EXCEPTION) && !known);
             break;
         }
+        case store::EventKind::POWER:
+            appendf(fields, sizeof(fields), n, "\"kind\":\"power\",\"source\":\"%s\",\"mv_aa\":%lu,\"mv_12v\":%lu,\"alarm\":\"%s\"",
+                    e.a & store::POWER_CELLS ? "aa" : "12v", static_cast<unsigned long>(e.value & 0xFFFF),
+                    static_cast<unsigned long>(e.value >> 16),
+                    power::alarmName(static_cast<power::Alarm>((e.a & store::POWER_ALARM_MASK) >> store::POWER_ALARM_SHIFT)));
+            break;
         case store::EventKind::STATION:
             appendf(fields, sizeof(fields), n, "\"kind\":\"station\",\"what\":\"%s\",\"detail\":%lu", e.a < 4 ? STATION_WHAT[e.a] : "?",
                     static_cast<unsigned long>(e.value));

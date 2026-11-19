@@ -163,15 +163,58 @@ Próby 1–8 z [przejścia na rdzeń](stos.md#przejście-na-rdzeń-i-powrót-do-
 | Sygnał | GPIO ESP32-S3 | Co robi program |
 |---|---|---|
 | pomiar 12 V (V_12_ADC) | 5 (ADC1_CH4) | polecenie `VTEST`: `vtest_mv` to napięcie 12 V, `divider` wynosi 16 |
-| pomiar ogniw (V_AA_ADC) i klucz dzielnika (DIV_EN) | 4 (ADC1_CH3) i 46 | jeszcze nic; DIV_EN niesterowany (R43 do masy), w uśpieniu zatrzaśnięty |
-| PWM przetwornicy (PWM_SYNC) | 45 | jeszcze nic; niesterowany (R63 do masy: Burst Mode), w uśpieniu zatrzaśnięty |
-| INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (`NAP` i [pętla czuwania](#pętla-czuwania-v2)); wyłączenia z programu jeszcze nie ma |
-| wyłączenie stacji (KILL_MCU) | 47 | jeszcze nic; pin nie jest sterowany, R72 trzyma go w stanie niskim (stacja zostaje włączona), a w uśpieniu jest zatrzaśnięty |
+| pomiar ogniw (V_AA_ADC) i klucz dzielnika (DIV_EN) | 4 (ADC1_CH3) i 46 | DIV_EN wysoki tylko na czas pomiaru co minutę, odczyt 20 ms po włączeniu (opis pod tabelą); w uśpieniu zatrzaśnięty |
+| PWM przetwornicy (PWM_SYNC) | 45 | stan wysoki (PWM) na czas nadawania, poza nim niski (Burst Mode); polecenie `CONVERTER` do pomiarów (opis pod tabelą); w uśpieniu zatrzaśnięty w stanie niskim |
+| INT wyłącznika (PWR_INT) | 48 | budzi z uśpienia (`NAP` i [pętla czuwania](#pętla-czuwania-v2)); stan niski przez 2 s zaczyna [wyłączanie](#wyłączanie-przez-ltc2955) |
+| wyłączenie stacji (KILL_MCU) | 47 | niski w pracy (R72 trzyma go tak też przed startem programu), wysoki na końcu [wyłączania](#wyłączanie-przez-ltc2955); w uśpieniu zatrzaśnięty |
 | laptop podłączony (USB_LAPTOP) | 3 | budzi z uśpienia; w [pętli czuwania](#pętla-czuwania-v2) zasada 10 s i odłączanie od magistrali USB |
 
 **Przelicznik 12 V.** Pomiar korzysta z dzielnika UV sterownika U5: R37 221 kΩ, R38 10,0 kΩ i R39 15,4 kΩ, wszystkie 0,1%. Napięcie na pinie to 12 V × 15,4 / 246,4, czyli dokładnie 1/16 (na L0 dzielnik VTEST dawał 1/6). R76 10 kΩ i C33 100 nF to filtr przed pinem, a nie część dzielnika. Napięcie jest tylko przy włączonej stacji, bo dzielnik podłącza Q4 z szyny ON. 36 V daje 2,25 V, czyli mieści się w zakresie tłumienia 11 dB.
 
-Czego nie da się sprawdzić bez płytki v2: odczytu `VTEST` wobec woltomierza (upływ BAV199 i pinu EN/UVLO zmienia go do około 0,06 V, [README płytki](../../hardware/plytka-v2/README.md)), poziomu INT przy krótkim i długim naciśnięciu wyłącznika i poziomu USB_LAPTOP z laptopem i ładowarką.
+**Tryb przetwornicy 3,3 V.** LTC3115-1 (U7) pracuje w Burst Mode przy niskim PWM_SYNC i w stałej częstotliwości (PWM) przy wysokim. Burst Mode ma mały prąd spoczynkowy, ale obsługuje typowo poniżej 50 mA, a moduł radia bierze w nadawaniu około 60 mA (pomiar na L0 z 2026-11-17, [README płytki](../../hardware/plytka-v2/README.md)). Sterownik SX1262 (`src/sx1262_link.cpp`) ustawia więc PWM_SYNC wysoko tuż przed SetTx i SetTxContinuousWave i nisko po końcu nadawania: po TxDone, po przekroczeniu czasu i przy każdym wyjściu układu do spoczynku. Odbiór, CAD i czuwanie są w Burst Mode. Linia R63 100 kΩ do masy trzyma Burst Mode przy resecie i przed startem programu.
+
+Polecenie `CONVERTER pwm` albo `CONVERTER burst` (tryb przygotowania) wymusza tryb na stałe, żeby zmierzyć tętnienia, sprawność i spadek 3,3 V przy nadawaniu w obu trybach ([pomiary na pierwszych sztukach](../../hardware/plytka-v2/README.md#na-pierwszych-sztukach-v2)). Gdyby 3,3 V spadało już przy starcie, ten sam sterownik pozwala przejść na PWM od startu bez zmiany płytki. `CONVERTER auto` wraca do zwykłej pracy, tak jak wyjście z trybu przygotowania i restart.
+
+### Pomiar ogniw i 12 V
+
+Program mierzy co minutę napięcie kompletu ogniw i wejścia 12 V (`src/power.h`, wołane z `main.cpp`). Pierwszy pomiar jest zaraz po starcie. DIV_EN idzie wysoko, a po 20 ms (filtr 1,8 ms τ, [README płytki](../../hardware/plytka-v2/README.md)) program czyta oba piny ADC jako średnią z 16 odczytów i wyłącza DIV_EN. Wynik to V_AA = pin × 4,9 i V12 = pin × 16. Progi liczą się ze średniej kroczącej z 5 pomiarów, bo impulsy nadawania chwilowo obniżają napięcie zimnych ogniw. Pomiar nie zaczyna się, dopóki od końca nadawania nie minie 2 s (sterownik SX1262 podaje czas od końca nadawania). Nadawanie w trakcie przerywa pomiar, a ten wraca po przerwie.
+
+- `wymien_ogniwa`, gdy średnia spadnie poniżej 4,4 V. Alarm schodzi przy średniej co najmniej 4,6 V, czyli po włożeniu nowego kompletu. Alarm jest też przy 12 V bez ogniw (średnia około 0 V), bo stacja nie ma wtedy rezerwy.
+- Źródło rozpoznaje program tak jak łącznik 12 V: ogniwa, gdy pomiar 12 V jest poniżej 10,5 V albo powyżej 17 V (wejście odcięte przez OVP). Od 12,4 V źródłem jest 12 V, a w paśmie 10,5–12,4 V zostaje stan poprzedni. Przed pierwszym pomiarem i przy pierwszym pomiarze w paśmie program przyjmuje 12 V.
+- Alarmy 12 V, tylko przy pracy z ogniw ([stany zasilania 12 V](../../docs/spec/elektronika.md#stany-zasilania-12-v)). `za_wysokie_12v` jest przy pomiarze 12 V powyżej 17 V. `odlaczone_12v` jest, gdy źródło jest podłączone (pomiar od 8,0 V, dolna granica zbocza samoczynnego włączenia, przyjęte 2026-11-18), ale za niskie dla łącznika. Bez przewodu 12 V (około 0 V) alarmu nie ma, bo stacja może pracować z samych ogniw. Oba działają jak awarie stacji: ekran alarmu do OK (OK tylko wycisza), a dioda i wpis w PRZEKAZANIU ZMIANY trwają do usunięcia przyczyny. Przypomnienia co 15 min nie mają. W jednym polu `alarm` (`status.power`, zdarzenie `power`, `POWER`) pierwszeństwo ma `wymien_ogniwa`.
+- Stan `shutdown` w `POWER`: średnia poniżej 4,0 V przy pracy z ogniw. Wtedy stacja sama się [wyłącza](#wyłączanie-przez-ltc2955).
+- Wynik widać w wierszu 3 ekranu głównego (`zasilanie_12v` albo przy pracy z ogniw `zasilanie_aa` z [szacunkiem godzin](#szacunek-godzin-pracy-z-ogniw), a przed pierwszym szacunkiem `ogniwa_napiecie`), w STAN (`zasilanie_12v`, `ogniwa_napiecie`, przy pracy z ogniw `ogniwa_czas`), w PRZEKAZANIU ZMIANY (`wymien_ogniwa`), w `INFO` (`src`, `mv`), w `status.power` protokołu USB i w `POWER`. Zmiana źródła i alarmu trafia do `LOG` i do pierścienia zdarzeń jako zdarzenie `power` dla laptopa ([protokół](../../docs/spec/usb-protocol.md)). Pierwszy pomiar po starcie daje je tylko wtedy, gdy różni się od stanu przyjętego przed nim (12 V bez alarmu). Wpis pierścienia niesie źródło i kod alarmu w polu `a`, a napięcia w `value` (ogniwa w młodszych 16 bitach, 12 V w starszych).
+
+Okres 60 s, średnią z 5 pomiarów, przerwę 2 s po nadawaniu, zejście alarmu przy 4,6 V, alarm bez ogniw i rozpoznanie źródła przyjął właściciel 2026-11-18. Wszystko to trzeba sprawdzić na płytce: przerwę po nadawaniu oscyloskopem na V_AA przy zimnych ogniwach, a progi łącznika zasilaczem regulowanym wobec `POWER`. Błąd ADC wobec woltomierza (cel ≤2%, [odbiór](../../docs/spec/odbior.md)) sprawdza `POWER` przy znanych napięciach ogniw i 12 V.
+
+### Szacunek godzin pracy z ogniw
+
+Stacja nie mierzy prądu, więc godziny liczy bilans energii (`src/cells.h`, przyjęty przez właściciela 2026-11-18). Przy każdym pomiarze zasilania program dolicza energię pobraną z ogniw od poprzedniego pomiaru. Czas pracy MCU bez uśpienia, czas uśpienia (pętla czuwania) i czas nadawania (sterownik SX1262) mnoży przez stałe prądy szyny 3,3 V, dzieli przez sprawność przetwornicy i dolicza spadek na diodzie ogniw. Godziny to pozostała energia kompletu podzielona przez średni pobór (średnia wykładnicza z wagą 1/30, około pół godziny). Energia liczy się tylko przy pracy z ogniw. Przy `wymien_ogniwa` ekran pokazuje 1 h, a poza alarmem najmniej 1 h.
+
+| Stała | Wartość | Źródło |
+|---|---|---|
+| energia użytkowa kompletu | 14,4 Wh (4 × 4,5 Wh × 0,8) | model energii, `software/reference/obliczenia.py` |
+| MCU bez uśpienia / w uśpieniu | 45 mA / 3 mA | model energii (środkowy wariant ESP32-S3, czuwanie) |
+| radio w odbiorze / w nadawaniu 13 dBm | 6,2 mA / około 60 mA | pomiar Wio-SX1262 z 2026-11-17 ([raport](../../hardware/xiao-wici/evidence/prad-wio-2026-11-17.md)) |
+| ekran, FRAM, przyciski, nadzorca | 1,0 mA | model energii (0,5 + 0,5 mA) |
+| sprawność LTC3115-1 przy 3,3 V | 78% | środek oszacowania 74–83% ([projekt zasilania](../../hardware/r02/zasilanie.md)) |
+| spadek na diodzie ogniw | 0,35 V | model energii |
+
+Nowy komplet program rozpoznaje po skoku napięcia. Licznik zeruje się, gdy pierwszy pomiar po starcie albo po przerwie bez ogniw (poniżej 1 V) jest o co najmniej 0,4 V wyższy od ostatniego zapisanego przy tym samym źródle zasilania. Napięcie pod obciążeniem (praca z ogniw) i bez niego (12 V) się różni, więc program porównuje je tylko w obrębie jednego źródła. Częściowo zużyty komplet też może wyzerować licznik i wtedy szacunek jest za wysoki aż do `wymien_ogniwa`. Zużyta energia i ostatnie napięcie leżą w pierścieniu 8 rekordów w FRAM pod 0xFA00 (luka między zbiorem powtórzeń BULLETIN a rejestrem, `journal::CELLS_BASE`). Zapis idzie przy każdym pomiarze z ogniw, a poza nimi przy zmianie napięcia o co najmniej 50 mV albo zmianie źródła. ZNISZCZ DANE kasuje licznik, więc szacunek zaczyna się wtedy od pełnego kompletu. Przeniesienie stacji kopiuje licznik z obrazem, a nowy komplet w nowej skrzynce rozpoznaje skok napięcia. `POWER` podaje `hours`, `used_mwh`, `capacity_mwh`, `avg_mw` i `new_sets`.
+
+Wszystkie stałe trzeba zmierzyć na płytce v2: prąd z ogniw w pracy, w czuwaniu i przy nadawaniu, sprawność przetwornicy i napięcie świeżego i zużytego kompletu pod obciążeniem i bez niego (próg 0,4 V). Pomiar 48 h na ogniwach z minimum pilotażu sprawdza, czy szacunek zgadza się z czasem do `wymien_ogniwa`.
+
+### Wyłączanie przez LTC2955
+
+Sterownik wyłącznika ściąga INT 19–45 ms po naciśnięciu i trzyma go do puszczenia ([projekt zasilania](../../hardware/r02/zasilanie.md)), więc 2 s przytrzymania odmierza program (`src/shutdown.h`, wołane na początku obiegu pętli w `main.cpp`). INT liczy się dopiero po pierwszym puszczeniu wyłącznika od startu, więc przycisk trzymany przy włączaniu stacji jej nie wyłącza. Drugim powodem jest średnia ogniw poniżej 4,0 V przy pracy z ogniw ([pomiar](#pomiar-ogniw-i-12-v)), także zaraz po starcie z wyczerpanymi ogniwami.
+
+1. Ekran pokazuje `wylaczanie`. Pętla przestaje wołać stos, magazyn, protokół USB i radio, więc żaden zapis nie jest w toku. Program zapisuje tablice stosu (`rnsnode::persist`) i zegar dziennika, zatrzymuje stos i przełącza radio w spoczynek. Wpis w `LOG` podaje powód (`button` albo `cells`).
+2. Ekran pokazuje `mozna_wyjac` przez 2 s, a potem program ustawia KILL_MCU wysoko. Q11 ściąga KILL i sterownik zdejmuje zasilanie. Sterownik ignoruje KILL przez 304–720 ms po włączeniu, ale trzymany KILL działa po tym oknie sam.
+3. Jeśli zasilanie nie zgaśnie w 5 s, stacja zostaje wyłączona programowo: stan jest zapisany, a radio wyłączone. Ekran pokazuje `mozna_wyjac` i `nie_wylaczona`, w `LOG` jest jeden wpis, a KILL jest ponawiany co 5 s (puszczony na 100 ms). Restartu nie ma, bo włączałby stację wbrew wyłącznikowi, a przy 4,0 V na ogniwach zapętlałby się i dalej rozładowywał ogniwa. Przytrzymanie wyłącznika przez 5–19 s wyłącza stację bez MCU.
+
+Czasy 2 s `mozna_wyjac`, 5 s do uznania KILL za nieudany i ponawianie KILL przyjął właściciel 2026-11-18. Do sprawdzenia na płytce: INT przy krótkim i długim naciśnięciu, wyłączenie po 2 s z czuwania i z pracy, start z ogniwami 3,9 V bez 12 V (wyłączenie zaraz po pierwszym pomiarze) i zachowanie przy odłączonym Q11 (`nie_wylaczona`).
+
+Czego nie da się sprawdzić bez płytki v2: czasu przejścia z Burst Mode do PWM przed pierwszym symbolem ramki (oscyloskop na +3V3 i PWM_SYNC przy `TXPKT`), odczytu `VTEST` wobec woltomierza (upływ BAV199 i pinu EN/UVLO zmienia go do około 0,06 V, [README płytki](../../hardware/plytka-v2/README.md)), poziomu INT przy krótkim i długim naciśnięciu wyłącznika i poziomu USB_LAPTOP z laptopem i ładowarką.
 
 ## Lekkie uśpienie (NAP)
 
