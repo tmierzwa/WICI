@@ -44,6 +44,9 @@ void reboot() { vb::reboot("platform::reboot"); }
 
 void beginVtest() {}
 
+// Piny ADC w symulatorze niepodłączone (0 V); pomiaru zasilania (power.h) symulator nie ma.
+uint32_t pinMilliVolts(uint8_t) { return 0; }
+
 // VTEST: wejście zasilacza laboratoryjnego na N1; w symulatorze niepodłączone (0 V).
 void printVtest() {
     Serial.printf("{\"vtest_mv\":%lu,\"pin_mv\":%lu,\"adc\":\"ADC1_CH%u\",\"divider\":%u}\n", 0UL, 0UL, board::VTEST_ADC_CHANNEL,

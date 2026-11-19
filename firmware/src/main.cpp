@@ -32,6 +32,9 @@
 #include "board.h"
 #include "cmdargs.h"
 #include "console.h"
+#include "cells.h"
+#include "power.h"
+#include "shutdown.h"
 #if defined(WICI_RNS_CORE)
 #include "core_selftest.h"
 #include "identity.h"
@@ -774,6 +777,13 @@ void alarmLed(bool on) {
     digitalWrite(board::LED_ALARM, on ? HIGH : LOW);  // dioda alarmu aktywna stanem wysokim
 }
 
+#if defined(WICI_POWER_SENSE)
+void beginPower();  // pomiar zasilania, niżej
+#endif
+#if defined(WICI_POWER_OFF)
+void beginShutdown();
+#endif
+
 void beginPanel() {
     pinMode(board::LED_ALARM, OUTPUT);
     alarmLed(false);
@@ -782,6 +792,12 @@ void beginPanel() {
     pinMode(board::SW_SILENCE, INPUT);  // podciągnięcia na płytce
     pinMode(board::BTN_PREP, INPUT);
     platform::beginVtest();
+#if defined(WICI_POWER_SENSE)
+    beginPower();
+#endif
+#if defined(WICI_POWER_OFF)
+    beginShutdown();
+#endif
     silenceSwitchLevel = silenceSwitchState = silenceSwitch();
     silenceSwitchSince = millis();
     switchSilence = silenceSwitchState;  // położenie przełącznika przy starcie (przed radiem i stosem)
@@ -820,6 +836,7 @@ void pollPanel(uint32_t now) {
     in.alarmCause = alarmCause;
     in.silence = silenceAny();
     in.muted = screenModel.muted();
+    in.remind = screenHost.remindCells();
     in.unread = storeOk ? static_cast<uint32_t>(stationStore.unread()) : 0;
     const uint32_t ms = annunciation.poll(now, in);
     if (ms) beep(ms);
@@ -829,6 +846,193 @@ void pollPanel(uint32_t now) {
     }
     if (!ledManual && annunciation.led() != alarmLedOn) alarmLed(annunciation.led());
 }
+
+#if defined(WICI_POWER_SENSE)
+// Pomiar ogniw i 12 V (power.h): DIV_EN wysoki tylko od kroku ENABLE do odczytu, odczyt najwcześniej 20 ms później
+// i nie w okresie nadawania; wynik na ekranie (wiersz 3, STAN), w INFO i `status.power`, alarm wymien_ogniwa.
+power::Monitor powerMonitor;
+// Szacunek godzin pracy z ogniw (cells.h): bilans energii przy każdym pomiarze, stan w FRAM.
+cells::Estimator cellEstimator;
+bool cellsLoaded = false;
+#if defined(WICI_STANDBY)
+uint64_t standbySleptMs();  // pętla czuwania, niżej
+#endif
+
+// Czasy od poprzedniego pomiaru: praca bez uśpienia, uśpienie (pętla czuwania), nadawanie (sterownik radia).
+void updateCells(uint32_t now) {
+    static uint64_t lastUptime = 0, lastSlept = 0;
+    static uint32_t lastTx = 0;
+    static bool first = true;
+    const uint64_t uptime = platform::uptimeMs();
+#if defined(WICI_STANDBY)
+    const uint64_t slept = standbySleptMs();
+#else
+    const uint64_t slept = 0;
+#endif
+    const uint32_t tx = radiocon::link().txOnMs();
+    uint32_t sleptMs = 0, awakeMs = 0, txMs = 0;
+    if (!first) {
+        sleptMs = static_cast<uint32_t>(slept - lastSlept);
+        const uint64_t total = uptime - lastUptime;
+        awakeMs = total > sleptMs ? static_cast<uint32_t>(total - sleptMs) : 0;
+        txMs = tx - lastTx;
+    }
+    first = false;
+    lastUptime = uptime;
+    lastSlept = slept;
+    lastTx = tx;
+    if (!cellsLoaded && journalOk) {
+        cellsLoaded = true;
+        journal::SmallRecord r;
+        cells::Saved saved;
+        if (stationJournal.loadCells(r)) {
+            saved.valid = true;
+            saved.usedUwh = r.a;
+            saved.lastMv = static_cast<uint16_t>(r.b);
+            saved.lastOnCells = r.c != 0;
+        }
+        cellEstimator.begin(saved);
+    }
+    const uint32_t before = cellEstimator.freshSets();
+    const bool save = cellEstimator.update(awakeMs, sleptMs, txMs, powerMonitor.lastCellsMv(), powerMonitor.cellsMv(),
+                                           powerMonitor.source() == power::Source::CELLS);
+    if (cellEstimator.freshSets() != before) bench.log("cells: new set detected (voltage step), energy counter reset");
+    if (save && journalOk && !destroyed) {
+        const cells::Saved st = cellEstimator.saved();
+        if (!stationJournal.writeCells(st.usedUwh, st.lastMv, st.lastOnCells)) bench.log("cells: FRAM write failed");
+    }
+    (void)now;
+}
+
+void beginPower() {
+    pinMode(board::BATTERY_DIV_EN, OUTPUT);
+    digitalWrite(board::BATTERY_DIV_EN, LOW);
+}
+
+void pollPower(uint32_t now) {
+    switch (powerMonitor.poll(now, radiocon::link().sinceTxMs(now))) {
+        case power::Step::ENABLE: digitalWrite(board::BATTERY_DIV_EN, HIGH); break;
+        case power::Step::DISABLE: digitalWrite(board::BATTERY_DIV_EN, LOW); break;
+        case power::Step::READ: {
+            const bool replace = powerMonitor.replaceCells(), first = !powerMonitor.measured();
+            const power::Alarm alarmBefore = powerMonitor.alarm();
+            const power::Source source = powerMonitor.source();
+            powerMonitor.sample(now, platform::pinMilliVolts(board::BATTERY_ADC), platform::pinMilliVolts(board::VTEST));
+            digitalWrite(board::BATTERY_DIV_EN, LOW);
+            updateCells(now);
+            char line[96];
+            if (first || source != powerMonitor.source()) {
+                snprintf(line, sizeof(line), "power source %s: 12v %u mV, cells %u mV", power::sourceName(powerMonitor.source()),
+                         powerMonitor.mainsMv(), powerMonitor.lastCellsMv());
+                bench.log(line);
+            }
+            if (replace != powerMonitor.replaceCells()) {
+                snprintf(line, sizeof(line), "cells %s: mean %u mV", powerMonitor.replaceCells() ? "low (wymien_ogniwa)" : "replaced",
+                         powerMonitor.cellsMv());
+                bench.log(line);
+            }
+            // Zdarzenie `power` dla laptopa (usb-protocol.md): zmiana źródła albo alarmu energii. Pierwszy pomiar daje
+            // zdarzenie tylko wtedy, gdy różni się od stanu przyjętego przed nim (12 V bez alarmu).
+            if (powerMonitor.alarm() != alarmBefore) {
+                snprintf(line, sizeof(line), "power alarm %s: 12v %u mV", power::alarmName(powerMonitor.alarm()), powerMonitor.mainsMv());
+                bench.log(line);
+            }
+            if ((source != powerMonitor.source() || alarmBefore != powerMonitor.alarm()) && storeOk && !nodeRole() &&
+                !app.powerEvent(powerMonitor.source() == power::Source::CELLS, static_cast<uint8_t>(powerMonitor.alarm()),
+                                powerMonitor.cellsMv(), powerMonitor.mainsMv()))
+                bench.log("power event: store write failed");
+            break;
+        }
+        case power::Step::NONE: break;
+    }
+    screenHost.setPowerAlarms(powerMonitor.replaceCells(), powerMonitor.mainsLow(), powerMonitor.mainsHigh());
+}
+
+// POWER: stan pomiaru zasilania (power.h) do sprawdzenia ADC przy stole.
+void printPower() {
+    const power::Monitor& m = powerMonitor;
+    const cells::Estimator& e = cellEstimator;
+    Serial.printf("{\"source\":\"%s\",\"mv_aa\":%u,\"mv_aa_last\":%u,\"mv_12v\":%u,\"samples\":%u,\"aborted\":%lu,"
+                  "\"alarm\":\"%s\",\"shutdown\":%s,\"next_ms\":%lu,",
+                  power::sourceName(m.source()), m.cellsMv(), m.lastCellsMv(), m.mainsMv(), m.samples(),
+                  static_cast<unsigned long>(m.aborted()), power::alarmName(m.alarm()), boolName(m.shutdown()),
+                  static_cast<unsigned long>(m.untilMs(millis())));
+    // Szacunek godzin (cells.h): hours 0 bez średniego poboru z pracy z ogniw.
+    Serial.printf("\"hours\":%lu,\"used_mwh\":%lu,\"capacity_mwh\":%lu,\"avg_mw\":%lu,\"new_sets\":%lu}\n",
+                  static_cast<unsigned long>(e.hours(m.replaceCells())), static_cast<unsigned long>(e.usedUwh() / 1000),
+                  static_cast<unsigned long>(cells::CAPACITY_UWH / 1000), static_cast<unsigned long>(e.averageUw() / 1000),
+                  static_cast<unsigned long>(e.freshSets()));
+}
+#endif
+
+#if defined(WICI_POWER_OFF)
+#if !defined(WICI_POWER_SENSE)
+#error "WICI_POWER_OFF wymaga WICI_POWER_SENSE (wyłączenie przy wyczerpanych ogniwach)"
+#endif
+// Wyłączanie (shutdown.h): INT 2 s albo wyczerpane ogniwa. Stacja zatrzymuje stos i radio, zapisuje tablice stosu
+// i zegar dziennika, pokazuje mozna_wyjac i ściąga KILL; przy nieudanym KILL zostaje wyłączona programowo.
+shutdown::Sequence powerOff;
+
+void beginShutdown() {
+    pinMode(board::POWER_KILL, OUTPUT);
+    digitalWrite(board::POWER_KILL, LOW);   // R72 trzyma Q11 wyłączony do tej chwili
+    pinMode(board::POWER_INT, INPUT);       // R47 10 kΩ do 3,3 V
+}
+
+ui::PowerOff powerOffScreen() {
+    switch (powerOff.phase()) {
+        case shutdown::Phase::RUN: return ui::PowerOff::NONE;
+        case shutdown::Phase::SAVING: return ui::PowerOff::SAVING;
+        case shutdown::Phase::FAILED: return ui::PowerOff::FAILED;
+        default: return ui::PowerOff::REMOVABLE;
+    }
+}
+
+// Zapis przed odcięciem: pętla już nie woła stosu, magazynu ani radia, więc żaden zapis nie jest w toku.
+void stopForShutdown() {
+    if (rnsOk) {
+        rnsnode::persist();   // tablice stosu w FRAM jak przed restartem
+        rnsnode::halt();      // stos staje, interfejs nie nadaje
+    }
+    if (journalOk && !destroyed && !stationJournal.writeClock(counterS())) journalFailed();
+    platform::RadioLock lock(measure::RADIO_LOCK_WAIT_MS);
+    radiocon::setRxArmed(false);
+    radiocon::link().idle();   // koniec odbioru i nadawania
+}
+
+// Wołane na początku obiegu pętli; true: stacja się wyłącza i obieg kończy się tu (tylko ekran i KILL).
+bool pollShutdown(uint32_t now) {
+    const shutdown::Phase before = powerOff.phase();
+    const bool changed = powerOff.poll(now, digitalRead(board::POWER_INT) == LOW, powerMonitor.shutdown());
+    if (!powerOff.active()) return false;
+    if (changed) {
+        if (before == shutdown::Phase::RUN) {
+            char line[64];
+            snprintf(line, sizeof(line), "shutdown: %s, cells %u mV", shutdown::reasonName(powerOff.reason()), powerMonitor.cellsMv());
+            bench.log(line);
+            screenChanged();
+            updateScreen(true);   // wylaczanie na ekranie przed zapisem
+            stopForShutdown();
+            powerOff.saved(millis());
+        }
+        digitalWrite(board::POWER_KILL, powerOff.kill() ? HIGH : LOW);
+        if (powerOff.failedLog()) {
+            bench.log("shutdown: KILL had no effect, station stays off in software, KILL retried");
+            powerOff.logged();
+        }
+        screenChanged();
+    }
+    if (screenDirty) {
+        screenDirty = false;
+        updateScreen(false);
+    }
+#if !defined(WICI_HEADLESS)
+    displayPending = display.refresh() > 0;
+    display.maintain(now);
+#endif
+    return true;
+}
+#endif
 
 #endif
 
@@ -854,8 +1058,17 @@ void BenchHost::showCard(const char* fingerprint) {
     screenChanged();
 }
 
+#if defined(WICI_POWER_SENSE)
+// Pomiar płytki v2 (power.h): mv_aa to filtrowana średnia ogniw, mv_12v ostatni pomiar wejścia 12 V; przed
+// pierwszym pomiarem zera i źródło 12v.
+void BenchHost::power(char* out, size_t size) {
+    snprintf(out, size, "\"source\":\"%s\",\"mv_aa\":%u,\"mv_12v\":%u,\"alarm\":\"%s\"", power::sourceName(powerMonitor.source()),
+             powerMonitor.cellsMv(), powerMonitor.mainsMv(), power::alarmName(powerMonitor.alarm()));
+}
+#else
 // Stanowisko jest zasilane z USB i nie mierzy napięć: źródło "12v", napięcia 0, bez alarmu energii.
 void BenchHost::power(char* out, size_t size) { snprintf(out, size, "\"source\":\"12v\",\"mv_aa\":0,\"mv_12v\":0,\"alarm\":\"none\""); }
+#endif
 
 void BenchHost::diag(char* out, size_t size) {
     const station::Stats& a = app.stats();
@@ -1193,8 +1406,23 @@ ui::Status screenStatus() {
     const store::Meta& m = stationStore.meta();
     s.contactKnown = storeOk && m.contactKnown && m.contactS >= startServiceS;
     s.contactS = storeOk && m.contactKnown ? nowS - m.contactS : nowS;
+#if defined(WICI_POWER_SENSE)
+    s.mains12 = powerMonitor.source() == power::Source::MAINS12;
+    s.millivolts = powerMonitor.mainsMv();
+    s.cellsMeasured = powerMonitor.measured();
+    s.cellMillivolts = powerMonitor.cellsMv();
+    s.replaceCells = powerMonitor.replaceCells();
+    s.cellHoursKnown = cellEstimator.known();
+    s.cellHours = cellEstimator.hours(s.replaceCells);
+    s.mainsLow = powerMonitor.mainsLow();
+    s.mainsHigh = powerMonitor.mainsHigh();
+#else
     s.mains12 = true;
     s.millivolts = 0;                // stanowisko nie mierzy napięcia (INFO: mv = 0)
+#endif
+#if defined(WICI_POWER_OFF)
+    s.powerOff = powerOffScreen();
+#endif
     uint32_t oldest = 0;
     s.queued = storeOk ? static_cast<uint32_t>(stationStore.unsent(oldest)) : 0;
     s.queueAgeS = s.queued && nowS > oldest ? nowS - oldest : 0;
@@ -1407,13 +1635,22 @@ void printFram() {
 }
 
 void printInfo() {
-    // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy.
+    // Pola jak w INFO ze specyfikacji radia; napięcie jest zerowe, bo stanowisko go nie mierzy (v2 mierzy, power.h).
     // uptime_s to zegar z dziennika FRAM (ciągły między restartami), boot_s czas od startu.
     // Wiersz w częściach poniżej 256 znaków (Print::printf rdzenia nRF52, zob. printRns).
     const measure::LinkCounters& c = bench.link();
+#if defined(WICI_POWER_SENSE)
+    // v2: źródło i jego napięcie z pomiaru (power.h): AA ze średnią ogniw, 12V z pomiarem wejścia.
+    const bool cells = powerMonitor.source() == power::Source::CELLS;
+    const char* src = cells ? "AA" : "12V";
+    const unsigned mv = cells ? powerMonitor.cellsMv() : powerMonitor.mainsMv();
+#else
+    const char* src = "USB";
+    const unsigned mv = 0;
+#endif
     Serial.printf("{\"contract\":2,\"profile\":\"%s\",\"radio\":\"%s\",\"mcu\":\"%s\",\"fw\":\"%s\","
-                  "\"src\":\"USB\",\"mv\":0,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
-                  radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, static_cast<unsigned long>(bench.debtRemainingMs()),
+                  "\"src\":\"%s\",\"mv\":%u,\"tx_wait_ms\":%lu,\"rx_ok\":%lu,\"rx_bad\":%lu,\"tx_drop\":%lu,\"restarts\":%lu,",
+                  radiocon::PROFILE, radiocon::NAME, platform::MCU, WICI_FW_VERSION, src, mv, static_cast<unsigned long>(bench.debtRemainingMs()),
                   static_cast<unsigned long>(c.rxOk), static_cast<unsigned long>(c.rxBad), static_cast<unsigned long>(c.txDrop),
                   static_cast<unsigned long>(stationJournal.starts()));
     // channel_jammed: alarm zagłuszania kanału (R3-43); stanowisko pokazuje go przy roocie (R3-44).
@@ -1541,6 +1778,9 @@ void printHelp() {
 #endif
 #if defined(WICI_STANDBY)
                  ",\"STANDBY\""
+#endif
+#if defined(WICI_POWER_SENSE)
+                 ",\"POWER\""
 #endif
 #if defined(WICI_RNS_CORE)
                  ",\"RNS SELFTEST\""
@@ -1903,6 +2143,9 @@ void handle(char* cmd) {
 #endif
 #if defined(WICI_STANDBY)
     else if (!strcmp(cmd, "STANDBY") && n == 0) printStandby();
+#endif
+#if defined(WICI_POWER_SENSE)
+    else if (!strcmp(cmd, "POWER") && n == 0) printPower();
 #endif
     else if (!strcmp(cmd, "REQ")) requestCommand(words, n);
 #if !defined(WICI_HEADLESS)
@@ -2384,6 +2627,9 @@ void stationLoop() {
     platform::feedWatchdog();
     platform::uptimeMs();  // licznik 64-bitowy liczy przejścia przez zero przy każdym obiegu
     bench.debtRemainingMs();   // odczekany dług gaśnie, zanim millis() przejdzie przez 2^31 ms
+#if defined(WICI_POWER_OFF)
+    if (pollShutdown(now)) return;
+#endif
     if (now - lastBeat >= 500) {
         lastBeat = now;
         beat = !beat;
@@ -2493,6 +2739,9 @@ void stationLoop() {
 #if defined(WICI_BOARD_N1)
     pollPanel(now);
 #endif
+#if defined(WICI_POWER_SENSE)
+    pollPower(now);
+#endif
     screenModel.tick(now);
     persistScreen();
     static uint32_t lastScreen = 0;
@@ -2590,6 +2839,9 @@ standby::Vcom standbyVcom;
 standby::Hold radioHold;
 standby::Hold inputHold;
 standby::Counters standbyCounters;
+#if defined(WICI_POWER_SENSE)
+uint64_t standbySleptMs() { return standbyCounters.sleptMs; }
+#endif
 standby::Reason standbyReason = standby::Reason::WORK;
 bool usbOnBus = true;         // rdzeń podłącza USB przed setup()
 uint32_t radioEvents = 0;     // ramki odebrane i nadane (LinkCounters) przy ostatnim obiegu
@@ -2656,6 +2908,12 @@ void standbyStep() {
     if (screenDirty || displayPending || (vcom && vcomFailed) || display.softwareVcom()) plan.block(standby::Reason::SCREEN);
     if (storeWork || rebootAtMs) plan.block(standby::Reason::WORK);
     plan.wakeIn(annunciation.untilChangeMs(now));
+#if defined(WICI_POWER_SENSE)
+    plan.wakeIn(powerMonitor.untilMs(now));
+#endif
+#if defined(WICI_POWER_OFF)
+    plan.wakeIn(powerOff.untilMs(now));   // przytrzymanie wyłącznika, mozna_wyjac, ponowienie KILL
+#endif
     if (wiciActive && linkAuto && !bench.silence) plan.wakeAt(wiciNextBeaconMs);
     plan.wakeIn(standbyUsb.untilMs(now));
     if (vcom) plan.wakeIn(standbyVcom.untilEdgeMs(now));

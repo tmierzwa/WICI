@@ -48,6 +48,9 @@ void feedWatchdog();
 
 void beginVtest();
 void printVtest();  // odpowiedź na VTEST (tylko płytka N1)
+// Napięcie na pinie ADC [mV] (tylko ESP32-S3 z płytką N1): średnia z 16 odczytów (tłumienie 11 dB, kalibracja
+// eFuse); VTEST i pomiar zasilania na v2 (power.h). Pin ogniw dostaje tłumienie w beginVtest.
+uint32_t pinMilliVolts(uint8_t pin);
 
 // Blokada operacji radia: jedna operacja sterownika radia (kilka transakcji SPI: BUSY, status, kasowanie
 // przerwań, bufor) naraz, gdy obok pętli stacji obsługuje układ zadanie odbioru (ESP32-S3, stacja L0).

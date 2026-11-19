@@ -70,7 +70,9 @@ constexpr size_t TEST_NONCES = 8;
 constexpr size_t REVISION_TIMES = 8;                   // COMMIT niepotwierdzonych rewizji (alarm)
 constexpr uint32_t WRITE_BLOCK = 1024;                 // rezerwacja numerów zapisu
 static_assert(RING_BASE + RING_BLOCKS * SLOT == STORE_END, "pierścień zdarzeń kończy magazyny");
-static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= REGISTER_BASE, "zbiór powtórzeń przed rejestrem");
+static_assert(BULLETIN_BASE + BULLETIN_BLOCKS * SLOT <= journal::CELLS_BASE &&
+                  journal::CELLS_BASE + journal::CELLS_SLOTS * journal::SMALL_RECORD <= REGISTER_BASE,
+              "licznik energii ogniw w luce między zbiorem powtórzeń a rejestrem");
 static_assert(CONFIG_BASE + 2 * CONFIG_COPY <= META_BASE, "kopie konfiguracji przed meta");
 static_assert(TX_BASE + 2 * TX_AREA <= CONFIG_BASE, "rekordy transakcji przed konfiguracją");
 static_assert(journal::EVENT_BASE + journal::EVENT_SLOTS * journal::EVENT_RECORD <= TX_BASE, "dziennik przed magazynami");
@@ -195,7 +197,9 @@ struct Released {
 };
 
 // Zdarzenie dla laptopa: wpis 24 B pierścienia bez treści SA1 (usb-protocol.md, "Synchronizacja").
-enum class EventKind : uint8_t { OWN = 1, STAGE = 2, MSG = 3, RADIO = 4, STATION = 6 };
+enum class EventKind : uint8_t { OWN = 1, STAGE = 2, MSG = 3, RADIO = 4, POWER = 5, STATION = 6 };
+// POWER: a = źródło (bit 0: ogniwa) i alarm energii (power::Alarm) w bitach 1–2; value = mv_aa | mv_12v << 16.
+enum PowerBits : uint8_t { POWER_CELLS = 0x01, POWER_ALARM_SHIFT = 1, POWER_ALARM_MASK = 0x06 };
 // Pierwsze wartości są równe etapom (Stage), więc zmiana etapu daje kod wprost.
 enum class StageCode : uint8_t { STORED, SENDING, DELIVERED, RECEIVED, CANCELLED, SUPERSEDED, RELEASED };
 const char* stageCodeName(StageCode code);   // także nazwa etapu w wierszu `snap`
@@ -205,7 +209,7 @@ struct Event {
     uint32_t ev = 0;
     uint32_t at = 0;             // czas dla obsługi
     EventKind kind = EventKind::STATION;
-    // OWN: pochodzenie; STAGE: StageCode; MSG: źródło; RADIO: RadioBits; STATION: StationWhat.
+    // OWN: pochodzenie; STAGE: StageCode; MSG: źródło; RADIO: RadioBits; POWER: PowerBits; STATION: StationWhat.
     uint8_t a = 0;
     bool decisionChanged = false;   // STAGE: nowa decyzja (blokuje `close`)
     uint16_t slot = 0;           // gniazdo rejestru albo skrzynki; RELEASED: indeks pamięci zwolnionych
@@ -214,7 +218,7 @@ struct Event {
     uint8_t decision = 0;        // STAGE
     uint8_t attempt = 0;         // STAGE: próba (nasycona)
     uint16_t decisionRev = 0;
-    uint32_t value = 0;          // STAGE: status_event; STATION: szczegół
+    uint32_t value = 0;          // STAGE: status_event; POWER: napięcia; STATION: szczegół
 };
 
 struct TestNonce {

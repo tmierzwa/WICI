@@ -525,7 +525,7 @@ void measure::randomBytes(uint8_t* out, size_t count) {
     for (size_t i = 0; i < count; ++i) out[i] = next++;
 }
 
-constexpr uint8_t PIN_CS = 10, PIN_RESET = 9, PIN_BUSY = 14, PIN_RXEN = 42, PIN_OK = 39;
+constexpr uint8_t PIN_CS = 10, PIN_RESET = 9, PIN_BUSY = 14, PIN_RXEN = 42, PIN_OK = 39, PIN_PWM = 45;
 
 // Blokada operacji radia: licznik zamiast mutexu FreeRTOS (sprawdza, że próbka nie zwalnia cudzej blokady).
 // lockBusy: blokadę trzyma ktoś inny (pętla przy obiegu zadania); taskRunning: zadanie odbioru pracuje, więc
@@ -561,6 +561,7 @@ struct Chip {
     uint32_t rf = 0, rxTimeout = 0;
     int txCountdown = -1, cadCountdown = -1;
     bool holdTx = false, busyStuck = false, rxen = false, rxenAtTx = true, rxenAtCad = false;
+    bool pwm = false, pwmAtTx = false, pwmAtCad = true;  // PWM_SYNC przetwornicy (płytka v2): poziom, przy SetTx i przy CAD
     bool cadBusy = false, cadHang = false;  // CAD wykrywa preambułę; CAD bez końca
     int cadDetects = 0;                     // tyle następnych CAD wykrywa (jak fałszywe wykrycie przy cadBusy false)
     unsigned cadHangAt = 0;                 // CAD o numerze cadCount + 1 równym temu bez końca (0: żaden)
@@ -617,6 +618,7 @@ void execute() {
             if (chip.mode == sx1262::MODE_STBY_RC || chip.mode == sx1262::MODE_STBY_XOSC) {
                 chip.mode = sx1262::MODE_RX;  // demodulator pracuje w czasie CAD
                 chip.rxenAtCad = chip.rxen;   // przełącznik antenowy w odbiorze tylko przy wysokim RXEN
+                chip.pwmAtCad = chip.pwm;
                 chip.cadCountdown = 2;
             }
             break;
@@ -625,6 +627,7 @@ void execute() {
                 chip.mode = sx1262::MODE_TX;
                 chip.txCountdown = 3;
                 chip.rxenAtTx = chip.rxen;
+                chip.pwmAtTx = chip.pwm;
             }
             break;
         case sx1262::OP_SET_RX:
@@ -632,7 +635,7 @@ void execute() {
             chip.rxTimeout = p[0] << 16 | p[1] << 8 | p[2];
             chip.rxPtr = 0;  // RxBaseAddr; w odbiorze ciągłym dalej od poprzedniego pakietu
             break;
-        case sx1262::OP_SET_TX_CW: chip.mode = sx1262::MODE_TX; chip.txCountdown = -1; chip.rxenAtTx = chip.rxen; break;
+        case sx1262::OP_SET_TX_CW: chip.mode = sx1262::MODE_TX; chip.txCountdown = -1; chip.rxenAtTx = chip.rxen; chip.pwmAtTx = chip.pwm; break;
         case sx1262::OP_SET_SLEEP: {
             chip.sleeping = true;
             chip.mode = 0;
@@ -669,6 +672,7 @@ int digitalRead(uint8_t pin) {
 void digitalWrite(uint8_t pin, uint8_t level) {
     if (pin == PIN_RESET && level == LOW) resetChip();
     if (pin == PIN_RXEN) chip.rxen = level == HIGH;
+    if (pin == PIN_PWM) chip.pwm = level == HIGH;
     if (pin != PIN_CS) return;
     if (level == LOW) {
         if (chip.sleeping) { chip.sleeping = false; chip.mode = sx1262::MODE_STBY_RC; }
@@ -779,10 +783,13 @@ void runFor(measure::Bench& bench, uint32_t ms) {
 int main() {
     SPIClass spi;
     sx1262::Radio radio(spi, PIN_CS, PIN_RESET, PIN_BUSY, 1000000);
-    sx1262::LinkDriver link(radio, PIN_RXEN);
+    sx1262::LinkDriver link(radio, PIN_RXEN, PIN_PWM);
     radio.begin();
+    chip.pwm = true;  // begin() napędza linię przetwornicy nisko (Burst Mode), także gdy była wysoka
     link.begin();
+    printf("PWMBEGIN %d %d %s\n", chip.pwm, link.pwmHigh(), sx1262::converterName(link.converter()));
     fakeUs = 1000000;
+    const uint32_t sinceNever = link.sinceTxMs(millis());   // bez nadawania od startu
 
     // Reset i identyfikacja z tekstu wersji; profil utracony przed CONFIG.
     const bool reset = radio.reset();
@@ -829,8 +836,18 @@ int main() {
     chip.ops.clear();
     const bool cw = link.startCw();
     printf("CW %d %s %d %d\n", cw, link.stateName(), chip.rxenAtTx, indexOf(sx1262::OP_SET_TX_CW) >= 0);
+    const bool cwPwm = chip.pwm;
+    const uint32_t sinceInCw = link.sinceTxMs(millis());   // w trakcie nadawania: 0
+    fakeUs += 250000;   // nośna przez 250 ms (łączny czas nadawania niżej)
     link.stopCw();
+    const uint32_t cwEnd = millis();
+    fakeUs += 1500000;
+    // Czas od końca nadawania (pomiar ogniw, power.h): bez nadawania 0xFFFFFFFF, w nadawaniu 0, potem od końca.
+    printf("SINCETX %lu %lu %lu\n", static_cast<unsigned long>(sinceNever), static_cast<unsigned long>(sinceInCw),
+           static_cast<unsigned long>(link.sinceTxMs(millis()) - (millis() - cwEnd)));
     printf("CWSTOP %s\n", link.stateName());
+    // Przetwornica w PWM od chwili przed SetTxContinuousWave przez całą nośną, po STOP znów Burst Mode.
+    printf("CWPWM %d %d %d\n", chip.pwmAtTx, cwPwm, chip.pwm);
 
     // Ramka wzorcowa 20 B: długość w parametrach pakietu, treść z bufora, RXEN niski przy TX, powrót do STDBY_RC.
     uint8_t frame[255];
@@ -839,13 +856,39 @@ int main() {
     const bool sent = link.transmit(frame, 20, false, &timing);
     printf("TX %d %u %zu %02X %02X %d %s %d %d\n", sent, chip.packetParams[3], chip.lastTx.size(), chip.lastTx.front(), chip.lastTx.back(),
            chip.rxenAtTx, link.stateName(), timing.valid, timing.totalUs > 0);
+    // PWM przy SetTx ramki, po TxDone (powrót sam do STDBY_XOSC) znów Burst Mode.
+    printf("TXPWM %d %d\n", chip.pwmAtTx, chip.pwm);
+    printf("TXSINCE %lu\n", static_cast<unsigned long>(link.sinceTxMs(millis())));   // ramka skończona przed chwilą
+    // Łączny czas nadawania (bilans energii ogniw, cells.h): nośna 250 ms i ramka 20 B.
+    printf("TXON %d\n", link.txOnMs() >= 250 && link.txOnMs() < 260);   // nośna 250 ms i ramka modelu (chwila)
     printf("TXLEN %d %d\n", link.transmit(frame, 0, false, nullptr), link.transmit(frame, 256, false, nullptr));
     chip.holdTx = true;
     const uint32_t before = millis();
     const bool stuck = link.transmit(frame, 20, false, nullptr);
     printf("TXSTUCK %d %s %d %d\n", stuck, link.stateName(), millis() - before >= lora::frameAirMs(20) + 100,
            millis() - before < lora::frameAirMs(20) + 120);
+    printf("TXSTUCKPWM %d %d\n", chip.pwmAtTx, chip.pwm);  // nadawanie bez TxDone: PWM do przerwania, potem Burst Mode
     chip.holdTx = false;
+
+    // Tryby wymuszone (CONVERTER, pomiary przetwornicy): PWM na stałe także w spoczynku i w odbiorze, BURST
+    // także w nadawaniu; AUTO wraca do Burst Mode poza nadawaniem. Nazwy i parsowanie słów polecenia.
+    link.setConverter(sx1262::Converter::PWM);
+    const bool forcedIdle = chip.pwm;
+    link.startRx(true, 0);
+    const bool forcedRx = chip.pwm;
+    link.transmit(frame, 20, false, nullptr);
+    printf("PWMFORCED %d %d %d %d %s\n", forcedIdle, forcedRx, chip.pwmAtTx, chip.pwm, sx1262::converterName(link.converter()));
+    link.setConverter(sx1262::Converter::BURST);
+    const bool burstIdle = chip.pwm;
+    link.transmit(frame, 20, false, nullptr);
+    printf("PWMBURST %d %d %d %s\n", burstIdle, chip.pwmAtTx, chip.pwm, sx1262::converterName(link.converter()));
+    link.setConverter(sx1262::Converter::AUTO);
+    sx1262::Converter parsed = sx1262::Converter::BURST;
+    const bool parseAuto = sx1262::parseConverter("auto", parsed) && parsed == sx1262::Converter::AUTO;
+    const bool parsePwm = sx1262::parseConverter("pwm", parsed) && parsed == sx1262::Converter::PWM;
+    const bool parseBurst = sx1262::parseConverter("burst", parsed) && parsed == sx1262::Converter::BURST;
+    const bool parseBad = sx1262::parseConverter("PWM", parsed);
+    printf("PWMAUTO %d %d %d %d %d %d\n", chip.pwm, link.pwmHigh(), parseAuto, parsePwm, parseBurst, parseBad);
 
     // Odbiór ciągły ramek 12 B: RXEN wysoki, SetRx 0xFFFFFF; ramka z bufora od wskaźnika, RSSI i SNR pakietu.
     const bool rx = link.startRx(false, 12);
@@ -911,6 +954,7 @@ int main() {
     const radiolink::TxPrep prep = link.prepareTx(frame, 30);
     const char* prepMode = link.stateName();
     const bool prepRxen = chip.rxen;
+    const bool prepPwm = chip.pwm;
     const radiolink::Cad cadFree = link.cad();
     const char* cadMode = link.stateName();
     const unsigned txBeforeCad = chip.txCount;
@@ -920,6 +964,8 @@ int main() {
            cadSent, chip.lastTx.size(), chip.lastTx.front(), link.stateName(), chip.txCount - txBeforeCad);
     // RXEN wysoki w czasie CAD, niski przed SetTx.
     printf("CADRXEN %d %d\n", chip.rxenAtCad, chip.rxenAtTx);
+    // Przetwornica w Burst Mode w odbiorze i CAD, w PWM przy SetTx po CAD, po TxDone znów Burst Mode.
+    printf("CADPWM %d %d %d %d\n", prepPwm, chip.pwmAtCad, chip.pwmAtTx, chip.pwm);
     // Kolejność: SetStandby, parametry pakietu, bufor, SetCad, SetTx; bez SetStandby między CAD a SetTx.
     printf("CADORDER %d %d %d %d %d %d\n", indexOf(sx1262::OP_SET_STANDBY), indexOf(sx1262::OP_SET_PACKET_PARAMS),
            indexOf(sx1262::OP_WRITE_BUFFER), indexOf(sx1262::OP_SET_CAD), indexOf(sx1262::OP_SET_TX),
@@ -2588,6 +2634,22 @@ class Sx1262LinkTests(unittest.TestCase):
         self.assertEqual(line(self.out, "TXLEN"), "TXLEN 0 0")
         self.assertEqual(line(self.out, "TXSTUCK"), "TXSTUCK 0 STBY_XOSC 1 1")
 
+    def test_converter_pwm_only_while_transmitting(self):
+        # v2 board: PWM_SYNC of the LTC3115-1 high = PWM, low = Burst Mode (typically below 50 mA, transmit about
+        # 60 mA). AUTO: low from begin(), high from before SetTx / SetTxContinuousWave until the end of the transmit
+        # (TxDone, timeout, STOP), low again afterwards.
+        self.assertEqual(line(self.out, "PWMBEGIN"), "PWMBEGIN 0 0 auto")
+        self.assertEqual(line(self.out, "CWPWM"), "CWPWM 1 1 0")
+        self.assertEqual(line(self.out, "TXPWM"), "TXPWM 1 0")
+        self.assertEqual(line(self.out, "SINCETX"), "SINCETX 4294967295 0 0")
+        self.assertEqual(line(self.out, "TXSINCE"), "TXSINCE 0")
+        self.assertEqual(line(self.out, "TXON"), "TXON 1")
+        self.assertEqual(line(self.out, "TXSTUCKPWM"), "TXSTUCKPWM 1 0")
+        # CONVERTER pwm / burst hold the level in idle, receive and transmit; auto returns to Burst Mode at once.
+        self.assertEqual(line(self.out, "PWMFORCED"), "PWMFORCED 1 1 1 1 pwm")
+        self.assertEqual(line(self.out, "PWMBURST"), "PWMBURST 0 0 0 burst")
+        self.assertEqual(line(self.out, "PWMAUTO"), "PWMAUTO 0 0 1 1 1 0")
+
     def test_continuous_receive_with_rssi_and_snr(self):
         self.assertEqual(line(self.out, "RX"), "RX 1 RX 1 FFFFFF")
         self.assertEqual(line(self.out, "POLL0"), "POLL0 0")
@@ -2625,6 +2687,8 @@ class Sx1262LinkTests(unittest.TestCase):
         # the loaded 30 B frame is sent and the chip falls back to STDBY_XOSC.
         self.assertEqual(line(self.out, "CADTX"), "CADTX 0 STBY_XOSC 0 0 STBY_RC 1 30 A0 STBY_XOSC 1")
         self.assertEqual(line(self.out, "CADRXEN"), "CADRXEN 1 0")  # RF switch in receive during CAD, low again for TX
+        # Converter (v2 PWM_SYNC): Burst Mode after prepareTx and in CAD, PWM at SetTx, Burst Mode after TxDone.
+        self.assertEqual(line(self.out, "CADPWM"), "CADPWM 0 0 1 0")
         standby, params, write, cad, tx, standbys = (int(v) for v in line(self.out, "CADORDER").split()[1:])
         self.assertTrue(standby < params < write < cad < tx)  # frame loaded before CAD, SetTx right after it
         self.assertEqual(standbys, 1)

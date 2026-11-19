@@ -95,13 +95,20 @@ void reboot() {
 void beginVtest() {
     analogReadResolution(12);
     analogSetPinAttenuation(board::VTEST, ADC_11db);
+#if defined(WICI_POWER_SENSE)
+    analogSetPinAttenuation(board::BATTERY_ADC, ADC_11db);   // ogniwa: do 7,3 V / 4,9 = 1,5 V na pinie
+#endif
+}
+
+uint32_t pinMilliVolts(uint8_t pin) {
+    uint32_t sum = 0;
+    for (int i = 0; i < 16; ++i) sum += analogReadMilliVolts(pin);
+    return sum / 16;
 }
 
 // VTEST: średnia z 16 odczytów ADC1_CH4 w mV (analogReadMilliVolts: tłumienie 11 dB, kalibracja eFuse).
 void printVtest() {
-    uint32_t sum = 0;
-    for (int i = 0; i < 16; ++i) sum += analogReadMilliVolts(board::VTEST);
-    const uint32_t pinMv = sum / 16;
+    const uint32_t pinMv = pinMilliVolts(board::VTEST);
     Serial.printf("{\"vtest_mv\":%lu,\"pin_mv\":%lu,\"adc\":\"ADC1_CH%u\",\"divider\":%u}\n",
                   static_cast<unsigned long>(pinMv * board::VTEST_DIVIDER), static_cast<unsigned long>(pinMv),
                   board::VTEST_ADC_CHANNEL, board::VTEST_DIVIDER);
