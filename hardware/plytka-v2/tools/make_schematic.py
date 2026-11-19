@@ -126,7 +126,7 @@ def effects(size=1.27, hide=False, justify=None):
 
 # Columns by block, top to bottom.
 GROUPS = [
-    ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32'],
+    ['J2', 'F1', 'D4', 'U5', 'Q2', 'Q3', 'C30', 'C31', 'R30', 'R31', 'R32', 'C32', 'C38', 'C39', 'D20'],
     ['Q4', 'R33', 'D5', 'R34', 'Q5', 'R35', 'R36', 'D15', 'R37', 'R38', 'R39', 'C33', 'D6', 'R76'],
     ['J1', 'R40', 'D7', 'Q6', 'R41', 'Q7', 'R43', 'R44', 'R45', 'C34', 'D11', 'R77', 'C50'],
     ['U6', 'J3', 'D18', 'R84', 'C65', 'C37', 'R70', 'R71', 'C53', 'D13', 'D8', 'D9', 'R46', 'C35', 'D10', 'C36', 'R47', 'R48', 'D16', 'Q11', 'R72', 'Q8', 'R49', 'R50', 'D12', 'R78'],
@@ -195,7 +195,7 @@ def generate():
         inst = [A('symbol'), [A('lib_id'), p['lib_id']], [A('at'), x, y, 0], [A('unit'), 1],
                 [A('exclude_from_sim'), A('no')],
                 [A('in_bom'), A('yes' if p.get('bom', True) and not flag else 'no')],
-                [A('on_board'), A('no' if flag else 'yes')], [A('dnp'), A('no')],
+                [A('on_board'), A('no' if flag else 'yes')], [A('dnp'), A('yes' if p.get('dnp') else 'no')],
                 [A('uuid'), uid(p['ref'])]]
         props = [('Reference', p['ref'], False), ('Value', p['value'], False),
                  ('Footprint', p['footprint'], True), ('Datasheet', '', True)]
@@ -265,16 +265,16 @@ def write_bom():
                            p['footprint']), []).append(p)
     with (ROOT / 'bom.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.writer(f)
-        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'specyfikacja', 'footprint', 'uwagi'])
+        w.writerow(['oznaczenia', 'ilość', 'wartość', 'producent', 'MPN', 'LCSC', 'montaż', 'specyfikacja', 'footprint', 'uwagi'])
         for items in groups.values():
             p = items[0]
             notes = [i['note'] for i in items]
             note = notes[0] if len(set(notes)) == 1 else '; '.join(f"{i['ref']}: {i['note']}" for i in items if i['note'])
             w.writerow([' '.join(i['ref'] for i in items), sum(i['qty'] for i in items),
                         ' / '.join(dict.fromkeys(i['value'] for i in items)), p['manufacturer'], p['mpn'],
-                        p['lcsc'], p['spec'], p['footprint'], note])
+                        p['lcsc'], 'ręcznie' if p['hand'] else 'JLC', p['spec'], p['footprint'], note])
         for refs, qty, manufacturer, mpn, spec, note in EXTRAS:
-            w.writerow([refs, qty, '', manufacturer, mpn, '', spec, 'bez footprintu', note])
+            w.writerow([refs, qty, '', manufacturer, mpn, '', 'poza płytką', spec, 'bez footprintu', note])
 
 
 def write_connections():

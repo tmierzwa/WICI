@@ -35,6 +35,8 @@ def main():
             own.SetPosition(pcbnew.VECTOR2I(0, 0))
             own.SetOrientationDegrees(0)
             own.SetReference('REF**')
+            # the test board leaves the inductor without a type; an SMD-only placement export would drop it
+            own.SetAttributes(pcbnew.FP_SMD)
             pcbnew.FootprintSave(str(wici), own)
             # FootprintSave gives new uuids on every run; number them so the file only changes with the footprint
             path = wici / (name + '.kicad_mod')

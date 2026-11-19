@@ -91,7 +91,7 @@
         "footprint_filters_mismatch": "ignore",
         "footprint_symbol_field_mismatch": "warning",
         "footprint_symbol_mismatch": "warning",
-        "footprint_type_mismatch": "ignore",
+        "footprint_type_mismatch": "error",
         "hole_clearance": "error",
         "hole_to_hole": "warning",
         "holes_co_located": "warning",
@@ -144,7 +144,7 @@
         "min_connection": 0.0,
         "min_copper_edge_clearance": 0.5,
         "min_groove_width": 0.0,
-        "min_hole_clearance": 0.25,
+        "min_hole_clearance": 0.3,
         "min_hole_to_hole": 0.25,
         "min_microvia_diameter": 0.2,
         "min_microvia_drill": 0.1,
@@ -153,9 +153,9 @@
         "min_text_height": 0.8,
         "min_text_thickness": 0.08,
         "min_through_hole_diameter": 0.3,
-        "min_track_width": 0.2,
+        "min_track_width": 0.15,
         "min_via_annular_width": 0.1,
-        "min_via_diameter": 0.5,
+        "min_via_diameter": 0.6,
         "solder_mask_to_copper_clearance": 0.0,
         "use_height_for_length_calcs": true
       },
@@ -287,6 +287,120 @@
         "via_diameter": 0.6,
         "via_drill": 0.3,
         "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "HV",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.3,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "HV12",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.6,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Plane",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 5,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.4,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "Power",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 3,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.5,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "USB",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 4,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.25,
+        "tuning_profile": "",
+        "via_diameter": 0.6,
+        "via_drill": 0.3,
+        "wire_width": 6
+      },
+      {
+        "bus_width": 12,
+        "clearance": 0.15,
+        "diff_pair_gap": 0.25,
+        "diff_pair_via_gap": 0.25,
+        "diff_pair_width": 0.2,
+        "line_style": 0,
+        "microvia_diameter": 0.3,
+        "microvia_drill": 0.1,
+        "name": "VSYS",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2,
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.8,
+        "tuning_profile": "",
+        "via_diameter": 0.8,
+        "via_drill": 0.4,
+        "wire_width": 6
       }
     ],
     "meta": {
@@ -294,7 +408,136 @@
     },
     "net_colors": null,
     "netclass_assignments": null,
-    "netclass_patterns": []
+    "netclass_patterns": [
+      {
+        "netclass": "HV12",
+        "pattern": "12V_IN"
+      },
+      {
+        "netclass": "HV12",
+        "pattern": "V12_F"
+      },
+      {
+        "netclass": "HV12",
+        "pattern": "V12_MID"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "V12_FLT"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "V12_SW"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "Q4_G"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "Q5_D"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "ON_DIV"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "S12_DGATE"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "S12_HGATE"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "S12_CAP"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "S12_SW"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "S12_DVDT"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "VCTL"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "Q8_G"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "PWR_ENB"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "ON"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "Q5_G"
+      },
+      {
+        "netclass": "HV",
+        "pattern": "Q10_G"
+      },
+      {
+        "netclass": "VSYS",
+        "pattern": "VSYS"
+      },
+      {
+        "netclass": "VSYS",
+        "pattern": "BAT_IN"
+      },
+      {
+        "netclass": "VSYS",
+        "pattern": "BAT_R"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+5V"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "+3V3_RF"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "BZ_P"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "BZ_N"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "BST_SW"
+      },
+      {
+        "netclass": "Power",
+        "pattern": "CONV_VCC"
+      },
+      {
+        "netclass": "USB",
+        "pattern": "USB_DP"
+      },
+      {
+        "netclass": "USB",
+        "pattern": "USB_DN"
+      },
+      {
+        "netclass": "Plane",
+        "pattern": "GND"
+      },
+      {
+        "netclass": "Plane",
+        "pattern": "+3V3"
+      }
+    ]
   },
   "pcbnew": {
     "last_paths": {
@@ -311,7 +554,13 @@
     "bus_aliases": {},
     "legacy_lib_dir": "",
     "legacy_lib_list": [],
-    "top_level_sheets": []
+    "top_level_sheets": [
+      {
+        "filename": "plytka-v2.kicad_sch",
+        "name": "plytka-v2",
+        "uuid": "00000000-0000-0000-0000-000000000000"
+      }
+    ]
   },
   "sheets": [],
   "text_variables": {},

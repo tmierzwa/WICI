@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>cad/plytka-v2.kicad_sch</source>
-    <date>2026-11-10T00:23:49</date>
+    <date>2026-11-11T09:41:57</date>
     <tool>Eeschema 10.0.6</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -57,14 +57,14 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNG</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNG"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -84,15 +84,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -112,15 +112,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -141,14 +141,14 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNG</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNG"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -168,15 +168,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -196,15 +196,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -225,14 +225,14 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNG</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNG"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -253,14 +253,14 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21A106KAYNNNG</field>
+        <field name="MPN">CL21A106KAYNNNE</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21A106KAYNNNG"/>
+      <property name="MPN" value="CL21A106KAYNNNE"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -308,15 +308,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -336,15 +336,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -420,15 +420,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -448,15 +448,15 @@
       <value>27n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B273KBANNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB273</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B273KBANNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB273"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -476,15 +476,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -504,15 +504,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -560,15 +560,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -603,6 +603,62 @@
       <property name="ki_fp_filters" value="C_*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>130c4965-7896-502d-8a24-1717d3c7356e</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C38">
+      <value>100n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B104KCFNNNE</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B104KCFNNNE"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>fa2105a1-a38f-5264-8b98-1a5aadb10251</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="C39">
+      <value>10n</value>
+      <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
+      <fields>
+        <field name="Manufacturer">Samsung Electro-Mechanics</field>
+        <field name="MPN">CL21B103KBANNNC</field>
+        <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
+      <property name="MPN" value="CL21B103KBANNNC"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <property name="ki_fp_filters" value="C_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>de0e51ad-d07f-5945-9a22-7f6d1e2b5d22</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -728,15 +784,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -756,15 +812,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -784,15 +840,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -840,15 +896,15 @@
       <value>82p</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21C820JBANNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805JRNPO9BN820</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21C820JBANNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805JRNPO9BN820"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -868,15 +924,15 @@
       <value>3n9</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B392KBANNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB392</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B392KBANNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB392"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -896,15 +952,15 @@
       <value>100u 25V</value>
       <footprint>Capacitor_THT:CP_Radial_D8.0mm_P3.50mm</footprint>
       <fields>
-        <field name="Manufacturer"/>
-        <field name="MPN"/>
+        <field name="Manufacturer">SamYoung</field>
+        <field name="MPN">PXB 25V100 8*11.5</field>
         <field name="Footprint">Capacitor_THT:CP_Radial_D8.0mm_P3.50mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C_Polarized" description="Polarized capacitor"/>
-      <property name="Manufacturer" value=""/>
-      <property name="MPN" value=""/>
+      <property name="Manufacturer" value="SamYoung"/>
+      <property name="MPN" value="PXB 25V100 8*11.5"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -924,15 +980,15 @@
       <value>82p</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21C820JBANNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805JRNPO9BN820</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21C820JBANNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805JRNPO9BN820"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -953,14 +1009,14 @@
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
         <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B102KBANNNC</field>
+        <field name="MPN">CL21B102KBCNNNC</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
       <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B102KBANNNC"/>
+      <property name="MPN" value="CL21B102KBCNNNC"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1008,15 +1064,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1036,15 +1092,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1064,15 +1120,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1092,15 +1148,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1120,15 +1176,15 @@
       <value>100n</value>
       <footprint>Capacitor_SMD:C_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Samsung Electro-Mechanics</field>
-        <field name="MPN">CL21B104KBCNNNC</field>
+        <field name="Manufacturer">Yageo</field>
+        <field name="MPN">CC0805KRX7R9BB104</field>
         <field name="Footprint">Capacitor_SMD:C_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
-      <property name="Manufacturer" value="Samsung Electro-Mechanics"/>
-      <property name="MPN" value="CL21B104KBCNNNC"/>
+      <property name="Manufacturer" value="Yageo"/>
+      <property name="MPN" value="CC0805KRX7R9BB104"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="cap capacitor"/>
@@ -1204,15 +1260,15 @@
       <value>1N4148W</value>
       <footprint>Diode_SMD:D_SOD-123</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">1N4148W-7-F</field>
+        <field name="Manufacturer">ST (Semtech)</field>
+        <field name="MPN">1N4148W</field>
         <field name="Footprint">Diode_SMD:D_SOD-123</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D" description="Diode"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="1N4148W-7-F"/>
+      <property name="Manufacturer" value="ST (Semtech)"/>
+      <property name="MPN" value="1N4148W"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -1401,15 +1457,15 @@
       <value>BZT52C33</value>
       <footprint>Diode_SMD:D_SOD-123</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">BZT52C33-7-F</field>
+        <field name="Manufacturer">Hongjiacheng</field>
+        <field name="MPN">BZT52C33</field>
         <field name="Footprint">Diode_SMD:D_SOD-123</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D_Zener" description="Zener diode"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="BZT52C33-7-F"/>
+      <property name="Manufacturer" value="Hongjiacheng"/>
+      <property name="MPN" value="BZT52C33"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -1570,15 +1626,15 @@
       <value>BZT52C5V1</value>
       <footprint>Diode_SMD:D_SOD-123</footprint>
       <fields>
-        <field name="Manufacturer">Diodes Incorporated</field>
-        <field name="MPN">BZT52C5V1-7-F</field>
+        <field name="Manufacturer">Hongjiacheng</field>
+        <field name="MPN">BZT52C5V1</field>
         <field name="Footprint">Diode_SMD:D_SOD-123</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="D_Zener" description="Zener diode"/>
-      <property name="Manufacturer" value="Diodes Incorporated"/>
-      <property name="MPN" value="BZT52C5V1-7-F"/>
+      <property name="Manufacturer" value="Hongjiacheng"/>
+      <property name="MPN" value="BZT52C5V1"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="diode"/>
@@ -1669,6 +1725,36 @@
       <property name="ki_fp_filters" value="Texas*DPY0002A*"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>9a4df7cd-9ff3-57b0-b18e-4b6253a92d4d</tstamps>
+      <units>
+        <unit name="A">
+          <pins>
+            <pin num="1"/>
+            <pin num="2"/>
+          </pins>
+        </unit>
+      </units>
+    </comp>
+    <comp ref="D20">
+      <value>SMBJ33CA</value>
+      <footprint>Diode_SMD:D_SMB</footprint>
+      <fields>
+        <field name="Manufacturer">Hongjiacheng (R+O)</field>
+        <field name="MPN">SMBJ33CA</field>
+        <field name="Footprint">Diode_SMD:D_SMB</field>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="Device" part="D_TVS" description="Bidirectional transient-voltage-suppression diode"/>
+      <property name="Manufacturer" value="Hongjiacheng (R+O)"/>
+      <property name="MPN" value="SMBJ33CA"/>
+      <property name="Sheetname" value="plytka-v2"/>
+      <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
+      <property name="exclude_from_bom"/>
+      <property name="dnp"/>
+      <property name="ki_keywords" value="diode TVS thyrector"/>
+      <property name="ki_fp_filters" value="TO-???* *_Diode_* *SingleDiode* D_*"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>3a616300-623a-516a-8d63-479d24c5f757</tstamps>
       <units>
         <unit name="A">
           <pins>
@@ -1993,15 +2079,15 @@
       <value>DEVKITC J1</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC221LFBN-RC</field>
+        <field name="Manufacturer">Hong Cheng</field>
+        <field name="MPN">HC-PM254-8.5H-1x22PZ</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x22" description="Generic connector, single row, 01x22, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC221LFBN-RC"/>
+      <property name="Manufacturer" value="Hong Cheng"/>
+      <property name="MPN" value="HC-PM254-8.5H-1x22PZ"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2041,15 +2127,15 @@
       <value>DEVKITC J3</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC221LFBN-RC</field>
+        <field name="Manufacturer">Hong Cheng</field>
+        <field name="MPN">HC-PM254-8.5H-1x22PZ</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x22" description="Generic connector, single row, 01x22, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC221LFBN-RC"/>
+      <property name="Manufacturer" value="Hong Cheng"/>
+      <property name="MPN" value="HC-PM254-8.5H-1x22PZ"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2126,15 +2212,15 @@
       <value>WIO J1</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC071LFBN-RC</field>
+        <field name="Manufacturer">hanxia</field>
+        <field name="MPN">HX PM2.54-1x7P ZC-Y</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x07" description="Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC071LFBN-RC"/>
+      <property name="Manufacturer" value="hanxia"/>
+      <property name="MPN" value="HX PM2.54-1x7P ZC-Y"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2159,15 +2245,15 @@
       <value>WIO J2</value>
       <footprint>Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</footprint>
       <fields>
-        <field name="Manufacturer">Sullins</field>
-        <field name="MPN">PPTC071LFBN-RC</field>
+        <field name="Manufacturer">hanxia</field>
+        <field name="MPN">HX PM2.54-1x7P ZC-Y</field>
         <field name="Footprint">Connector_PinSocket_2.54mm:PinSocket_1x07_P2.54mm_Vertical</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Connector_Generic" part="Conn_01x07" description="Generic connector, single row, 01x07, script generated (kicad-library-utils/schlib/autogen/connector/)"/>
-      <property name="Manufacturer" value="Sullins"/>
-      <property name="MPN" value="PPTC071LFBN-RC"/>
+      <property name="Manufacturer" value="hanxia"/>
+      <property name="MPN" value="HX PM2.54-1x7P ZC-Y"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="connector"/>
@@ -2335,15 +2421,15 @@
       <value>MMBT3904</value>
       <footprint>Package_TO_SOT_SMD:SOT-23</footprint>
       <fields>
-        <field name="Manufacturer">onsemi</field>
-        <field name="MPN">MMBT3904LT1G</field>
+        <field name="Manufacturer">Jiangsu Changjing</field>
+        <field name="MPN">MMBT3904</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Transistor_BJT" part="MMBT3904" description="0.2A Ic, 40V Vce, Small Signal NPN Transistor, SOT-23"/>
-      <property name="Manufacturer" value="onsemi"/>
-      <property name="MPN" value="MMBT3904LT1G"/>
+      <property name="Manufacturer" value="Jiangsu Changjing"/>
+      <property name="MPN" value="MMBT3904"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="NPN Transistor"/>
@@ -2689,15 +2775,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2717,15 +2803,15 @@
       <value>22R</value>
       <footprint>Resistor_SMD:R_1206_3216Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC1206FR-0722RL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">1206W4F220JT5E</field>
         <field name="Footprint">Resistor_SMD:R_1206_3216Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC1206FR-0722RL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="1206W4F220JT5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2745,15 +2831,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2773,15 +2859,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2801,15 +2887,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2829,15 +2915,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2857,15 +2943,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2885,15 +2971,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2913,15 +2999,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2941,15 +3027,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2969,15 +3055,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -2997,15 +3083,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3025,15 +3111,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3053,15 +3139,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3081,15 +3167,15 @@
       <value>33R</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0733RL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F330JT5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0733RL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F330JT5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3109,15 +3195,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3137,15 +3223,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3165,15 +3251,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3193,15 +3279,15 @@
       <value>309k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07309KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F3093T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07309KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F3093T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3277,15 +3363,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3305,15 +3391,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3333,15 +3419,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3361,15 +3447,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3389,15 +3475,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3417,15 +3503,15 @@
       <value>221k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RT0805BRD07221KL</field>
+        <field name="Manufacturer">Viking Tech</field>
+        <field name="MPN">AR05BTCW2213</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RT0805BRD07221KL"/>
+      <property name="Manufacturer" value="Viking Tech"/>
+      <property name="MPN" value="AR05BTCW2213"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3529,15 +3615,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3557,15 +3643,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3585,15 +3671,15 @@
       <value>39k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RT0805BRD0739KL</field>
+        <field name="Manufacturer">Viking Tech</field>
+        <field name="MPN">ARG05BTC3902</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RT0805BRD0739KL"/>
+      <property name="Manufacturer" value="Viking Tech"/>
+      <property name="MPN" value="ARG05BTC3902"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3669,15 +3755,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3697,15 +3783,15 @@
       <value>470k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07470KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F4703T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07470KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F4703T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3725,15 +3811,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3753,15 +3839,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3781,15 +3867,15 @@
       <value>220k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07220KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F2203T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07220KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F2203T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3809,15 +3895,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3837,15 +3923,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3865,15 +3951,15 @@
       <value>220k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07220KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F2203T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07220KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F2203T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3921,15 +4007,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3949,15 +4035,15 @@
       <value>432k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07432KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F4323T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07432KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F4323T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -3977,15 +4063,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4005,15 +4091,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4033,15 +4119,15 @@
       <value>5k1</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-075K1L</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F5101T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-075K1L"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F5101T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4061,15 +4147,15 @@
       <value>5k1</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-075K1L</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F5101T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-075K1L"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F5101T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4089,15 +4175,15 @@
       <value>20k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0720KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F2002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0720KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F2002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4117,15 +4203,15 @@
       <value>20k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0720KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F2002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0720KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F2002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4201,15 +4287,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4229,15 +4315,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4257,15 +4343,15 @@
       <value>1M</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071ML</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1004T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071ML"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1004T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4285,15 +4371,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4313,15 +4399,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4341,15 +4427,15 @@
       <value>10k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-0710KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1002T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-0710KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1002T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4369,15 +4455,15 @@
       <value>100k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-07100KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1003T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-07100KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1003T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4397,15 +4483,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4425,15 +4511,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4453,15 +4539,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4481,15 +4567,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4509,15 +4595,15 @@
       <value>1k</value>
       <footprint>Resistor_SMD:R_0805_2012Metric</footprint>
       <fields>
-        <field name="Manufacturer">Yageo</field>
-        <field name="MPN">RC0805FR-071KL</field>
+        <field name="Manufacturer">UNI-ROYAL</field>
+        <field name="MPN">0805W8F1001T5E</field>
         <field name="Footprint">Resistor_SMD:R_0805_2012Metric</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Device" part="R" description="Resistor"/>
-      <property name="Manufacturer" value="Yageo"/>
-      <property name="MPN" value="RC0805FR-071KL"/>
+      <property name="Manufacturer" value="UNI-ROYAL"/>
+      <property name="MPN" value="0805W8F1001T5E"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="R res resistor"/>
@@ -4564,15 +4650,15 @@
       <value>CY15B104QN-50SXI</value>
       <footprint>Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</footprint>
       <fields>
-        <field name="Manufacturer">Infineon</field>
-        <field name="MPN">CY15B104QN-50SXI</field>
+        <field name="Manufacturer">RAMXEED</field>
+        <field name="MPN">MB85RS4MTPF-G-BCERE1</field>
         <field name="Footprint">Package_SO:SOIC-8_5.3x5.3mm_P1.27mm</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="Memory_NVRAM" part="MB85RS2MT" description="FeRAM memory with SPI interface, 2Mbit (256K x 8), 1.8V to 3.6V supply, DIP-8 / SOIC-8 (SOP-8, 208 mil)"/>
-      <property name="Manufacturer" value="Infineon"/>
-      <property name="MPN" value="CY15B104QN-50SXI"/>
+      <property name="Manufacturer" value="RAMXEED"/>
+      <property name="MPN" value="MB85RS4MTPF-G-BCERE1"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <property name="ki_keywords" value="FRAM Ferroelectric-RAM 3.3V 2-Mbit MB85RS2MTPH MB85RS2MTPF Fujitsu Obsolete"/>
@@ -4631,14 +4717,14 @@
       <footprint>Package_TO_SOT_SMD:SOT-23-5</footprint>
       <fields>
         <field name="Manufacturer">Texas Instruments</field>
-        <field name="MPN">TPS3840PH27DBVR</field>
+        <field name="MPN">TPS3840PH27DBVRQ1</field>
         <field name="Footprint">Package_TO_SOT_SMD:SOT-23-5</field>
         <field name="Datasheet"/>
         <field name="Description"/>
       </fields>
       <libsource lib="WICI" part="TPS3840PH" description="Supervisor, push-pull active-high RESET, SOT-23-5"/>
       <property name="Manufacturer" value="Texas Instruments"/>
-      <property name="MPN" value="TPS3840PH27DBVR"/>
+      <property name="MPN" value="TPS3840PH27DBVRQ1"/>
       <property name="Sheetname" value="plytka-v2"/>
       <property name="Sheetfile" value="plytka-v2.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
@@ -5866,6 +5952,8 @@
       <node ref="C35" pin="2" pintype="passive"/>
       <node ref="C36" pin="2" pintype="passive"/>
       <node ref="C37" pin="2" pintype="passive"/>
+      <node ref="C38" pin="2" pintype="passive"/>
+      <node ref="C39" pin="2" pintype="passive"/>
       <node ref="C4" pin="2" pintype="passive"/>
       <node ref="C40" pin="2" pintype="passive"/>
       <node ref="C41" pin="2" pintype="passive"/>
@@ -5895,6 +5983,7 @@
       <node ref="D17" pin="2" pinfunction="A_2" pintype="passive"/>
       <node ref="D18" pin="2" pinfunction="GND_2" pintype="power_in"/>
       <node ref="D19" pin="2" pinfunction="GND_2" pintype="power_in"/>
+      <node ref="D20" pin="2" pinfunction="A2_2" pintype="passive"/>
       <node ref="D4" pin="2" pinfunction="A2_2" pintype="passive"/>
       <node ref="D6" pin="1" pinfunction="A_1" pintype="passive"/>
       <node ref="J1" pin="2" pinfunction="Pin_2_2" pintype="passive"/>
@@ -6129,6 +6218,7 @@
       <node ref="R32" pin="2" pintype="passive"/>
     </net>
     <net code="70" name="/S12_EN" class="Default">
+      <node ref="C39" pin="1" pintype="passive"/>
       <node ref="R37" pin="2" pintype="passive"/>
       <node ref="R38" pin="1" pintype="passive"/>
       <node ref="U5" pin="6" pinfunction="EN/UVLO_6" pintype="input"/>
@@ -6214,7 +6304,9 @@
       <node ref="R73" pin="1" pintype="passive"/>
     </net>
     <net code="86" name="/V12_F" class="Default">
+      <node ref="C38" pin="1" pintype="passive"/>
       <node ref="D13" pin="2" pinfunction="A_2" pintype="passive"/>
+      <node ref="D20" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D4" pin="1" pinfunction="A1_1" pintype="passive"/>
       <node ref="D5" pin="1" pinfunction="K_1" pintype="passive"/>
       <node ref="F1" pin="2" pintype="passive"/>
