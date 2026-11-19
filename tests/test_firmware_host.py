@@ -1513,12 +1513,14 @@ class HostUnitTests(unittest.TestCase):
 
     def test_cells_new_set_by_voltage_step(self):
         # Przyjęte 2026-11-18: nowy komplet, gdy pierwszy pomiar po starcie albo po przerwie bez ogniw (< 1 V) jest
-        # o ≥0,4 V wyższy od zapisanego przy tym samym źródle. Mniejszy skok, inne źródło albo skok w trakcie pracy
-        # nie zerują licznika.
+        # o ≥0,4 V wyższy od zapisanego. Mniejszy skok albo skok w trakcie pracy nie zerują licznika.
         self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/6200/6200/1")[0][1:], [0, 0, 0, 0, 1])
         self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/6199/6199/1")[0][1], 9000000)
-        self.assertEqual(self.cells("B9000000/5800/0", "0/0/0/6300/6300/1")[0][1], 9000000)
         self.assertEqual(self.cells("B9000000/5800/1", "0/0/0/5800/5800/1", "60000/0/0/6300/6300/1")[1][5], 0)
+        # Zapisane przy 12 V (bez obciążenia), teraz z ogniw: pod obciążeniem ten sam komplet ma niższe napięcie,
+        # więc porównanie wprost.
+        self.assertEqual(self.cells("B9000000/5800/0", "0/0/0/6200/6200/1")[0][5], 1)
+        self.assertEqual(self.cells("B9000000/5800/0", "0/0/0/6199/6199/1")[0][1], 9000000)
         # Wymiana przy 12 V: pomiar bez ogniw, potem nowy komplet bez obciążenia.
         out = self.cells("B9000000/6000/0", "0/0/0/6000/6000/0", "60000/0/0/0/3000/0", "60000/0/0/7100/5000/0")
         self.assertEqual([x[1] for x in out], [9000000, 9000000, 0])
@@ -1527,6 +1529,39 @@ class HostUnitTests(unittest.TestCase):
         out = self.cells("B9000000/6000/0", "0/0/0/6000/6000/0", "60000/0/0/6030/6000/0", "60000/0/0/6060/6000/0",
                          "60000/0/0/6060/6000/1")
         self.assertEqual([x[0] for x in out], [0, 0, 1, 1])
+
+    def test_cells_new_set_after_shutdown_on_cells_started_on_mains(self):
+        # Stacja wyłączyła się przy 4,0 V na ogniwach, nowy komplet włożony przy 12 V: 7,1 V bez obciążenia niczego
+        # nie dowodzi, bo ten sam komplet bez obciążenia też ma wyższe napięcie. Zapisane 4,0 V zostaje (bez zapisu
+        # do FRAM, więc restart przy 12 V daje to samo), a rozstrzyga pierwszy pomiar z ogniw.
+        out = self.cells("B14000000/4000/1", "0/0/0/7100/7100/0", "60000/0/0/7100/7100/0", "60000/0/0/6300/6300/1",
+                         "60000/0/0/6300/6300/1")
+        self.assertEqual([x[0] for x in out], [0, 0, 1, 1])
+        self.assertEqual([x[1] for x in out[:2]], [14000000, 14000000])
+        self.assertEqual([x[5] for x in out], [0, 0, 1, 1])
+        uw = self.model_input_uw(60000, 0, 0, 6300)
+        self.assertAlmostEqual(out[2][1], uw * 60 / 3600, delta=2)   # licznik od zera, z energią tego pomiaru
+        self.assertGreater(out[3][3], 50)
+        # Wymiana w trakcie oczekiwania (przerwa bez ogniw przy 12 V) też rozstrzyga się pod obciążeniem.
+        out = self.cells("B14000000/4000/1", "0/0/0/4800/4800/0", "60000/0/0/0/3000/0", "60000/0/0/7100/5000/0",
+                         "60000/0/0/6300/6300/1")
+        self.assertEqual([x[5] for x in out], [0, 0, 0, 1])
+
+    def test_cells_same_set_back_after_shutdown_on_cells(self):
+        # Ten sam komplet po wyłączeniu przy 4,0 V, start przy 12 V: bez obciążenia niżej niż 4,4 V kończy oczekiwanie
+        # bez zerowania (nowy komplet pod obciążeniem byłby jeszcze niżej), a dalej napięcie śledzi się jak zwykle.
+        out = self.cells("B14000000/4000/1", "0/0/0/4300/4300/0", "60000/0/0/4300/4300/0", "60000/0/0/4600/4600/1")
+        self.assertEqual([x[0] for x in out], [1, 0, 1])
+        self.assertEqual([x[5] for x in out], [0, 0, 0])
+        # Bez obciążenia 4,6 V: oczekiwanie; pomiar przy 12 V niżej niż 4,4 V je kończy, a pierwszy pomiar z ogniw
+        # pod obciążeniem bez skoku nie zeruje licznika.
+        out = self.cells("B14000000/4000/1", "0/0/0/4600/4600/0", "60000/0/0/4350/4350/0", "60000/0/0/4500/4500/1")
+        self.assertEqual([x[0] for x in out], [0, 1, 1])
+        self.assertEqual([x[5] for x in out], [0, 0, 0])
+        out = self.cells("B14000000/4000/1", "0/0/0/4600/4600/0", "60000/0/0/4600/4600/0", "60000/0/0/4200/4200/1")
+        self.assertEqual([x[0] for x in out], [0, 0, 1])
+        self.assertEqual([x[5] for x in out], [0, 0, 0])
+        self.assertGreater(out[2][1], 14000000)
 
     def test_cells_counter_ring_in_store_gap(self):
         # Pierścień 8 rekordów pod 0xFA00 (przyjęte 2026-11-18): najnowszy po „restarcie”, nic poza pierścieniem

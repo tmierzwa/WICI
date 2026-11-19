@@ -35,12 +35,17 @@ bool Estimator::update(uint32_t awakeMs, uint32_t sleptMs, uint32_t txMs, uint16
     started_ = true;
     const bool present = lastMv >= ABSENT_MV;
     bool save = false;
-    // Nowy komplet: skok napięcia po starcie albo po przerwie bez ogniw, przy tym samym źródle co zapisane napięcie.
-    if (present && (first || absent_) && lastMv_ && onCells == lastOnCells_ && lastMv >= lastMv_ + FRESH_STEP_MV) {
-        usedUwh_ = 0;
-        remainderUwms_ = 0;
-        ++freshSets_;
-        save = true;
+    // Nowy komplet: skok napięcia po starcie albo po przerwie bez ogniw (opis w cells.h). Zapisane pod obciążeniem,
+    // a teraz bez niego: skok niczego nie dowodzi, więc rozstrzyga pierwszy pomiar z ogniw (pending_).
+    if (present && (first || absent_ || pending_) && lastMv_) {
+        const bool step = lastMv >= lastMv_ + FRESH_STEP_MV;
+        pending_ = lastOnCells_ && !onCells && step;
+        if (step && !pending_) {
+            usedUwh_ = 0;
+            remainderUwms_ = 0;
+            ++freshSets_;
+            save = true;
+        }
     }
     absent_ = !present;
     if (onCells && present) {
@@ -56,7 +61,7 @@ bool Estimator::update(uint32_t awakeMs, uint32_t sleptMs, uint32_t txMs, uint16
             save = true;
         }
     }
-    if (present) {
+    if (present && !pending_) {   // w oczekiwaniu zostaje napięcie spod obciążenia
         const uint16_t diff = lastMv > storedMv_ ? lastMv - storedMv_ : storedMv_ - lastMv;
         if (diff >= SAVE_STEP_MV || onCells != lastOnCells_ || !storedMv_) save = true;
         lastMv_ = lastMv;

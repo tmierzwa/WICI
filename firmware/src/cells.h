@@ -10,10 +10,19 @@
 //   minutę), więc nagły ruch albo cisza zmienia szacunek stopniowo.
 // - Przy alarmie wymien_ogniwa szacunek pokazuje najwyżej 1 h, bo tak mówi tekst alarmu; inaczej najmniej 1 h.
 // - Nowy komplet: licznik zeruje się, gdy pierwszy pomiar po starcie albo po przerwie bez ogniw (poniżej
-//   ABSENT_MV) jest wyższy o co najmniej FRESH_STEP_MV od ostatniego zapisanego przy tym samym źródle zasilania.
-//   Napięcie pod obciążeniem (praca z ogniw) i bez niego (12 V) różni się, więc porównanie jest tylko w obrębie
-//   jednego źródła. Częściowo zużyty komplet też może wyzerować licznik; wtedy szacunek jest za wysoki aż do
-//   wymien_ogniwa.
+//   ABSENT_MV) jest wyższy o co najmniej FRESH_STEP_MV od ostatniego zapisanego. Ten sam komplet bez obciążenia
+//   (12 V) ma wyższe napięcie niż pod obciążeniem (praca z ogniw), stąd zależność od źródła:
+//   - to samo źródło: porównanie wprost;
+//   - zapisane przy 12 V, teraz praca z ogniw: porównanie wprost, bo pod obciążeniem ten sam komplet ma niższe
+//     napięcie, więc skok o FRESH_STEP_MV oznacza inny komplet;
+//   - zapisane przy pracy z ogniw, teraz 12 V: skok niczego nie dowodzi. Program zostawia zapisane napięcie spod
+//     obciążenia i rozstrzyga przy pierwszym pomiarze z ogniw, czyli zanim policzy energię. Pomiar przy 12 V niższy
+//     niż zapisane + FRESH_STEP_MV kończy oczekiwanie bez zerowania, bo nowy komplet pod obciążeniem byłby jeszcze
+//     niższy. Przykład: stacja wyłączyła się przy 4,0 V na ogniwach, nowy komplet włożony przy 12 V pokazuje 7,1 V,
+//     a licznik zeruje się, gdy po odłączeniu 12 V ogniwa pod obciążeniem pokażą ponad 4,4 V.
+//   Częściowo zużyty komplet też może wyzerować licznik; wtedy szacunek jest za wysoki aż do wymien_ogniwa.
+//   Ten sam komplet włożony z powrotem po odpoczynku może pod obciążeniem chwilowo pokazać o FRESH_STEP_MV więcej
+//   niż przed wyłączeniem i też wyzerować licznik; sprawdzić na płytce.
 // - Licznik i ostatnie napięcie leżą w FRAM (journal::Journal::writeCells), więc przetrwają restart i wyłączenie.
 //
 // Stałe pochodzą z modelu energii (software/reference/obliczenia.py: komplet 4 × 4,5 Wh × 0,8, MCU 45 mA w pracy
@@ -73,6 +82,7 @@ private:
     uint32_t usedUwh_ = 0;
     uint16_t lastMv_ = 0;
     bool lastOnCells_ = false;
+    bool pending_ = false;     // skok przy 12 V wobec napięcia spod obciążenia: rozstrzyga pierwszy pomiar z ogniw
     uint16_t storedMv_ = 0;    // ostatnie zapisane napięcie (próg zapisu)
     uint32_t averageUw_ = 0;
     uint32_t freshSets_ = 0;
