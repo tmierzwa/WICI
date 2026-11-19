@@ -232,6 +232,19 @@ Pomyłka o jeden pin w J6 jest bezpieczna (pin 16 to INT z podciągnięciem do +
 
 ## 5. Moduły: DevKitC i Wio, start i wgranie programu
 
+### Program przed włożeniem modułu
+
+Program stacji ma obraz `v2` dla tej płytki (`firmware/src/board_v2.h`, od 2026-11-18 wersja `v2-0.8`): piny z tabeli „Sygnały MCU” w polaczenia.md, pomiar ogniw i 12 V z alarmami, PWM przetwornicy na czas nadawania, wyłączanie przez INT i KILL, szacunek godzin pracy i czuwanie [firmware/docs/prototyp-l0-i-xiao.md, „Prototyp płytki v2”]. Wgrywa się go do DevKitC, zanim moduł trafi do gniazd, tak jak w [planie prób](proby.md) (próba 2). Powód: fabryczny program modułu jest nieznany, a obraz `v2` od pierwszej chwili trzyma linie zasilania w bezpiecznym stanie (KILL nisko, przetwornica w Burst Mode poza nadawaniem).
+
+Złącza USB samego modułu DevKitC używa się tylko wtedy, gdy moduł jest poza płytką albo zasilanie stacji (J1 i J2) jest odłączone. Inaczej szynę 3,3 V zasilałyby dwa źródła [elektronika.md, „Gniazdo USB do laptopa”].
+
+- P1. Zainstaluj PlatformIO według firmware/README.md.
+- P2. Moduł DevKitC leży na stole, poza płytką, na nieprzewodzącym podłożu. Podłącz laptop do jego złącza podpisanego „USB” (nie „UART”).
+- P3. Uruchom: `cd firmware && ../.venv-pio/bin/pio run -e v2 -t upload` [firmware/README.md].
+- P4. Jeśli wgrywanie nie znajduje portu: przytrzymaj BOOT na DevKitC, naciśnij i puść RST, puść BOOT, powtórz P3.
+- P5. Wgranie jest udane, gdy esptool kończy bez błędu (sprawdzenie sumy wgranych danych). Samego programu na gołym module się nie ocenia: bez płytki pomiar ogniw daje przypadkowe wartości i program może od razu przejść do wyłączania, więc `INFO` może nie odpowiadać. **STOP, jeśli** esptool zgłasza błąd także po P4: zapisz komunikat.
+- P6. Odłącz laptop od modułu.
+
 ### DevKitC
 
 1. Stacja wyłączona, wszystkie źródła odłączone. +3V3 poniżej 0,1 V.
@@ -242,9 +255,11 @@ Pomyłka o jeden pin w J6 jest bezpieczna (pin 16 to INT z podciągnięciem do +
 6. Oscyloskop na +3V3 (lewy pin JP3), masa sondy na MASIE: 0,5 V/działkę, zbocze opadające na 3,15 V, tryb pojedynczy, 2 ms/działkę.
 7. Włącz stację przyciskiem.
 8. **STOP, jeśli** zasilacz siedzi w ograniczeniu albo +3V3 (multimetr) jest poniżej 3,0 V.
-9. Jeśli stacja wyłącza się sama około pół sekundy po włączeniu: program w DevKitC ustawia GPIO47 (KILL). Nie jest to uszkodzenie: przejdź do wgrania programu i włączaj stację z przytrzymanym przyciskiem BOOT na DevKitC (moduł nie uruchamia wtedy programu).
+9. Z obrazem `v2` stacja ma zostać włączona. Radia jeszcze nie ma, więc po około sekundzie program zgłasza awarię radia: brzęczyk daje krótki sygnał co 2 s i miga dioda alarmu (z podłączonym ekranem: wybór języka, a potem „RADIO: AWARIA”). To oczekiwane i znika po włożeniu Wio (kroki 12–19) [firmware/src/annunciator.h; ui_texts.h]. Dwa przypadki, gdy stacja wyłącza się sama:
+   - po około pół sekundy: moduł ma inny program niż `v2` (ustawia GPIO47, czyli KILL) albo wgranie P3 się nie udało. Nie jest to uszkodzenie płytki: odłącz zasilanie, wyjmij moduł i powtórz P2–P5;
+   - po kilku sekundach przy 6,0 V na J1: program jest dobry, ale pomiar ogniw daje mniej niż 4,0 V i program sam wyłącza stację. **STOP**, zapisz i zgłoś (tor pomiaru ogniw: Q6, Q7, R44, R45, linia DIV_EN) [firmware/docs/prototyp-l0-i-xiao.md, „Wyłączanie przez LTC2955”].
 10. Odczytaj najniższe +3V3 z oscyloskopu (jeśli się wyzwolił). **STOP, jeśli** 2,74 V albo niżej (próg nadzorcy FRAM U3, 2,66–2,74 V [elektronika.md, „Zanik zasilania i zapis”, punkt 2]). Wynik liczy się tylko, gdy zasilacz ani razu nie wszedł w ograniczenie prądu.
-11. Wyłącz stację przytrzymaniem. Ustaw 4,0 V i ograniczenie 1,0 A. Powtórz 7–10 [README, „Przed zamówieniem”: start ESP32-S3 przy 4 V]. Przy spadku nie poprawiaj niczego sam; README podaje kolejne poprawki [tamże].
+11. Wyłącz stację przytrzymaniem. Ustaw 4,0 V i ograniczenie 1,0 A. Powtórz 7–10 [README, „Przed zamówieniem”: start ESP32-S3 przy 4 V]. Przy spadku nie poprawiaj niczego sam; README podaje kolejne poprawki [tamże]. Przy 4,0 V obraz `v2` może po kilku sekundach sam wyłączyć stację, bo próg wyłączenia to pomiar ogniw poniżej 4,0 V [firmware/docs/prototyp-l0-i-xiao.md, „Wyłączanie przez LTC2955”]. To poprawne zachowanie. Dlatego w tym przebiegu: multimetr z kroku 8 odczytaj w pierwszych 2 s po włączeniu, a oscyloskop oceniaj tak: liczy się tylko spadek, po którym +3V3 wraca do około 3,3 V. Jeśli oscyloskop wyzwolił się dopiero przy wyłączeniu (+3V3 opada do 0 V i nie wraca), to nie jest spadek przy starcie i nie jest powodem do STOP. Zapisz, czy stacja się wyłączyła.
 
 ### Wio
 
@@ -254,31 +269,35 @@ Pomyłka o jeden pin w J6 jest bezpieczna (pin 16 to INT z podciągnięciem do +
 15. PPK2 w trybie **amperomierza (Ampere meter)**, nie źródła: VIN na lewy pin JP3 (+3V3), VOUT na prawy pin JP3, GND PPK2 na MASĘ. Zworka JP3 zdjęta.
 16. Zasilacz na J1: 6,0 V, 0,50 A (założenie). Oscyloskop jak w kroku 6.
 17. Włącz stację. Odczytaj prąd radia w PPK2.
-18. **STOP, jeśli** prąd radia bez nadawania przekracza 20 mA albo rośnie (założenie: SX1262 w odbiorze bierze kilka mA; dużo więcej oznacza źle włożony moduł).
+18. **STOP, jeśli** prąd radia przekracza 20 mA albo rośnie (założenie: SX1262 w odbiorze bierze kilka mA, na L0 zmierzono 6,2 mA; dużo więcej oznacza źle włożony moduł). Stacja bez konfiguracji sieci nie nadaje, więc po pierwszej sekundzie (start radia) prąd ma być stały. Powtarzające się impulsy kilkudziesięciu mA: **ZAPISZ** i zgłoś [firmware/src/rns_node_core.cpp: interfejs bez klucza sieci nie nadaje].
 19. Wyłącz stację, odłącz PPK2, załóż zworkę JP3.
 
-### Wgranie programu
+### Program na płytce
 
-Program stacji ma obraz `v2` dla tej płytki (`firmware/src/board_v2.h`, od 2026-11-18 wersja `v2-0.8`): piny z tabeli „Sygnały MCU” w polaczenia.md, pomiar ogniw i 12 V z alarmami, PWM przetwornicy na czas nadawania, wyłączanie przez INT i KILL, szacunek godzin pracy i czuwanie [firmware/docs/prototyp-l0-i-xiao.md, „Prototyp płytki v2”]. Próby pierwszych sztuk prowadzi się na obrazie `v2` według [planu prób](proby.md), który w próbie 2 wgrywa `v2` od razu. Kroki 20–29 niżej to wcześniejsze, opcjonalne sprawdzenie obrazem `l0`: nie steruje on nowymi liniami zasilania (PWM przetwornicy, klucz dzielnika ogniw, KILL), więc oddziela błąd płytki od błędu nowych funkcji programu, a przetwornica pracuje z nim cały czas w Burst Mode. Po kroku 29 wgrywa się obraz `v2` (`pio run -e v2 -t upload`, urządzenie „WICI v2”, `INFO` pokazuje `v2-0.8` albo nowszy). Do pierwszego sprawdzenia pasuje obraz `l0` prototypu v1.1: piny ekranu, radia, FRAM i przycisków są te same [README, „Przydział pinów”; firmware/src/board_l0.h]. Obraz `l0` sprawdzi USB, ekran, radio i FRAM. Nie obsługuje pomiaru ogniw, KILL, INT, PWM przetwornicy i wykrywania laptopa; odczyt „12 V” będzie błędny (czyta GPIO5 z dzielnikiem 1/6, a v2 ma 0,0625 [board_l0.h, VTEST; design.py, R38/R39]). Obraz `l0` nie rusza GPIO3, GPIO4 ani GPIO45–48, więc nie koliduje z nowymi obwodami v2 [board_l0.h]. Gdyby obraz `l0` nie ruszył, zapasowo wgrywa się program diagnostyczny L0 (`hardware/l0-diagnostic`, te same piny, USB natywne).
+Kroki 20–29 sprawdzają obraz `v2` na płytce: USB przez gniazdo płytki, radio, FRAM, pomiar zasilania, wgranie przez gniazdo płytki i wyłączenie z programu. Ekranu i przycisków panelu te kroki nie sprawdzają. Dalsze próby (dokładność pomiaru, alarmy, czuwanie, energia) są w [planie prób](proby.md) od próby 3.
 
-Laptop nie zasila stacji przez USB-C (VBUS idzie tylko do wykrywania laptopa), więc stacja musi być zasilana z J1 albo J2 [elektronika.md, „Gniazdo USB do laptopa”].
+Laptop nie zasila stacji przez USB-C (VBUS idzie tylko do wykrywania laptopa), więc stacja musi być zasilana z J1 albo J2 [elektronika.md, „Gniazdo USB do laptopa”]. Stacja bez laptopa usypia procesor i odłącza się od USB. Wraca na magistralę na 10 s po starcie i po pojawieniu się napięcia z laptopa w gnieździe płytki, a gdy laptop ją w tym czasie rozpozna, zostaje połączona, dopóki przewód jest w gnieździe [firmware/docs/prototyp-l0-i-xiao.md, „Pętla czuwania”, USB i zasada 10 s].
 
-20. Zainstaluj PlatformIO według firmware/README.md.
-21. Zasilacz na J1: 6,0 V, 0,50 A. Antena na Wio. Włącz stację.
-22. Podłącz laptop do USB-C stacji (J4).
-23. Uruchom: `cd firmware && ../.venv-pio/bin/pio run -e l0 -t upload` [firmware/README.md].
-24. Jeśli wgrywanie nie znajduje portu: przytrzymaj BOOT na DevKitC, naciśnij i puść RST, puść BOOT, powtórz 23. Kolejne wgrania idą bez przycisków (wgrywanie przez esptool z „dotknięciem 1200 b/s” [platformio.ini, `[env:bench-b-port]`, przez `bench-b`]).
-25. Po wgraniu naciśnij RST na DevKitC.
-26. Laptop ma widzieć urządzenie „WICI L0” z dwoma portami szeregowymi [platformio.ini, `[env:l0]`, `[lora]`].
-27. Otwórz pierwszy port. Obraz sam wysyła `INFO`, `RADIO`, `FRAM`, `JOURNAL`; `INFO` ma pokazać `l0-0.6` [firmware/docs/polecenia.md; platformio.ini].
-28. **STOP, jeśli** laptop nie widzi urządzenia albo nie ma `INFO`: zapisz komunikat esptool.
-29. Wyłącz stację przytrzymaniem J3 (laptop zostaje podłączony). Zmierz +3V3: poniżej 0,3 V. Laptop nie może zasilać wyłączonej stacji [README, „Tor zasilania”, wykrywanie laptopa]. **STOP, jeśli** wyżej.
+Ekran nie jest do tych kroków potrzebny: wszystko widać w odpowiedziach na porcie i na mierniku. Taśmę ekranu wkłada się do J7 dopiero przy próbie 2 z planu prób (polecenie `SCREEN`, przyciski), zawsze przy odłączonym zasilaniu. Napisy z ekranu podane niżej w cudzysłowie są dla płytki z podłączonym ekranem.
+
+20. Zasilacz na J1: 6,0 V, 0,50 A. Antena na Wio, zworka JP3 założona. Włącz stację. Alarmu awarii radia z kroku 9 ma już nie być, bo radio jest w gnieździe. Jeśli brzęczyk albo dioda nadal dają sygnał, nie zatrzymuj się: przyczynę pokaże `INFO` w kroku 23 (stacja bez konfiguracji może zgłaszać inny alarm; zapisz go).
+21. Podłącz laptop do USB-C stacji (J4). Laptop ma w ciągu 10 s zobaczyć urządzenie „WICI v2” z dwoma portami szeregowymi [platformio.ini, `[env:v2]`, `[lora]`].
+22. **STOP, jeśli** laptop nie widzi urządzenia. Najpierw spróbuj: wyjmij i włóż przewód w J4. Potem przytrzymaj przycisk przygotowania (SW6) przez 3 s: stacja wchodzi w tryb przygotowania i wraca na magistralę [firmware/docs/prototyp-l0-i-xiao.md, „Pętla czuwania”, USB i zasada 10 s]. Gdy laptop ją zobaczy, przytrzymaj SW6 jeszcze raz przez 3 s, żeby wyjść z trybu; inaczej krok 25 pokaże `prep` zamiast `usb`. Jeśli nadal nic: zapisz, czy brzęczyk albo dioda dają sygnał, i nie przechodź dalej.
+23. Otwórz pierwszy port (diagnostyka) i wyślij `INFO` [firmware/docs/polecenia.md]. Ma być: `fw` `v2-0.8` albo nowszy, `radio_ok`, `fram_ok` i `journal_ok` `true`, `src` `AA`, `mv` około 6000. **STOP, jeśli** któreś z trzech pól `_ok` jest `false`: zapisz całą odpowiedź oraz odpowiedzi `RADIO` i `FRAM`.
+24. Odczekaj minutę i wyślij `POWER`. Ma być: `source` `aa`, `samples` większe od 0, `alarm` `none`, a `mv_aa_last` w granicach 2% napięcia zmierzonego multimetrem na J1 (przy 6,00 V: 5880–6120). **ZAPISZ** odpowiedź i odczyt multimetru. Odchyłka ponad 2% nie zatrzymuje uruchomienia; rozstrzyga ją próba 3 z planu prób.
+25. Wyślij `STANDBY`: pole `standby` ma wartość `usb` (laptop połączony wstrzymuje czuwanie). Wyślij `CONVERTER`: `converter` `auto` i `pwm_sync` `false` (Burst Mode poza nadawaniem). **ZAPISZ** obie odpowiedzi.
+26. Wgranie przez gniazdo płytki, przy włączonej stacji i połączonym laptopie. Zamknij program terminala (otwarty port blokuje wgrywanie) i uruchom: `cd firmware && ../.venv-pio/bin/pio run -e v2 -t upload`. Jeśli wgrywanie nie znajduje portu: przytrzymaj BOOT na DevKitC, naciśnij i puść RST, puść BOOT, powtórz. Moduł wisi pod zasilaną płytką, więc przyciski naciskaj palcem albo plastikowym narzędziem, nie metalowym. Po wgraniu naciśnij RST na DevKitC i powtórz krok 23. Złącza USB samego modułu przy włączonej stacji nie używaj.
+27. **STOP, jeśli** po wgraniu laptop nie widzi urządzenia albo nie ma `INFO`: zapisz komunikat esptool.
+28. Wyłączenie z programu, z multimetrem na +3V3: przytrzymaj wyłącznik (J3) około 2 s i puść. Program zapisuje stan, czeka 2 s i zdejmuje zasilanie, więc +3V3 ma spaść do zera po około 2–3 s od puszczenia (ekran: przez chwilę „WYŁĄCZANIE – CZEKAJ, ZAPISUJĘ”, potem „MOŻNA WYJĄĆ OGNIWA”). Port szeregowy znika już wcześniej i to jest poprawne [firmware/docs/prototyp-l0-i-xiao.md, „Wyłączanie przez LTC2955”]. **STOP, jeśli** po około 10 s +3V3 nadal jest (ekran: „STACJA SIĘ NIE WYŁĄCZYŁA”): tor KILL (GPIO47, Q11) nie działa. Wyłącz wtedy stację przytrzymaniem wyłącznika przez 5–19 s i zapisz wynik.
+29. Laptop zostaje podłączony. Zmierz +3V3: poniżej 0,3 V. Laptop nie może zasilać wyłączonej stacji [README, „Tor zasilania”, wykrywanie laptopa]. **STOP, jeśli** wyżej.
+
+Zapasowo, gdy obraz `v2` nie rusza, a płytka przeszła kroki z części 3: obraz `l0` prototypu v1.1 (`pio run -e l0 -t upload`) ma te same piny ekranu, radia, FRAM i przycisków i nie steruje nowymi liniami zasilania (GPIO3, GPIO4, GPIO45–48), więc pozwala oddzielić błąd płytki od błędu nowych funkcji programu [firmware/src/board_l0.h]. Jego odczyt „12 V” jest na v2 błędny (dzielnik 1/6 zamiast 1/16), a przetwornica pracuje z nim cały czas w Burst Mode. Drugi zapas to program diagnostyczny L0 (`hardware/l0-diagnostic`, te same piny, USB natywne).
 
 ## 6. Przełączanie 12 V ↔ ogniwa pod obciążeniem
 
 Ta próba ma sens tylko z pracującym DevKitC; bez modułów +3V3 nie ma obciążenia i nie spadnie [README, „Na pierwszych sztukach v2”, C50].
 
-1. DevKitC i Wio w gniazdach, program `l0`, antena, zworka JP3.
+1. DevKitC i Wio w gniazdach, program `v2`, antena, zworka JP3.
 2. Koszyk z ogniwami AA w J1 (albo PPK2 jako źródło 5,0 V na J1).
 3. Włącz stację przyciskiem.
 4. Zasilacz: 12,6 V, 0,50 A, wtyczka w J2, wyjście włączone.

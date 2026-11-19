@@ -1,6 +1,6 @@
 # WICI: próby pierwszych sztuk v2
 
-Plan prób dwóch prototypów na [płytce v2](README.md) z obrazem [`v2`](../../firmware/docs/prototyp-l0-i-xiao.md#prototyp-płytki-v2-v2) (od `v2-0.8`). Płytki jeszcze nie ma: projekt ma komplet ścieżek i pliki produkcyjne, a zamówienie prototypów czeka na punkty z [Przed zamówieniem](README.md#przed-zamówieniem). Bezpieczne pierwsze włączenie krok po kroku, z warunkami przerwania, opisuje [uruchomienie.md](uruchomienie.md); rozwija ono próbę 1 i początek próby 2. Plan powstał wcześniej, żeby obie sztuki sprawdzić w jednym przejściu, kiedy tylko wrócą z montażu.
+Plan prób dwóch prototypów na [płytce v2](README.md) z obrazem [`v2`](../../firmware/docs/prototyp-l0-i-xiao.md#prototyp-płytki-v2-v2) (od `v2-0.8`). Płytki jeszcze nie ma: projekt ma komplet ścieżek i pliki produkcyjne, a zamówienie prototypów czeka na punkty z [Przed zamówieniem](README.md#przed-zamówieniem). Bezpieczne pierwsze włączenie krok po kroku, z warunkami przerwania, opisuje [uruchomienie.md](uruchomienie.md); rozwija ono próbę 1 i część próby 2 (obraz `v2` wgrany przed włożeniem modułu, potem kroki 20–29: USB, radio, FRAM, pomiar zasilania, wyłączenie); ekran i przyciski z próby 2 sprawdza się po nim. Plan powstał wcześniej, żeby obie sztuki sprawdzić w jednym przejściu, kiedy tylko wrócą z montażu.
 
 Próby mają trzy cele:
 
