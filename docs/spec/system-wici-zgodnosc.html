@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Wersje formatów, profile, próby współdziałania i dowody zgodności WICI.">
-  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.64</title>
+  <title>Wersje, zgodność i dowody — Specyfikacja WICI 0.65</title>
   <link rel="stylesheet" href="system-wici.css">
   <style>
     .evidence-table { min-width: 94rem; }
@@ -36,7 +36,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Wersje, zgodność i dowody</h1>
-      <p><span class="status">Projekt 0.64</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.65</span> · 9 listopada 2026 r.</p>
       <p class="explain"><strong>Status.</strong> Rejestr wiąże kandydatów na wymagania z próbami. Nie potwierdza zgodności wyrobu. Próba D21 jest zamknięta 17 listopada 2026 r. na rzecz WICI-Link po próbach na prototypach <code>l0</code> (14–17 listopada); budżet energii potwierdzi płytka v2 (<a href="system-wici-decyzje.html#wici-dec-022">WICI-DEC-022</a>); wynik jednej drogi posłuży do kalibracji <a href="system-wici-siec.html#sprawdzenie-pelnego-zakresu">emulatora</a>, lecz nie potwierdzi 15 skoków.</p>
     </header>
     <nav class="section-nav" aria-label="Na tej stronie">
@@ -123,6 +123,7 @@
           <tr><td>Wstrzymanie wysyłki do stacji</td><td><a href="system-wici-funkcje.html#wstrzymanie-wysylki">3. Funkcje</a></td><td>Funkcja</td><td>Test</td><td>—</td><td>Przed terenem</td><td>Brak próby</td><td>Brak wiersza w <a href="odbior.md#próby">planie odbioru</a>; brak operacji w panelu (<a href="system-wici-decyzje.html#wici-inv-016">WICI-INV-016</a>).</td></tr>
           <tr><td>Zamknięcie zdarzenia i zniszczenie danych</td><td><a href="system-wici-interfejsy.html#odtwarzanie">7. Trwałość</a></td><td>Wyrób</td><td>Test</td><td>T2, T8</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Dwa osobne wiersze planu</a>; brak wyniku i procedury starych kluczy (<a href="system-wici-decyzje.html#wici-inv-023">WICI-INV-023</a>).</td></tr>
           <tr><td>Obsługa według karty</td><td><a href="system-wici-funkcje.html#operacje">3. Funkcje</a></td><td>Wyrób</td><td>Próba z ludźmi</td><td>T1, T8</td><td>Przed terenem i wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">„Obsługa według karty”</a>; próba niewykonana.</td></tr>
+          <tr><td>Tor zasilania i słaba energia</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Próba i pomiar</td><td>T6</td><td>Przed terenem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">„Tor zasilania stacji pilotażowej”</a> i <a href="../../hardware/plytka-v2/proby.md">plan prób pierwszych sztuk v2</a>. Program płytki v2 (pomiar ogniw i 12 V, szacunek czasu pracy, ostrzeżenie o ogniwach, alarmy 12 V, wyłączanie, zdarzenie USB) jest w <code>main</code> od <code>b7a6cf9c</code>, sprawdzony tylko testami na komputerze; płytki v2 jeszcze nie ma (<a href="system-wici-decyzje.html#wici-inv-065">WICI-INV-065</a>).</td></tr>
           <tr><td>Praca na AA</td><td><a href="system-wici-wyrob.html#energia">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="odbior.md#próby">Plan T6</a>; brak pomiaru na v2.</td></tr>
           <tr><td>Radio i klimat</td><td><a href="system-wici-wyrob.html#bezpieczenstwo-wyrobu">8. Wyrób</a></td><td>Wyrób</td><td>Pomiar</td><td>T4, T6</td><td>Przed wydaniem</td><td>Próba opisana bez wyniku</td><td><a href="system-wici-decyzje.html#wici-inv-026">Progi klimatu wymagają korekty</a>; brak wyniku wyrobu.</td></tr>
           <tr><td>Współistnienie w kanale</td><td><a href="system-wici-siec.html#wspolistnienie">6. Sieć</a></td><td>Protokół i wyrób</td><td>Próba przy stole i pomiar w terenie</td><td>—</td><td>Przed terenem i wydaniem</td><td>Dowód istnieje</td><td><a href="../../hardware/xiao-wici/evidence/kanal-nesdr-2026-11-14.md">Pomiar NESDR przy stole</a>, 1 h: obca zajętość około 0,15% w kanale i 0,66% w podpaśmie, obcy nadajnik co 128 s. Jedno miejsce i godzina; pomiar w terenie i wpływ na doręczenie otwarte (<a href="radio.md#współdzielenie-kanału">plan pomiaru</a>).</td></tr>
@@ -224,7 +225,7 @@
       <p>W sieci działa jedna wersja WICI-Link. Zmiana formatu łącza następuje poza kryzysem, przez przygotowanie wszystkich węzłów przez USB, i można ją połączyć z wymianą klucza sieci. Protokół nie obsługuje dwóch wersji naraz i nie obiecuje zgodności wstecznej formatu łącza. Po przygotowaniu każdego węzła wykonuje się próbę TEST. Zmiany kolejek, ponowień i polityki dróg nie wymagają zmiany formatu, jeśli nie zmieniają bajtów w eterze.</p>
       <p class="explain"><strong>Granica i koszt.</strong> Pole wersji ma dwa bity: v3 zajmuje wartość maksymalną, v2 jest wycofana, a 0 i 1 są wolne. Następny format użyje jednej z nich. Klucz łącza pochodzi z etykiety <code>WICI link v3</code>; po jej zmianie starszy węzeł odrzuci ramkę przy sprawdzaniu MAC i nie odróżni jej od zakłóceń. Niezgodność ujawni nieudany TEST. Podczas objazdu sieć jest podzielona, przy 15 skokach potencjalnie przez dzień lub dłużej; pilna poprawka formatu ma ten sam koszt. Dwie wersje naraz wymagałyby sprawdzenia dwóch kluczy łącza oraz kombinacji kolejek, HACK i tagów pary, pozostawiając starą wersję podatną na ataki i nadal wymagając objazdu. Zmiana przez radio otwiera nową drogę ataku i zużywa czas nadawania; węzeł tłumaczący ponosi koszt obu wersji. Procedura objazdu pozostaje <a href="system-wici-decyzje.html#wici-inv-035">luką</a>. Decyzja nie dotyczy SA1 ani koperty.</p>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.64 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.65 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>

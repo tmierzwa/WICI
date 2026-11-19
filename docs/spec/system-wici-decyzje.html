@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Stan kodu po PR 181, źródła i otwarte decyzje specyfikacji WICI.">
-  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.64</title>
+  <title>Inwentaryzacja i decyzje — Specyfikacja WICI 0.65</title>
   <link rel="stylesheet" href="system-wici.css">
 </head>
 <body>
@@ -32,7 +32,7 @@
     <header>
       <p class="meta">WICI-SPEC · <a href="system-wici.html">Spis części</a></p>
       <h1>Inwentaryzacja i decyzje</h1>
-      <p><span class="status">Projekt 0.64</span> · 9 listopada 2026 r.</p>
+      <p><span class="status">Projekt 0.65</span> · 9 listopada 2026 r.</p>
     </header>
       <nav class="section-nav" aria-label="Na tej stronie">
         <a href="#inwentaryzacja">Inwentaryzacja</a>
@@ -496,6 +496,13 @@
             <div><dt>Luka</dt><dd>Według <a href="#wici-dec-020">WICI-DEC-020</a> do zmiany są: opis startu w oprogramowaniu i program stacji (język z FRAM, kontrola adresu po każdym starcie, nie po wyborze języka), aplikacja stanowiska i instrukcja dyżurnego (<a href="system-wici-funkcje.html#r3-45">R3-45</a>, zamykanie załatwionych zgłoszeń stanem 6) oraz program <code>l0</code> (licznik wybudzeń na godzinę w poleceniu diagnostycznym). Plan odbioru nie ma jeszcze prób tych zmian.</dd></div>
           </dl>
         </article>
+        <article class="record" id="wici-inv-065">
+          <h4>WICI-INV-065</h4>
+          <dl>
+            <div><dt>Stan</dt><dd>Program płytki v2 w <code>main</code> (PR 235–240, do <code>d1b205f4</code>) mierzy ogniwa i 12 V, szacuje czas pracy z ogniw, podnosi ostrzeżenie o ogniwach i alarmy odłączonego i za wysokiego 12 V, wyłącza stację przytrzymaniem wyłącznika z zapisem stanu i przekazuje zmiany zasilania laptopowi jako zdarzenie USB. Opis jest w <a href="oprogramowanie.md">oprogramowaniu</a> i <a href="elektronika.md#zasilanie-stacji">elektronice</a>, a <a href="../../hardware/plytka-v2/proby.md">plan prób pierwszych sztuk v2</a> (PR 241) ustala kolejność sprawdzeń.</dd></div>
+            <div><dt>Luka</dt><dd>Program sprawdzono tylko testami na komputerze; płytki v2 jeszcze nie ma. Progi, okres pomiaru, stałe szacunku i teksty przyjęte 18 listopada 2026 r. są szacunkami do zastąpienia pomiarem. Rozdział 8 opisuje te zachowania na poziomie wyrobu; brzmienia i progi zostają w dokumentach powołanych.</dd></div>
+          </dl>
+        </article>
       </div>
       <h3 id="stan-zatwierdzen">Stan zatwierdzeń rozdziałów</h3>
       <p><a href="system-wici-o-dokumencie.html#zatwierdzanie">Trzy stopnie</a> to szkic, zatwierdzenie do próby i stan normatywny. Obecnie żaden rozdział nie został zatwierdzony. Kształt wymagania jest odrębny od stopnia zatwierdzenia.</p>
@@ -577,6 +584,7 @@
           <tr><td>0.62</td><td>Zapisano WICI-DEC-022: D21 zamknięta 17 listopada 2026 r. na rzecz WICI-Link, z budżetem energii do potwierdzenia na v2. Stan D21 uzgodniony w rozdziałach, rejestrze zgodności i inwentaryzacji; warunek usunięcia automatycznego powrotu do Reticulum spełniony.</td></tr>
           <tr><td>0.63</td><td>Rozdział 1 opisuje wynik próby przy stole zamiast warunku; założenia o własnych protokołach WICI są potwierdzone, a Reticulum zostaje konfiguracją bez numerów.</td></tr>
           <tr><td>0.64</td><td>WICI-INV-048 zamknięta: stanowisko nie zmienia nośnika odpowiedzi samo, a na inny nośnik przenosi stację tylko dyżurny (PR #234); rozdział 7 opisuje tę regułę.</td></tr>
+          <tr><td>0.65</td><td>Rozdział 8: wiersz „Słaba energia” z szacunkiem czasu pracy z ogniw, alarmami 12 V i zdarzeniem USB oraz nowy wiersz „Wyłączanie”; rejestr zgodności z wierszem toru zasilania; nowe WICI-INV-065 o programie zasilania płytki v2 bez próby na płytce.</td></tr>
           <tr><td>0.59</td><td>Zapisano WICI-DEC-020: język z FRAM po każdym starcie (rozdział 8), ostrzeżenie stanowiska o zgłoszeniach bez stanu 6 (nowe R3-45), licznik wybudzeń na v1 i czas wybudzenia na v2 (rozdział 6, rejestr zgodności); nowe WICI-INV-064. Rozdział 6: rozsyłanie awaryjne tylko w dół, BEACON stacji bez rangi i przekaźnika po zimnym starcie.</td></tr>
           <tr><td>0.58</td><td>Raport z prób przy stole w <code>main</code>: rejestr zgodności z wynikami (HACK i kolejki, cisza, zalew, współistnienie w kanale, zanik przekaźnika) i nowym wierszem alarmu zagłuszania; WICI-INV-061, 062 i 063 ze stanem wdrożeń w <code>main</code>; wiersz D21 w rozdziale 6 z odnośnikiem do raportu.</td></tr>
           <tr><td>0.57</td><td>Zapisano WICI-DEC-019: alarm zagłuszania kanału (nowe R3-43 i R3-44 w rozdziale 3), dłuższe odroczenia przed porzuceniem ramki jako kandydat do pomiaru, odrzucone krótsze okno wolnego kanału. Rozdział 6: szacunek zysku z ponownego CAD przed HACK i granica milknięcia sieci przy zagłuszaniu.</td></tr>
@@ -636,7 +644,7 @@
         </tbody>
       </table>
     </section>
-    <footer class="page-footer">WICI-SPEC · Projekt 0.64 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
+    <footer class="page-footer">WICI-SPEC · Projekt 0.65 · <a href="system-wici-decyzje.html#historia-zmian">Historia zmian</a></footer>
   </main>
 </div>
 </body>
